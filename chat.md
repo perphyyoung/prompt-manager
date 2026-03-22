@@ -22,10 +22,12 @@
 从图像管理选择, 支持多选
 新建提示词 界面, 如果新上传图像已经存在于数据库中, 则提示用户是否确认覆盖; 跳转到 当前图像的图像详情界面
 图像引用计数 定期清理; 设计图像引用计数方案, 参考 database.js 中的建表语句, 结合 sqlite-optimization skills 分析
-generateUniqueTimestamp 删除
-main.js add-prompt 提取日期函数, substr
 创建提示词时, toast 不是中文; 参考 DialogService, 实现统一管理的 toast
 renderer\services\DialogService.js 设置相同的提示风格信息
+generateUniqueTimestamp 删除
+main.js add-prompt 提取日期函数, substr
+
+## 20260322-4
 
 ## 20260322-3---
 
@@ -446,7 +448,6 @@ get-prompt-trash 仍然同时获取提示词和图像
 2026-03-10 17:05: 图像卡片改为背景图+遮罩层实现，添加底部区域显示标签和动态内容（根据排序规则显示更新/创建时间、文件名或尺寸），将未引用标记移至右下角。
 2026-03-10 16:45: 提示词卡片底部改为动态显示，根据排序规则显示更新时间、创建时间或标题。
 2026-03-10 16:40: 图像详情界面信息区域改为列表式显示，移除标签后的冒号，添加CSS样式美化。
-2026-03-10 16:35: 修复所有使用 CURRENT_TIMESTAMP 的数据库更新操作，统一使用 new Date().toISOString() 存储 UTC 时间。
 2026-03-10 16:30: 从图像查询函数中删除 md5 和 thumbnailMD5 返回，仅保留 getImageByMD5 用于后台重复校验。
 2026-03-10 16:20: 图像详情界面将 MD5 显示改为更新时间显示，修复 getImageById 返回 fileSize 字段。
 2026-03-10 16:05: 删除数据库迁移脚本，建表语句已包含所有字段，新建数据库无需迁移。

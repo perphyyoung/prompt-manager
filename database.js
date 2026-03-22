@@ -7,7 +7,7 @@ import sqlite3 from 'sqlite3';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { logInfo, logDebug, logError } from './logger.js';
-import { localTime } from './utils/TimeUtils.js';
+import { getFormattedLocalTimeToSecond, localTime } from './utils/TimeUtils.js';
 
 sqlite3.verbose();
 
@@ -1877,7 +1877,7 @@ async function getStatistics() {
  * @returns {Promise<string>} 新目录路径（带时间后缀）
  */
 async function renameDataDirectory(dataDir) {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const timestamp = getFormattedLocalTimeToSecond();
   const parentDir = path.dirname(dataDir);
   const dirName = path.basename(dataDir);
   const newPath = path.join(parentDir, `${dirName}_${timestamp}`);

@@ -13,6 +13,7 @@ import crypto from 'crypto';
 import * as db from './database.js';
 import { logInfo, logError, logDebug } from './logger.js';
 import { generatePromptId, generateImageId } from './utils/idGenerator.js';
+import { getFormattedLocalTimeToSecond, getFormattedYearMonth } from './utils/TimeUtils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,7 +39,7 @@ const COLORS = {
  * @param {...any} args - 日志内容
  */
 function coloredLog(level, ...args) {
-  const timestamp = new Date().toISOString();
+  const timestamp = getFormattedLocalTimeToSecond();
   let color = COLORS.RESET;
   let prefix = `[${timestamp}]`;
   
@@ -266,73 +267,70 @@ async function saveImageFile(sourcePath, fileName) {
   // 计算源文件 MD5
   const sourceMD5 = await calculateFileMD5(sourcePath);
 
-    // 检查是否已存在相同 MD5 的图像
-    const existingImage = await db.getImageByMD5(sourceMD5);
-    if (existingImage) {
-      console.debug('Found duplicate image by MD5, reusing:', fileName);
-      return {
-        id: existingImage.id,
-        fileName: fileName,
-        isDuplicate: true,
-        duplicateMessage: `图像 "${fileName}" 已存在，直接使用已保存的版本`
-      };
-    }
-
-    // 生成年月子目录（格式：202603）
-    const now = new Date();
-    const yearMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const imagesDir = await ensureImagesDir(yearMonth);
-
-    const ext = path.extname(fileName) || '.png';
-    const uniqueName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}${ext}`;
-    const targetPath = path.join(imagesDir, uniqueName);
-
-    await fs.copyFile(sourcePath, targetPath);
-
-    // 获取图像尺寸和文件大小
-    let width = null;
-    let height = null;
-    let fileSize = 0;
-    try {
-      const metadata = await sharp(targetPath).metadata();
-      width = metadata.width;
-      height = metadata.height;
-      const stats = await fs.stat(targetPath);
-      fileSize = stats.size;
-    } catch (error) {
-      console.error('Failed to get image info:', error);
-    }
-
-    // 生成缩略图（传入年月子目录）
-    const thumbnailInfo = await generateThumbnail(targetPath, uniqueName, yearMonth);
-
-    // 生成图像 ID
-    const imageId = generateImageId();
-
-    // 构建图像信息对象
-    const imageInfo = {
-      id: imageId,
-      fileName: fileName,
-      storedName: uniqueName,
-      relativePath: 'images/' + yearMonth + '/' + uniqueName,
-      thumbnailPath: thumbnailInfo ? thumbnailInfo.relativePath : null,
-      md5: sourceMD5,
-      thumbnailMD5: thumbnailInfo ? thumbnailInfo.thumbnailMD5 : null,
-      width: width,
-      height: height,
-      fileSize: fileSize,
-      createdAt: new Date().toISOString()
-    };
-
-    // 保存到数据库
-    await db.addImage(imageInfo);
-
-    // 返回简化版信息（只包含 ID 和文件名）
+  // 检查是否已存在相同 MD5 的图像
+  const existingImage = await db.getImageByMD5(sourceMD5);
+  if (existingImage) {
+    console.debug('Found duplicate image by MD5, reusing:', fileName);
     return {
-      id: imageId,
+      id: existingImage.id,
       fileName: fileName,
-      isDuplicate: false
+      isDuplicate: true,
+      duplicateMessage: `图像 "${fileName}" 已存在，直接使用已保存的版本`
     };
+  }
+
+  // 生成图像 ID
+  const imageId = generateImageId();
+  // 生成年月子目录（格式：202603）
+  const yearMonth = getFormattedYearMonth();
+  const imagesDir = await ensureImagesDir(yearMonth);
+
+  const ext = path.extname(fileName) || '.png';
+  const uniqueName = imageId + ext;
+  const targetPath = path.join(imagesDir, uniqueName);
+
+  await fs.copyFile(sourcePath, targetPath);
+
+  // 获取图像尺寸和文件大小
+  let width = null;
+  let height = null;
+  let fileSize = 0;
+  try {
+    const metadata = await sharp(targetPath).metadata();
+    width = metadata.width;
+    height = metadata.height;
+    const stats = await fs.stat(targetPath);
+    fileSize = stats.size;
+  } catch (error) {
+    console.error('Failed to get image info:', error);
+  }
+
+  // 生成缩略图（传入年月子目录）
+  const thumbnailInfo = await generateThumbnail(targetPath, uniqueName, yearMonth);
+
+  // 构建图像信息对象
+  const imageInfo = {
+    id: imageId,
+    fileName: fileName,
+    storedName: uniqueName,
+    relativePath: 'images/' + yearMonth + '/' + uniqueName,
+    thumbnailPath: thumbnailInfo ? thumbnailInfo.relativePath : null,
+    md5: sourceMD5,
+    thumbnailMD5: thumbnailInfo ? thumbnailInfo.thumbnailMD5 : null,
+    width: width,
+    height: height,
+    fileSize: fileSize
+  };
+
+  // 保存到数据库
+  await db.addImage(imageInfo);
+
+  // 返回简化版信息（只包含 ID 和文件名）
+  return {
+    id: imageId,
+    fileName: fileName,
+    isDuplicate: false
+  };
 }
 
 /**
@@ -473,9 +471,7 @@ ipcMain.handle('get-prompts', async (event, sortBy, sortOrder) => {
 ipcMain.handle('add-prompt', async (event, prompt) => {
   const newPrompt = {
     id: generatePromptId(),
-    ...prompt,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    ...prompt
   };
   // 如果没有提供标题，使用 ID 作为标题
   if (!newPrompt.title) {
@@ -809,8 +805,7 @@ ipcMain.handle('import-prompts', async () => {
     for (const item of imported) {
       const newPrompt = {
         ...item,
-        id: generatePromptId(),
-        importedAt: new Date().toISOString()
+        id: generatePromptId()
       };
       await db.addPrompt(newPrompt);
       importedPrompts.push(newPrompt);
