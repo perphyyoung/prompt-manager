@@ -20,6 +20,9 @@ export class ImageUploadManager {
     });
     // 绑定事件委托（只需执行一次）
     this.previewManager.bindEvents();
+
+    // 防抖标志：防止重复打开文件对话框
+    this.isOpeningDialog = false;
   }
 
   /**
@@ -98,19 +101,33 @@ export class ImageUploadManager {
    * 处理选择多图
    */
   async handleSelectImages() {
-    // 打开安全文件对话框（支持多选）
-    const filePaths = await window.electronAPI.openImageFiles();
+    // 防抖保护：防止重复打开文件对话框
+    if (this.isOpeningDialog) {
+      return;
+    }
 
-    const result = await this.strategy.selectFiles(filePaths);
-    if (!result.success) return;
+    this.isOpeningDialog = true;
 
-    // 显示预览
-    this.previewManager.render(this.strategy.getFilePaths());
+    try {
+      // 打开安全文件对话框（支持多选）
+      const filePaths = await window.electronAPI.openImageFiles();
 
-    // 启用确定按钮
-    const confirmBtn = document.getElementById('confirmImageUploadBtn');
-    if (confirmBtn) {
-      confirmBtn.disabled = false;
+      const result = await this.strategy.selectFiles(filePaths);
+      if (!result.success) return;
+
+      // 显示预览
+      this.previewManager.render(this.strategy.getFilePaths());
+
+      // 启用确定按钮
+      const confirmBtn = document.getElementById('confirmImageUploadBtn');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+      }
+    } finally {
+      // 延迟重置标志，确保对话框完全关闭
+      setTimeout(() => {
+        this.isOpeningDialog = false;
+      }, 500);
     }
   }
 

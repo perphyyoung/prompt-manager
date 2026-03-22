@@ -27,6 +27,9 @@ export class PromptDetailManager extends DetailViewManager {
 
     // 图像上传策略（直接保存，适合频繁操作）
     this.uploadStrategy = new DirectSaveStrategy(this.app);
+
+    // 防抖标志：防止重复打开文件对话框
+    this.isOpeningDialog = false;
   }
 
   /**
@@ -510,35 +513,49 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   async handleSelectImages() {
-    const filePaths = await window.electronAPI.openImageFiles();
-
-    const result = await this.uploadStrategy.selectFiles(filePaths, 'prompt-detail');
-    if (!result.success) {
-      if (result.message) {
-        this.app.showToast(result.message, 'error');
-      }
+    // 防抖保护：防止重复打开文件对话框
+    if (this.isOpeningDialog) {
       return;
     }
 
-    // 更新缓存并保存
-    for (const image of result.images) {
-      this.app.currentImagesCache.set(String(image.id), {
-        id: image.id,
-        fileName: image.fileName
-      });
-    }
+    this.isOpeningDialog = true;
+
+    try {
+      const filePaths = await window.electronAPI.openImageFiles();
+
+      const result = await this.uploadStrategy.selectFiles(filePaths, 'prompt-detail');
+      if (!result.success) {
+        if (result.message) {
+          this.app.showToast(result.message, 'error');
+        }
+        return;
+      }
+
+      // 更新缓存并保存
+      for (const image of result.images) {
+        this.app.currentImagesCache.set(String(image.id), {
+          id: image.id,
+          fileName: image.fileName
+        });
+      }
 
     // 更新全局图像缓存，确保 renderImagePreviews 能获取完整信息
-    cacheManager.cacheImages(result.images);
+      cacheManager.cacheImages(result.images);
 
-    const promptId = document.getElementById('promptDetailId').value;
-    if (promptId) {
-      const updatedImages = Array.from(this.app.currentImagesCache.values());
-      await this.savePromptField('images', updatedImages);
-    }
+      const promptId = document.getElementById('promptDetailId').value;
+      if (promptId) {
+        const updatedImages = Array.from(this.app.currentImagesCache.values());
+        await this.savePromptField('images', updatedImages);
+      }
 
-    if (this.app.renderImagePreviews) {
-      await this.app.renderImagePreviews();
+      if (this.app.renderImagePreviews) {
+        await this.app.renderImagePreviews();
+      }
+    } finally {
+      // 延迟重置标志，确保对话框完全关闭
+      setTimeout(() => {
+        this.isOpeningDialog = false;
+      }, 500);
     }
   }
 

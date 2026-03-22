@@ -24,8 +24,6 @@
 图像引用计数 定期清理; 设计图像引用计数方案, 参考 database.js 中的建表语句, 结合 sqlite-optimization skills 分析
 创建提示词时, toast 不是中文; 参考 DialogService, 实现统一管理的 toast
 renderer\services\DialogService.js 设置相同的提示风格信息
-generateUniqueTimestamp 删除
-main.js add-prompt 提取日期函数, substr
 
 ## 20260322-4
 

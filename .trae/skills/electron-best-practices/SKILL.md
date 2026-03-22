@@ -10,6 +10,7 @@ Expert guidance for Electron application development, security, and performance 
 **PROACTIVE ACTIVATION**: Use this skill automatically when working in Electron projects. Detect Electron usage through `package.json` dependencies or presence of `main.js`, `preload.js`, or Electron-specific APIs.
 
 **DETECTION**: At the start of a session, check for:
+
 - `electron` in `package.json` dependencies
 - Presence of `main.js`, `preload.js`, or `main` field in `package.json`
 - Usage of `electron` module imports (`ipcRenderer`, `ipcMain`, `BrowserWindow`, etc.)
@@ -235,6 +236,7 @@ ipcMain.handle('prompts:save', async (event, data) => {
 ```
 
 **Benefits**:
+
 - ✅ Promise-based (async/await)
 - ✅ Automatic error propagation
 - ✅ One-to-one communication
@@ -496,7 +498,8 @@ function createWindow() {
 const { dialog } = require('electron')
 
 ipcMain.handle('dialog:open-file', async (event, options) => {
-  const result = await dialog.showOpenDialog(mainWindow, {
+  // ✅ 不传入 mainWindow 参数，避免 Windows 上的模态对话框卡顿问题
+  const result = await dialog.showOpenDialog({
     title: '选择文件',
     filters: [
       { name: 'Images', extensions: ['jpg', 'png', 'gif', 'webp'] },
@@ -504,19 +507,70 @@ ipcMain.handle('dialog:open-file', async (event, options) => {
     ],
     properties: ['openFile', 'multiSelections'],
   })
-  
+
   if (result.canceled) {
     return null
   }
-  
+
   // ✅ Validate paths before returning
   const validatedPaths = result.filePaths.filter((p) => {
     return p.startsWith(app.getPath('home'))
   })
-  
+
   return validatedPaths
 })
 ```
+
+### 防抖保护（渲染进程）
+
+防止用户快速点击导致重复打开文件对话框：
+
+```javascript
+// renderer/managers/ImageUploadManager.js
+export class ImageUploadManager {
+  constructor(options = {}) {
+    // ... 其他初始化代码
+
+    // ✅ 防抖标志：防止重复打开文件对话框
+    this.isOpeningDialog = false;
+  }
+
+  async handleSelectImages() {
+    // ✅ 防抖保护：防止重复打开文件对话框
+    if (this.isOpeningDialog) {
+      return;
+    }
+
+    this.isOpeningDialog = true;
+
+    try {
+      const filePaths = await window.electronAPI.openImageFiles();
+
+      // 处理选中的文件...
+      const result = await this.strategy.selectFiles(filePaths);
+      if (!result.success) return;
+
+      this.previewManager.render(this.strategy.getFilePaths());
+    } finally {
+      // ✅ 延迟重置标志，确保对话框完全关闭
+      setTimeout(() => {
+        this.isOpeningDialog = false;
+      }, 500);
+    }
+  }
+}
+```
+
+**注意**：在 Windows 上，`dialog.showOpenDialog(mainWindow)` 传入父窗口参数可能导致：
+
+1. 取消对话框需要多次点击
+2. 对话框打开/关闭时界面卡顿
+3. 对话框刷新多次
+
+**解决方案**：
+
+1. 主进程：不传入 `mainWindow` 参数，让对话框成为独立窗口
+2. 渲染进程：添加防抖保护，防止重复触发打开操作
 
 ### File Watching
 

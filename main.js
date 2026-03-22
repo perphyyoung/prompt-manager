@@ -788,7 +788,7 @@ ipcMain.handle('export-prompts', async (event, prompts) => {
 
 // 导入 Prompts
 ipcMain.handle('import-prompts', async () => {
-  const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+  const { filePaths } = await dialog.showOpenDialog({
     title: '导入 Prompts',
     filters: [
       { name: 'JSON Files', extensions: ['json'] }
@@ -846,7 +846,7 @@ ipcMain.handle('get-data-path', async () => {
 
 // 选择新的数据路径
 ipcMain.handle('select-data-path', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
+  const result = await dialog.showOpenDialog({
     title: '选择数据目录',
     properties: ['openDirectory', 'createDirectory'],
     defaultPath: currentDataDir
@@ -868,7 +868,7 @@ ipcMain.handle('select-data-path', async () => {
 
 // 选择目录（通用）
 ipcMain.handle('select-directory', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
+  const result = await dialog.showOpenDialog({
     title: '选择导出目录',
     properties: ['openDirectory'],
     defaultPath: currentDataDir
@@ -888,7 +888,7 @@ ipcMain.handle('save-image-file', async (event, sourcePath, fileName) => {
 
 // 打开图像文件对话框（支持多选）
 ipcMain.handle('dialog:open-image-files', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
+  const result = await dialog.showOpenDialog({
     title: '选择图像',
     filters: [
       { name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'] },
@@ -1123,7 +1123,7 @@ ipcMain.handle('get-image-path', async (event, relativePath) => {
 
 // 选择图像文件
 ipcMain.handle('select-image-files', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
+  const result = await dialog.showOpenDialog({
     title: '选择图像',
     properties: ['openFile', 'multiSelections'],
     filters: [

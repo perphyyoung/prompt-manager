@@ -27,6 +27,9 @@ export class NewPromptManager {
     this.pendingTitle = null;
     this.currentId = null;
     this.prefillImages = [];
+
+    // 防抖标志：防止重复打开文件对话框
+    this.isOpeningDialog = false;
   }
 
   /**
@@ -151,13 +154,27 @@ export class NewPromptManager {
    * 处理选择多图
    */
   async handleSelectImages() {
-    const filePaths = await window.electronAPI.openImageFiles();
+    // 防抖保护：防止重复打开文件对话框
+    if (this.isOpeningDialog) {
+      return;
+    }
 
-    const result = await this.strategy.selectFiles(filePaths);
-    if (!result.success) return;
+    this.isOpeningDialog = true;
 
-    // 更新预览
-    this.previewManager.render(this.strategy.getFilePaths());
+    try {
+      const filePaths = await window.electronAPI.openImageFiles();
+
+      const result = await this.strategy.selectFiles(filePaths);
+      if (!result.success) return;
+
+      // 更新预览
+      this.previewManager.render(this.strategy.getFilePaths());
+    } finally {
+      // 延迟重置标志，确保对话框完全关闭
+      setTimeout(() => {
+        this.isOpeningDialog = false;
+      }, 500);
+    }
   }
 
   /**
