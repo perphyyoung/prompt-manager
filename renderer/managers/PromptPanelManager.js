@@ -4,143 +4,13 @@ import { PanelRenderer, PanelItemRenderer } from './SharedComponents/index.js';
 import { TagUI } from './TagUI.js';
 import { Constants } from '../constants.js';
 import { DialogService, DialogConfig } from '../services/index.js';
+import { BatchConfig } from '../config/index.js';
 
 /**
  * 提示词面板管理器
  * 负责提示词列表的渲染、筛选、排序、标签管理等功能
  */
 export class PromptPanelManager extends PanelManagerBase {
-  // ==================== 批量操作方法 ====================
-
-  /**
-   * 批量删除提示词
-   */
-  async batchDelete() {
-    const ids = Array.from(this.selectedIds);
-    if (ids.length === 0) return;
-
-    const confirmed = await DialogService.showConfirmDialogByConfig({
-      ...DialogConfig.BATCH_DELETE,
-      data: { count: ids.length }
-    });
-    if (!confirmed) return;
-
-    try {
-      for (const id of ids) {
-        await window.electronAPI.softDeletePrompt(id);
-        cacheManager.getPromptCache().delete(String(id));
-      }
-      this.selectedIds.clear();
-      this.app.showToast(`${ids.length} 个提示词已删除`, 'success');
-      this.eventBus.emit('promptsDeleted', { ids });
-      await this.loadData();
-      this.renderView();
-      this.toolbarController?.updateUI();
-    } catch (error) {
-      window.electronAPI.logError('PromptPanelManager', 'Batch delete failed:', error);
-      this.app.showToast('批量删除失败', 'error');
-    }
-  }
-
-  /**
-   * 批量添加标签
-   */
-  async batchAddTag() {
-    const ids = Array.from(this.selectedIds);
-    if (ids.length === 0) return;
-
-    const tag = await this.app.showInputDialog('添加标签', '输入要添加的标签（多个标签用逗号分隔）');
-    if (!tag || tag.trim() === '') return;
-
-    try {
-      const tags = tag.split(',').map(t => t.trim()).filter(t => t);
-      for (const id of ids) {
-        const prompt = cacheManager.getCachedPrompt(id);
-        if (!prompt) continue;
-        let currentTags = prompt.tags ? [...prompt.tags] : [];
-        for (const tagName of tags) {
-          if (!currentTags.includes(tagName)) {
-            currentTags.push(tagName);
-          }
-        }
-        await window.electronAPI.updatePrompt(id, { tags: currentTags });
-      }
-      this.app.showToast(`${ids.length} 个提示词已添加标签`);
-      this.eventBus.emit('promptTagsChanged', { ids });
-    } catch (error) {
-      window.electronAPI.logError('PromptPanelManager', 'Batch add tag failed:', error);
-      this.app.showToast('批量添加标签失败', 'error');
-    }
-  }
-
-  /**
-   * 批量设置安全状态
-   */
-  async batchSetSafe() {
-    const ids = Array.from(this.selectedIds);
-    if (ids.length === 0) return;
-
-    try {
-      for (const id of ids) {
-        await window.electronAPI.updatePrompt(id, { isSafe: 1 });
-      }
-      this.selectedIds.clear();
-      this.app.showToast(`${ids.length} 个提示词已设为安全`, 'success');
-      this.eventBus.emit('safeRatingChanged', { targetType: 'batch', isSafe: true });
-      this.renderView();
-      this.toolbarController?.updateUI();
-    } catch (error) {
-      window.electronAPI.logError('PromptPanelManager', 'Batch set safe failed:', error);
-      this.app.showToast('批量设置安全状态失败', 'error');
-    }
-  }
-
-  /**
-   * 批量设置不安全
-   */
-  async batchSetUnsafe() {
-    const ids = Array.from(this.selectedIds);
-    if (ids.length === 0) return;
-
-    try {
-      for (const id of ids) {
-        await window.electronAPI.updatePrompt(id, { isSafe: 0 });
-      }
-      this.selectedIds.clear();
-      this.app.showToast(`${ids.length} 个提示词已设为不安全`, 'success');
-      this.eventBus.emit('safeRatingChanged', { targetType: 'batch', isSafe: false });
-      this.renderView();
-      this.toolbarController?.updateUI();
-    } catch (error) {
-      window.electronAPI.logError('PromptPanelManager', 'Batch set unsafe failed:', error);
-      this.app.showToast('批量设置安全状态失败', 'error');
-    }
-  }
-
-  /**
-   * 取消选择
-   */
-  batchCancel() {
-    this.selectedIds.clear();
-    this.renderView();
-    this.toolbarController?.updateUI();
-  }
-
-  /**
-   * 反选
-   */
-  batchInvert() {
-    const items = this.getItems().filter(item => !item.isDeleted && (this.viewMode !== 'safe' || item.isSafe !== 0));
-    const newSelection = new Set();
-    items.forEach(item => {
-      if (!this.selectedIds.has(item.id)) {
-        newSelection.add(item.id);
-      }
-    });
-    this.selectedIds = newSelection;
-    this.renderView();
-    this.toolbarController?.updateUI();
-  }
   // 提示词特殊标签检查函数 Map
   static PROMPT_TAG_CHECKS = new Map([
     [Constants.FAVORITE_TAG, (p) => p.isFavorite],
@@ -166,7 +36,8 @@ export class PromptPanelManager extends PanelManagerBase {
       eventBus: options.eventBus,
       storagePrefix: 'prompt',
       defaultCardSize: 260,
-      toolbarConfig: options.toolbarConfig
+      toolbarConfig: options.toolbarConfig,
+      operationConfig: BatchConfig.prompt.operations
     });
     this.saveManager = options.saveManager;
     this.filteredPrompts = [];

@@ -1,6 +1,7 @@
 import { HtmlUtils, LRUCache } from '../../utils/index.js';
 import { TagUI } from './TagUI.js';
-import { BatchToolbarController } from './BatchToolbarController.js';
+import { BatchToolbarUI } from './BatchToolbarUI.js';
+import { BatchProcessor } from './BatchProcessor.js';
 
 /**
  * 面板管理器基类
@@ -52,12 +53,21 @@ export class PanelManagerBase {
 
     // 初始化批量操作工具栏控制器
     if (options.toolbarConfig) {
-      this.toolbarController = new BatchToolbarController({
+      this.toolbarController = new BatchToolbarUI({
         ...options.toolbarConfig,
         getSelectedCount: () => this.selectedIds.size,
         panelManager: this
       });
       this.toolbarController.init();
+    }
+
+    // 初始化批量操作执行器
+    if (options.operationConfig) {
+      this.batchExecutor = new BatchProcessor({
+        panelManager: this,
+        operationConfig: options.operationConfig,
+        eventBus: this.eventBus
+      });
     }
 
     // 绑定事件
@@ -779,6 +789,57 @@ export class PanelManagerBase {
     await this.loadData();
     await this.renderView();
     await this.renderTagFilters();
+  }
+
+  // ==================== 批量操作方法（配置驱动） ====================
+
+  /**
+   * 批量删除
+   */
+  async batchDelete() {
+    await this.batchExecutor?.executeDelete('delete');
+  }
+
+  /**
+   * 批量添加标签
+   */
+  async batchAddTag() {
+    await this.batchExecutor?.executeAddTag('addTag');
+  }
+
+  /**
+   * 批量设置安全
+   */
+  async batchSetSafe() {
+    await this.batchExecutor?.executeSetSafe('setSafe');
+  }
+
+  /**
+   * 批量设置不安全
+   */
+  async batchSetUnsafe() {
+    await this.batchExecutor?.executeSetSafe('setUnsafe');
+  }
+
+  /**
+   * 取消选择
+   */
+  batchCancel() {
+    this.batchExecutor?.executeCancel();
+  }
+
+  /**
+   * 反选
+   */
+  batchInvert() {
+    this.batchExecutor?.executeInvert();
+  }
+
+  /**
+   * 全选
+   */
+  batchSelectAll() {
+    this.batchExecutor?.executeSelectAll();
   }
 }
 

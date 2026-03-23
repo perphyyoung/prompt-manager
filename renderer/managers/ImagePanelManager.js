@@ -3,6 +3,7 @@ import { PanelManagerBase } from './PanelManagerBase.js';
 import { PanelRenderer, PanelItemRenderer } from './SharedComponents/index.js';
 import { Constants } from '../constants.js';
 import { DialogService, DialogConfig } from '../services/index.js';
+import { BatchConfig } from '../config/index.js';
 
 /**
  * 图像面板管理器
@@ -16,130 +17,6 @@ export class ImagePanelManager extends PanelManagerBase {
     [Constants.UNSAFE_TAG, (img) => img.isSafe === 0],
     [Constants.NO_TAG_TAG, (img) => !img.tags || img.tags.length === 0]
   ]);
-
-  // ==================== 批量操作方法 ====================
-
-  /**
-   * 批量删除图像
-   */
-  async batchDelete() {
-    const ids = Array.from(this.selectedIds);
-    if (ids.length === 0) return;
-
-    const confirmed = await DialogService.showConfirmDialogByConfig({
-      ...DialogConfig.BATCH_DELETE,
-      data: { count: ids.length }
-    });
-    if (!confirmed) return;
-
-    try {
-      for (const id of ids) {
-        await window.electronAPI.softDeleteImage(id);
-        cacheManager.getImageCache().delete(String(id));
-      }
-      this.selectedIds.clear();
-      this.app.showToast(`${ids.length} 个图像已删除`, 'success');
-      this.eventBus.emit('imagesDeleted', { ids });
-      await this.loadData();
-      this.renderView();
-      this.toolbarController?.updateUI();
-    } catch (error) {
-      window.electronAPI.logError('ImagePanelManager', 'Batch delete failed:', error);
-      this.app.showToast('批量删除失败', 'error');
-    }
-  }
-
-  /**
-   * 批量添加标签
-   */
-  async batchAddTag() {
-    const ids = Array.from(this.selectedIds);
-    if (ids.length === 0) return;
-
-    const tag = await this.app.showInputDialog('添加标签', '输入要添加的标签（多个标签用逗号分隔）');
-    if (!tag || tag.trim() === '') return;
-
-    try {
-      const tags = tag.split(',').map(t => t.trim()).filter(t => t);
-      for (const id of ids) {
-        await window.electronAPI.addImageTags(id, tags);
-      }
-      this.app.showToast(`${ids.length} 个图像已添加标签`);
-      this.eventBus.emit('imageTagsChanged', { ids });
-    } catch (error) {
-      window.electronAPI.logError('ImagePanelManager', 'Batch add tag failed:', error);
-      this.app.showToast('批量添加标签失败', 'error');
-    }
-  }
-
-  /**
-   * 批量设置安全状态
-   */
-  async batchSetSafe() {
-    const ids = Array.from(this.selectedIds);
-    if (ids.length === 0) return;
-
-    try {
-      for (const id of ids) {
-        await window.electronAPI.updateImage(id, { isSafe: 1 });
-      }
-      this.selectedIds.clear();
-      this.app.showToast(`${ids.length} 个图像已设为安全`, 'success');
-      this.eventBus.emit('safeRatingChanged', { targetType: 'batch', isSafe: true });
-      this.renderView();
-      this.toolbarController?.updateUI();
-    } catch (error) {
-      window.electronAPI.logError('ImagePanelManager', 'Batch set safe failed:', error);
-      this.app.showToast('批量设置安全状态失败', 'error');
-    }
-  }
-
-  /**
-   * 批量设置不安全
-   */
-  async batchSetUnsafe() {
-    const ids = Array.from(this.selectedIds);
-    if (ids.length === 0) return;
-
-    try {
-      for (const id of ids) {
-        await window.electronAPI.updateImage(id, { isSafe: 0 });
-      }
-      this.selectedIds.clear();
-      this.app.showToast(`${ids.length} 个图像已设为不安全`, 'success');
-      this.eventBus.emit('safeRatingChanged', { targetType: 'batch', isSafe: false });
-      this.renderView();
-      this.toolbarController?.updateUI();
-    } catch (error) {
-      window.electronAPI.logError('ImagePanelManager', 'Batch set unsafe failed:', error);
-      this.app.showToast('批量设置安全状态失败', 'error');
-    }
-  }
-
-  /**
-   * 取消选择
-   */
-  batchCancel() {
-    this.selectedIds.clear();
-    this.renderView();
-    this.toolbarController?.updateUI();
-  }
-
-  /**
-   * 反选
-   */
-  batchInvert() {
-    const items = this.getItems().filter(item => !item.isDeleted && (this.viewMode !== 'safe' || item.isSafe !== 0));
-    const newSelection = new Set();
-    items.forEach(item => {
-      if (!this.selectedIds.has(item.id)) {
-        newSelection.add(item.id);
-      }
-    });
-    this.selectedIds = newSelection;
-    this.renderView();
-    this.toolbarController?.updateUI();
-  }
 
   /**
    * 构造函数
@@ -155,7 +32,8 @@ export class ImagePanelManager extends PanelManagerBase {
       eventBus: options.eventBus,
       storagePrefix: 'image',
       defaultCardSize: 180,
-      toolbarConfig: options.toolbarConfig
+      toolbarConfig: options.toolbarConfig,
+      operationConfig: BatchConfig.image.operations
     });
     this.filteredImages = [];
   }

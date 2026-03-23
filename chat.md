@@ -26,9 +26,15 @@ renderer\services\DialogService.js 设置相同的提示风格信息
 database optimize-database
 提示词批量管理 如何做 单元测试
 renderer\managers\SelectionManager.js selectedItems 改为 lrucache 是否更好, 与当前实现有何优劣
-现在涉及多选工具栏的有几个文件? 文件组织和命名可以怎样优化
+涉及 批量工具栏 的有几个文件? 文件组织和命名可以怎样优化
 
-## 20260324
+## 20260324-2---
+
+同目录模块 之间导入时，直接导入具体文件，不通过 index.js; 跨目录导入 时，统一使用 index.js
+`ImagePanelManager.js` `PromptPanelManager.js` 两个文件是不是存在大量重复逻辑? 结合 `PanelManagerBase.js` , 通过 refactor skills 给出优化方案; 配置驱动模式是否可用; 可暂时只考虑 批量相关功能
+只有点击 取消选择 按钮才会退出批量模式
+
+## 20260324---
 
 import 统一通过 index.js 导出和导入, 修改 xxx
 ToolbarConfig 只是 批量工具栏 的配置, 命名需要具体, BatchToolbarConfig?

@@ -12,7 +12,7 @@ import {
   ToolbarManager, ImportExportManager, SettingsManager, ImageSelectorManager,
   NewPromptManager, ImageUploadManager, ImageContextMenuManager
 } from './managers/index.js';
-import { BatchToolbarConfig } from './config/index.js';
+import { BatchConfig } from './config/index.js';
 import { EventBus, HtmlUtils, isSameId, cacheManager } from '../utils/index.js';
 import { HoverTooltipManager, ShortcutManager } from './renderer_utils/index.js';
 
@@ -161,14 +161,14 @@ class PromptManager {
     this.promptPanelManager = new PromptPanelManager({
       app: this,
       eventBus: this.eventBus,
-      toolbarConfig: BatchToolbarConfig.prompt
+      toolbarConfig: BatchConfig.prompt
     });
 
     // 初始化图像面板管理器
     this.imagePanelManager = new ImagePanelManager({
       app: this,
       eventBus: this.eventBus,
-      toolbarConfig: BatchToolbarConfig.image
+      toolbarConfig: BatchConfig.image
     });
 
     // 初始化标签注册表（重构后，用配置替代继承）
@@ -218,7 +218,7 @@ class PromptManager {
       app: this,
       storageKey: 'currentPanel',
       defaultPanel: 'prompt',
-      batchToolbarConfig: BatchToolbarConfig
+      batchToolbarConfig: BatchConfig
     });
     this.navigationManager.init();
 

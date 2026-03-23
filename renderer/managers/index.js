@@ -16,7 +16,8 @@ export { SimpleTagManager } from './SimpleTagManager.js';
 export { TrashManager } from './TrashManager.js';
 
 // 批量操作工具栏控制器
-export { BatchToolbarController } from './BatchToolbarController.js';
+export { BatchToolbarUI } from './BatchToolbarUI.js';
+export { BatchProcessor } from './BatchProcessor.js';
 
 export { ImageFullscreenManager } from './ImageFullscreenManager.js';
 export { DetailViewManager } from './DetailViewManager.js';

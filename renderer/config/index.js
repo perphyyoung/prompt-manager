@@ -1,1 +1,1 @@
-export { BatchToolbarConfig } from './BatchToolbarConfig.js';
+export { BatchConfig } from './BatchConfig.js';
