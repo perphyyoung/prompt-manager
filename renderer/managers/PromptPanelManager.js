@@ -59,6 +59,32 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
+   * 获取搜索查询（实现基类抽象方法）
+   * @returns {string}
+   */
+  getSearchQuery() {
+    return this.app.searchSortManager?.getPromptSearchQuery() || '';
+  }
+
+  /**
+   * 检查提示词是否匹配搜索查询（实现基类抽象方法）
+   * 支持标题、内容、翻译、标签、备注搜索
+   * @param {Object} prompt - 提示词对象
+   * @param {string} lowerQuery - 小写的搜索查询
+   * @returns {boolean}
+   */
+  matchesSearch(prompt, lowerQuery) {
+    if (!lowerQuery) return true;
+    return (
+      prompt.title?.toLowerCase().includes(lowerQuery) ||
+      prompt.content?.toLowerCase().includes(lowerQuery) ||
+      prompt.contentTranslate?.toLowerCase().includes(lowerQuery) ||
+      prompt.note?.toLowerCase().includes(lowerQuery) ||
+      (prompt.tags && prompt.tags.some(tag => tag.toLowerCase().includes(lowerQuery)))
+    );
+  }
+
+  /**
    * 获取特殊标签检查函数 Map（实现基类抽象方法）
    * @returns {Map}
    */

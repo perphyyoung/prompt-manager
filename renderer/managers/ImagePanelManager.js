@@ -50,6 +50,30 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
+   * 获取搜索查询（实现基类抽象方法）
+   * @returns {string}
+   */
+  getSearchQuery() {
+    return this.app.searchSortManager?.getImageSearchQuery() || '';
+  }
+
+  /**
+   * 检查图像是否匹配搜索查询（实现基类抽象方法）
+   * 支持文件名、标签、备注搜索
+   * @param {Object} img - 图像对象
+   * @param {string} lowerQuery - 小写的搜索查询
+   * @returns {boolean}
+   */
+  matchesSearch(img, lowerQuery) {
+    if (!lowerQuery) return true;
+    return (
+      img.fileName?.toLowerCase().includes(lowerQuery) ||
+      (img.tags && img.tags.some(tag => tag.toLowerCase().includes(lowerQuery))) ||
+      (img.note && img.note.toLowerCase().includes(lowerQuery))
+    );
+  }
+
+  /**
    * 获取特殊标签检查函数 Map（实现基类抽象方法）
    * @returns {Map}
    */

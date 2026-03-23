@@ -147,6 +147,26 @@ export class PanelManagerBase {
   }
 
   /**
+   * 获取搜索查询（子类实现）
+   * @abstract
+   * @returns {string} 搜索查询字符串
+   */
+  getSearchQuery() {
+    return ''; // 默认返回空字符串，表示不搜索
+  }
+
+  /**
+   * 检查项目是否匹配搜索查询（子类实现）
+   * @abstract
+   * @param {Object} item - 项目对象
+   * @param {string} lowerQuery - 小写的搜索查询
+   * @returns {boolean} 是否匹配
+   */
+  matchesSearch(item, lowerQuery) {
+    return true; // 默认全部匹配
+  }
+
+  /**
    * 获取特殊标签检查函数 Map（子类实现）
    * @abstract
    * @returns {Map}
@@ -402,6 +422,13 @@ export class PanelManagerBase {
             return item.tags && item.tags.includes(tag);
           });
         });
+      }
+
+      // 搜索过滤
+      const searchQuery = this.getSearchQuery();
+      if (searchQuery) {
+        const lowerQuery = searchQuery.toLowerCase();
+        filtered = filtered.filter(item => this.matchesSearch(item, lowerQuery));
       }
 
       // 排序
