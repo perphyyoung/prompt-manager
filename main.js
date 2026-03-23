@@ -489,6 +489,17 @@ ipcMain.handle('permanent-delete-prompt', async (event, id) => {
   }
 });
 
+// 恢复所有提示词
+ipcMain.handle('restore-all-prompts', async () => {
+  try {
+    await db.restoreAllPrompts();
+    return true;
+  } catch (error) {
+    logError('Main', 'Restore all prompts error:', error);
+    throw error;
+  }
+});
+
 // 清空提示词回收站
 ipcMain.handle('empty-prompt-trash', async () => {
   try {
@@ -539,6 +550,17 @@ ipcMain.handle('permanent-delete-image', async (event, id) => {
     return true;
   } catch (error) {
     logError('Main', 'Permanently delete image error:', error);
+    throw error;
+  }
+});
+
+// 恢复所有图像
+ipcMain.handle('restore-all-images', async () => {
+  try {
+    await db.restoreAllImages();
+    return true;
+  } catch (error) {
+    logError('Main', 'Restore all images error:', error);
     throw error;
   }
 });

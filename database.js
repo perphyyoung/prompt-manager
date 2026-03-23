@@ -959,6 +959,18 @@ async function permanentDeletePrompt(id) {
 }
 
 /**
+ * 恢复所有已删除的提示词
+ */
+async function restoreAllPrompts() {
+  const now = localTime();
+  await run(
+    'UPDATE prompts SET is_deleted = 0, deleted_at = NULL, updated_at = ? WHERE is_deleted = 1',
+    [now]
+  );
+  return true;
+}
+
+/**
  * 获取收藏的提示词
  */
 async function getFavoritePrompts() {
@@ -1503,6 +1515,18 @@ async function permanentDeleteImage(id, dataDir) {
 }
 
 /**
+ * 恢复所有已删除的图像
+ */
+async function restoreAllImages() {
+  const now = localTime();
+  await run(
+    'UPDATE images SET is_deleted = 0, deleted_at = NULL, updated_at = ? WHERE is_deleted = 1',
+    [now]
+  );
+  return true;
+}
+
+/**
  * 获取回收站中的图像
  */
 async function getDeletedImages() {
@@ -1930,6 +1954,7 @@ export {
   searchPrompts,
   deletePrompt,
   restorePrompt,
+  restoreAllPrompts,
   permanentDeletePrompt,
   getDeletedPrompts,
   getFavoritePrompts,
@@ -1954,6 +1979,7 @@ export {
   addImage,
   softDeleteImage,
   restoreImage,
+  restoreAllImages,
   permanentDeleteImage,
   getDeletedImages,
   emptyImageTrash,

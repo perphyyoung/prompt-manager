@@ -1,5 +1,21 @@
 # 开发对话记录
 
+## todo
+
+快捷键管理
+提示词主界面和图像主界面, 是否也可以使用配置驱动模式, 与当前实现有何优劣
+批量操作界面, 是否也可以使用配置驱动模式, 与当前实现有何优劣
+现在 两个回收站的操作逻辑是否一致, 变量命名是否一致, 还能再优化吗? 结合 refator skills 分析
+从图像管理选择, 支持多选
+新建提示词 界面, 如果新上传图像已经存在于数据库中, 则提示用户是否确认覆盖; 跳转到 当前图像的图像详情界面
+图像引用计数 定期清理; 设计图像引用计数方案, 参考 database.js 中的建表语句, 结合 sqlite-optimization skills 分析
+创建提示词时, toast 不是中文; 参考 DialogService, 实现统一管理的 toast
+renderer\services\DialogService.js 设置相同的提示风格信息
+database optimize-database
+提示词批量管理 如何做 单元测试
+renderer\managers\SelectionManager.js selectedItems 改为 lrucache 是否更好, 与当前实现有何优劣
+涉及 批量工具栏 的有几个文件? 文件组织和命名可以怎样优化
+
 ## 常用
 
 正常了, 删除日志的生成语句, 保留日志系统
@@ -11,35 +27,14 @@
 通过 google-code-review skills 审查本地变更, 使用 `git diff > git-diff.log`, 不要用交互式的 `git diff`
 根据 chat.md 的第 12 行以及 git-diff.log, 更新 readme.md 和 change.md, 并总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 
-## todo
-
-快捷键管理
-提示词主界面和图像主界面, 是否也可以使用配置驱动模式, 与当前实现有何优劣
-批量操作界面, 是否也可以使用配置驱动模式, 与当前实现有何优劣
-现在 两个回收站的整体设计, 可以怎样重构, 结合 refator skills 分析
-现在 两个回收站的操作逻辑是否一致, 变量命名是否一致, 还能再优化吗?
-从图像管理选择, 支持多选
-新建提示词 界面, 如果新上传图像已经存在于数据库中, 则提示用户是否确认覆盖; 跳转到 当前图像的图像详情界面
-图像引用计数 定期清理; 设计图像引用计数方案, 参考 database.js 中的建表语句, 结合 sqlite-optimization skills 分析
-创建提示词时, toast 不是中文; 参考 DialogService, 实现统一管理的 toast
-renderer\services\DialogService.js 设置相同的提示风格信息
-database optimize-database
-提示词批量管理 如何做 单元测试
-renderer\managers\SelectionManager.js selectedItems 改为 lrucache 是否更好, 与当前实现有何优劣
-涉及 批量工具栏 的有几个文件? 文件组织和命名可以怎样优化
-
 ## 20260324-3
 
 删除批量安全, 添加批量收藏
 批量操作添加单元测试
 
-## 20260324-2---
-
 同目录模块 之间导入时，直接导入具体文件，不通过 index.js; 跨目录导入 时，统一使用 index.js
 `ImagePanelManager.js` `PromptPanelManager.js` 两个文件是不是存在大量重复逻辑? 结合 `PanelManagerBase.js` , 通过 refactor skills 给出优化方案; 配置驱动模式是否可用; 可暂时只考虑 批量相关功能
 只有点击 取消选择 按钮才会退出批量模式
-
-## 20260324---
 
 import 统一通过 index.js 导出和导入, 修改 xxx
 ToolbarConfig 只是 批量工具栏 的配置, 命名需要具体, BatchToolbarConfig?

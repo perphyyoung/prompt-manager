@@ -82,6 +82,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPromptTrash: () => ipcRenderer.invoke('get-prompt-trash'),
   /** 从提示词回收站恢复 @param {string} id - Prompt ID */
   restorePromptFromTrash: (id) => ipcRenderer.invoke('restore-prompt-from-trash', id),
+  /** 恢复所有提示词 */
+  restoreAllPrompts: () => ipcRenderer.invoke('restore-all-prompts'),
   /** 永久删除提示词 @param {string} id - Prompt ID */
   permanentDeletePrompt: (id) => ipcRenderer.invoke('permanent-delete-prompt', id),
   /** 清空提示词回收站 */
@@ -152,6 +154,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   softDeleteImage: (id) => ipcRenderer.invoke('soft-delete-image', id),
   /** 从回收站恢复图像 @param {string} id - 图像 ID */
   restoreImageFromTrash: (id) => ipcRenderer.invoke('restore-image-from-trash', id),
+  /** 恢复所有图像 */
+  restoreAllImages: () => ipcRenderer.invoke('restore-all-images'),
   /** 永久删除图像 @param {string} id - 图像 ID */
   permanentDeleteImage: (id) => ipcRenderer.invoke('permanent-delete-image', id),
   /** 清空图像回收站 */

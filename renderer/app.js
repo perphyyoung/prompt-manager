@@ -387,12 +387,14 @@ class PromptManager {
     document.getElementById('promptAddBtn')?.addEventListener('click', () => this.newPromptManager.open());
     document.getElementById('promptTrashBtn')?.addEventListener('click', () => this.trashManager.open('prompt'));
     document.getElementById('closePromptTrashModal')?.addEventListener('click', () => this.trashManager.close());
+    document.getElementById('restoreAllPromptTrashBtn')?.addEventListener('click', () => this.trashManager.restoreAll('prompt'));
     document.getElementById('emptyPromptTrashBtn')?.addEventListener('click', () => this.trashManager.empty());
 
     // 图像工具栏
     document.getElementById('imageAddBtn')?.addEventListener('click', () => this.imageUploadManager.open());
     document.getElementById('imageTrashBtn')?.addEventListener('click', () => this.trashManager.open('image'));
     document.getElementById('closeImageTrashModal')?.addEventListener('click', () => this.trashManager.close());
+    document.getElementById('restoreAllImageTrashBtn')?.addEventListener('click', () => this.trashManager.restoreAll('image'));
     document.getElementById('emptyImageTrashBtn')?.addEventListener('click', () => this.trashManager.empty());
 
     // 绑定图像上传事件

@@ -309,6 +309,68 @@ export class TrashManager {
   }
 
   /**
+   * 批量恢复所有项目
+   * 使用缓存更新，避免全量重新加载
+   * @param {string} itemType - 项目类型 (prompt/image)
+   */
+  async restoreAll(itemType) {
+    try {
+      // 1. 获取当前回收站中该类型的项目
+      const itemsToRestore = this.trashItems.filter(item => item.type === itemType);
+      
+      if (itemsToRestore.length === 0) {
+        this.app.showToast('回收站已为空', 'info');
+        return;
+      }
+
+      // 2. 批量恢复数据库
+      if (itemType === 'prompt') {
+        await window.electronAPI.restoreAllPrompts();
+      } else {
+        await window.electronAPI.restoreAllImages();
+      }
+
+      // 3. 批量更新缓存
+      const cacheManager = this.app?.cacheManager;
+      const now = localTime();
+      
+      if (cacheManager) {
+        for (const item of itemsToRestore) {
+          cacheManager.updateCachedItem(item.id, itemType, {
+            isDeleted: 0,
+            deletedAt: null,
+            updatedAt: now
+          });
+        }
+      }
+
+      this.app.showToast(`已恢复 ${itemsToRestore.length} 个项目`, 'success');
+
+      // 4. 重新加载回收站
+      await this.loadTrash();
+
+      // 5. 刷新主界面（使用已更新的缓存数据，无需重新加载）
+      if (itemType === 'prompt' && this.app.promptPanelManager) {
+        await this.app.promptPanelManager.renderView();
+        await this.app.promptPanelManager.renderTagFilters();
+        this.app.eventBus?.emit('promptsChanged');
+      } else if (itemType === 'image' && this.app.imagePanelManager) {
+        await this.app.imagePanelManager.renderView();
+        await this.app.imagePanelManager.renderTagFilters();
+        this.app.eventBus?.emit('imagesChanged');
+      }
+
+      // 刷新统计界面
+      if (this.app.currentPanel === 'statistics') {
+        await this.app.renderStatistics();
+      }
+    } catch (error) {
+      window.electronAPI.logError('TrashManager.js', 'Failed to restore all items:', error);
+      this.app.showToast('恢复失败', 'error');
+    }
+  }
+
+  /**
    * 永久删除项目
    * @param {string} itemId - 项目 ID
    * @param {string} itemType - 项目类型
