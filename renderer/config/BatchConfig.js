@@ -1,3 +1,106 @@
+import { SimpleTagManager } from '../managers/index.js';
+
+/**
+ * 将扁平的标签列表转换为分组格式
+ * @param {Array} flatTags - 扁平标签列表 [{ name, groupId, groupName, groupType }]
+ * @returns {Array} - 分组格式 [{ id, name, type, tags: [] }]
+ */
+function convertTagsToGroupFormat(flatTags) {
+  if (!flatTags || flatTags.length === 0) return [];
+
+  const groupsMap = new Map();
+  flatTags.forEach(tag => {
+    const groupId = tag.groupId || 'ungrouped';
+    if (!groupsMap.has(groupId)) {
+      groupsMap.set(groupId, {
+        id: groupId,
+        name: tag.groupName || '未分组',
+        type: tag.groupType || 'multi',
+        tags: []
+      });
+    }
+    groupsMap.get(groupId).tags.push(tag.name);
+  });
+
+  return Array.from(groupsMap.values());
+}
+
+/**
+ * 通用批量添加标签处理函数
+ * 逻辑与 SimpleTagManager.addTags() 保持一致
+ * @param {string[]} ids - 项目ID数组
+ * @param {string} tagInput - 标签输入字符串（逗号分隔）
+ * @param {Object} options - 配置选项
+ * @param {Function} options.getItemById - 获取项目的函数 (id) => Promise<Object>
+ * @param {Function} options.updateItem - 更新项目的函数 (id, { tags }) => Promise<void>
+ * @param {Function} options.getTagsWithGroup - 获取标签组信息的函数 () => Promise<Array>
+ * @param {string} options.itemName - 项目名称（用于日志）
+ */
+async function processBatchAddTags(ids, tagInput, options) {
+  const { getItemById, updateItem, getTagsWithGroup, itemName } = options;
+
+  // 解析并去重标签（与 SimpleTagManager.addTags 一致）
+  const tagNames = tagInput.split(',').map(t => t.trim()).filter(t => t);
+  const uniqueTags = [...new Set(tagNames)];
+
+  if (uniqueTags.length === 0) return;
+
+  // 获取标签组信息并转换为分组格式
+  const flatTagsWithGroup = await getTagsWithGroup();
+  const tagsWithGroup = convertTagsToGroupFormat(flatTagsWithGroup);
+
+  let hasAnyViolation = false;
+  const allViolationGroups = [];
+
+  for (const id of ids) {
+    const item = await getItemById(id);
+    if (!item) continue;
+
+    // 过滤掉已存在的标签（与 SimpleTagManager.addTags 一致）
+    const currentItemTags = item.tags || [];
+    const tagsToAdd = uniqueTags.filter(tag => !currentItemTags.includes(tag));
+
+    if (tagsToAdd.length === 0) continue;
+
+    let currentTags = [...currentItemTags];
+    const violationGroups = [];
+
+    // 逐个添加并检查违规（与 SimpleTagManager.addTags 一致）
+    for (const tagName of tagsToAdd) {
+      const result = await SimpleTagManager.addTagWithViolationCheck(
+        currentTags,
+        tagName,
+        tagsWithGroup
+      );
+      currentTags = result.tags;
+
+      if (result.hasViolation && result.violationGroup) {
+        hasAnyViolation = true;
+        if (!violationGroups.includes(result.violationGroup)) {
+          violationGroups.push(result.violationGroup);
+        }
+      }
+    }
+
+    // 过滤空标签并更新（与 SimpleTagManager.addTags 一致）
+    const finalTags = currentTags.filter(t => t && t.trim());
+    await updateItem(id, { tags: finalTags });
+
+    // 收集违规组
+    violationGroups.forEach(group => {
+      if (!allViolationGroups.includes(group)) {
+        allViolationGroups.push(group);
+      }
+    });
+  }
+
+  // 显示违规警告（与 SimpleTagManager.addTags 一致）
+  if (hasAnyViolation && allViolationGroups.length > 0) {
+    const groupNames = allViolationGroups.join(', ');
+    window.electronAPI?.showToast?.(`警告：违反单选组限制 (${groupNames})`, 'warning');
+  }
+}
+
 /**
  * 批量操作配置
  * 统一定义提示词面板和图像面板的批量操作配置
@@ -35,19 +138,13 @@ export const BatchConfig = {
         needInput: true,
         inputTitle: '添加标签',
         inputPlaceholder: '输入要添加的标签（多个标签用逗号分隔）',
-        processItems: async (ids, tagInput, api) => {
-          const tags = tagInput.split(',').map(t => t.trim()).filter(t => t);
-          for (const id of ids) {
-            const prompt = await window.electronAPI.getPromptById(id);
-            if (!prompt) continue;
-            let currentTags = prompt.tags ? [...prompt.tags] : [];
-            for (const tagName of tags) {
-              if (!currentTags.includes(tagName)) {
-                currentTags.push(tagName);
-              }
-            }
-            await window.electronAPI.updatePrompt(id, { tags: currentTags });
-          }
+        processItems: async (ids, tagInput) => {
+          await processBatchAddTags(ids, tagInput, {
+            getItemById: (id) => window.electronAPI.getPromptById(id),
+            updateItem: (id, data) => window.electronAPI.updatePrompt(id, data),
+            getTagsWithGroup: () => window.electronAPI.getPromptTagsWithGroup(),
+            itemName: '提示词'
+          });
         },
         successMsg: (count) => `${count} 个提示词已添加标签`,
         errorMsg: '批量添加标签失败'
@@ -97,16 +194,18 @@ export const BatchConfig = {
         errorMsg: '批量删除失败'
       },
       addTag: {
-        api: 'addImageTags',
+        api: 'updateImage',
         event: 'imageTagsChanged',
         needInput: true,
         inputTitle: '添加标签',
         inputPlaceholder: '输入要添加的标签（多个标签用逗号分隔）',
-        processItems: async (ids, tagInput, api) => {
-          const tags = tagInput.split(',').map(t => t.trim()).filter(t => t);
-          for (const id of ids) {
-            await window.electronAPI[api](id, tags);
-          }
+        processItems: async (ids, tagInput) => {
+          await processBatchAddTags(ids, tagInput, {
+            getItemById: (id) => window.electronAPI.getImageById(id),
+            updateItem: (id, data) => window.electronAPI.updateImage(id, data),
+            getTagsWithGroup: () => window.electronAPI.getImageTagsWithGroup(),
+            itemName: '图像'
+          });
         },
         successMsg: (count) => `${count} 个图像已添加标签`,
         errorMsg: '批量添加标签失败'
