@@ -1750,11 +1750,11 @@ async function getImageTagsWithGroupInfo() {
  * @param {number} groupId - 标签组ID（可选）
  */
 async function addImageTag(name, groupId = null) {
-  const nowIso = localTime();
+  const now = localTime();
   try {
     await run(
       'INSERT INTO image_tags (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)',
-      [name, groupId, nowIso, nowIso]
+      [name, groupId, now, now]
     );
   } catch (err) {
     // 标签已存在，更新组ID（如果提供了）
@@ -1762,7 +1762,7 @@ async function addImageTag(name, groupId = null) {
       if (groupId !== null) {
         await run(
           'UPDATE image_tags SET group_id = ?, updated_at = ? WHERE name = ?',
-          [groupId, nowIso, name]
+          [groupId, now, name]
         );
       }
     } else {
@@ -1827,6 +1827,24 @@ async function getImageTagsByImageId(imageId) {
     ORDER BY it.name
   `;
   const rows = await all(sql, [imageId]);
+  return rows.map(row => row.name);
+}
+
+// ==================== 共享标签 ====================
+
+/**
+ * 获取所有标签（提示词标签和图像标签合并）
+ * 用于自动完成功能
+ * @returns {Promise<Array<string>>} 合并后的标签列表
+ */
+async function getAllTags() {
+  const sql = `
+    SELECT name FROM prompt_tags
+    UNION
+    SELECT name FROM image_tags
+    ORDER BY name
+  `;
+  const rows = await all(sql);
   return rows.map(row => row.name);
 }
 
@@ -2011,6 +2029,8 @@ export {
   addImageTags,
   deleteImageTag,
   assignImageTagToBelongGroup,
+  // 共享标签
+  getAllTags,
   // 数据清理
   renameDataDirectory,
   clearAllData,

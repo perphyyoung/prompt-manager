@@ -16,3 +16,6 @@ export {
 
 // 安全评级服务
 export { default as SafeRatingService } from './SafeRatingService.js';
+
+// 标签自动完成服务
+export { TagAutocomplete } from './TagAutocomplete.js';

@@ -3,6 +3,7 @@
 ## todo
 
 快捷键管理
+提示词批量添加时, 插入 prompt_tags 和 其他关联表 可以分开; prompt_tags 可以使用一次 sql 插入
 提示词主界面和图像主界面, 是否也可以使用配置驱动模式, 与当前实现有何优劣
 批量操作界面, 是否也可以使用配置驱动模式, 与当前实现有何优劣
 现在 两个回收站的操作逻辑是否一致, 变量命名是否一致, 还能再优化吗? 结合 refator skills 分析
@@ -27,8 +28,11 @@ renderer\managers\SelectionManager.js selectedItems 改为 lrucache 是否更好
 通过 google-code-review skills 审查本地变更, 使用 `git diff > git-diff.log`, 不要用交互式的 `git diff`
 根据 chat.md 的第 12 行以及 git-diff.log, 更新 readme.md 和 change.md, 并总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 
-## 20260324-3
+## 20260324-1
 
+参考 add-image-tags, 添加 add-prompt-tags, 并应用到 标签缓存上
+当前每次输入都会调用 getAllTags() 查询数据库, 建立缓存保存已有标签, 每次新增时缓存更新, 删除时缓存不变, 下次启动时更新缓存, 给出方案
+提示词标签和图像标签的自动完成功能, 能否共享标签数据? 给出共享标签数据的实现方案, 是否会与当前的功能冲突, 比如 违单, 重复标签 等
 删除批量安全, 添加批量收藏
 批量操作添加单元测试
 

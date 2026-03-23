@@ -29,6 +29,9 @@ let tray = null;
 let currentDataDir = DEFAULT_DATA_DIR;
 let pendingOldDataDir = null;
 
+// 标签缓存（用于自动完成功能）
+let allTagsCache = null;
+
 // 检测是否为测试模式
 const isTestMode = process.env.PLAYWRIGHT_TEST === 'true' || process.env.NODE_ENV === 'test';
 
@@ -281,6 +284,48 @@ async function saveImageFile(sourcePath, fileName) {
     fileName: fileName,
     isDuplicate: false
   };
+}
+
+/**
+ * 初始化标签缓存
+ * 应用启动时从数据库加载所有标签
+ */
+async function initTagsCache() {
+  try {
+    allTagsCache = await db.getAllTags();
+  } catch (error) {
+    logError('Main', 'Failed to initialize tags cache:', error);
+    allTagsCache = [];
+  }
+}
+
+/**
+ * 更新标签缓存（添加新标签）
+ * @param {string} tagName - 标签名称
+ */
+function addTagToCache(tagName) {
+  if (allTagsCache && !allTagsCache.includes(tagName)) {
+    allTagsCache.push(tagName);
+    allTagsCache.sort();
+  }
+}
+
+/**
+ * 批量更新标签缓存
+ * @param {Array<string>} tagNames - 标签名称数组
+ */
+function addTagsToCache(tagNames) {
+  if (!allTagsCache) return;
+  let updated = false;
+  for (const tagName of tagNames) {
+    if (!allTagsCache.includes(tagName)) {
+      allTagsCache.push(tagName);
+      updated = true;
+    }
+  }
+  if (updated) {
+    allTagsCache.sort();
+  }
 }
 
 /**
@@ -618,9 +663,24 @@ ipcMain.handle('get-prompt-tags', async () => {
 ipcMain.handle('add-prompt-tag', async (event, tag) => {
   try {
     await db.addPromptTag(tag);
+    // 更新缓存
+    addTagToCache(tag);
     return await db.getPromptTags();
   } catch (error) {
     logError('Main', 'Add prompt tag error:', error);
+    throw error;
+  }
+});
+
+// 为提示词添加多个标签
+ipcMain.handle('add-prompt-tags', async (event, promptId, tagNames) => {
+  try {
+    await db.addPromptTags(promptId, tagNames);
+    // 批量更新缓存
+    addTagsToCache(tagNames);
+    return true;
+  } catch (error) {
+    logError('Main', 'Add prompt tags error:', error);
     throw error;
   }
 });
@@ -966,6 +1026,8 @@ ipcMain.handle('get-image-tags', async () => {
 ipcMain.handle('add-image-tag', async (event, tag) => {
   try {
     await db.addImageTag(tag);
+    // 更新缓存
+    addTagToCache(tag);
     return await db.getImageTags();
   } catch (error) {
     logError('Main', 'Add image tag error:', error);
@@ -977,6 +1039,8 @@ ipcMain.handle('add-image-tag', async (event, tag) => {
 ipcMain.handle('add-image-tags', async (event, imageId, tagNames) => {
   try {
     await db.addImageTags(imageId, tagNames);
+    // 批量更新缓存
+    addTagsToCache(tagNames);
     return true;
   } catch (error) {
     logError('Main', 'Add image tags error:', error);
@@ -1089,6 +1153,15 @@ ipcMain.handle('get-image-tags-with-group', async () => {
     logError('Main', 'Get image tags with group error:', error);
     throw error;
   }
+});
+
+// 获取所有标签（提示词和图像标签合并）
+ipcMain.handle('get-all-tags', async () => {
+  // 如果缓存未初始化，先加载
+  if (!allTagsCache) {
+    await initTagsCache();
+  }
+  return allTagsCache;
 });
 
 // 分配图像标签到所属组
@@ -1339,6 +1412,9 @@ app.whenReady().then(async () => {
   } catch (err) {
     logError('Main', 'Failed to initialize database:', err);
   }
+
+  // 初始化标签缓存
+  await initTagsCache();
 
   // 配置 CSP（Content Security Policy）
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {

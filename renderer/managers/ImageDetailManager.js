@@ -8,7 +8,7 @@ import { SaveManager, ImageSaveStrategy } from '../renderer_utils/index.js';
 import { SimpleTagManager } from './SimpleTagManager.js';
 import { EditableTagList } from '../components/index.js';
 import { Constants } from '../constants.js';
-import { DialogService, DialogConfig } from '../services/index.js';
+import { DialogService, DialogConfig, TagAutocomplete } from '../services/index.js';
 
 export class ImageDetailManager extends DetailViewManager {
   /**
@@ -283,40 +283,40 @@ export class ImageDetailManager extends DetailViewManager {
    * @private
    */
   bindTagInputEvents() {
-    const input = document.getElementById('imageDetailTagInput');
-    if (!input) return;
-
-    // 移除旧的事件监听器（如果存在）
-    if (this.tagInputHandler) {
-      input.removeEventListener('keydown', this.tagInputHandler);
+    // 清理旧的自动完成组件
+    if (this.tagAutocomplete) {
+      this.tagAutocomplete.destroy();
     }
 
-    // 创建新的事件处理函数
-    this.tagInputHandler = async (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        let tagName = input.value.trim();
-        // 去除开头和结尾的逗号
-        tagName = tagName.replace(/^[，,]+|[，,]+$/g, '');
-        if (tagName) {
-          try {
-            // 支持批量添加（逗号或空格分隔）
-            const tagNames = tagName.split(/[,，\s]+/).filter(t => t.trim());
-            if (tagNames.length > 1) {
-              await this.simpleTagManager.addTags(tagNames);
-            } else {
-              await this.simpleTagManager.addTag(tagName);
-            }
-            input.value = '';
-          } catch (error) {
-            window.electronAPI.logError('ImageDetailManager.js', 'Failed to add tag:', error);
-            this.app.showToast(error.message, 'error');
-          }
+    // 创建新的自动完成组件
+    this.tagAutocomplete = new TagAutocomplete({
+      inputId: 'imageDetailTagInput',
+      dropdownId: 'imageDetailTagAutocomplete',
+      getTags: () => window.electronAPI.getAllTags(),
+      onSelect: async (tagName) => {
+        try {
+          await this.simpleTagManager.addTag(tagName);
+        } catch (error) {
+          window.electronAPI.logError('ImageDetailManager.js', 'Failed to add tag:', error);
+          this.app.showToast(error.message, 'error');
         }
-      }
-    };
+      },
+      onBatchAdd: async (tagNames) => {
+        try {
+          if (tagNames.length === 1) {
+            await this.simpleTagManager.addTag(tagNames[0]);
+          } else {
+            await this.simpleTagManager.addTags(tagNames);
+          }
+        } catch (error) {
+          window.electronAPI.logError('ImageDetailManager.js', 'Failed to add tags:', error);
+          this.app.showToast(error.message, 'error');
+        }
+      },
+      containerSelector: '.image-tag-input-area'
+    });
 
-    input.addEventListener('keydown', this.tagInputHandler);
+    this.tagAutocomplete.init();
   }
 
   /**

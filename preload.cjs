@@ -114,6 +114,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPromptTags: () => ipcRenderer.invoke('get-prompt-tags'),
   /** 添加提示词标签 @param {string} tag - 标签名称 */
   addPromptTag: (tag) => ipcRenderer.invoke('add-prompt-tag', tag),
+  /** 为提示词添加多个标签 @param {string} promptId - 提示词 ID @param {Array} tagNames - 标签名称数组 */
+  addPromptTags: (promptId, tagNames) => ipcRenderer.invoke('add-prompt-tags', promptId, tagNames),
   /** 删除提示词标签 @param {string} tag - 标签名称 */
   deletePromptTag: (tag) => ipcRenderer.invoke('delete-prompt-tag', tag),
   /** 重命名提示词标签 @param {string} oldTag - 原标签名 @param {string} newTag - 新标签名 */
@@ -166,6 +168,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   scanOrphanFiles: () => ipcRenderer.invoke('scan-orphan-files'),
   /** 导出并删除孤儿文件 @param {Array} orphanFiles - 孤儿文件列表 @param {string} exportDir - 导出目录 */
   exportAndDeleteOrphanFiles: (orphanFiles, exportDir) => ipcRenderer.invoke('export-and-delete-orphan-files', orphanFiles, exportDir),
+
+  // ==================== 共享标签 ====================
+  /** 获取所有标签（提示词和图像标签合并） */
+  getAllTags: () => ipcRenderer.invoke('get-all-tags'),
 
   // ==================== 统计 ====================
   /** 获取数据库统计信息 */
