@@ -72,6 +72,69 @@ export class PanelManagerBase {
 
     // 绑定事件
     this.subscribeToEvents();
+
+    // 绑定键盘事件（批量操作快捷键）
+    this.bindKeyboardEvents();
+  }
+
+  /**
+   * 绑定键盘事件
+   * 支持批量操作的快捷键
+   */
+  bindKeyboardEvents() {
+    document.addEventListener('keydown', (e) => {
+      // Ctrl+A: 全选（仅列表视图和紧凑视图支持）
+      if (e.ctrlKey && e.key.toLowerCase() === 'a') {
+        // 检查当前面板是否活动（可见）
+        if (!this.isActivePanel()) return;
+
+        // 检查当前视图模式
+        if (this.viewModeType === 'list' || this.viewModeType === 'compact') {
+          // 检查是否有可见项目
+          const visibleItems = this.getItems().filter(
+            item => !item.isDeleted && (this.viewMode !== 'safe' || item.isSafe !== 0)
+          );
+          if (visibleItems.length > 0) {
+            e.preventDefault();
+            this.selectAllVisibleItems();
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * 检查当前面板是否是活动面板（可见）
+   * @returns {boolean}
+   */
+  isActivePanel() {
+    // 通过 app.currentPanel 判断当前活动面板
+    const currentPanel = this.app?.currentPanel;
+    if (!currentPanel) return false;
+
+    // 根据 storagePrefix 判断面板类型
+    // prompt -> 'prompt', image -> 'image'
+    return currentPanel === this.storagePrefix;
+  }
+
+  /**
+   * 全选所有可见项目
+   */
+  selectAllVisibleItems() {
+    const visibleItems = this.getItems().filter(
+      item => !item.isDeleted && (this.viewMode !== 'safe' || item.isSafe !== 0)
+    );
+
+    visibleItems.forEach(item => {
+      this.selectedIds.add(String(item.id));
+    });
+
+    // 进入批量模式
+    if (this.toolbarController) {
+      this.toolbarController.enterBatchMode();
+    }
+
+    this.renderView();
   }
 
   /**
