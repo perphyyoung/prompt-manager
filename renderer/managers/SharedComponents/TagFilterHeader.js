@@ -1,4 +1,4 @@
-import { TagHtmlGenerator } from './TagHtmlGenerator.js';
+import { HtmlUtils } from '../../../utils/index.js';
 
 /**
  * 标签筛选头部
@@ -127,8 +127,8 @@ export class TagFilterHeader {
         const draggableAttr = (!isSpecial && dragType) ? 'draggable="true"' : '';
         const dragTypeAttr = (!isSpecial && dragType) ? `data-drag-type="${dragType}"` : '';
         return `
-          <button class="tag-filter-item ${className || ''}" data-tag="${TagHtmlGenerator.escapeHtml(tag)}" data-is-special="${isSpecial}" data-is-top-group="${isTopGroup || false}" data-is-single-select="${isSingleSelect || false}" ${draggableAttr} ${dragTypeAttr}>
-            <span class="tag-name">${TagHtmlGenerator.escapeHtml(tag)}</span>
+          <button class="tag-filter-item ${className || ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="${isSpecial}" data-is-top-group="${isTopGroup || false}" data-is-single-select="${isSingleSelect || false}" ${draggableAttr} ${dragTypeAttr}>
+            <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
             <span class="tag-badge">${count || 0}</span>
           </button>
         `;

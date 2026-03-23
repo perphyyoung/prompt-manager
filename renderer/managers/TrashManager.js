@@ -1,5 +1,5 @@
-import { DialogService, DialogConfig } from '../services/DialogService.js';
-import { localTime } from '../../utils/TimeUtils.js';
+import { DialogService, DialogConfig } from '../services/index.js';
+import { localTime } from '../../utils/index.js';
 
 /**
  * 回收站管理器

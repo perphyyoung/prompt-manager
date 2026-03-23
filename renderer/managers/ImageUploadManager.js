@@ -1,4 +1,4 @@
-import { DelaySaveStrategy } from '../services/UploadStrategies.js';
+import { DelaySaveStrategy } from '../services/index.js';
 import { ImagePreviewManager } from './ImagePreviewManager.js';
 
 /**

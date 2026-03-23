@@ -2,28 +2,18 @@
  * 重构版应用主类
  * 作为协调器，整合各个面板管理器
  */
+
 import { Constants } from './constants.js';
-import SafeRatingService from './services/SafeRatingService.js';
-import { DialogService, DialogConfig } from './services/DialogService.js';
+import { SafeRatingService, DialogService, DialogConfig } from './services/index.js';
 import {
   PromptPanelManager, ImagePanelManager,
-  TagService, TagRegistry, TagUI,
-  TrashManager, BatchOperationsManager, SimpleTagManager,
-  ImageFullscreenManager, PromptDetailManager, ImageDetailManager,
+  TagRegistry, TrashManager, BatchOperationsManager, ImageFullscreenManager, PromptDetailManager, ImageDetailManager,
   ModalManager, TagGroupModalManager, ToastManager, NavigationManager, SearchSortManager,
   ToolbarManager, ImportExportManager, SettingsManager, ImageSelectorManager,
   NewPromptManager, ImageUploadManager, ImageContextMenuManager
 } from './managers/index.js';
-import { EventBus, HoverTooltipManager, ShortcutManager, HtmlUtils } from './utils/index.js';
-
-// 导入 isSameId 工具函数
-import { isSameId } from './utils/isSameId.js';
-
-// 导入 cacheManager
-import { cacheManager } from './utils/CacheManager.js';
-
-// PromptManager 日志文件路径
-const PROMPT_MANAGER_LOG_FILE = new URL('../prompt_manager.log', import.meta.url).pathname;
+import { EventBus, HtmlUtils, isSameId, cacheManager } from '../utils/index.js';
+import { HoverTooltipManager, ShortcutManager } from './renderer_utils/index.js';
 
 /**
  * 主应用类 - 协调器
@@ -58,10 +48,10 @@ class PromptManager {
 
     // 事件总线
     this.eventBus = new EventBus();
-    
+
     // 服务
     this.safeRatingService = new SafeRatingService();
-    
+
     // 面板管理器（初始化后赋值）
     this.promptPanelManager = null;
     this.imagePanelManager = null;
@@ -115,7 +105,7 @@ class PromptManager {
 
       // 加载数据（初始化，不刷新）
       await this.loadData(false);
-      
+
       // 恢复上次打开的面板
       this.navigationManager.restorePanelState();
     } catch (error) {
@@ -131,12 +121,12 @@ class PromptManager {
     const savedTheme = localStorage.getItem(Constants.LocalStorageKey.THEME) || 'dark';
     const html = document.documentElement;
     html.setAttribute('data-theme', savedTheme);
-    
+
     // 更新主题按钮文本
     const themeToggle = document.getElementById('settingsThemeToggle');
     if (themeToggle) {
-      themeToggle.innerHTML = savedTheme === 'dark' 
-        ? '<span>☀️</span> 明亮' 
+      themeToggle.innerHTML = savedTheme === 'dark'
+        ? '<span>☀️</span> 明亮'
         : '<span>🌙</span> 暗黑';
     }
   }
@@ -368,7 +358,7 @@ class PromptManager {
   async bindNavigationEvents() {
     // 导航事件由 NavigationManager 处理
     const settingsBtn = document.getElementById('settingsBtn');
-    
+
     settingsBtn?.addEventListener('click', async () => {
       this.openSettingsModal();
     });
@@ -1062,7 +1052,7 @@ class PromptManager {
 
       // 重新渲染列表
       await this.promptPanelManager.refreshAfterUpdate();
-      
+
       this.showToast('标签已添加', 'success');
     } catch (error) {
       const errorInfo = {
@@ -1186,7 +1176,7 @@ class PromptManager {
     if (!toolbar) return;
 
     const selectedCount = this.promptPanelManager?.selectedIds?.size || 0;
-    
+
     if (selectedCount > 0) {
       toolbar.style.display = 'flex';
       const countEl = document.getElementById('promptBatchSelectedCount');
@@ -1426,10 +1416,10 @@ class PromptManager {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const index = parseInt(btn.dataset.index);
-        
+
         // 从当前列表获取图像
         const imgRef = this.displayedImages[index];
-        
+
         // 显示确认对话框
         const confirmed = await DialogService.showConfirmDialogByConfig(DialogConfig.REMOVE_IMAGE_FROM_PROMPT);
         if (!confirmed) return;

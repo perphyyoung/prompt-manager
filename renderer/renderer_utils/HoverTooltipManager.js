@@ -1,5 +1,4 @@
-import { isSameId } from '../utils/isSameId.js';
-import { cacheManager } from './CacheManager.js';
+import { isSameId, cacheManager } from '../../utils/index.js';
 
 /**
  * Hover Tooltip 管理器

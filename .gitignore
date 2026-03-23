@@ -1,4 +1,5 @@
 # Custom files
+*.diff
 renderer/styles-*
 testing-playwright/*
 重构/*

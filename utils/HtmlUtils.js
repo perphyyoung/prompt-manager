@@ -16,6 +16,23 @@ export class HtmlUtils {
   }
 
   /**
+   * 转义 HTML 属性值
+   * @param {string} text - 要转义的文本
+   * @returns {string} 转义后的属性值
+   */
+  static escapeAttr(text) {
+    if (!text) return '';
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/\n/g, '&#10;')
+      .replace(/\r/g, '&#13;');
+  }
+
+  /**
    * 格式化文件大小
    * @param {number} bytes - 字节数
    * @returns {string} - 格式化后的文件大小

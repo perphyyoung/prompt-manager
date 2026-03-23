@@ -1,5 +1,5 @@
+import { HtmlUtils, LRUCache } from '../../utils/index.js';
 import { TagUI } from './TagUI.js';
-import { LRUCache } from '../utils/LRUCache.js';
 
 /**
  * 面板管理器基类
@@ -415,8 +415,8 @@ export class PanelManagerBase {
     const specialTagsHtml = specialTags.map(({ tag, count }) => {
       const isActive = this.selectedTags.has(tag);
       return `
-        <button class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${TagUI.escapeHtml(tag)}" data-is-special="true">
-          <span class="tag-name">${TagUI.escapeHtml(tag)}</span>
+        <button class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="true">
+          <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
           <span class="tag-badge">${count}</span>
         </button>
       `;

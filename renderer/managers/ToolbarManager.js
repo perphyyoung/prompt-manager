@@ -2,7 +2,7 @@
  * 工具栏管理器
  * 负责处理工具栏按钮事件和操作
  */
-import { DialogService, DialogConfig } from '../services/DialogService.js';
+import { DialogService, DialogConfig } from '../services/index.js';
 
 export class ToolbarManager {
   /**

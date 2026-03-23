@@ -1,5 +1,5 @@
 import { Constants } from '../constants.js';
-import { DialogService, DialogConfig } from '../services/DialogService.js';
+import { DialogService, DialogConfig } from '../services/index.js';
 
 /**
  * 简化版标签管理器（用于编辑界面）

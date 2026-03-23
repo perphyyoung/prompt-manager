@@ -1,5 +1,5 @@
 import { Constants } from '../constants.js';
-import { ListNavigator } from '../../utils/ListNavigator.js';
+import { ListNavigator } from '../../utils/index.js';
 
 /**
  * 详情视图管理器基类

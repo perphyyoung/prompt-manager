@@ -1,3 +1,4 @@
+import { HtmlUtils } from '../../../utils/index.js';
 import { Constants } from '../../constants.js';
 
 /**
@@ -5,35 +6,6 @@ import { Constants } from '../../constants.js';
  * 提供通用的标签 HTML 生成方法
  */
 export class TagHtmlGenerator {
-  /**
-   * HTML 转义
-   * @param {string} text - 要转义的文本
-   * @returns {string} 转义后的 HTML 字符串
-   */
-  static escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  /**
-   * 转义 HTML 属性值
-   * @param {string} text - 要转义的文本
-   * @returns {string} 转义后的属性值
-   */
-  static escapeAttr(text) {
-    if (!text) return '';
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;')
-      .replace(/\n/g, '&#10;')
-      .replace(/\r/g, '&#13;');
-  }
-
   /**
    * 获取普通标签（过滤所有特殊标签）
    * @param {string[]} tags - 原始标签数组
@@ -58,7 +30,7 @@ export class TagHtmlGenerator {
     }
 
     return normalTags.map(tag => {
-      return `<span class="${tagClass}">${TagHtmlGenerator.escapeHtml(tag)}</span>`;
+      return `<span class="${tagClass}">${HtmlUtils.escapeHtml(tag)}</span>`;
     }).join('');
   }
 
@@ -70,7 +42,7 @@ export class TagHtmlGenerator {
    */
   static generateNoteHtml(note, noteClass) {
     if (!note || !note.trim()) return '';
-    return `<div class="${noteClass}" title="${TagHtmlGenerator.escapeAttr(note)}">${TagHtmlGenerator.escapeHtml(note)}</div>`;
+    return `<div class="${noteClass}" title="${HtmlUtils.escapeAttr(note)}">${HtmlUtils.escapeHtml(note)}</div>`;
   }
 
   /**
@@ -94,8 +66,8 @@ export class TagHtmlGenerator {
         const isActive = selectedSet.has(tag);
         const dragType = isImage ? 'image-tag' : 'prompt-tag';
         return `
-          <button class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${TagHtmlGenerator.escapeHtml(tag)}" data-is-special="true" draggable="true" data-drag-type="${dragType}">
-            <span class="tag-name">${TagHtmlGenerator.escapeHtml(tag)}</span>
+          <button class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="true" draggable="true" data-drag-type="${dragType}">
+            <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
             <span class="tag-badge">${count}</span>
           </button>
         `;
@@ -135,15 +107,15 @@ export class TagHtmlGenerator {
 
         const groupTypeText = group.type === 'single' ? '单选' : '多选';
         html += `<div class="tag-filter-group">`;
-        html += `<div class="tag-filter-group-title">${TagHtmlGenerator.escapeHtml(group.name)} <span class="tag-filter-group-type">${groupTypeText}</span></div>`;
+        html += `<div class="tag-filter-group-title">${HtmlUtils.escapeHtml(group.name)} <span class="tag-filter-group-type">${groupTypeText}</span></div>`;
         html += '<div class="tag-filter-group-content">';
 
         html += visibleTags.map(({ tag, count }) => {
           const isActive = selectedSet.has(tag);
           const dragType = isImage ? 'image-tag' : 'prompt-tag';
           return `
-            <div class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${TagHtmlGenerator.escapeHtml(tag)}" draggable="true" data-drag-type="${dragType}">
-              <span class="tag-name">${TagHtmlGenerator.escapeHtml(tag)}</span>
+            <div class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" draggable="true" data-drag-type="${dragType}">
+              <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
               <span class="tag-badge">${count}</span>
             </div>
           `;
@@ -162,8 +134,8 @@ export class TagHtmlGenerator {
           const isActive = selectedSet.has(tag);
           const dragType = isImage ? 'image-tag' : 'prompt-tag';
           return `
-            <div class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${TagHtmlGenerator.escapeHtml(tag)}" draggable="true" data-drag-type="${dragType}">
-              <span class="tag-name">${TagHtmlGenerator.escapeHtml(tag)}</span>
+            <div class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" draggable="true" data-drag-type="${dragType}">
+              <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
               <span class="tag-badge">${count}</span>
             </div>
           `;

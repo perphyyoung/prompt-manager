@@ -1,4 +1,4 @@
-import { isSameId } from '../utils/isSameId.js';
+import { isSameId, HtmlUtils } from '../../utils/index.js';
 import { Constants } from '../constants.js';
 
 /**
@@ -111,8 +111,8 @@ export class ImageSelectorManager {
       }));
 
       grid.innerHTML = imageItems.map(image => `
-        <div class="image-selector-item" data-image-id="${image.id}" data-image-path="${this.escapeHtml(image.relativePath || image.path)}">
-          <img src="file://${this.escapeHtml(image.fullPath)}" alt="${this.escapeHtml(image.name || image.fileName)}" loading="lazy">
+        <div class="image-selector-item" data-image-id="${image.id}" data-image-path="${HtmlUtils.escapeHtml(image.relativePath || image.path)}">
+          <img src="file://${HtmlUtils.escapeHtml(image.fullPath)}" alt="${HtmlUtils.escapeHtml(image.name || image.fileName)}" loading="lazy">
         </div>
       `).join('');
 
@@ -145,7 +145,7 @@ export class ImageSelectorManager {
     try {
       const tags = await window.electronAPI.getImageTags();
       tagFilter.innerHTML = '<option value="">所有标签</option>' +
-        tags.map(tag => `<option value="${this.escapeHtml(tag)}">${this.escapeHtml(tag)}</option>`).join('');
+        tags.map(tag => `<option value="${HtmlUtils.escapeHtml(tag)}">${HtmlUtils.escapeHtml(tag)}</option>`).join('');
     } catch (error) {
       window.electronAPI.logError('ImageSelectorManager.js', 'Failed to render image selector tag filters:', error);
     }
@@ -241,18 +241,5 @@ export class ImageSelectorManager {
     }
 
     this.close();
-  }
-
-  /**
-   * HTML转义
-   * @param {string} text - 需要转义的文本
-   * @returns {string} - 转义后的HTML
-   * @private
-   */
-  escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   }
 }

@@ -1,8 +1,8 @@
+import { cacheManager } from '../../utils/index.js';
 import { PanelManagerBase } from './PanelManagerBase.js';
 import { PanelRenderer, PanelItemRenderer } from './SharedComponents/index.js';
 import { Constants } from '../constants.js';
-import { DialogService, DialogConfig } from '../services/DialogService.js';
-import { cacheManager } from '../utils/CacheManager.js';
+import { DialogService, DialogConfig } from '../services/index.js';
 
 /**
  * 图像面板管理器

@@ -1,3 +1,4 @@
+import { HtmlUtils } from '../../utils/index.js';
 import { Constants } from '../constants.js';
 
 /**
@@ -56,7 +57,7 @@ export class EditableTagList {
 
     if (tags.length > 0) {
       container.innerHTML = tags.map(tag => {
-        const escapedTag = this.escapeHtml(tag);
+        const escapedTag = HtmlUtils.escapeHtml(tag);
         return `<span class="tag-editable tag-removable" data-tag="${escapedTag}">
           ${escapedTag}
           <span class="tag-remove-btn" title="删除标签">×</span>
@@ -73,14 +74,5 @@ export class EditableTagList {
   renderWithInit() {
     this.init();
     this.render();
-  }
-
-  /**
-   * HTML 转义
-   */
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   }
 }

@@ -1,4 +1,5 @@
 import { TagUI } from '../TagUI.js';
+import { HtmlUtils } from '../../../utils/index.js';
 
 /**
  * 面板项渲染器
@@ -45,12 +46,12 @@ export class PanelItemRenderer {
     let dynamicInfo = '';
     if (sortBy === 'updatedAt' && prompt.updatedAt) {
       const date = new Date(prompt.updatedAt);
-      dynamicInfo = `<div class="prompt-card-dynamic-info">更新于 ${date.toLocaleDateString('zh-CN')}</div>`;
+      dynamicInfo = `<div class="card-footer-info">更新于 ${date.toLocaleDateString('zh-CN')}</div>`;
     } else if (sortBy === 'createdAt' && prompt.createdAt) {
       const date = new Date(prompt.createdAt);
-      dynamicInfo = `<div class="prompt-card-dynamic-info">创建于 ${date.toLocaleDateString('zh-CN')}</div>`;
+      dynamicInfo = `<div class="card-footer-info">创建于 ${date.toLocaleDateString('zh-CN')}</div>`;
     } else {
-      dynamicInfo = `<div class="prompt-card-title">${TagUI.escapeHtml(prompt.title || '无标题')}</div>`;
+      dynamicInfo = `<div class="card-footer-info">${HtmlUtils.escapeHtml(prompt.title || '无标题')}</div>`;
     }
 
     return {
@@ -86,7 +87,7 @@ export class PanelItemRenderer {
           icon: icons.delete
         }
       ],
-      content: TagUI.escapeHtml(prompt.content),
+      content: HtmlUtils.escapeHtml(prompt.content),
       footer: {
         tags: tagsHtml,
         dynamicInfo
@@ -106,16 +107,20 @@ export class PanelItemRenderer {
     const favoriteIcon = img.isFavorite ? icons.favorite.filled : icons.favorite.outline;
     const tagsHtml = TagUI.generateTagsHtml(img.tags, 'tag-display', 'tag-display-empty');
 
-    // 动态信息
+    // 动态信息 - 根据排序字段显示对应信息
     let dynamicInfo = '';
     if (sortBy === 'updatedAt' && img.updatedAt) {
       const date = new Date(img.updatedAt);
-      dynamicInfo = `<div class="image-card-dynamic-info">更新于 ${date.toLocaleDateString('zh-CN')}</div>`;
+      dynamicInfo = `<div class="card-footer-info">更新于 ${date.toLocaleDateString('zh-CN')}</div>`;
     } else if (sortBy === 'createdAt' && img.createdAt) {
       const date = new Date(img.createdAt);
-      dynamicInfo = `<div class="image-card-dynamic-info">创建于 ${date.toLocaleDateString('zh-CN')}</div>`;
+      dynamicInfo = `<div class="card-footer-info">创建于 ${date.toLocaleDateString('zh-CN')}</div>`;
+    } else if ((sortBy === 'width' || sortBy === 'height') && (img.width || img.height)) {
+      dynamicInfo = `<div class="card-footer-info">${img.width || '?'} x ${img.height || '?'}</div>`;
+    } else if (sortBy === 'fileSize' && img.fileSize) {
+      dynamicInfo = `<div class="card-footer-info">${HtmlUtils.formatFileSize(img.fileSize)}</div>`;
     } else {
-      dynamicInfo = `<div class="image-card-file-name">${TagUI.escapeHtml(img.fileName)}</div>`;
+      dynamicInfo = `<div class="card-footer-info">${HtmlUtils.escapeHtml(img.fileName)}</div>`;
     }
 
     return {
@@ -283,7 +288,7 @@ export class PanelItemRenderer {
           ${thumbnailHtml}
           <div class="prompt-list-text-content">
             <div class="prompt-list-item-header">
-              <div class="prompt-list-title">${TagUI.escapeHtml(prompt.title || '无标题')}</div>
+              <div class="prompt-list-title">${HtmlUtils.escapeHtml(prompt.title || '无标题')}</div>
               <div class="prompt-list-tags">${tagsHtml}</div>
             </div>
           </div>
@@ -309,10 +314,10 @@ export class PanelItemRenderer {
         ${thumbnailHtml}
         <div class="prompt-list-text-content">
           <div class="prompt-list-item-header">
-            <div class="prompt-list-title">${TagUI.escapeHtml(prompt.title || '无标题')}</div>
+            <div class="prompt-list-title">${HtmlUtils.escapeHtml(prompt.title || '无标题')}</div>
             <div class="prompt-list-tags">${tagsHtml}</div>
           </div>
-          <div class="prompt-list-content">${TagUI.escapeHtml(prompt.content)}</div>
+          <div class="prompt-list-content">${HtmlUtils.escapeHtml(prompt.content)}</div>
           ${noteHtml}
         </div>
         <div class="prompt-list-actions">
@@ -374,7 +379,7 @@ export class PanelItemRenderer {
           </div>
           <div class="image-list-text-content">
             <div class="image-list-item-header">
-              <div class="image-list-title">${TagUI.escapeHtml(img.name || '无标题')}</div>
+              <div class="image-list-title">${HtmlUtils.escapeHtml(img.name || '无标题')}</div>
               <div class="image-list-tags">${tagsHtml}</div>
             </div>
           </div>
@@ -387,7 +392,7 @@ export class PanelItemRenderer {
     }
 
     // 完整列表视图
-    const metaHtml = `<div class="image-list-meta"><span>${img.width || '?'} x ${img.height || '?'}</span><span>${PanelItemRenderer.formatFileSize(img.fileSize)}</span></div>`;
+    const metaHtml = `<div class="image-list-meta"><span>${img.width || '?'} x ${img.height || '?'}</span><span>${HtmlUtils.formatFileSize(img.fileSize)}</span></div>`;
 
     return `
       <div class="image-list-item ${isCompactClass} ${isFavoriteClass} ${isSelectedClass}"
@@ -400,7 +405,7 @@ export class PanelItemRenderer {
         </div>
         <div class="image-list-text-content">
           <div class="image-list-item-header">
-            <div class="image-list-title">${TagUI.escapeHtml(img.name || '无标题')}</div>
+            <div class="image-list-title">${HtmlUtils.escapeHtml(img.name || '无标题')}</div>
             <div class="image-list-tags">${tagsHtml}</div>
           </div>
           ${metaHtml}
@@ -413,18 +418,6 @@ export class PanelItemRenderer {
     `;
   }
 
-  /**
-   * 格式化文件大小
-   * @param {number} bytes - 字节数
-   * @returns {string} 格式化后的文件大小
-   */
-  static formatFileSize(bytes) {
-    if (!bytes || bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  }
 }
 
 export default PanelItemRenderer;

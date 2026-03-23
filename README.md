@@ -228,12 +228,20 @@ cnpm start
 | `main.js` | Electron 主进程入口 (ES Module) |
 | `preload.cjs` | 预加载脚本，暴露安全 API (CommonJS) |
 | `database.js` | SQLite 数据库操作模块 (ES Module) |
+| `logger.js` | 统一日志服务，输出到控制台和 debug.log |
 | `package.json` | 项目配置和依赖 |
 | `start-debug.bat` | 调试模式启动脚本 |
 | `start-hidden.vbs` | 静默启动脚本（无命令行窗口） |
 | `renderer/` | 渲染进程代码（HTML/CSS/JS） |
 | `node_modules/` | npm 依赖包（安装后生成） |
 | `config.json` | 应用配置文件 |
+
+### 工具脚本
+
+| 路径 | 说明 |
+| ------ | ------ |
+| `verify-imports.js` | JS 文件 import 验证脚本 |
+| `js文件树.md` | 项目 JS 文件结构文档 |
 
 ### 运行时生成
 

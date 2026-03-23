@@ -1,5 +1,37 @@
 # 更新日志
 
+## 20260323
+
+### 日志系统统一
+
+- 重构日志系统，所有日志统一通过 `logger.js` 管理
+- logger.js 同时输出到控制台和 `debug.log` 文件
+- main.js 中的 `console.error/warn/log` 全部改为 `logError/logWarn/logInfo`
+- 添加 `renderer-log` IPC 通道，渲染进程日志通过 IPC 写入 debug.log
+- preload.cjs 更新日志方法，使用 IPC 通道发送日志
+
+### 代码组织优化
+
+- utils 目录重组：`renderer/utils/` → `utils/`（根目录）+ `renderer/renderer_utils/`
+- 修复 PromptPanelManager.js 的 import 路径错误（`../../../utils` → `../../utils`）
+- 统一使用 index.js 导入，避免直接导入子模块
+
+### 代码质量
+
+- 移除 index.html 中的内联脚本（避免 CSP 冲突）
+- 移除 app.js 中的调试代码和错误捕获
+- 移除 preload.cjs 中的早期错误捕获
+
+### 开发工具
+
+- 新增 `verify-imports.js` 脚本，用于验证 JS 文件 import 正确性
+- 更新 `js文件树.md`，反映最新的文件结构
+
+### 已知问题说明
+
+- ES Module 静态 import 错误无法被运行时捕获，依赖 IDE/编辑器验证
+- 建议使用 `node verify-imports.js` 定期检查 import 路径
+
 ## 20260322-3
 
 ### 图像预填充功能

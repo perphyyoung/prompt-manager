@@ -3,13 +3,12 @@
  * 负责管理提示词详情模态框
  */
 import { DetailViewManager } from './DetailViewManager.js';
-import { SaveManager, PromptSaveStrategy, validateTitle, HtmlUtils } from '../utils/index.js';
-import { isSameId } from '../utils/isSameId.js';
+import { validateTitle, cacheManager } from '../../utils/index.js';
+import { SaveManager, PromptSaveStrategy } from '../renderer_utils/index.js';
 import { Constants } from '../constants.js';
-import { cacheManager } from '../utils/CacheManager.js';
-import { DirectSaveStrategy } from '../services/UploadStrategies.js';
+import { DirectSaveStrategy } from '../services/index.js';
 import { SimpleTagManager } from './SimpleTagManager.js';
-import { EditableTagList } from '../components/EditableTagList.js';
+import { EditableTagList } from '../components/index.js';
 
 export class PromptDetailManager extends DetailViewManager {
   /**

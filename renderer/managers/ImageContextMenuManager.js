@@ -1,4 +1,4 @@
-import { cacheManager } from '../utils/CacheManager.js';
+import { cacheManager } from '../../utils/index.js';
 
 /**
  * 图像右键菜单管理器

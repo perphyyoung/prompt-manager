@@ -6,8 +6,8 @@
 import sqlite3 from 'sqlite3';
 import path from 'path';
 import { promises as fs } from 'fs';
-import { logInfo, logDebug, logError } from './logger.js';
-import { getFormattedLocalTimeToSecond, localTime } from './utils/TimeUtils.js';
+import { logError } from './logger.js';
+import { getFormattedLocalTimeToSecond, localTime } from './utils/index.js';
 
 sqlite3.verbose();
 

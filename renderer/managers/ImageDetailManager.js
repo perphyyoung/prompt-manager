@@ -3,13 +3,12 @@
  * 负责管理图像详情模态框
  */
 import { DetailViewManager } from './DetailViewManager.js';
-import { SaveManager, HtmlUtils, ImageSaveStrategy, validateFileName } from '../utils/index.js';
-import { SimpleTagManager } from '../managers/SimpleTagManager.js';
-import { EditableTagList } from '../components/EditableTagList.js';
-import { isSameId } from '../utils/isSameId.js';
+import { HtmlUtils, validateFileName, isSameId, cacheManager } from '../../utils/index.js';
+import { SaveManager, ImageSaveStrategy } from '../renderer_utils/index.js';
+import { SimpleTagManager } from './SimpleTagManager.js';
+import { EditableTagList } from '../components/index.js';
 import { Constants } from '../constants.js';
-import { cacheManager } from '../utils/CacheManager.js';
-import { DialogService, DialogConfig } from '../services/DialogService.js';
+import { DialogService, DialogConfig } from '../services/index.js';
 
 export class ImageDetailManager extends DetailViewManager {
   /**

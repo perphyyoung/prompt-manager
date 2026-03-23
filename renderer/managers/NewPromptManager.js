@@ -1,7 +1,6 @@
-import { DialogService, DialogConfig } from '../services/DialogService.js';
-import { DelaySaveStrategy } from '../services/UploadStrategies.js';
+import { DialogService, DialogConfig, DelaySaveStrategy } from '../services/index.js';
 import { ImagePreviewManager } from './ImagePreviewManager.js';
-import { cacheManager } from '../utils/CacheManager.js';
+import { cacheManager } from '../../utils/index.js';
 
 /**
  * 新建提示词管理器

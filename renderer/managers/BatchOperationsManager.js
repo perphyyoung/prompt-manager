@@ -1,6 +1,5 @@
-import { isSameId } from '../utils/isSameId.js';
-import { cacheManager } from '../utils/CacheManager.js';
-import { DialogService, DialogConfig } from '../services/DialogService.js';
+import { cacheManager } from '../../utils/index.js';
+import { DialogService, DialogConfig } from '../services/index.js';
 
 /**
  * 批量操作策略基类

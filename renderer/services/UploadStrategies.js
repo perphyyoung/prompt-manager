@@ -1,5 +1,4 @@
-import { ImageUploadService } from './ImageUploadService.js';
-import { UploadNotificationService } from './UploadNotificationService.js';
+import { ImageUploadService, UploadNotificationService } from './index.js';
 
 /**
  * 上传策略基类

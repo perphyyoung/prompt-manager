@@ -171,11 +171,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ==================== 调试日志 ====================
   /** 记录调试日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 */
-  logDebug: (component, message, data) => ipcRenderer.invoke('log-debug', component, message, data),
+  logDebug: (component, message, data) => { ipcRenderer.invoke('renderer-log', 'debug', component, message, data); },
   /** 记录错误日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 */
-  logError: (component, message, data) => ipcRenderer.invoke('log-error', component, message, data),
-  /** 记录警告日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 @param {string} logFile - 日志文件路径 */
-  logWarn: (component, message, data, logFile) => ipcRenderer.invoke('log-warn', component, message, data, logFile),
+  logError: (component, message, data) => { ipcRenderer.invoke('renderer-log', 'error', component, message, data); },
+  /** 记录警告日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 */
+  logWarn: (component, message, data) => { ipcRenderer.invoke('renderer-log', 'warn', component, message, data); },
+  /** 记录信息日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 */
+  logInfo: (component, message, data) => { ipcRenderer.invoke('renderer-log', 'info', component, message, data); },
 
   // ==================== 其他 ====================
   /** 获取旧数据目录路径（清空数据后） */

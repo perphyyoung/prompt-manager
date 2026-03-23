@@ -31,8 +31,8 @@ This skill guides the agent in conducting professional and thorough code reviews
 #### For Local Changes:
 
 - **Identify Changes**:
-  - Check status: `git status`
-  - Read diffs: `git diff` (working tree) and/or `git diff --staged` (staged)
+  - Check status: `git status > git-status.log`
+  - Read diffs: `git diff > git-diff.log` (working tree)
 - **Preflight (Optional)**: If the changes are substantial, ask the user if they want to run `npm run preflight` before reviewing.
 
 ### 3. In-Depth Analysis

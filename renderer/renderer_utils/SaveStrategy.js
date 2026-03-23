@@ -1,4 +1,4 @@
-import { cacheManager } from './CacheManager.js';
+import { cacheManager } from '../../utils/index.js';
 
 /**
  * 保存策略接口

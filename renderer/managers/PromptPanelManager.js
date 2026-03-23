@@ -1,9 +1,9 @@
+import { HtmlUtils, cacheManager } from '../../utils/index.js';
 import { PanelManagerBase } from './PanelManagerBase.js';
 import { PanelRenderer, PanelItemRenderer } from './SharedComponents/index.js';
 import { TagUI } from './TagUI.js';
 import { Constants } from '../constants.js';
-import { DialogService, DialogConfig } from '../services/DialogService.js';
-import { cacheManager } from '../utils/CacheManager.js';
+import { DialogService, DialogConfig } from '../services/index.js';
 
 /**
  * 提示词面板管理器
@@ -286,7 +286,7 @@ export class PromptPanelManager extends PanelManagerBase {
         if (imagePath) {
           try {
             const fullPath = await window.electronAPI.getImagePath(imagePath);
-            const escapedTitle = TagUI.escapeHtml(prompt.title || '预览');
+            const escapedTitle = HtmlUtils.escapeHtml(prompt.title || '预览');
             return `<img src="file://${fullPath.replace(/"/g, '&quot;')}" alt="${escapedTitle}" class="prompt-list-thumbnail">`;
           } catch (error) {
             window.electronAPI.logError('PromptPanelManager.js', 'Failed to get image path:', error);

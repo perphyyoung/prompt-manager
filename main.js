@@ -11,9 +11,9 @@ import os from 'os';
 import sharp from 'sharp';
 import crypto from 'crypto';
 import * as db from './database.js';
-import { logInfo, logError, logDebug } from './logger.js';
 import { generatePromptId, generateImageId } from './utils/idGenerator.js';
-import { getFormattedLocalTimeToSecond, getFormattedYearMonth } from './utils/TimeUtils.js';
+import { getFormattedLocalTimeToSecond, getFormattedYearMonth } from './utils/index.js';
+import { logInfo, logDebug, logError, logWarn } from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,56 +23,6 @@ const CONFIG_FILE = path.join(__dirname, 'config.json');
 
 // 默认数据目录（相对于应用目录）
 const DEFAULT_DATA_DIR = path.join(__dirname, 'py-data');
-
-// ANSI 颜色代码
-const COLORS = {
-  RED: '\x1b[31m',
-  GREEN: '\x1b[32m',
-  YELLOW: '\x1b[33m',
-  BLUE: '\x1b[34m',
-  RESET: '\x1b[0m'
-};
-
-/**
- * 带颜色的日志输出
- * @param {string} level - 日志级别 (log, error, warn, info)
- * @param {...any} args - 日志内容
- */
-function coloredLog(level, ...args) {
-  const timestamp = getFormattedLocalTimeToSecond();
-  let color = COLORS.RESET;
-  let prefix = `[${timestamp}]`;
-  
-  switch (level) {
-    case 'error':
-      color = COLORS.RED;
-      prefix += ' [ERROR]';
-      break;
-    case 'warn':
-      color = COLORS.YELLOW;
-      prefix += ' [WARN]';
-      break;
-    case 'info':
-      color = COLORS.BLUE;
-      prefix += ' [INFO]';
-      break;
-    default:
-      prefix += ' [LOG]';
-  }
-  
-  console.log(color + prefix, ...args, COLORS.RESET);
-}
-
-// 重写 console 方法
-const originalError = console.error;
-console.error = function(...args) {
-  coloredLog('error', ...args);
-};
-
-const originalWarn = console.warn;
-console.warn = function(...args) {
-  coloredLog('warn', ...args);
-};
 
 let mainWindow;
 let tray = null;
@@ -193,7 +143,7 @@ async function calculateFileMD5(filePath) {
     const fileBuffer = await fs.readFile(filePath);
     return crypto.createHash('md5').update(fileBuffer).digest('hex');
   } catch (error) {
-    console.error('Failed to calculate MD5:', error);
+    logError('Main', 'Failed to calculate MD5:', error);
     return null;
   }
 }
@@ -250,7 +200,7 @@ async function generateThumbnail(imagePath, storedName, subDir = '') {
       thumbnailMD5
     };
   } catch (error) {
-    console.error('Failed to generate thumbnail:', error);
+    logError('Main', 'Failed to generate thumbnail:', error);
     return null;
   }
 }
@@ -302,7 +252,7 @@ async function saveImageFile(sourcePath, fileName) {
     const stats = await fs.stat(targetPath);
     fileSize = stats.size;
   } catch (error) {
-    console.error('Failed to get image info:', error);
+    logError('Main', 'Failed to get image info:', error);
   }
 
   // 生成缩略图（传入年月子目录）
@@ -376,9 +326,9 @@ function createWindow() {
     }
   });
 
-  // 拦截关闭事件，最小化到托盘
+  // 拦截关闭事件，最小化到托盘（测试模式下直接关闭）
   mainWindow.on('close', (event) => {
-    if (!app.isQuiting) {
+    if (!app.isQuiting && !isTestMode) {
       event.preventDefault();
       mainWindow.hide();
     }
@@ -512,7 +462,7 @@ ipcMain.handle('get-prompt-trash', async () => {
       type: 'prompt'
     }));
   } catch (error) {
-    console.error('Get prompt trash error:', error);
+    logError('Main', 'Get prompt trash error:', error);
     throw error;
   }
 });
@@ -523,7 +473,7 @@ ipcMain.handle('restore-prompt-from-trash', async (event, id) => {
     await db.restorePrompt(id);
     return true;
   } catch (error) {
-    console.error('Restore from trash error:', error);
+    logError('Main', 'Restore from trash error:', error);
     throw error;
   }
 });
@@ -534,7 +484,7 @@ ipcMain.handle('permanent-delete-prompt', async (event, id) => {
     await db.permanentDeletePrompt(id);
     return true;
   } catch (error) {
-    console.error('Permanent delete prompt error:', error);
+    logError('Main', 'Permanent delete prompt error:', error);
     throw error;
   }
 });
@@ -548,7 +498,7 @@ ipcMain.handle('empty-prompt-trash', async () => {
     }
     return true;
   } catch (error) {
-    console.error('Empty recycle bin error:', error);
+    logError('Main', 'Empty recycle bin error:', error);
     throw error;
   }
 });
@@ -560,7 +510,7 @@ ipcMain.handle('get-image-trash', async () => {
   try {
     return await db.getDeletedImages();
   } catch (error) {
-    console.error('Get image trash error:', error);
+    logError('Main', 'Get image trash error:', error);
     throw error;
   }
 });
@@ -571,7 +521,7 @@ ipcMain.handle('restore-image-from-trash', async (event, id) => {
     await db.restoreImage(id);
     return true;
   } catch (error) {
-    console.error('Restore image from trash error:', error);
+    logError('Main', 'Restore image from trash error:', error);
     throw error;
   }
 });
@@ -582,7 +532,7 @@ ipcMain.handle('permanent-delete-image', async (event, id) => {
     await db.permanentDeleteImage(id, currentDataDir);
     return true;
   } catch (error) {
-    console.error('Permanently delete image error:', error);
+    logError('Main', 'Permanently delete image error:', error);
     throw error;
   }
 });
@@ -593,7 +543,7 @@ ipcMain.handle('empty-image-trash', async () => {
     await db.emptyImageTrash(currentDataDir);
     return true;
   } catch (error) {
-    console.error('Empty image trash error:', error);
+    logError('Main', 'Empty image trash error:', error);
     throw error;
   }
 });
@@ -604,7 +554,7 @@ ipcMain.handle('soft-delete-image', async (event, id) => {
     await db.softDeleteImage(id);
     return true;
   } catch (error) {
-    console.error('Soft delete image error:', error);
+    logError('Main', 'Soft delete image error:', error);
     throw error;
   }
 });
@@ -631,7 +581,7 @@ ipcMain.handle('get-prompt-tags', async () => {
   try {
     return await db.getPromptTags();
   } catch (error) {
-    console.error('Get prompt tags error:', error);
+    logError('Main', 'Get prompt tags error:', error);
     throw error;
   }
 });
@@ -642,7 +592,7 @@ ipcMain.handle('add-prompt-tag', async (event, tag) => {
     await db.addPromptTag(tag);
     return await db.getPromptTags();
   } catch (error) {
-    console.error('Add prompt tag error:', error);
+    logError('Main', 'Add prompt tag error:', error);
     throw error;
   }
 });
@@ -654,7 +604,7 @@ ipcMain.handle('delete-prompt-tag', async (event, tag) => {
     await db.run('DELETE FROM prompt_tags WHERE name = ?', [tag]);
     return await db.getPromptTags();
   } catch (error) {
-    console.error('Delete prompt tag error:', error);
+    logError('Main', 'Delete prompt tag error:', error);
     throw error;
   }
 });
@@ -666,7 +616,7 @@ ipcMain.handle('get-prompt-tag-groups', async () => {
   try {
     return await db.getPromptTagGroupsOnly();
   } catch (error) {
-    console.error('Get prompt tag groups error:', error);
+    logError('Main', 'Get prompt tag groups error:', error);
     throw error;
   }
 });
@@ -676,7 +626,7 @@ ipcMain.handle('create-prompt-tag-group', async (event, name, type, sortOrder) =
   try {
     return await db.createPromptTagGroup(name, type, sortOrder);
   } catch (error) {
-    console.error('Create prompt tag group error:', error);
+    logError('Main', 'Create prompt tag group error:', error);
     throw error;
   }
 });
@@ -686,7 +636,7 @@ ipcMain.handle('update-prompt-tag-group-attrs', async (event, id, updates) => {
   try {
     return await db.updatePromptTagGroup(id, updates);
   } catch (error) {
-    console.error('Update prompt tag group attrs error:', error);
+    logError('Main', 'Update prompt tag group attrs error:', error);
     throw error;
   }
 });
@@ -696,7 +646,7 @@ ipcMain.handle('delete-prompt-tag-group', async (event, id) => {
   try {
     return await db.deletePromptTagGroup(id);
   } catch (error) {
-    console.error('Delete prompt tag group error:', error);
+    logError('Main', 'Delete prompt tag group error:', error);
     throw error;
   }
 });
@@ -706,7 +656,7 @@ ipcMain.handle('get-prompt-tags-with-group', async () => {
   try {
     return await db.getPromptTagsWithGroupInfo();
   } catch (error) {
-    console.error('Get prompt tags with group error:', error);
+    logError('Main', 'Get prompt tags with group error:', error);
     throw error;
   }
 });
@@ -716,7 +666,7 @@ ipcMain.handle('assign-prompt-tag-to-belong-group', async (event, tagName, group
   try {
     return await db.updatePromptTagGroupByTagName(tagName, groupId);
   } catch (error) {
-    console.error('Assign prompt tag to belong group error:', error);
+    logError('Main', 'Assign prompt tag to belong group error:', error);
     throw error;
   }
 });
@@ -758,7 +708,7 @@ ipcMain.handle('rename-prompt-tag', async (event, oldTag, newTag) => {
     
     return await db.getPromptTags();
   } catch (error) {
-    console.error('Rename prompt tag error:', error);
+    logError('Main', 'Rename prompt tag error:', error);
     throw error;
   }
 });
@@ -906,7 +856,7 @@ ipcMain.handle('dialog:open-image-files', async () => {
     // Windows: 检查是否为本地盘符路径（如 D:\, C:\）
     const isLocalPath = /^[a-zA-Z]:[\\/]/.test(filePath);
     if (!isLocalPath) {
-      console.warn('Path validation failed (not a local path):', filePath);
+      logWarn('Main', 'Path validation failed (not a local path):', filePath);
     }
     return isLocalPath;
   });
@@ -919,7 +869,7 @@ ipcMain.handle('get-images', async (event, sortBy, sortOrder) => {
   try {
     return await db.getImages(sortBy, sortOrder);
   } catch (error) {
-    console.error('Get images error:', error);
+    logError('Main', 'Get images error:', error);
     throw error;
   }
 });
@@ -929,7 +879,7 @@ ipcMain.handle('get-images-by-ids', async (event, ids) => {
   try {
     return await db.getImagesByIds(ids);
   } catch (error) {
-    console.error('Get images by ids error:', error);
+    logError('Main', 'Get images by ids error:', error);
     throw error;
   }
 });
@@ -939,7 +889,7 @@ ipcMain.handle('get-all-images-for-stats', async () => {
   try {
     return await db.getAllImages();
   } catch (error) {
-    console.error('Get all images for stats error:', error);
+    logError('Main', 'Get all images for stats error:', error);
     throw error;
   }
 });
@@ -949,7 +899,7 @@ ipcMain.handle('get-image-by-id', async (event, imageId) => {
   try {
     return await db.getImageById(imageId);
   } catch (error) {
-    console.error('Get image by id error:', error);
+    logError('Main', 'Get image by id error:', error);
     throw error;
   }
 });
@@ -959,7 +909,7 @@ ipcMain.handle('get-prompt-images', async (event, promptId) => {
   try {
     return await db.getPromptImages(promptId);
   } catch (error) {
-    console.error('Get prompt images error:', error);
+    logError('Main', 'Get prompt images error:', error);
     throw error;
   }
 });
@@ -969,7 +919,7 @@ ipcMain.handle('get-image-tags', async () => {
   try {
     return await db.getImageTags();
   } catch (error) {
-    console.error('Get image tags error:', error);
+    logError('Main', 'Get image tags error:', error);
     throw error;
   }
 });
@@ -980,7 +930,7 @@ ipcMain.handle('add-image-tag', async (event, tag) => {
     await db.addImageTag(tag);
     return await db.getImageTags();
   } catch (error) {
-    console.error('Add image tag error:', error);
+    logError('Main', 'Add image tag error:', error);
     throw error;
   }
 });
@@ -991,7 +941,7 @@ ipcMain.handle('add-image-tags', async (event, imageId, tagNames) => {
     await db.addImageTags(imageId, tagNames);
     return true;
   } catch (error) {
-    console.error('Add image tags error:', error);
+    logError('Main', 'Add image tags error:', error);
     throw error;
   }
 });
@@ -1001,7 +951,7 @@ ipcMain.handle('update-image', async (event, id, updates) => {
   try {
     return await db.updateImage(id, updates);
   } catch (error) {
-    console.error('Update image error:', error);
+    logError('Main', 'Update image error:', error);
     throw error;
   }
 });
@@ -1022,7 +972,7 @@ ipcMain.handle('rename-image-tag', async (event, oldTag, newTag) => {
     
     return true;
   } catch (error) {
-    console.error('Rename image tag error:', error);
+    logError('Main', 'Rename image tag error:', error);
     throw error;
   }
 });
@@ -1046,7 +996,7 @@ ipcMain.handle('delete-image-tag', async (event, tag) => {
 
     return true;
   } catch (error) {
-    console.error('Delete image tag error:', error);
+    logError('Main', 'Delete image tag error:', error);
     throw error;
   }
 });
@@ -1058,7 +1008,7 @@ ipcMain.handle('get-image-tag-groups', async () => {
   try {
     return await db.getImageTagGroupsOnly();
   } catch (error) {
-    console.error('Get image tag groups error:', error);
+    logError('Main', 'Get image tag groups error:', error);
     throw error;
   }
 });
@@ -1068,7 +1018,7 @@ ipcMain.handle('create-image-tag-group', async (event, name, type, sortOrder) =>
   try {
     return await db.createImageTagGroup(name, type, sortOrder);
   } catch (error) {
-    console.error('Create image tag group error:', error);
+    logError('Main', 'Create image tag group error:', error);
     throw error;
   }
 });
@@ -1078,7 +1028,7 @@ ipcMain.handle('update-image-tag-group-attrs', async (event, id, updates) => {
   try {
     return await db.updateImageTagGroup(id, updates);
   } catch (error) {
-    console.error('Update image tag group error:', error);
+    logError('Main', 'Update image tag group error:', error);
     throw error;
   }
 });
@@ -1088,7 +1038,7 @@ ipcMain.handle('delete-image-tag-group', async (event, id) => {
   try {
     return await db.deleteImageTagGroup(id);
   } catch (error) {
-    console.error('Delete image tag group error:', error);
+    logError('Main', 'Delete image tag group error:', error);
     throw error;
   }
 });
@@ -1098,7 +1048,7 @@ ipcMain.handle('get-image-tags-with-group', async () => {
   try {
     return await db.getImageTagsWithGroupInfo();
   } catch (error) {
-    console.error('Get image tags with group error:', error);
+    logError('Main', 'Get image tags with group error:', error);
     throw error;
   }
 });
@@ -1108,7 +1058,7 @@ ipcMain.handle('assign-image-tag-to-belong-group', async (event, tagName, groupI
   try {
     return await db.assignImageTagToBelongGroup(tagName, groupId);
   } catch (error) {
-    console.error('Assign image tag to belong group error:', error);
+    logError('Main', 'Assign image tag to belong group error:', error);
     throw error;
   }
 });
@@ -1144,9 +1094,7 @@ ipcMain.handle('select-image-files', async () => {
 ipcMain.handle('clear-all-data', async () => {
   try {
     const oldDataDir = currentDataDir;
-    const pad = n => n.toString().padStart(2, '0');
-    const now = new Date();
-    const timestamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const timestamp = getFormattedLocalTimeToSecond();
     const newDataDir = path.join(path.dirname(oldDataDir), `${path.basename(oldDataDir)}_${timestamp}`);
     db.closeDatabase();
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -1155,7 +1103,7 @@ ipcMain.handle('clear-all-data', async () => {
     await db.initDatabase(oldDataDir);
     return newDataDir;
   } catch (error) {
-    console.error('Clear all data error:', error);
+    logError('Main', 'Clear all data error:', error);
     throw error;
   }
 });
@@ -1165,7 +1113,7 @@ ipcMain.handle('get-statistics', async () => {
   try {
     return await db.getStatistics();
   } catch (error) {
-    console.error('Get statistics error:', error);
+    logError('Main', 'Get statistics error:', error);
     throw error;
   }
 });
@@ -1175,7 +1123,7 @@ ipcMain.handle('optimize-database', async () => {
   try {
     return await db.optimizeDatabase();
   } catch (error) {
-    console.error('Optimize database error:', error);
+    logError('Main', 'Optimize database error:', error);
     throw error;
   }
 });
@@ -1187,40 +1135,11 @@ ipcMain.handle('get-old-data-dir', async () => {
   return oldDir;
 });
 
-// 记录调试日志
-ipcMain.handle('log-debug', async (event, component, message, data) => {
-  try {
-    const { logDebug } = await import('./logger.js');
-    logDebug(component, message, data);
-    return true;
-  } catch (error) {
-    console.error('Log debug error:', error);
-    return false;
-  }
-});
-
-// 记录错误日志
-ipcMain.handle('log-error', async (event, component, message, data) => {
-  try {
-    const { logError } = await import('./logger.js');
-    logError(component, message, data);
-    return true;
-  } catch (error) {
-    console.error('Log error error:', error);
-    return false;
-  }
-});
-
-// 记录警告日志
-ipcMain.handle('log-warn', async (event, component, message, data, logFile) => {
-  try {
-    const { logWarn } = await import('./logger.js');
-    logWarn(component, message, data, logFile);
-    return true;
-  } catch (error) {
-    console.error('Log warn error:', error);
-    return false;
-  }
+// 渲染进程日志（通过 IPC 写入 debug.log）
+ipcMain.handle('renderer-log', async (event, level, component, message, data) => {
+  const logFn = level === 'error' ? logError : level === 'warn' ? logWarn : level === 'debug' ? logDebug : logInfo;
+  logFn(component, message, data);
+  return true;
 });
 
 /**
@@ -1299,7 +1218,7 @@ ipcMain.handle('scan-orphan-files', async () => {
       totalSize: ((orphanImageSize + orphanThumbnailSize) / 1024 / 1024).toFixed(2)
     };
   } catch (error) {
-    console.error('Scan orphan files error:', error);
+    logError('Main', 'Scan orphan files error:', error);
     throw error;
   }
 });
@@ -1337,7 +1256,7 @@ ipcMain.handle('export-and-delete-orphan-files', async (event, orphanFiles, expo
         await fs.unlink(file.fullPath);
         deletedCount++;
       } catch (error) {
-        console.error('Failed to export/delete file:', file.fullPath, error);
+        logError('Main', 'Failed to export/delete file:', { fullPath: file.fullPath, error });
         failedCount++;
       }
     }
@@ -1349,8 +1268,27 @@ ipcMain.handle('export-and-delete-orphan-files', async (event, orphanFiles, expo
       exportPath: orphanExportDir 
     };
   } catch (error) {
-    console.error('Export and delete orphan files error:', error);
+    logError('Main', 'Export and delete orphan files error:', error);
     throw error;
+  }
+});
+
+// 请求单实例锁
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  logInfo('Main', 'Another instance is already running. Quitting...');
+  app.quit();
+}
+
+// 当尝试运行第二个实例时，聚焦到第一个实例的窗口
+app.on('second-instance', (event, commandLine, workingDirectory) => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.show();
+    mainWindow.focus();
   }
 });
 
@@ -1361,7 +1299,7 @@ app.whenReady().then(async () => {
     await db.initDatabase(currentDataDir);
     // Database initialized
   } catch (err) {
-    console.error('Failed to initialize database:', err);
+    logError('Main', 'Failed to initialize database:', err);
   }
 
   // 配置 CSP（Content Security Policy）

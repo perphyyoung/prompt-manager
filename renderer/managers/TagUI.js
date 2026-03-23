@@ -1,4 +1,5 @@
 import { Constants } from '../constants.js';
+import { HtmlUtils } from '../../utils/index.js';
 
 /**
  * 标签 UI - 展示层
@@ -11,27 +12,6 @@ export class TagUI {
   constructor(type) {
     this.type = type;
     this.isPrompt = type === 'prompt';
-  }
-
-  // ========== HTML 转义工具 ==========
-
-  static escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  static escapeAttr(text) {
-    if (!text) return '';
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;')
-      .replace(/\n/g, '&#10;')
-      .replace(/\r/g, '&#13;');
   }
 
   // ========== 标签注册表 HTML ==========
@@ -83,25 +63,25 @@ export class TagUI {
   generateTagItemHtml(tag, count, groupId = null, isSpecial = false) {
     if (isSpecial) {
       return `
-        <div class="tag-manager-item special-tag-in-card" data-tag="${TagUI.escapeHtml(tag)}">
+        <div class="tag-manager-item special-tag-in-card" data-tag="${HtmlUtils.escapeHtml(tag)}">
           <div class="tag-manager-badges">
             <span class="tag-badge-count">${count}</span>
           </div>
-          <div class="tag-manager-item-name">${TagUI.escapeHtml(tag)}</div>
+          <div class="tag-manager-item-name">${HtmlUtils.escapeHtml(tag)}</div>
         </div>
       `;
     }
 
     return `
-      <div class="tag-manager-item tag-in-card" data-tag="${TagUI.escapeHtml(tag)}" data-group-id="${groupId || ''}" draggable="true">
+      <div class="tag-manager-item tag-in-card" data-tag="${HtmlUtils.escapeHtml(tag)}" data-group-id="${groupId || ''}" draggable="true">
         <div class="tag-manager-badges">
-          <button class="tag-badge-btn tag-badge-delete" data-tag="${TagUI.escapeHtml(tag)}" title="删除">
+          <button class="tag-badge-btn tag-badge-delete" data-tag="${HtmlUtils.escapeHtml(tag)}" title="删除">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
             </svg>
           </button>
-          <button class="tag-badge-btn tag-badge-edit" data-tag="${TagUI.escapeHtml(tag)}" title="编辑">
+          <button class="tag-badge-btn tag-badge-edit" data-tag="${HtmlUtils.escapeHtml(tag)}" title="编辑">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -109,7 +89,7 @@ export class TagUI {
           </button>
           <span class="tag-badge-count">${count}</span>
         </div>
-        <div class="tag-manager-item-name">${TagUI.escapeHtml(tag)}</div>
+        <div class="tag-manager-item-name">${HtmlUtils.escapeHtml(tag)}</div>
       </div>
     `;
   }
@@ -180,7 +160,7 @@ export class TagUI {
     return `
       <div class="tag-group-card" data-group-id="${group.id}" data-group-type="${group.type}" data-drop-target="true">
         <div class="tag-group-card-header">
-          <span class="tag-group-card-name">${TagUI.escapeHtml(group.name)}</span>
+          <span class="tag-group-card-name">${HtmlUtils.escapeHtml(group.name)}</span>
           ${sortBadge}
           ${firstBadge}
           <span class="tag-group-card-type">${typeText}</span>
@@ -226,8 +206,8 @@ export class TagUI {
         const isActive = selectedSet.has(tag);
         const dragType = isImage ? 'image-tag' : 'prompt-tag';
         return `
-          <button class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${TagUI.escapeHtml(tag)}" data-is-special="true" draggable="true" data-drag-type="${dragType}">
-            <span class="tag-name">${TagUI.escapeHtml(tag)}</span>
+          <button class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="true" draggable="true" data-drag-type="${dragType}">
+            <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
             <span class="tag-badge">${count}</span>
           </button>
         `;
@@ -268,15 +248,15 @@ export class TagUI {
 
         const groupTypeText = group.type === 'single' ? '单选' : '多选';
         html += `<div class="tag-filter-group" data-group-id="${group.id}" data-group-type="${group.type}">`;
-        html += `<div class="tag-filter-group-title">${TagUI.escapeHtml(group.name)} <span class="tag-filter-group-type">${groupTypeText}</span></div>`;
+        html += `<div class="tag-filter-group-title">${HtmlUtils.escapeHtml(group.name)} <span class="tag-filter-group-type">${groupTypeText}</span></div>`;
         html += '<div class="tag-filter-group-content">';
 
         html += visibleTags.map(({ tag, count }) => {
           const isActive = selectedSet.has(tag);
           const dragType = isImage ? 'image-tag' : 'prompt-tag';
           return `
-            <div class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${TagUI.escapeHtml(tag)}" data-group-id="${group.id}" draggable="true" data-drag-type="${dragType}">
-              <span class="tag-name">${TagUI.escapeHtml(tag)}</span>
+            <div class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-group-id="${group.id}" draggable="true" data-drag-type="${dragType}">
+              <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
               <span class="tag-badge">${count}</span>
             </div>
           `;
@@ -296,8 +276,8 @@ export class TagUI {
         const isActive = selectedSet.has(tag);
         const dragType = isImage ? 'image-tag' : 'prompt-tag';
         return `
-          <div class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${TagUI.escapeHtml(tag)}" draggable="true" data-drag-type="${dragType}">
-            <span class="tag-name">${TagUI.escapeHtml(tag)}</span>
+          <div class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" draggable="true" data-drag-type="${dragType}">
+            <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
             <span class="tag-badge">${count}</span>
           </div>
         `;
@@ -430,8 +410,8 @@ export class TagUI {
         const dragTypeAttr = (!isSpecial && dragType) ? `data-drag-type="${dragType}"` : '';
 
         return `
-          <button class="tag-filter-item ${className || ''}" data-tag="${TagUI.escapeHtml(tag)}" data-is-special="${isSpecial}" data-is-top-group="${isTopGroup || false}" data-is-single-select="${isSingleSelect || false}" ${draggableAttr} ${dragTypeAttr}>
-            <span class="tag-name">${TagUI.escapeHtml(tag)}</span>
+          <button class="tag-filter-item ${className || ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="${isSpecial}" data-is-top-group="${isTopGroup || false}" data-is-single-select="${isSingleSelect || false}" ${draggableAttr} ${dragTypeAttr}>
+            <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
             <span class="tag-badge">${count || 0}</span>
           </button>
         `;
@@ -487,7 +467,7 @@ export class TagUI {
     }
 
     return normalTags.map(tag => {
-      return `<span class="${tagClass}">${TagUI.escapeHtml(tag)}</span>`;
+      return `<span class="${tagClass}">${HtmlUtils.escapeHtml(tag)}</span>`;
     }).join('');
   }
 
@@ -506,8 +486,8 @@ export class TagUI {
     }
 
     return normalTags.map(tag => {
-      const removeBtn = readonly ? '' : `<button class="tag-remove" data-tag="${TagUI.escapeAttr(tag)}" title="移除">×</button>`;
-      return `<span class="tag-badge editable">${TagUI.escapeHtml(tag)}${removeBtn}</span>`;
+      const removeBtn = readonly ? '' : `<button class="tag-remove" data-tag="${HtmlUtils.escapeAttr(tag)}" title="移除">×</button>`;
+      return `<span class="tag-badge editable">${HtmlUtils.escapeHtml(tag)}${removeBtn}</span>`;
     }).join('');
   }
 
@@ -519,7 +499,7 @@ export class TagUI {
    */
   static generateNoteHtml(note, noteClass) {
     if (!note || !note.trim()) return '';
-    return `<div class="${noteClass}" title="${TagUI.escapeAttr(note)}">${TagUI.escapeHtml(note)}</div>`;
+    return `<div class="${noteClass}" title="${HtmlUtils.escapeAttr(note)}">${HtmlUtils.escapeHtml(note)}</div>`;
   }
 }
 

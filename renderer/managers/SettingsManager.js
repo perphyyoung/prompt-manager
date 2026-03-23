@@ -1,5 +1,5 @@
 import { Constants } from '../constants.js';
-import { DialogService, DialogConfig } from '../services/DialogService.js';
+import { DialogService, DialogConfig } from '../services/index.js';
 
 /**
  * 设置管理器

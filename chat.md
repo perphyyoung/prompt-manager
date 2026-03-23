@@ -2,14 +2,14 @@
 
 ## 常用
 
-根据 chat.md 的第 12 行以及对应的对话内容, 更新 readme.md 和 change.md, 并总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 正常了, 删除日志的生成语句, 保留日志系统
 调试解决, 写入 debug.log, 不是 控制台
 全面分析当前项目, 有没有什么常见的隐患, 给出优化方案
 排查上步所有可能的问题, 给出修改方案
 检查现有事件绑定中, 有哪些是没有在 html 中出现的, 也没有 动态生成; 给出统计结果
-根据实际文件结构, 更新 js文件树.md
-审查本地变更
+根据实际 js 文件结构, 更新 js文件树.md
+通过 google-code-review skills 审查本地变更, 使用 `git diff > git-diff.log`, 不要用交互式的 `git diff`
+根据 chat.md 的第 12 行以及对应的对话内容, 更新 readme.md 和 change.md, 并总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 
 ## todo
 
@@ -24,10 +24,24 @@
 图像引用计数 定期清理; 设计图像引用计数方案, 参考 database.js 中的建表语句, 结合 sqlite-optimization skills 分析
 创建提示词时, toast 不是中文; 参考 DialogService, 实现统一管理的 toast
 renderer\services\DialogService.js 设置相同的提示风格信息
+database optimize-database
 
-## 20260322-4
+## 20260323---
+
+添加 verify-imports.js 文件, 用于检查 js 文件的 import 是否正确
+通过 google-code-review skills 审查本地变更, 使用 `git diff > git-diff.log`, 不要用交互式的 `git diff`
+将每个 import 都通过 index.js 导入, 如果 index.js 不存在, 则创建 index.js
+/plan 检查 `utils` 里的文件, 是否都可以统一移动到 外部的 utils, 有没有浏览器特定限制导致不能移动的
+escapeHtml 在多个文件中反复定义, 统一修改为 使用 `HtmlUtils.js`
+宽度和高度统一显示为 width x height, 不需要单独显示; 文件大小 应该是有一个函数, 因为 图像详情界面 也在用, 提取同一个函数来计算文件大小
+图像界面的排序依据, 当前 切换到 宽度,高度,文件大小 时, 图像卡片的底部信息没有对应显示, 排查并修复
+创建一个统一的样式, 然后 提示词卡片和图像卡片 底部公用, 删除现在独立的; 统一样式和现在 图像卡片底部的一样, 12px, 默认 font-weight, color white rgba(255,255,255,0.9)
+当前 提示词卡片 显示 提示词标题 有特殊样式吗, 感觉明显和时间的样式不同? 设置提示词卡片上的排序原则字段使用白色显示, 统一样式
+当前标签的保存和更新实现, 支持标签的批量操作吗? 还是每次只更新一个标签 -> 支持批量添加, 不支持批量删除(当前场景不需要批量删除)
 
 ## 20260322-3---
+
+electron dialog.showOpenDialog 打开的界面, 如果直接点取消, 要点好几次才能取消掉; 有时候弹出的 打开界面感觉也刷新了好几次, 界面明显卡顿; 这是这个方法的普遍问题吗? 还是当前项目的配置有问题? 有其他流畅的方案可选吗? -> 已知问题, 移除 mainWindow 参数, 添加防抖保护
 
 - 图像和提示词的关联关系改变后，双方 updated_at 字段都需要更新
 - 通过预填充图像新建提示词成功后，返回的图像详情界面左侧面板需要同步
