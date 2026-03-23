@@ -1369,10 +1369,19 @@ async function updateImage(id, updates) {
 
       const promptsToAdd = newPromptIds.filter(pid => !currentPromptIds.includes(pid));
       const promptsToRemove = currentPromptIds.filter(pid => !newPromptIds.includes(pid));
+      const promptsChanged = promptsToAdd.length > 0 || promptsToRemove.length > 0;
 
-      await run('DELETE FROM prompt_image_relations WHERE image_id = ?', [id]);
-      if (prompts.length > 0) {
-        await addImagePrompts(id, newPromptIds);
+      // 只删除需要移除的关联（增量更新）
+      if (promptsToRemove.length > 0) {
+        await run(
+          `DELETE FROM prompt_image_relations WHERE image_id = ? AND prompt_id IN (${promptsToRemove.map(() => '?').join(',')})`,
+          [id, ...promptsToRemove]
+        );
+      }
+
+      // 只添加新增的关联
+      if (promptsToAdd.length > 0) {
+        await addImagePrompts(id, promptsToAdd);
       }
 
       if (promptsToAdd.length > 0) {
@@ -1388,7 +1397,7 @@ async function updateImage(id, updates) {
         );
       }
 
-      if (!hasBasicFieldUpdate) {
+      if (promptsChanged && !hasBasicFieldUpdate) {
         await run('UPDATE images SET updated_at = ? WHERE id = ?', [now, id]);
       }
     }

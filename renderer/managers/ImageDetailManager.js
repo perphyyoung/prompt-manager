@@ -555,7 +555,9 @@ export class ImageDetailManager extends DetailViewManager {
     try {
       const currentPrompts = this.currentItem?.promptRefs || [];
       const newPrompts = currentPrompts.filter(p => !isSameId(p.promptId, promptId));
-      await window.electronAPI.updateImage(imageId, { prompts: newPrompts });
+      // 转换为数据库需要的格式（只保留 id）
+      const promptsForUpdate = newPrompts.map(p => ({ id: p.promptId }));
+      await window.electronAPI.updateImage(imageId, { prompts: promptsForUpdate });
 
       if (this.currentItem) {
         this.currentItem.promptRefs = newPrompts;
