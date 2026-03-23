@@ -164,15 +164,55 @@ export class ImageUploadManager {
       return;
     }
 
-    this.app.showToast(`成功保存 ${result.count} 张图像`, 'success');
+    // 获取提示词内容
+    const promptContent = document.getElementById('uploadImagePrompt')?.value?.trim();
+    
+    // 如果有提示词内容，创建提示词并关联图像
+    if (promptContent) {
+      try {
+        const imageIds = result.images.map(img => img.id);
+        await this.createPromptWithImages(promptContent, imageIds);
+        this.app.showToast(`成功保存 ${result.count} 张图像并创建提示词`, 'success');
+      } catch (error) {
+        window.electronAPI.logError('ImageUploadManager.js', 'Failed to create prompt:', error);
+        this.app.showToast(`图像已保存，但提示词创建失败: ${error.message}`, 'warning');
+      }
+    } else {
+      this.app.showToast(`成功保存 ${result.count} 张图像`, 'success');
+    }
 
     // 清理
     this.previewManager.clear();
     this.strategy.clear();
+    
+    // 清空提示词内容
+    const promptTextarea = document.getElementById('uploadImagePrompt');
+    if (promptTextarea) {
+      promptTextarea.value = '';
+    }
 
     // 触发事件
     this.app.eventBus?.emit('imagesChanged');
     this.close();
+  }
+
+  /**
+   * 创建提示词并关联图像
+   * @param {string} content - 提示词内容
+   * @param {string[]} imageIds - 图像ID数组
+   */
+  async createPromptWithImages(content, imageIds) {
+    const prompt = {
+      title: '',  // 留空，让 main.js 使用 ID 作为标题
+      content,
+      tags: [],
+      images: imageIds.map(id => ({ id })),
+      note: '',
+      isSafe: 1
+    };
+
+    await window.electronAPI.addPrompt(prompt);
+    this.app.eventBus?.emit('promptsChanged');
   }
 
   /**
