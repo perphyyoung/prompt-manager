@@ -330,14 +330,20 @@ export class TrashManager {
       // 重新加载回收站
       await this.loadTrash();
 
-      // 刷新主界面数据（如果是从主界面删除的）
+      // 刷新主界面数据（使用缓存更新，无需重新加载）
       if (itemType === 'prompt' && this.app.promptPanelManager) {
-        await this.app.promptPanelManager.loadData();
+        const cacheManager = this.app.cacheManager;
+        if (cacheManager) {
+          cacheManager.removeCachedItem(itemId, itemType);
+        }
         await this.app.promptPanelManager.renderView();
         await this.app.promptPanelManager.renderTagFilters();
         this.app.eventBus?.emit('promptsChanged');
       } else if (itemType === 'image' && this.app.imagePanelManager) {
-        await this.app.imagePanelManager.loadData();
+        const cacheManager = this.app.cacheManager;
+        if (cacheManager) {
+          cacheManager.removeCachedItem(itemId, itemType);
+        }
         await this.app.imagePanelManager.renderView();
         await this.app.imagePanelManager.renderTagFilters();
         this.app.eventBus?.emit('imagesChanged');
