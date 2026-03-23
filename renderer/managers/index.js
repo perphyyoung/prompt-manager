@@ -14,7 +14,10 @@ export { TagUI } from './TagUI.js';
 export { SimpleTagManager } from './SimpleTagManager.js';
 
 export { TrashManager } from './TrashManager.js';
-export { BatchOperationsManager } from './BatchOperationsManager.js';
+
+// 批量操作工具栏控制器
+export { BatchToolbarController } from './BatchToolbarController.js';
+
 export { ImageFullscreenManager } from './ImageFullscreenManager.js';
 export { DetailViewManager } from './DetailViewManager.js';
 export { PromptDetailManager } from './PromptDetailManager.js';

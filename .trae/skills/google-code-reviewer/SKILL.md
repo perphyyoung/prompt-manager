@@ -1,5 +1,5 @@
 ---
-name: "code-reviewer"
+name: "google-code-reviewer"
 description: "Reviews code for correctness, maintainability, and adherence to project standards. Invoke when user asks for code review, before merging changes, or when reviewing PRs."
 ---
 

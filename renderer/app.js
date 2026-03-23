@@ -7,11 +7,12 @@ import { Constants } from './constants.js';
 import { SafeRatingService, DialogService, DialogConfig } from './services/index.js';
 import {
   PromptPanelManager, ImagePanelManager,
-  TagRegistry, TrashManager, BatchOperationsManager, ImageFullscreenManager, PromptDetailManager, ImageDetailManager,
+  TagRegistry, TrashManager, ImageFullscreenManager, PromptDetailManager, ImageDetailManager,
   ModalManager, TagGroupModalManager, ToastManager, NavigationManager, SearchSortManager,
   ToolbarManager, ImportExportManager, SettingsManager, ImageSelectorManager,
   NewPromptManager, ImageUploadManager, ImageContextMenuManager
 } from './managers/index.js';
+import { BatchToolbarConfig } from './config/index.js';
 import { EventBus, HtmlUtils, isSameId, cacheManager } from '../utils/index.js';
 import { HoverTooltipManager, ShortcutManager } from './renderer_utils/index.js';
 
@@ -56,7 +57,6 @@ class PromptManager {
     this.promptPanelManager = null;
     this.imagePanelManager = null;
     this.trashManager = null;
-    this.batchOpsManager = null;
     this.shortcutManager = null;
     this.imageFullscreenManager = null;
     this.promptDetailManager = null;
@@ -94,7 +94,7 @@ class PromptManager {
       // 初始化 hover tooltip
       this.initHoverTooltips();
 
-      // 初始化面板管理器
+      // 初始化面板管理器（只加载数据，不渲染视图）
       await this.initPanelManagers();
 
       // 绑定工具栏事件
@@ -106,7 +106,7 @@ class PromptManager {
       // 加载数据（初始化，不刷新）
       await this.loadData(false);
 
-      // 恢复上次打开的面板
+      // 恢复上次打开的面板（会触发当前面板的渲染）
       this.navigationManager.restorePanelState();
     } catch (error) {
       window.electronAPI.logError('App', 'Failed to initialize application:', error);
@@ -151,12 +151,6 @@ class PromptManager {
     await this.trashManager.init();
 
     // 初始化批量操作管理器
-    this.batchOpsManager = new BatchOperationsManager({
-      app: this,
-      eventBus: this.eventBus
-    });
-    this.batchOpsManager.init();
-
     // 初始化快捷键管理器
     this.shortcutManager = new ShortcutManager({
       app: this
@@ -166,13 +160,15 @@ class PromptManager {
     // 初始化提示词面板管理器
     this.promptPanelManager = new PromptPanelManager({
       app: this,
-      eventBus: this.eventBus
+      eventBus: this.eventBus,
+      toolbarConfig: BatchToolbarConfig.prompt
     });
 
     // 初始化图像面板管理器
     this.imagePanelManager = new ImagePanelManager({
       app: this,
-      eventBus: this.eventBus
+      eventBus: this.eventBus,
+      toolbarConfig: BatchToolbarConfig.image
     });
 
     // 初始化标签注册表（重构后，用配置替代继承）
@@ -221,7 +217,8 @@ class PromptManager {
     this.navigationManager = new NavigationManager({
       app: this,
       storageKey: 'currentPanel',
-      defaultPanel: 'prompt'
+      defaultPanel: 'prompt',
+      batchToolbarConfig: BatchToolbarConfig
     });
     this.navigationManager.init();
 
@@ -274,9 +271,11 @@ class PromptManager {
       app: this
     });
 
-    // 执行初始化
-    await this.promptPanelManager.init();
-    await this.imagePanelManager.init();
+    // 并行初始化（只加载数据，不渲染）
+    await Promise.all([
+      this.promptPanelManager.init(),
+      this.imagePanelManager.init()
+    ]);
   }
 
   /**
@@ -1169,26 +1168,6 @@ class PromptManager {
   }
 
   /**
-   * 渲染提示词批量操作工具栏
-   */
-  renderPromptBatchOperationToolbar() {
-    const toolbar = document.getElementById('promptBatchToolbar');
-    if (!toolbar) return;
-
-    const selectedCount = this.promptPanelManager?.selectedIds?.size || 0;
-
-    if (selectedCount > 0) {
-      toolbar.style.display = 'flex';
-      const countEl = document.getElementById('promptBatchSelectedCount');
-      if (countEl) {
-        countEl.textContent = `已选择 ${selectedCount} 项`;
-      }
-    } else {
-      toolbar.style.display = 'none';
-    }
-  }
-
-  /**
    * 处理提示词项选择
    * @param {string} promptId - 提示词 ID
    * @param {number} index - 索引
@@ -1771,7 +1750,7 @@ class PromptManager {
 
     this.promptPanelManager.lastSelectedIndex = index;
     this.promptPanelManager.renderView();
-    this.renderPromptBatchOperationToolbar();
+    this.promptPanelManager.toolbarController?.updateUI();
   }
 }
 

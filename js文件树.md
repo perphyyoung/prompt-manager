@@ -15,6 +15,10 @@ renderer/
 ├── app.js                       # 应用主类，协调各管理器，处理全局状态和事件
 ├── constants.js                 # 应用常量定义，包括枚举和配置项
 │
+├── config/                      # 配置目录
+│   ├── index.js                 # 配置统一导出
+│   └── BatchToolbarConfig.js    # 批量操作工具栏配置
+│
 ├── managers/                    # 管理器层 - 业务逻辑核心
 │   ├── index.js                 # 管理器统一导出
 │   │
@@ -41,7 +45,7 @@ renderer/
 │   ├── TagUI.js                 # 标签 UI 组件，生成标签 HTML 和渲染
 │   ├── TagGroupModalManager.js  # 标签组模态框管理器
 │   │
-│   ├── BatchOperationsManager.js    # 批量操作管理器，处理批量删除等操作
+│   ├── BatchToolbarController.js    # 批量操作工具栏控制器
 │   ├── SearchSortManager.js         # 搜索排序管理器，处理搜索和排序逻辑
 │   │
 │   ├── NavigationManager.js      # 导航管理器，处理面板切换导航
@@ -109,14 +113,15 @@ verify-imports.js                # JS 文件导入验证脚本（node verify-imp
 | 目录 | 文件数 | 说明 |
 |------|--------|------|
 | 主进程 | 3 | main.js, database.js, logger.js |
-| renderer/managers | 23 | 业务管理器 |
+| renderer/config | 2 | 配置目录（含 index.js） |
+| renderer/managers | 24 | 业务管理器 |
 | renderer/managers/SharedComponents | 5 | 共享组件（含 index.js） |
 | renderer/renderer_utils | 5 | 渲染进程工具类（含 index.js） |
 | renderer/components | 2 | UI 组件（含 index.js） |
 | renderer/services | 6 | 服务类（含 index.js） |
 | 根目录 utils | 10 | 共享工具类（含 index.js） |
 | 工具脚本 | 1 | verify-imports.js |
-| **总计** | **55** | - |
+| **总计** | **58** | - |
 
 ## 架构分层
 
@@ -143,12 +148,3 @@ logger.js                        # 统一日志服务
 ├── 输出到 debug.log              # 持久化记录
 └── IPC: renderer-log            # 渲染进程日志通道
 ```
-
-## 最近新增/修改文件
-
-| 文件 | 说明 | 变更类型 |
-|------|------|----------|
-| logger.js | 统一日志服务，输出到控制台和 debug.log | 新增/重构 |
-| renderer/renderer_utils/ | 渲染进程工具类目录 | 重组 |
-| utils/ | 共享工具类目录（从 renderer/utils 迁移） | 重组 |
-| verify-imports.js | JS 文件导入验证脚本 | 新增 |

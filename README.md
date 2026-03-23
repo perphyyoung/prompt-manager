@@ -26,6 +26,7 @@ Prompt Manager 是一款本地提示词管理工具，基于 Electron 开发，�
 - **保存机制**: 字段级变化追踪 + 防抖自动保存
 - **导航统一**: ListNavigator 类提供一致的列表导航体验
 - **上传架构**: 策略模式（DelaySaveStrategy/DirectSaveStrategy）+ 职责分离（ImagePreviewManager/UploadStrategies/ImageUploadService）
+- **批量操作**: 配置驱动架构（BatchToolbarConfig + BatchToolbarController），支持提示词和图像面板的批量删除、添加标签、设置安全状态等操作
 
 ## 功能
 
@@ -39,6 +40,7 @@ Prompt Manager 是一款本地提示词管理工具，基于 Electron 开发，�
 
 - **标签管理系统** - 标签添加/筛选/组管理/拖拽/排序，单选组限制（Ctrl+点击多选时仍限制单选），特殊标签，标签筛选收起等
 - **列表视图系统** - 视图切换（卡片/列表/紧凑），排序，列表多选，批量操作，搜索等
+  - **批量操作** - 支持反选、批量添加标签、批量设置安全/不安全状态、批量删除；切换视图时自动清除选择并隐藏工具栏
 - **收藏系统** - 收藏/取消收藏，收藏筛选
 - **回收站系统** - 软删除，恢复，彻底删除，卡片布局
 - **数据管理系统** - 导入导出，数据目录，孤儿文件清理

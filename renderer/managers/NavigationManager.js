@@ -13,6 +13,7 @@ export class NavigationManager {
     this.app = options.app;
     this.storageKey = options.storageKey || 'currentPanel';
     this.defaultPanel = options.defaultPanel || 'prompt';
+    this.batchToolbarConfig = options.batchToolbarConfig || {};
 
     this.currentPanel = this.defaultPanel;
     this.panels = new Map();
@@ -28,7 +29,6 @@ export class NavigationManager {
   init() {
     this.registerPanels();
     this.bindEvents();
-    this.restorePanelState();
     this._subscribeImageChanges();
     this._subscribePromptChanges();
   }
@@ -37,8 +37,7 @@ export class NavigationManager {
     this._unsubscribeImagesChanged = this.app.eventBus?.on('imagesChanged', async () => {
       await this.app.imagePanelManager.loadData();
       if (this.currentPanel === 'image' && this.app.imagePanelManager) {
-        await this.app.imagePanelManager.renderView();
-        await this.app.imagePanelManager.renderTagFilters();
+        await this.app.imagePanelManager.ensureRendered();
       }
     });
   }
@@ -47,8 +46,7 @@ export class NavigationManager {
     this._unsubscribePromptsChanged = this.app.eventBus?.on('promptsChanged', async () => {
       await this.app.promptPanelManager.loadData();
       if (this.currentPanel === 'prompt' && this.app.promptPanelManager) {
-        await this.app.promptPanelManager.renderView();
-        await this.app.promptPanelManager.renderTagFilters();
+        await this.app.promptPanelManager.ensureRendered();
       }
     });
   }
@@ -58,31 +56,34 @@ export class NavigationManager {
    * @private
    */
   registerPanels() {
+    const promptConfig = this.batchToolbarConfig.prompt || {};
+    const imageConfig = this.batchToolbarConfig.image || {};
+
     this.panels.set('prompt', {
-      id: 'promptPanel',
-      buttonId: 'promptManagerBtn',
+      ...promptConfig,
+      id: promptConfig.id || 'promptPanel',
+      buttonId: promptConfig.buttonId || 'promptManagerBtn',
       name: 'prompt',
       onShow: async () => {
         if (this.app.promptPanelManager) {
           this.app.updatePromptViewButtons(this.app.promptPanelManager.viewModeType);
-          await this.app.promptPanelManager.renderView();
+          await this.app.promptPanelManager.ensureRendered();
         }
       }
     });
 
     this.panels.set('image', {
-      id: 'imagePanel',
-      buttonId: 'imageManagerBtn',
+      ...imageConfig,
+      id: imageConfig.id || 'imagePanel',
+      buttonId: imageConfig.buttonId || 'imageManagerBtn',
       name: 'image',
       onShow: async () => {
         if (this.app.imagePanelManager) {
           this.app.updateImageViewButtons(this.app.imagePanelManager.viewModeType);
-          await this.app.imagePanelManager.renderView();
+          await this.app.imagePanelManager.ensureRendered();
         }
       }
     });
-
-
   }
 
   /**

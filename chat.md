@@ -7,14 +7,13 @@
 全面分析当前项目, 有没有什么常见的隐患, 给出优化方案
 排查上步所有可能的问题, 给出修改方案
 检查现有事件绑定中, 有哪些是没有在 html 中出现的, 也没有 动态生成; 给出统计结果
-根据实际 js 文件结构, 更新 js文件树.md
+根据实际 js 文件结构, 更新 js文件树.md, 不需要最近修改
 通过 google-code-review skills 审查本地变更, 使用 `git diff > git-diff.log`, 不要用交互式的 `git diff`
-根据 chat.md 的第 12 行以及对应的对话内容, 更新 readme.md 和 change.md, 并总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
+根据 chat.md 的第 12 行以及 git-diff.log, 更新 readme.md 和 change.md, 并总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 
 ## todo
 
 快捷键管理
-逐个检查 renderer/utils 目录, 到 utils 目录
 提示词主界面和图像主界面, 是否也可以使用配置驱动模式, 与当前实现有何优劣
 批量操作界面, 是否也可以使用配置驱动模式, 与当前实现有何优劣
 现在 两个回收站的整体设计, 可以怎样重构, 结合 refator skills 分析
@@ -25,6 +24,15 @@
 创建提示词时, toast 不是中文; 参考 DialogService, 实现统一管理的 toast
 renderer\services\DialogService.js 设置相同的提示风格信息
 database optimize-database
+提示词批量管理 如何做 单元测试
+renderer\managers\SelectionManager.js selectedItems 改为 lrucache 是否更好, 与当前实现有何优劣
+现在涉及多选工具栏的有几个文件? 文件组织和命名可以怎样优化
+
+## 20260324
+
+import 统一通过 index.js 导出和导入, 修改 xxx
+ToolbarConfig 只是 批量工具栏 的配置, 命名需要具体, BatchToolbarConfig?
+提示词主界面, 从列表视图选中后, 切换到卡片视图, 应该隐藏多选工具栏; 当前的切换视图和图像主界面的切换视图有什么不同
 
 ## 20260323---
 

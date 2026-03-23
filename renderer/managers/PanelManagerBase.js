@@ -1,5 +1,6 @@
 import { HtmlUtils, LRUCache } from '../../utils/index.js';
 import { TagUI } from './TagUI.js';
+import { BatchToolbarController } from './BatchToolbarController.js';
 
 /**
  * 面板管理器基类
@@ -15,6 +16,7 @@ export class PanelManagerBase {
    * @param {Object} options.eventBus - 事件总线
    * @param {string} options.storagePrefix - localStorage 键前缀
    * @param {number} options.defaultCardSize - 默认卡片大小
+   * @param {Object} options.toolbarConfig - 工具栏配置 { toolbarId, countId, label, onDelete, onAddTag, onSetSafe, onSetUnsafe, onCancel }
    */
   constructor(options) {
     this.app = options.app;
@@ -22,6 +24,7 @@ export class PanelManagerBase {
     this.eventBus = options.eventBus;
     this.storagePrefix = options.storagePrefix;
     this.defaultCardSize = options.defaultCardSize || 200;
+    this.onSelectionChange = options.onSelectionChange;
 
     // 通用状态
     this.filteredItems = [];
@@ -46,6 +49,16 @@ export class PanelManagerBase {
 
     // 初始化 LRU 缓存，用于缓存标签组数据
     this.tagsWithGroupCache = new LRUCache(10);
+
+    // 初始化批量操作工具栏控制器
+    if (options.toolbarConfig) {
+      this.toolbarController = new BatchToolbarController({
+        ...options.toolbarConfig,
+        getSelectedCount: () => this.selectedIds.size,
+        panelManager: this
+      });
+      this.toolbarController.init();
+    }
 
     // 绑定事件
     this.subscribeToEvents();
@@ -271,10 +284,16 @@ export class PanelManagerBase {
   }
 
   /**
-   * 初始化
+   * 初始化（只加载数据，不渲染视图）
    */
   async init() {
     await this.loadData();
+  }
+
+  /**
+   * 渲染视图和标签筛选器
+   */
+  async ensureRendered() {
     await this.renderView();
     await this.renderTagFilters();
   }
@@ -686,9 +705,18 @@ export class PanelManagerBase {
    * @param {string} mode - 视图模式
    */
   setViewMode(mode) {
+    // 切换视图模式时清除选择状态
+    const previousCount = this.selectedIds?.size || 0;
+    if (this.selectedIds) {
+      this.selectedIds.clear();
+    }
+
     this.viewModeType = mode;
     localStorage.setItem(`${this.storagePrefix}ViewMode`, mode);
     this.renderView();
+
+    // 更新工具栏
+    this.toolbarController?.updateUI();
   }
 
   /**

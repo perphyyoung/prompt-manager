@@ -1,14 +1,24 @@
 # 更新日志
 
-## 20260323
+## 20260324
+
+### 批量操作工具栏重构
+
+- **配置驱动架构**: 新建 `BatchToolbarConfig.js` 统一管理提示词和图像面板的批量操作工具栏配置
+
+### 代码清理
+
+- **日志堆栈优化**: `logger.js` 调整 `skipFrames` 为 3，显示更完整的错误堆栈
+
+### 文件组织优化
+
+- **配置目录**: 新建 `renderer/config/` 目录，包含 `BatchToolbarConfig.js` 和 `index.js`
+- **统一导入**: 通过 `index.js` 统一导出配置和批量操作控制器
 
 ### 日志系统统一
 
 - 重构日志系统，所有日志统一通过 `logger.js` 管理
 - logger.js 同时输出到控制台和 `debug.log` 文件
-- main.js 中的 `console.error/warn/log` 全部改为 `logError/logWarn/logInfo`
-- 添加 `renderer-log` IPC 通道，渲染进程日志通过 IPC 写入 debug.log
-- preload.cjs 更新日志方法，使用 IPC 通道发送日志
 
 ### 代码组织优化
 

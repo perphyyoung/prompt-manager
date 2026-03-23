@@ -43,7 +43,7 @@ async function writeLogToFile(message) {
  * @param {number} skipFrames - 跳过的帧数
  * @returns {Object} 包含 message 和 stack 的对象
  */
-function getDetailedStackTrace(error, skipFrames = 2) {
+function getDetailedStackTrace(error, skipFrames = 3) {
   const stack = error?.stack || new Error().stack;
   if (!stack) return { message: '', stack: '' };
 
@@ -52,18 +52,23 @@ function getDetailedStackTrace(error, skipFrames = 2) {
   const relevantLines = lines.slice(skipFrames);
 
   const formattedStack = relevantLines
-    .filter(line => line.includes('file:///'))
-    .slice(0, 10)
+    .slice(0, 15)
     .map((line, index) => {
-      const match = line.match(/at\s+(?:(.+?)\s+\()?file:\/\/.+?\/(.+?):(\d+):(\d+)\)?/);
+      // Try to match file:/// paths
+      const match = line.match(/at\s+(?:(.+?)\s+\()?file:\/\/.+?[\/\\](.+?):(\d+):(\d+)\)?/);
       if (match) {
         const [, funcName, filePath, lineNum, colNum] = match;
-        const shortPath = filePath.replace(/^.*[\\\/]/, '');
         const arrow = index === 0 ? '👉 ' : '   ';
-        return `${arrow}at ${funcName || '<anonymous>'} (${shortPath}:${lineNum}:${colNum})`;
+        return `${arrow}at ${funcName || '<anonymous>'} (${filePath}:${lineNum})`;
       }
-      return '   ' + line.trim();
+      // Fallback: show raw line
+      const trimmed = line.trim();
+      if (trimmed) {
+        return '   ' + trimmed;
+      }
+      return null;
     })
+    .filter(line => line !== null)
     .join('\n');
 
   return {
