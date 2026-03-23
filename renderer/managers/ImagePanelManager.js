@@ -13,6 +13,8 @@ export class ImagePanelManager extends PanelManagerBase {
   // 图像特殊标签检查函数 Map
   static IMAGE_TAG_CHECKS = new Map([
     [Constants.FAVORITE_TAG, (img) => img.isFavorite],
+    [Constants.UNREFERENCED_TAG, (img) => !img.promptRefs || img.promptRefs.length === 0],
+    [Constants.MULTI_REF_TAG, (img) => img.promptRefs && img.promptRefs.length > 1],
     [Constants.SAFE_TAG, (img) => img.isSafe !== 0],
     [Constants.UNSAFE_TAG, (img) => img.isSafe === 0],
     [Constants.NO_TAG_TAG, (img) => !img.tags || img.tags.length === 0]
@@ -513,11 +515,19 @@ export class ImagePanelManager extends PanelManagerBase {
   calculateSpecialTagCounts(visibleItems) {
     const specialTags = [];
     const favoriteCount = visibleItems.filter(img => img.isFavorite).length;
+    const unreferencedCount = visibleItems.filter(img => !img.promptRefs || img.promptRefs.length === 0).length;
+    const multiRefCount = visibleItems.filter(img => img.promptRefs && img.promptRefs.length > 1).length;
     const noTagCount = visibleItems.filter(img => !img.tags || img.tags.length === 0).length;
     const violatingCount = visibleItems.filter(img => img.tags && img.tags.includes(Constants.VIOLATING_TAG)).length;
 
     if (favoriteCount > 0) {
       specialTags.push({ tag: Constants.FAVORITE_TAG, count: favoriteCount });
+    }
+    if (unreferencedCount > 0) {
+      specialTags.push({ tag: Constants.UNREFERENCED_TAG, count: unreferencedCount });
+    }
+    if (multiRefCount > 0) {
+      specialTags.push({ tag: Constants.MULTI_REF_TAG, count: multiRefCount });
     }
     if (noTagCount > 0) {
       specialTags.push({ tag: Constants.NO_TAG_TAG, count: noTagCount });
