@@ -28,6 +28,11 @@ database optimize-database
 renderer\managers\SelectionManager.js selectedItems 改为 lrucache 是否更好, 与当前实现有何优劣
 涉及 批量工具栏 的有几个文件? 文件组织和命名可以怎样优化
 
+## 20260324-3
+
+删除批量安全, 添加批量收藏
+批量操作添加单元测试
+
 ## 20260324-2---
 
 同目录模块 之间导入时，直接导入具体文件，不通过 index.js; 跨目录导入 时，统一使用 index.js

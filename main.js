@@ -894,6 +894,16 @@ ipcMain.handle('get-all-images-for-stats', async () => {
   }
 });
 
+// 根据 ID 获取提示词信息
+ipcMain.handle('get-prompt-by-id', async (event, promptId) => {
+  try {
+    return await db.getPromptById(promptId);
+  } catch (error) {
+    logError('Main', 'Get prompt by id error:', error);
+    throw error;
+  }
+});
+
 // 根据 ID 获取图像信息
 ipcMain.handle('get-image-by-id', async (event, imageId) => {
   try {

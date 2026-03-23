@@ -13,8 +13,7 @@ export const BatchConfig = {
     buttons: [
       { id: 'promptBatchInvertBtn', text: '反选', className: 'btn btn-sm btn-secondary', action: 'Invert' },
       { id: 'promptBatchAddTagBtn', text: '批量添加标签', className: 'btn btn-sm btn-primary', action: 'AddTag' },
-      { id: 'promptBatchSetSafeBtn', text: '设为安全', className: 'btn btn-sm btn-primary', action: 'SetSafe' },
-      { id: 'promptBatchSetUnsafeBtn', text: '设为不安全', className: 'btn btn-sm btn-warning', action: 'SetUnsafe' },
+      { id: 'promptBatchFavoriteBtn', text: '批量收藏', className: 'btn btn-sm btn-primary', action: 'Favorite' },
       { id: 'promptBatchDeleteBtn', text: '批量删除', className: 'btn btn-sm btn-danger', action: 'Delete' },
       { id: 'promptBatchCancelBtn', text: '取消选择', className: 'btn btn-sm btn-secondary', action: 'Cancel' }
     ],
@@ -39,7 +38,7 @@ export const BatchConfig = {
         processItems: async (ids, tagInput, api) => {
           const tags = tagInput.split(',').map(t => t.trim()).filter(t => t);
           for (const id of ids) {
-            const prompt = await window.electronAPI.getPrompt(id);
+            const prompt = await window.electronAPI.getPromptById(id);
             if (!prompt) continue;
             let currentTags = prompt.tags ? [...prompt.tags] : [];
             for (const tagName of tags) {
@@ -53,21 +52,20 @@ export const BatchConfig = {
         successMsg: (count) => `${count} 个提示词已添加标签`,
         errorMsg: '批量添加标签失败'
       },
-      setSafe: {
+      favorite: {
         api: 'updatePrompt',
-        params: { isSafe: 1 },
-        event: 'safeRatingChanged',
-        eventData: { targetType: 'batch', isSafe: true },
-        successMsg: (count) => `${count} 个提示词已设为安全`,
-        errorMsg: '批量设置安全状态失败'
-      },
-      setUnsafe: {
-        api: 'updatePrompt',
-        params: { isSafe: 0 },
-        event: 'safeRatingChanged',
-        eventData: { targetType: 'batch', isSafe: false },
-        successMsg: (count) => `${count} 个提示词已设为不安全`,
-        errorMsg: '批量设置安全状态失败'
+        event: 'promptFavoriteChanged',
+        processItems: async (ids, input, api) => {
+          for (const id of ids) {
+            const prompt = await window.electronAPI.getPromptById(id);
+            if (!prompt) continue;
+            // 切换收藏状态
+            const newFavoriteStatus = prompt.isFavorite ? 0 : 1;
+            await window.electronAPI.updatePrompt(id, { isFavorite: newFavoriteStatus });
+          }
+        },
+        successMsg: (count) => `${count} 个提示词已切换收藏状态`,
+        errorMsg: '批量收藏失败'
       }
     }
   },
@@ -82,8 +80,7 @@ export const BatchConfig = {
     buttons: [
       { id: 'imageBatchInvertBtn', text: '反选', className: 'btn btn-sm btn-secondary', action: 'Invert' },
       { id: 'imageBatchAddTagBtn', text: '批量添加标签', className: 'btn btn-sm btn-primary', action: 'AddTag' },
-      { id: 'imageBatchSetSafeBtn', text: '设为安全', className: 'btn btn-sm btn-primary', action: 'SetSafe' },
-      { id: 'imageBatchSetUnsafeBtn', text: '设为不安全', className: 'btn btn-sm btn-warning', action: 'SetUnsafe' },
+      { id: 'imageBatchFavoriteBtn', text: '批量收藏', className: 'btn btn-sm btn-primary', action: 'Favorite' },
       { id: 'imageBatchDeleteBtn', text: '批量删除', className: 'btn btn-sm btn-danger', action: 'Delete' },
       { id: 'imageBatchCancelBtn', text: '取消选择', className: 'btn btn-sm btn-secondary', action: 'Cancel' }
     ],
@@ -114,21 +111,20 @@ export const BatchConfig = {
         successMsg: (count) => `${count} 个图像已添加标签`,
         errorMsg: '批量添加标签失败'
       },
-      setSafe: {
+      favorite: {
         api: 'updateImage',
-        params: { isSafe: 1 },
-        event: 'safeRatingChanged',
-        eventData: { targetType: 'batch', isSafe: true },
-        successMsg: (count) => `${count} 个图像已设为安全`,
-        errorMsg: '批量设置安全状态失败'
-      },
-      setUnsafe: {
-        api: 'updateImage',
-        params: { isSafe: 0 },
-        event: 'safeRatingChanged',
-        eventData: { targetType: 'batch', isSafe: false },
-        successMsg: (count) => `${count} 个图像已设为不安全`,
-        errorMsg: '批量设置安全状态失败'
+        event: 'imageFavoriteChanged',
+        processItems: async (ids, input, api) => {
+          for (const id of ids) {
+            const image = await window.electronAPI.getImageById(id);
+            if (!image) continue;
+            // 切换收藏状态
+            const newFavoriteStatus = image.isFavorite ? 0 : 1;
+            await window.electronAPI.updateImage(id, { isFavorite: newFavoriteStatus });
+          }
+        },
+        successMsg: (count) => `${count} 个图像已切换收藏状态`,
+        errorMsg: '批量收藏失败'
       }
     }
   }

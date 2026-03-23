@@ -113,12 +113,12 @@ export class BatchToolbarUI {
     this.buttons.forEach(btn => {
       const element = document.getElementById(btn.id);
       if (element && btn.action) {
-        element.addEventListener('click', () => {
+        element.addEventListener('click', async () => {
           const handler = this.panelManager[`batch${btn.action}`];
           if (handler) {
             // 点击任意批量操作按钮时进入批量模式
             this.enterBatchMode();
-            handler.call(this.panelManager);
+            await handler.call(this.panelManager);
           } else {
             window.electronAPI?.logError('BatchToolbar', `方法不存在: batch${btn.action}`);
           }

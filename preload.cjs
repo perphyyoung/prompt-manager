@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ==================== Prompt 管理 ====================
   /** 获取所有 Prompts @param {string} sortBy - 排序字段 @param {string} sortOrder - 排序顺序 */
   getPrompts: (sortBy, sortOrder) => ipcRenderer.invoke('get-prompts', sortBy, sortOrder),
+  /** 根据 ID 获取 Prompt @param {string} id - Prompt ID */
+  getPromptById: (id) => ipcRenderer.invoke('get-prompt-by-id', id),
   /** 添加新 Prompt @param {Object} prompt - Prompt 数据 */
   addPrompt: (prompt) => ipcRenderer.invoke('add-prompt', prompt),
   /** 更新 Prompt @param {string} id - Prompt ID @param {Object} updates - 更新内容 */

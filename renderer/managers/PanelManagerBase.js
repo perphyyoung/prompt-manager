@@ -808,17 +808,10 @@ export class PanelManagerBase {
   }
 
   /**
-   * 批量设置安全
+   * 批量收藏
    */
-  async batchSetSafe() {
-    await this.batchExecutor?.executeSetSafe('setSafe');
-  }
-
-  /**
-   * 批量设置不安全
-   */
-  async batchSetUnsafe() {
-    await this.batchExecutor?.executeSetSafe('setUnsafe');
+  async batchFavorite() {
+    await this.batchExecutor?.executeFavorite('favorite');
   }
 
   /**

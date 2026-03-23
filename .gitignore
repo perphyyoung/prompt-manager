@@ -1,4 +1,5 @@
 # Custom files
+tests/*
 *.diff
 renderer/styles-*
 testing-playwright/*

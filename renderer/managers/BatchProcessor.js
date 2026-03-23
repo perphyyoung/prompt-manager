@@ -138,6 +138,21 @@ export class BatchProcessor {
       if (config.event && this.eventBus) {
         this.eventBus.emit(config.event, { ids });
       }
+
+      // 重新加载数据以确保缓存更新
+      if (this.panelManager.loadData) {
+        await this.panelManager.loadData();
+      }
+
+      // 刷新视图
+      await this.panelManager.renderView();
+
+      // 刷新标签筛选区
+      if (this.panelManager.renderTagFilters) {
+        await this.panelManager.renderTagFilters();
+      }
+
+      this.panelManager.toolbarController?.updateUI();
     } catch (error) {
       window.electronAPI?.logError('BatchProcessor', `${operationKey} failed:`, error);
       this.panelManager.app.showToast(config.errorMsg, 'error');
@@ -145,10 +160,10 @@ export class BatchProcessor {
   }
 
   /**
-   * 执行批量设置安全状态
-   * @param {string} operationKey - 操作键（如 'setSafe' 或 'setUnsafe'）
+   * 执行批量收藏
+   * @param {string} operationKey - 操作键（如 'favorite'）
    */
-  async executeSetSafe(operationKey) {
+  async executeFavorite(operationKey = 'favorite') {
     const config = this.operationConfig[operationKey];
     if (!config) {
       window.electronAPI?.logError('BatchProcessor', `未找到操作配置: ${operationKey}`);
@@ -159,9 +174,9 @@ export class BatchProcessor {
     if (ids.length === 0) return;
 
     try {
-      // 执行设置
-      for (const id of ids) {
-        await window.electronAPI[config.api](id, config.params);
+      // 执行收藏操作
+      if (config.processItems) {
+        await config.processItems(ids, null, config.api);
       }
 
       // 显示成功消息
@@ -169,11 +184,22 @@ export class BatchProcessor {
 
       // 触发事件
       if (config.event && this.eventBus) {
-        this.eventBus.emit(config.event, config.eventData || {});
+        this.eventBus.emit(config.event, { ids });
+      }
+
+      // 重新加载数据以确保缓存更新
+      if (this.panelManager.loadData) {
+        await this.panelManager.loadData();
       }
 
       // 刷新视图
-      this.panelManager.renderView();
+      await this.panelManager.renderView();
+
+      // 刷新标签筛选区
+      if (this.panelManager.renderTagFilters) {
+        await this.panelManager.renderTagFilters();
+      }
+
       this.panelManager.toolbarController?.updateUI();
     } catch (error) {
       window.electronAPI?.logError('BatchProcessor', `${operationKey} failed:`, error);
