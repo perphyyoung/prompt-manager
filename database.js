@@ -942,9 +942,10 @@ async function deletePrompt(id) {
  * 恢复已删除的提示词
  */
 async function restorePrompt(id) {
+  const now = localTime();
   await run(
-    'UPDATE prompts SET is_deleted = 0, deleted_at = NULL WHERE id = ?',
-    [id]
+    'UPDATE prompts SET is_deleted = 0, deleted_at = NULL, updated_at = ? WHERE id = ?',
+    [now, id]
   );
   return getPromptById(id);
 }

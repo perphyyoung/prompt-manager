@@ -193,6 +193,49 @@ export class CacheManager {
   getCachedImage(id) {
     return this.getImageCache().get(String(id));
   }
+
+  // ==================== 通用缓存更新方法 ====================
+
+  /**
+   * 更新缓存中的项目
+   * 根据类型自动选择对应的缓存，并应用更新
+   * @param {string} id - 项目 ID
+   * @param {string} type - 项目类型 ('prompt' | 'image')
+   * @param {Object} updates - 要更新的字段对象
+   * @returns {Object|undefined} 更新后的项目，如果缓存中不存在则返回 undefined
+   */
+  updateCachedItem(id, type, updates) {
+    const cache = type === 'prompt' ? this.getPromptCache() : this.getImageCache();
+    const item = cache.get(String(id));
+    if (item) {
+      Object.assign(item, updates);
+      cache.set(String(id), item);
+      return item;
+    }
+    return undefined;
+  }
+
+  /**
+   * 从缓存中删除项目
+   * @param {string} id - 项目 ID
+   * @param {string} type - 项目类型 ('prompt' | 'image')
+   * @returns {boolean} 是否成功删除
+   */
+  removeCachedItem(id, type) {
+    const cache = type === 'prompt' ? this.getPromptCache() : this.getImageCache();
+    return cache.delete(String(id));
+  }
+
+  /**
+   * 检查项目是否在缓存中
+   * @param {string} id - 项目 ID
+   * @param {string} type - 项目类型 ('prompt' | 'image')
+   * @returns {boolean}
+   */
+  hasCachedItem(id, type) {
+    const cache = type === 'prompt' ? this.getPromptCache() : this.getImageCache();
+    return cache.has(String(id));
+  }
 }
 
 // 导出单例实例

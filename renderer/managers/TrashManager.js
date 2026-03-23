@@ -255,19 +255,20 @@ export class TrashManager {
       const config = TrashManager.TRASH_CONFIG[itemType];
       await window.electronAPI[config.restoreApi](itemId);
 
+      // 恢复后更新缓存状态（避免重新查询数据库）
+      this.updateCacheAfterRestore(itemId, itemType);
+
       this.app.showToast('已恢复', 'success');
-      
+
       // 重新加载回收站
       await this.loadTrash();
-      
-      // 刷新主界面数据
+
+      // 刷新主界面（使用已更新的缓存数据，无需重新加载）
       if (itemType === 'prompt' && this.app.promptPanelManager) {
-        await this.app.promptPanelManager.loadData();
         await this.app.promptPanelManager.renderView();
         await this.app.promptPanelManager.renderTagFilters();
         this.app.eventBus?.emit('promptsChanged');
       } else if (itemType === 'image' && this.app.imagePanelManager) {
-        await this.app.imagePanelManager.loadData();
         await this.app.imagePanelManager.renderView();
         await this.app.imagePanelManager.renderTagFilters();
         this.app.eventBus?.emit('imagesChanged');
@@ -287,6 +288,24 @@ export class TrashManager {
       window.electronAPI.logError('TrashManager.js', 'Failed to restore item:', error);
       this.app.showToast('恢复失败', 'error');
     }
+  }
+
+  /**
+   * 恢复后更新缓存中的项目状态
+   * 使用 cacheManager.updateCachedItem 统一更新缓存
+   * @param {string} itemId - 项目 ID
+   * @param {string} itemType - 项目类型 (prompt/image)
+   */
+  updateCacheAfterRestore(itemId, itemType) {
+    const now = localTime();
+    const cacheManager = this.app?.cacheManager;
+    if (!cacheManager) return;
+
+    cacheManager.updateCachedItem(itemId, itemType, {
+      isDeleted: 0,
+      deletedAt: null,
+      updatedAt: now
+    });
   }
 
   /**

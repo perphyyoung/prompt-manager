@@ -573,7 +573,11 @@ export class PromptPanelManager extends PanelManagerBase {
   async deleteItem(id) {
     try {
       await window.electronAPI.softDeletePrompt(id);
-      await this.loadData();
+      cacheManager.removeCachedItem(id, 'prompt');
+      const prompt = this.prompts.find(p => String(p.id) === String(id));
+      if (prompt) {
+        prompt.isDeleted = 1;
+      }
       await this.renderView();
       this.app.emit('promptsChanged', { prompts: this.prompts });
 

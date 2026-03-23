@@ -508,7 +508,13 @@ ipcMain.handle('empty-prompt-trash', async () => {
 // 获取图像回收站列表
 ipcMain.handle('get-image-trash', async () => {
   try {
-    return await db.getDeletedImages();
+    const deletedImages = await db.getDeletedImages();
+
+    // 为图像添加 type 字段
+    return deletedImages.map(image => ({
+      ...image,
+      type: 'image'
+    }));
   } catch (error) {
     logError('Main', 'Get image trash error:', error);
     throw error;

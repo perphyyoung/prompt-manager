@@ -524,7 +524,11 @@ export class ImagePanelManager extends PanelManagerBase {
   async deleteItem(id) {
     try {
       await window.electronAPI.softDeleteImage(id);
-      await this.loadData();
+      cacheManager.removeCachedItem(id, 'image');
+      const image = this.images.find(img => String(img.id) === String(id));
+      if (image) {
+        image.isDeleted = 1;
+      }
       await this.renderView();
       this.app.emit('imagesChanged', { images: this.images });
 
