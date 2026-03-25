@@ -327,6 +327,44 @@ class PromptManager {
     this.bindImageTagManagerEvents();
     this.bindDetailModalEvents();
     // 全屏查看器事件由 ImageFullscreenManager 处理
+    this.bindTextSelectEvents();
+  }
+
+  /**
+   * 绑定文本全选事件（Ctrl+A）
+   * 使用事件委托处理所有文本编辑框和查看框
+   */
+  bindTextSelectEvents() {
+    document.addEventListener('keydown', (e) => {
+      // 检查是否按下了 Ctrl+A (或 Cmd+A on Mac)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        const target = e.target;
+
+        // 检查目标是否是文本输入框或文本查看框
+        const isTextInput = target.tagName === 'INPUT' &&
+          ['text', 'search', 'url', 'email', 'password', 'number'].includes(target.type);
+        const isTextArea = target.tagName === 'TEXTAREA';
+        const isContentEditable = target.isContentEditable;
+        const isTextViewer = target.classList.contains('prompt-content');
+
+        // 如果是文本编辑/查看框，执行全选
+        if (isTextInput || isTextArea || isContentEditable || isTextViewer) {
+          e.preventDefault(); // 阻止默认行为，使用自定义全选
+
+          if (isContentEditable || isTextViewer) {
+            // 对于 contenteditable 元素和文本查看框
+            const range = document.createRange();
+            range.selectNodeContents(target);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+          } else {
+            // 对于普通输入框
+            target.select();
+          }
+        }
+      }
+    });
   }
 
   /**
