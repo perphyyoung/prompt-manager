@@ -1,5 +1,5 @@
 import { HtmlUtils } from '../../../utils/index.js';
-import { Constants } from '../../constants.js';
+import { Constants } from '../../../constants.js';
 
 /**
  * 标签 HTML 生成器

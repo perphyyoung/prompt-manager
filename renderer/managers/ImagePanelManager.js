@@ -1,7 +1,7 @@
 import { cacheManager } from '../../utils/index.js';
 import { PanelManagerBase } from './PanelManagerBase.js';
 import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig, UnifiedListRenderer, ImageListConfig } from './SharedComponents/index.js';
-import { Constants } from '../constants.js';
+import { Constants } from '../../constants.js';
 import { DialogService, DialogConfig } from '../services/index.js';
 import { BatchConfig } from '../config/index.js';
 

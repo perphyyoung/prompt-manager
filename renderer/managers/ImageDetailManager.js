@@ -7,7 +7,7 @@ import { HtmlUtils, validateFileName, isSameId, cacheManager } from '../../utils
 import { SaveManager, ImageSaveStrategy } from '../renderer_utils/index.js';
 import { SimpleTagManager } from './SimpleTagManager.js';
 import { EditableTagList } from '../components/index.js';
-import { Constants } from '../constants.js';
+import { Constants } from '../../constants.js';
 import { DialogService, DialogConfig, TagAutocomplete } from '../services/index.js';
 
 export class ImageDetailManager extends DetailViewManager {

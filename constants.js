@@ -129,4 +129,10 @@ export class Constants {
     PROMPT_TAG_FILTER_COLLAPSED: 'promptTagFilterCollapsed',
     IMAGE_TAG_FILTER_COLLAPSED: 'imageTagFilterCollapsed'
   });
+
+  // 回收站类型常量
+  static TrashType = Object.freeze({
+    PROMPT: 'trash-prompt',
+    IMAGE: 'trash-image'
+  });
 }

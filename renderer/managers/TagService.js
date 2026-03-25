@@ -1,4 +1,4 @@
-import { Constants } from '../constants.js';
+import { Constants } from '../../constants.js';
 
 /**
  * 标签服务 - 数据层

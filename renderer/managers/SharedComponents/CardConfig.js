@@ -1,4 +1,5 @@
 import { ButtonFactory } from './ButtonFactory.js';
+import { Constants } from '../../../constants.js';
 
 /**
  * 卡片类型枚举
@@ -6,8 +7,8 @@ import { ButtonFactory } from './ButtonFactory.js';
 export const CardType = {
   PROMPT_MAIN: 'prompt-main',
   IMAGE_MAIN: 'image-main',
-  PROMPT_TRASH: 'prompt-trash',
-  IMAGE_TRASH: 'image-trash'
+  PROMPT_TRASH: Constants.TrashType.PROMPT,
+  IMAGE_TRASH: Constants.TrashType.IMAGE
 };
 
 /**
@@ -52,10 +53,10 @@ export class CardConfig {
   getContentText(item) {
     switch (this.dataType) {
       case 'prompt':
-      case 'trash-prompt':
+      case Constants.TrashType.PROMPT:
         return this.getValue(item, 'content');
       case 'image':
-      case 'trash-image':
+      case Constants.TrashType.IMAGE:
         const promptRef = item.promptRefs?.[0];
         if (promptRef) {
           return promptRef.promptContent || promptRef.promptTitle || '未关联提示词';
@@ -158,7 +159,7 @@ export const ImageMainConfig = new CardConfig({
 export const PromptTrashConfig = new CardConfig({
   type: CardType.PROMPT_TRASH,
   cssPrefix: 'trash-card',
-  dataType: 'trash-prompt',
+  dataType: Constants.TrashType.PROMPT,
   fields: {
     id: 'id',
     content: 'content',
@@ -175,7 +176,7 @@ export const PromptTrashConfig = new CardConfig({
 export const ImageTrashConfig = new CardConfig({
   type: CardType.IMAGE_TRASH,
   cssPrefix: 'trash-card',
-  dataType: 'trash-image',
+  dataType: Constants.TrashType.IMAGE,
   fields: {
     id: 'id',
     tags: 'tags',

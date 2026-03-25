@@ -1,4 +1,4 @@
-import { Constants } from '../constants.js';
+import { Constants } from '../../constants.js';
 
 /**
  * 搜索排序管理器

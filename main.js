@@ -14,6 +14,7 @@ import * as db from './database.js';
 import { generatePromptId, generateImageId } from './utils/idGenerator.js';
 import { getFormattedLocalTimeToSecond, getFormattedYearMonth } from './utils/index.js';
 import { logInfo, logDebug, logError, logWarn } from './logger.js';
+import { Constants } from './constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -504,7 +505,7 @@ ipcMain.handle('get-prompt-trash', async () => {
     // 为提示词添加 type 字段
     return deletedPrompts.map(prompt => ({
       ...prompt,
-      type: 'trash-prompt'
+      type: Constants.TrashType.PROMPT
     }));
   } catch (error) {
     logError('Main', 'Get prompt trash error:', error);
@@ -569,7 +570,7 @@ ipcMain.handle('get-image-trash', async () => {
     // 为图像添加 type 字段
     return deletedImages.map(image => ({
       ...image,
-      type: 'trash-image'
+      type: Constants.TrashType.IMAGE
     }));
   } catch (error) {
     logError('Main', 'Get image trash error:', error);

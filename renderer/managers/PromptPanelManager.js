@@ -2,7 +2,7 @@ import { HtmlUtils, cacheManager } from '../../utils/index.js';
 import { PanelManagerBase } from './PanelManagerBase.js';
 import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig, UnifiedListRenderer, PromptListConfig } from './SharedComponents/index.js';
 import { TagUI } from './TagUI.js';
-import { Constants } from '../constants.js';
+import { Constants } from '../../constants.js';
 import { DialogService, DialogConfig } from '../services/index.js';
 import { BatchConfig } from '../config/index.js';
 

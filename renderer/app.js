@@ -3,7 +3,7 @@
  * 作为协调器，整合各个面板管理器
  */
 
-import { Constants } from './constants.js';
+import { Constants } from '../constants.js';
 import { SafeRatingService, DialogService, DialogConfig } from './services/index.js';
 import {
   PromptPanelManager, ImagePanelManager,
@@ -444,16 +444,16 @@ class PromptManager {
 
     // 提示词工具栏
     document.getElementById('promptAddBtn')?.addEventListener('click', () => this.newPromptManager.open());
-    document.getElementById('promptTrashBtn')?.addEventListener('click', () => this.trashManager.open('trash-prompt'));
+    document.getElementById('promptTrashBtn')?.addEventListener('click', () => this.trashManager.open(Constants.TrashType.PROMPT));
     document.getElementById('closePromptTrashModal')?.addEventListener('click', () => this.trashManager.close());
-    document.getElementById('restoreAllPromptTrashBtn')?.addEventListener('click', () => this.trashManager.restoreAll('trash-prompt'));
+    document.getElementById('restoreAllPromptTrashBtn')?.addEventListener('click', () => this.trashManager.restoreAll(Constants.TrashType.PROMPT));
     document.getElementById('emptyPromptTrashBtn')?.addEventListener('click', () => this.trashManager.empty());
 
     // 图像工具栏
     document.getElementById('imageAddBtn')?.addEventListener('click', () => this.imageUploadManager.open());
-    document.getElementById('imageTrashBtn')?.addEventListener('click', () => this.trashManager.open('trash-image'));
+    document.getElementById('imageTrashBtn')?.addEventListener('click', () => this.trashManager.open(Constants.TrashType.IMAGE));
     document.getElementById('closeImageTrashModal')?.addEventListener('click', () => this.trashManager.close());
-    document.getElementById('restoreAllImageTrashBtn')?.addEventListener('click', () => this.trashManager.restoreAll('trash-image'));
+    document.getElementById('restoreAllImageTrashBtn')?.addEventListener('click', () => this.trashManager.restoreAll(Constants.TrashType.IMAGE));
     document.getElementById('emptyImageTrashBtn')?.addEventListener('click', () => this.trashManager.empty());
 
     // 绑定图像上传事件

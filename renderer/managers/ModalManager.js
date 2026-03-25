@@ -1,3 +1,5 @@
+import { Constants } from '../../constants.js';
+
 /**
  * 模态框管理器
  * 负责管理通用模态框的显示/隐藏和交互
@@ -251,15 +253,15 @@ export class ModalManager {
    * 回收站模态框配置
    */
   static TRASH_MODAL_CONFIG = {
-    'trash-prompt': { modalId: 'promptTrashModal', name: 'promptTrashModal' },
-    'trash-image': { modalId: 'imageTrashModal', name: 'imageTrashModal' }
+    [Constants.TrashType.PROMPT]: { modalId: 'promptTrashModal', name: 'promptTrashModal' },
+    [Constants.TrashType.IMAGE]: { modalId: 'imageTrashModal', name: 'imageTrashModal' }
   };
 
   /**
    * 打开回收站模态框
-   * @param {string} type - 类型 ('trash-prompt' | 'trash-image')
+   * @param {string} type - 类型 (Constants.TrashType.PROMPT | Constants.TrashType.IMAGE)
    */
-  openTrashModal(type = 'trash-prompt') {
+  openTrashModal(type = Constants.TrashType.PROMPT) {
     const config = ModalManager.TRASH_MODAL_CONFIG[type];
     if (!config) return;
 
@@ -272,9 +274,9 @@ export class ModalManager {
 
   /**
    * 关闭回收站模态框
-   * @param {string} type - 类型 ('trash-prompt' | 'trash-image')
+   * @param {string} type - 类型 (Constants.TrashType.PROMPT | Constants.TrashType.IMAGE)
    */
-  closeTrashModal(type = 'trash-prompt') {
+  closeTrashModal(type = Constants.TrashType.PROMPT) {
     const config = ModalManager.TRASH_MODAL_CONFIG[type];
     if (!config) return;
 

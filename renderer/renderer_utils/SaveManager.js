@@ -3,7 +3,7 @@
  * 管理表单字段的自动保存，支持多种保存策略
  * 集成字段变更追踪功能
  */
-import { Constants } from '../constants.js';
+import { Constants } from '../../constants.js';
 
 export class SaveManager {
   /**

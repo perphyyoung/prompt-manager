@@ -1,5 +1,5 @@
 import { HtmlUtils } from '../../utils/index.js';
-import { Constants } from '../constants.js';
+import { Constants } from '../../constants.js';
 
 /**
  * 可编辑标签列表组件

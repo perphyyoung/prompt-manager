@@ -5,7 +5,7 @@
 import { DetailViewManager } from './DetailViewManager.js';
 import { validateTitle, cacheManager } from '../../utils/index.js';
 import { SaveManager, PromptSaveStrategy } from '../renderer_utils/index.js';
-import { Constants } from '../constants.js';
+import { Constants } from '../../constants.js';
 import { DirectSaveStrategy, TagAutocomplete } from '../services/index.js';
 import { SimpleTagManager } from './SimpleTagManager.js';
 import { EditableTagList } from '../components/index.js';
