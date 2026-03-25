@@ -5,17 +5,13 @@
 快捷键管理
 提示词批量添加时, 插入 prompt_tags 和 其他关联表 可以分开; prompt_tags 可以使用一次 sql 插入
 提示词主界面和图像主界面, 是否也可以使用配置驱动模式, 与当前实现有何优劣
-批量操作界面, 是否也可以使用配置驱动模式, 与当前实现有何优劣
-现在 两个回收站的操作逻辑是否一致, 变量命名是否一致, 还能再优化吗? 结合 refator skills 分析
 从图像管理选择, 支持多选
 新建提示词 界面, 如果新上传图像已经存在于数据库中, 则提示用户是否确认覆盖; 跳转到 当前图像的图像详情界面
 图像引用计数 定期清理; 设计图像引用计数方案, 参考 database.js 中的建表语句, 结合 sqlite-optimization skills 分析
 创建提示词时, toast 不是中文; 参考 DialogService, 实现统一管理的 toast
 renderer\services\DialogService.js 设置相同的提示风格信息
 database optimize-database
-提示词批量管理 如何做 单元测试
-renderer\managers\SelectionManager.js selectedItems 改为 lrucache 是否更好, 与当前实现有何优劣
-涉及 批量工具栏 的有几个文件? 文件组织和命名可以怎样优化
+详情界面, 添加标签的批量处理入口, 用于批量删除标签, 给出实现方案
 composes 是 CSS Modules 语法, 当前项目怎样引入
 
 ## 常用
@@ -29,20 +25,22 @@ composes 是 CSS Modules 语法, 当前项目怎样引入
 检查现有事件绑定中, 有哪些是没有在 html 中出现的, 也没有 动态生成; 给出统计结果
 根据实际 js 文件结构, 更新 js文件树.md, 不需要添加最近修改章节
 针对4个卡片样式, 编写单元测试, 输出测试结果
-我已经生成了 git-diff.log, 通过 google-code-review skills 审查本地变更, 使用 `git diff > git-diff.log`, 不要用交互式的 `git diff`
-我已经生成了 git-diff.log, 通过 google-code-review skills 审查 git-diff.log
+通过 google-code-review skill 审查本地变更, 使用 `git diff > git-diff.log`, 不要用交互式的 `git diff`
+我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log
 根据 chat.md 的第 12 行以及 git-diff.log, 更新 readme.md 和 change.md, 并总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 根据 git-diff.log, 总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
+
+## 20260325-1
+
+图像和提示词统一按钮, 添加复制
+现在 两个回收站的操作逻辑是否一致, 变量命名是否一致, 还能再优化吗? 结合 refator skills 分析
+每个 文本编辑框 和 文本查看框 都分别绑定 ctrl+a, 用于全选文本; 给出实现方案 -> 浏览器默认三击全选
 
 ## 20260324-1
 
 `docs\api-contracts.md` 根据这个编写单元测试, 给出测试结果; 如果发现接口定义不合理, 可以与我商量修改; 如果有更好的接口定义思路, 也可以和我商量
-详情界面, 添加标签的批量处理入口, 用于批量删除标签, 给出实现方案
-每个文本编辑框都分别绑定 ctrl+a, 用于全选文本
 主界面左侧底部的工具栏, 统计上方添加一个 toggle, 用于控制卡片上是否显示除按钮外的其他信息, 给出实现方案
 删除关于卡片的, 不再使用的卡片样式和代码逻辑
-所有卡片视图需要的字段现在是怎么获取的, 用到缓存了吗
-
 现在先只记录 回收站 相关的接口; 方案1 的结果放在 docs/api-contracts.md;  生成的 类型定义 + 转换函数 放在 render/ api目录下; 给出实现方案, 无代码
 两个主界面的列表布局和紧凑布局, 参考卡片布局的配置驱动模式, 给出实现方案
 对于4个卡片(两个主界面, 两个回收站), 提取公共函数和公共样式, 使用配置驱动模式建立新类, 用于统一管理4个卡片显示逻辑, 以现在的图像卡片为准(数据源不同), 结合 refactor skill, 给出方案

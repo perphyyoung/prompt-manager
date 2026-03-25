@@ -1079,56 +1079,12 @@ body {
   padding-right: 8px;
 }
 
-.prompt-list-item.is-favorite {
-  border-left: 3px solid #f59e0b;
-}
+/* ============================================
+   列表视图统一样式 - BEM命名规范
+   ============================================ */
 
-.prompt-list-item.is-unreferenced {
-  border-left: 3px solid var(--text-secondary);
-}
-
-.prompt-list-thumbnail {
-  width: 60px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-}
-
-.prompt-list-thumbnail-placeholder {
-  width: 60px;
-  height: 60px;
-  background: var(--bg-color);
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-/* 提示词列表项使用共用类名 */
-.prompt-list-info { flex: 1; min-width: 0; }
-.prompt-list-title { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.prompt-list-content { font-size: 12px; color: var(--text-secondary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-clamp: 2; box-orient: vertical; margin-bottom: 4px; }
-.prompt-list-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.prompt-list-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.prompt-list-tag { font-size: 11px; color: var(--primary-color); background: rgba(99, 102, 241, 0.1); padding: 2px 8px; border-radius: var(--radius-sm); white-space: nowrap; }
-.prompt-list-tag-empty { color: var(--text-secondary); background: var(--bg-color); }
-.prompt-list-note { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.prompt-list-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
-.prompt-list-actions button:not(.favorite-btn) { padding: 6px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; border-radius: var(--radius-sm); transition: all 0.2s ease; }
-.prompt-list-actions button:not(.favorite-btn):hover { background: var(--bg-color); color: var(--primary-color); }
-
-/* 提示词列表项特有样式 */
-.prompt-list-image-info {
-  font-size: 11px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-/* 提示词列表项 - 新布局样式 */
-.prompt-list-item {
+/* 列表项基础样式 */
+.list-item {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1142,28 +1098,87 @@ body {
   transition: all 0.2s ease;
 }
 
-.prompt-list-item:last-child {
+.list-item:last-child {
   border-bottom: none;
 }
 
-.prompt-list-item:hover {
+.list-item:hover {
   background: var(--bg-color);
 }
 
-.prompt-list-item.is-selected {
+.list-item--selected {
   background: rgba(99, 102, 241, 0.1);
 }
 
-/* 提示词列表复选框 */
-.prompt-list-checkbox {
+.list-item--favorite {
+  border-left: 3px solid #f59e0b;
+}
+
+.list-item--unreferenced {
+  border-left: 3px solid var(--text-secondary);
+}
+
+/* 提示词列表项特有样式 */
+.list-item--prompt:hover {
+  background: var(--bg-color);
+}
+
+.list-item--prompt.list-item--selected {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+/* 图像列表项特有样式 */
+.list-item--image:hover {
+  background: rgba(99, 102, 241, 0.05);
+  box-shadow: none;
+}
+
+.list-item--image.list-item--selected {
+  background: rgba(99, 102, 241, 0.08);
+  border-bottom-color: var(--primary-color);
+}
+
+/* 复选框 */
+.list-item__checkbox {
   width: 16px;
   height: 16px;
   cursor: pointer;
   flex-shrink: 0;
 }
 
-/* 提示词列表文本内容区域 */
-.prompt-list-text-content {
+/* 缩略图 */
+.list-item__thumbnail {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+/* 缩略图占位符 */
+.list-item__thumbnail-placeholder {
+  width: 60px;
+  height: 60px;
+  background: var(--bg-color);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* 缩略图包装器（图像列表用） */
+.list-item__thumbnail-wrapper {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+/* 文本内容容器 */
+.list-item__text-content {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -1171,14 +1186,15 @@ body {
   gap: 4px;
 }
 
-/* 提示词列表项头部（标题+标签） */
-.prompt-list-item-header {
+/* 头部（标题+标签） */
+.list-item__header {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.prompt-list-title {
+/* 标题 */
+.list-item__title {
   flex: 1;
   font-size: 14px;
   font-weight: 500;
@@ -1189,15 +1205,16 @@ body {
   min-width: 0;
 }
 
-.prompt-list-tags {
+/* 标签容器 */
+.list-item__tags {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
   align-items: center;
 }
 
-/* 提示词列表提示词内容 */
-.prompt-list-content {
+/* 内容 */
+.list-item__content {
   font-size: 12px;
   color: var(--text-secondary);
   line-height: 1.4;
@@ -1210,8 +1227,8 @@ body {
   box-orient: vertical;
 }
 
-/* 提示词列表备注 */
-.prompt-list-note {
+/* 备注 */
+.list-item__note {
   font-size: 12px;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -1219,16 +1236,15 @@ body {
   text-overflow: ellipsis;
 }
 
-/* 提示词列表操作按钮 */
-.prompt-list-actions {
+/* 操作按钮 */
+.list-item__actions {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
   align-items: center;
 }
 
-/* 非收藏按钮使用简洁样式 */
-.prompt-list-actions button:not(.favorite-btn) {
+.list-item__actions button:not(.favorite-btn) {
   padding: 6px;
   background: transparent;
   border: none;
@@ -1238,41 +1254,74 @@ body {
   transition: all 0.2s ease;
 }
 
-.prompt-list-actions button:not(.favorite-btn):hover {
+.list-item__actions button:not(.favorite-btn):hover {
   background: var(--bg-color);
   color: var(--primary-color);
 }
 
 /* 紧凑模式 */
-.prompt-list-view.is-compact .prompt-list-item {
+.list-item--compact {
   padding: 8px 16px;
   align-items: center;
 }
 
-.prompt-list-item.is-compact .prompt-list-text-content {
+.list-item--compact .list-item__text-content {
   flex: 1;
   flex-direction: row;
   align-items: center;
 }
 
-.prompt-list-item.is-compact .prompt-list-item-header {
+.list-item--compact .list-item__header {
   flex: 1;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.prompt-list-item.is-compact .prompt-list-content,
-.prompt-list-item.is-compact .prompt-list-note {
+.list-item--compact .list-item__content,
+.list-item--compact .list-item__note {
   display: none;
 }
 
-/* 紧凑模式 - 缩略图调整为32px */
-.prompt-list-item.is-compact .prompt-list-thumbnail,
-.prompt-list-item.is-compact .prompt-list-thumbnail-placeholder {
+.list-item--compact .list-item__thumbnail,
+.list-item--compact .list-item__thumbnail-placeholder,
+.list-item--compact .list-item__thumbnail-wrapper {
   width: 32px;
   height: 32px;
   border-radius: 4px;
+}
+
+/* 图像列表紧凑模式特有 */
+.list-item--image.list-item--compact {
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 0;
+  gap: 8px;
+}
+
+.list-item--image.list-item--compact.list-item--selected {
+  background: transparent;
+  border-color: var(--border-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.list-item--image.list-item--compact .list-item__title {
+  font-size: 13px;
+}
+
+.list-item--image.list-item--compact .list-item__tags {
+  gap: 2px;
+}
+
+.list-item--image.list-item--compact .list-item__actions button {
+  padding: 2px;
+}
+
+.list-item--image.list-item--compact .list-item__actions .favorite-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* 图像上传区域 - 单张 */
@@ -1375,138 +1424,7 @@ body {
   padding-right: 8px;
 }
 
-/* 图像列表项 - 继承共用样式 */
-.image-list-item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 12px;
-  padding: 8px 16px;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--border-color);
-  border-radius: 0;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
 
-.image-list-item:hover {
-  background: rgba(99, 102, 241, 0.05);
-  box-shadow: none;
-}
-
-.image-list-item.is-selected {
-  background: rgba(99, 102, 241, 0.08);
-  border-bottom-color: var(--primary-color);
-}
-
-.image-list-item.is-favorite {
-  border-left: 3px solid #f59e0b;
-}
-
-/* 多行模式 - 提示词和备注占满整行，左对齐 */
-.image-list-item .image-list-prompt,
-.image-list-item .image-list-note {
-  width: 100%;
-  margin-top: 4px;
-}
-
-.image-list-item.is-unreferenced {
-  border-left: 3px solid var(--text-secondary);
-}
-
-/* 列表视图复选框 */
-.image-list-checkbox {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.image-list-thumbnail {
-  width: 60px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-}
-
-/* 图像列表项使用共用类名 */
-.image-list-text-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.image-list-item-header { display: flex; align-items: center; gap: 8px; }
-.image-list-file-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.image-list-tags { display: flex; gap: 4px; flex-shrink: 0; align-items: center; }
-.image-list-tag { font-size: 11px; color: var(--primary-color); background: rgba(99, 102, 241, 0.1); padding: 2px 8px; border-radius: var(--radius-sm); white-space: nowrap; }
-.image-list-tag-empty { color: var(--text-secondary); background: var(--bg-color); }
-.image-list-prompt { font-size: 12px; color: var(--text-secondary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-clamp: 2; box-orient: vertical; }
-.image-list-note { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.image-list-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
-.image-list-actions button:not(.favorite-btn) { padding: 6px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; border-radius: var(--radius-sm); transition: all 0.2s ease; }
-.image-list-actions button:not(.favorite-btn):hover { background: var(--bg-color); color: var(--primary-color); }
-
-/* 单列紧凑模式 */
-.image-list-item.is-compact .image-list-prompt,
-.image-list-item.is-compact .image-list-note {
-  display: none;
-}
-
-.image-list-item.is-compact {
-  padding: 4px 8px;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--border-color);
-  border-radius: 0;
-  gap: 8px;
-}
-
-.image-list-item.is-compact.is-selected {
-  background: transparent;
-  border-color: var(--border-color);
-  border-bottom-color: var(--primary-color);
-}
-
-.image-list-item.is-compact .image-list-thumbnail {
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
-}
-
-/* 紧凑模式 - 文本容器横向排列 */
-.image-list-item.is-compact .image-list-text-content {
-  flex: 1;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-}
-
-.image-list-item.is-compact .image-list-item-header {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.image-list-item.is-compact .image-list-file-name {
-  font-size: 13px;
-}
-
-.image-list-item.is-compact .image-list-tags {
-  gap: 2px;
-}
-
-.image-list-item.is-compact .image-list-tag {
-  font-size: 10px;
-  padding: 1px 4px;
-}
-
-.image-list-item.is-compact .image-list-actions button {
-  padding: 2px;
-}
-
-.image-list-item.is-compact .image-list-actions .favorite-btn svg {
-  width: 14px;
-  height: 14px;
-}
 
 /* 视图切换按钮 */
 .view-toggle {

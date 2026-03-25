@@ -62,7 +62,7 @@ export class PanelRenderer {
       const id = item.dataset.id || item.dataset.imageId || item.dataset.promptId;
       if (id) {
         const isSelected = selectedIds.has(id);
-        item.classList.toggle('is-selected', isSelected);
+        item.classList.toggle('list-item--selected', isSelected);
         
         const checkbox = item.querySelector('input[type="checkbox"]');
         if (checkbox) {

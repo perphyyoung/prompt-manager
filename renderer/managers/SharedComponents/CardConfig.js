@@ -12,6 +12,17 @@ export const CardType = {
 };
 
 /**
+ * 主卡片按钮配置
+ */
+const CARD_MAIN_BUTTONS = {
+  left: [ButtonFactory.createFavoriteButton()],
+  right: [
+    ButtonFactory.createCopyButton(),
+    ButtonFactory.createDeleteButton()
+  ]
+};
+
+/**
  * 统一卡片配置类
  * 4行布局：按钮(10%) | 内容(40%) | 标签(40%) | 信息(10%)
  */
@@ -125,13 +136,7 @@ export const PromptMainConfig = new CardConfig({
     updatedAt: 'updatedAt',
     createdAt: 'createdAt'
   },
-  buttons: {
-    left: [ButtonFactory.createFavoriteButton()],
-    right: [
-      ButtonFactory.createCopyButton(),
-      ButtonFactory.createDeleteButton()
-    ]
-  }
+  buttons: CARD_MAIN_BUTTONS
 });
 
 export const ImageMainConfig = new CardConfig({
@@ -150,10 +155,7 @@ export const ImageMainConfig = new CardConfig({
     height: 'height',
     thumbnail: 'thumbnailPath'
   },
-  buttons: {
-    left: [ButtonFactory.createFavoriteButton()],
-    right: [ButtonFactory.createDeleteButton()]
-  }
+  buttons: CARD_MAIN_BUTTONS
 });
 
 export const PromptTrashConfig = new CardConfig({

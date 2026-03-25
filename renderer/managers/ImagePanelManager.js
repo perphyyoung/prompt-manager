@@ -203,6 +203,29 @@ export class ImagePanelManager extends PanelManagerBase {
           await this.toggleFavorite(img.id, !img.isFavorite);
         });
       }
+
+      // 复制按钮
+      const copyBtn = card.querySelector('.copy-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (img.promptRefs && img.promptRefs.length > 0) {
+            const promptContent = img.promptRefs[0].promptContent;
+            if (promptContent) {
+              try {
+                await window.electronAPI.copyToClipboard(promptContent);
+                this.app.showToast('已复制到剪贴板', 'success');
+              } catch (error) {
+                this.app.showToast('复制失败', 'error');
+              }
+            } else {
+              this.app.showToast('没有可复制的提示词内容', 'warning');
+            }
+          } else {
+            this.app.showToast('没有关联的提示词', 'warning');
+          }
+        });
+      }
     });
   }
 
@@ -268,16 +291,16 @@ export class ImagePanelManager extends PanelManagerBase {
     const listContainer = document.getElementById('imageList');
     if (!listContainer) return;
 
-    const items = listContainer.querySelectorAll('.image-list-item');
+    const items = listContainer.querySelectorAll('.list-item--image');
     for (const item of items) {
       const imagePath = item.dataset.imagePath;
       if (!imagePath) continue;
 
       try {
         const fullPath = await window.electronAPI.getImagePath(imagePath);
-        const wrapper = item.querySelector('.image-list-thumbnail-wrapper');
+        const wrapper = item.querySelector('.list-item__thumbnail-wrapper');
         if (wrapper) {
-          wrapper.innerHTML = `<img src="file://${fullPath.replace(/\\/g, '/').replace(/"/g, '&quot;')}" alt="" class="image-list-thumbnail">`;
+          wrapper.innerHTML = `<img src="file://${fullPath.replace(/\\/g, '/').replace(/"/g, '&quot;')}" alt="" class="list-item__thumbnail">`;
         }
       } catch (error) {
         window.electronAPI.logError('ImagePanelManager.js', 'Failed to load list thumbnail:', error);
@@ -294,10 +317,10 @@ export class ImagePanelManager extends PanelManagerBase {
     if (!listContainer) return;
 
     // 列表项点击事件
-    listContainer.querySelectorAll('.image-list-item').forEach(item => {
+    listContainer.querySelectorAll('.list-item--image').forEach(item => {
       item.addEventListener('click', (e) => {
         // 如果点击的是复选框或按钮，不处理
-        if (e.target.closest('.image-list-checkbox') ||
+        if (e.target.closest('.list-item__checkbox') ||
             e.target.closest('.favorite-btn') ||
             e.target.closest('.delete-btn')) {
           return;
@@ -338,7 +361,7 @@ export class ImagePanelManager extends PanelManagerBase {
     });
 
     // 复选框事件
-    listContainer.querySelectorAll('.image-list-checkbox').forEach(checkbox => {
+    listContainer.querySelectorAll('.list-item__checkbox').forEach(checkbox => {
       // 设置初始状态
       const id = checkbox.dataset.id;
       const isSelected = this.selectedIds.has(id);
@@ -380,6 +403,30 @@ export class ImagePanelManager extends PanelManagerBase {
         const confirmed = await DialogService.showConfirmDialogByConfig(DialogConfig.DELETE_IMAGE_TO_TRASH);
         if (confirmed) {
           await this.deleteItem(id);
+        }
+      });
+    });
+
+    // 复制按钮事件
+    listContainer.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const img = this.images.find(i => String(i.id) === String(id));
+        if (img && img.promptRefs && img.promptRefs.length > 0) {
+          const promptContent = img.promptRefs[0].promptContent;
+          if (promptContent) {
+            try {
+              await window.electronAPI.copyToClipboard(promptContent);
+              this.app.showToast('已复制到剪贴板', 'success');
+            } catch (error) {
+              this.app.showToast('复制失败', 'error');
+            }
+          } else {
+            this.app.showToast('没有可复制的提示词内容', 'warning');
+          }
+        } else {
+          this.app.showToast('没有关联的提示词', 'warning');
         }
       });
     });
@@ -636,11 +683,11 @@ export class ImagePanelManager extends PanelManagerBase {
     }
 
     // 更新列表视图
-    const listItem = document.querySelector(`.image-list-item[data-id="${id}"]`);
+    const listItem = document.querySelector(`.list-item--image[data-id="${id}"]`);
     if (listItem) {
       const btn = listItem.querySelector('.favorite-btn');
       updateBtn(btn);
-      listItem.classList.toggle('is-favorite', isFavorite);
+      listItem.classList.toggle('list-item--favorite', isFavorite);
     }
   }
 

@@ -292,7 +292,7 @@ export class PromptPanelManager extends PanelManagerBase {
 
     // 绑定事件
     this.bindPromptListItemEvents(listContainer, filtered);
-    this.bindHoverPreview('.prompt-list-item');
+    this.bindHoverPreview('.list-item--prompt');
     this.bindCardDropEvents(listContainer);
     this.toolbarController?.updateUI();
   }
@@ -306,7 +306,7 @@ export class PromptPanelManager extends PanelManagerBase {
     if (!listContainer) return;
 
     const allImages = await window.electronAPI.getImages();
-    const items = listContainer.querySelectorAll('.prompt-list-item');
+    const items = listContainer.querySelectorAll('.list-item--prompt');
 
     for (const item of items) {
       const promptId = item.dataset.id;
@@ -322,7 +322,7 @@ export class PromptPanelManager extends PanelManagerBase {
 
       try {
         const fullPath = await window.electronAPI.getImagePath(imagePath);
-        const thumbnailEl = item.querySelector('.prompt-list-thumbnail');
+        const thumbnailEl = item.querySelector('.list-item__thumbnail');
         if (thumbnailEl) {
           thumbnailEl.src = `file://${fullPath.replace(/"/g, '&quot;')}`;
         }
@@ -349,7 +349,7 @@ export class PromptPanelManager extends PanelManagerBase {
           try {
             const fullPath = await window.electronAPI.getImagePath(imagePath);
             const escapedTitle = HtmlUtils.escapeHtml(prompt.title || '预览');
-            return `<img src="file://${fullPath.replace(/"/g, '&quot;')}" alt="${escapedTitle}" class="prompt-list-thumbnail">`;
+            return `<img src="file://${fullPath.replace(/"/g, '&quot;')}" alt="${escapedTitle}" class="list-item__thumbnail">`;
           } catch (error) {
             window.electronAPI.logError('PromptPanelManager.js', 'Failed to get image path:', error);
           }
@@ -359,7 +359,7 @@ export class PromptPanelManager extends PanelManagerBase {
 
     // 返回占位符
     return `
-      <div class="prompt-list-thumbnail-placeholder">
+      <div class="list-item__thumbnail-placeholder">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
           <circle cx="8.5" cy="8.5" r="1.5"></circle>
@@ -375,14 +375,14 @@ export class PromptPanelManager extends PanelManagerBase {
    * @param {Array} filtered - 筛选后的提示词列表
    */
   bindPromptListItemEvents(listContainer, filtered) {
-    listContainer.querySelectorAll('.prompt-list-item').forEach(item => {
+    listContainer.querySelectorAll('.list-item--prompt').forEach(item => {
       const promptId = item.dataset.id;
       const index = parseInt(item.dataset.index);
       const prompt = filtered.find(p => String(p.id) === String(promptId));
       if (!prompt) return;
 
       // 复选框
-      const checkbox = item.querySelector('.prompt-list-checkbox');
+      const checkbox = item.querySelector('.list-item__checkbox');
       if (checkbox) {
         // 设置初始状态
         const idStr = String(promptId);
@@ -404,7 +404,7 @@ export class PromptPanelManager extends PanelManagerBase {
 
       // 点击整行
       item.addEventListener('click', (e) => {
-        if (e.target.closest('.prompt-list-checkbox') || e.target.closest('.prompt-list-actions')) {
+        if (e.target.closest('.list-item__checkbox') || e.target.closest('.list-item__actions')) {
           return;
         }
 
@@ -502,7 +502,7 @@ export class PromptPanelManager extends PanelManagerBase {
 
       if (dragSource === 'prompt-tag' && tagName) {
         // 处理标签拖拽到卡片
-        const card = e.target.closest('.prompt-card, .prompt-list-item');
+        const card = e.target.closest('.prompt-card, .list-item--prompt');
         if (card) {
           const promptId = card.dataset.id || card.dataset.promptId;
           if (promptId) {
@@ -709,11 +709,11 @@ export class PromptPanelManager extends PanelManagerBase {
     }
 
     // 更新列表视图
-    const listItem = document.querySelector(`.prompt-list-item[data-id="${id}"]`);
+    const listItem = document.querySelector(`.list-item--prompt[data-id="${id}"]`);
     if (listItem) {
       const btn = listItem.querySelector('.favorite-btn');
       updateBtn(btn);
-      listItem.classList.toggle('is-favorite', isFavorite);
+      listItem.classList.toggle('list-item--favorite', isFavorite);
     }
   }
 
