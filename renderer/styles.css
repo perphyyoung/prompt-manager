@@ -422,6 +422,13 @@ body {
   transform: translateX(4px);
 }
 
+.btn-sidebar-action.active {
+  background: linear-gradient(135deg, var(--primary-color) 0%, #8b5cf6 100%);
+  color: white;
+  border-color: transparent;
+  transform: translateX(4px);
+}
+
 /* 重启按钮使用醒目的橙色 */
 #refreshBtn {
   background: rgba(245, 158, 11, 0.1);
@@ -1727,11 +1734,13 @@ body {
 }
 
 /* ============================================
-   图像卡片 - 继承通用卡片
+   统一卡片系统 - 4行布局（10:40:40:10）
    ============================================ */
 
-/* 图像卡片 - 继承通用卡片 */
-.image-card {
+/* 所有卡片基础样式 */
+.image-card,
+.prompt-card,
+.trash-card {
   position: relative;
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -1739,37 +1748,68 @@ body {
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.3s ease, border-color 0.3s ease;
-  cursor: pointer;
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
 }
 
-.image-card:hover {
+.image-card,
+.prompt-card {
+  cursor: pointer;
+}
+
+.image-card:hover,
+.prompt-card:hover,
+.trash-card:hover {
   box-shadow: var(--shadow-md);
   border-color: var(--primary-color);
 }
 
-/* 图像卡片背景图 */
-.image-card .card__bg {
+/* 卡片背景 */
+.image-card-bg,
+.prompt-card-bg,
+.trash-card-bg {
+  position: absolute;
+  inset: 0;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  z-index: 0;
 }
 
-/* 图像卡片遮罩层 */
-.image-card .card__overlay {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.1) 50%, transparent 100%);
+/* 卡片遮罩层 - 4行布局 */
+.image-card-overlay,
+.prompt-card-overlay,
+.trash-card-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+  background: transparent;
 }
 
-.image-card .card__header {
+/* 通用行样式 */
+.card-row {
+  display: flex;
+  align-items: center;
+}
+
+/* ========== 第 1 行：按钮行 ========== */
+.image-card-row1,
+.prompt-card-row1,
+.trash-card-row1 {
+  flex: 0 0 auto;
+  display: flex;
+  padding: 4px 12px;
   justify-content: space-between;
+  align-items: flex-start;
 }
 
-/* 图像卡片特定按钮组 */
-.image-card-actions-left,
-.image-card-actions-right {
+/* 按钮组 - hover显示 */
+.card-actions-left,
+.card-actions-right {
   display: flex;
   gap: 4px;
   opacity: 0;
@@ -1777,91 +1817,143 @@ body {
   transition: opacity 0.2s ease;
 }
 
-.image-card:hover .image-card-actions-left,
-.image-card:hover .image-card-actions-right {
+.image-card:hover .card-actions-left,
+.image-card:hover .card-actions-right,
+.prompt-card:hover .card-actions-left,
+.prompt-card:hover .card-actions-right,
+.trash-card:hover .card-actions-left,
+.trash-card:hover .card-actions-right {
   opacity: 1;
   pointer-events: auto;
 }
 
-.image-card-content {
-  flex: 1;
-}
-
-.image-card-thumbnail-wrapper {
-  position: relative;
-  width: 100%;
-  flex: 1;
-  overflow: hidden;
-}
-
-.image-card-thumbnail {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.image-card-favorite-btn {
+/* 卡片按钮 */
+.card-btn {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.95);
-  color: #9ca3af;
-  border: 2px solid #e5e7eb;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-}
-
-.image-card:hover .image-card-favorite-btn {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.image-card-favorite-btn:hover {
-  border-color: #f59e0b;
-  color: #f59e0b;
-}
-
-.image-card-favorite-btn.active {
-  background: #f59e0b;
-  border-color: #f59e0b;
-  color: white;
-  opacity: 1;
-}
-
-.image-card-delete-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(239, 68, 68, 0.9);
-  color: white;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
+  transition: all 0.2s ease;
 }
 
-.image-card:hover .image-card-delete-btn {
-  opacity: 1;
-  pointer-events: auto;
+.card-btn.favorite-btn {
+  background: rgba(255, 255, 255, 0.95);
+  color: #9ca3af;
+  border: 2px solid #e5e7eb;
 }
 
-.image-card-delete-btn:hover {
-  background: rgba(220, 38, 38, 1);
+.card-btn.favorite-btn.active {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: white;
 }
 
-.image-card.is-favorite {
+.card-btn.delete-btn {
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+}
+
+.card-btn.restore-btn,
+.card-btn.btn-restore {
+  background: rgba(59, 130, 246, 0.9);
+  color: white;
+}
+
+.card-btn.btn-danger {
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+}
+
+/* ========== 第 2 行：内容行 ========== */
+.image-card-row2,
+.prompt-card-row2,
+.trash-card-row2 {
+  flex: 1 1 auto;
+  font-size: 12px;
+  color: var(--primary-color);
+  word-break: break-all;
+  padding: 0 8px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  line-clamp: 4;
+  box-orient: vertical;
+  min-height: 0;
+}
+
+/* ========== 第 3 行：标签行 (40%) ========== */
+.image-card-row3,
+.prompt-card-row3,
+.trash-card-row3 {
+  flex: 0 0 auto;
+  padding: 0 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 4px;
+  overflow: hidden;
+}
+
+/* 卡片标签样式 - 单独渲染 */
+.image-card-row3 .tag-display,
+.prompt-card-row3 .tag-display,
+.trash-card-row3 .tag-display {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: var(--primary-light);
+  color: var(--primary-color);
+  font-size: 11px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+/* ========== 第 4 行：信息行 ========== */
+.image-card-row4,
+.prompt-card-row4,
+.trash-card-row4 {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 11px;
+  color: var(--primary-color);
+  padding: 4px 0;
+}
+
+.card-footer-info {
+  text-align: center;
+  color: var(--primary-color);
+}
+
+/* 卡片信息隐藏模式 */
+.cards-info-hidden .prompt-card-row2,
+.cards-info-hidden .prompt-card-row3,
+.cards-info-hidden .prompt-card-row4,
+.cards-info-hidden .image-card-row2,
+.cards-info-hidden .image-card-row3,
+.cards-info-hidden .image-card-row4,
+.cards-info-hidden .trash-card-row2,
+.cards-info-hidden .trash-card-row3,
+.cards-info-hidden .trash-card-row4 {
+  display: none;
+}
+
+/* 收藏状态 */
+.image-card.is-favorite,
+.prompt-card.is-favorite,
+.trash-card.is-favorite {
   border-color: #f59e0b;
 }
+
+/* ============================================
+   卡片特殊状态样式
+   ============================================ */
 
 /* 未引用图像卡片样式 */
 .image-card.is-unreferenced {
@@ -1873,32 +1965,30 @@ body {
   opacity: 0.7;
 }
 
-/* 图像卡片拖拽悬停效果 */
-.image-card.drag-over {
-  border: 2px dashed var(--primary-color);
-  box-shadow: 0 0 0 4px var(--primary-light);
+/* 无图像提示词卡片样式 */
+.prompt-card.no-images {
+  border-color: #9ca3af;
+  border-style: dashed;
 }
 
-.image-list-item.drag-over {
-  border: 2px dashed var(--primary-color);
-  background-color: var(--primary-light);
+.prompt-card.no-images .prompt-card-overlay {
+  background: linear-gradient(135deg, var(--card-bg) 0%, var(--bg-color) 100%);
 }
 
-/* 标签拖拽时的样式 */
-.tag-filter-item.dragging {
-  opacity: 0.5;
-  cursor: grabbing;
+.prompt-card.no-images .prompt-card-content {
+  color: var(--text-secondary);
+  text-shadow: none;
 }
 
-.tag-filter-item[draggable="true"] {
-  cursor: grab;
+.prompt-card.no-images .tag {
+  color: var(--text-secondary);
+  background: var(--bg-color);
+  backdrop-filter: none;
 }
 
-.tag-filter-item[draggable="true"]:active {
-  cursor: grabbing;
-}
-
-.image-card-unreferenced-badge {
+/* 未引用/无图像徽章 */
+.image-card-unreferenced-badge,
+.prompt-card-no-image-badge {
   position: absolute;
   bottom: 8px;
   right: 8px;
@@ -1912,259 +2002,107 @@ body {
   pointer-events: none;
 }
 
-/* 图像卡片底部区域 */
-.image-card-footer {
-  padding: 8px 12px;
-  background: transparent;
-}
-
-.image-card-tags {
-  display: flex;
-  gap: 4px;
-  flex-wrap: nowrap;
-  overflow: hidden;
-  max-height: 22px;
-  margin-bottom: 4px;
-}
-
-/* 统一的卡片底部信息样式 - 提示词卡片和图像卡片共用 */
-.card-footer-info {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  width: 100%;
-}
-
-/* 图像提示词浮动提示框 */
-.image-prompt-tooltip {
-  position: fixed;
-  max-width: 400px;
-  max-height: 300px;
-  padding: 12px 16px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  z-index: 1000;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
-  pointer-events: none;
-  overflow-y: auto;
-}
-
-.image-prompt-tooltip.show {
-  opacity: 1;
-  visibility: visible;
-}
-
-.image-prompt-tooltip-content {
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--text-primary);
-  word-wrap: break-word;
-  white-space: pre-wrap;
-}
-
-/* Prompt 卡片 - 继承通用卡片 */
-.prompt-card {
-  position: relative;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.3s ease, border-color 0.3s ease;
-  cursor: pointer;
-  width: 100%;
-}
-
-.prompt-card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--primary-color);
-}
-
-/* 提示词卡片拖拽悬停效果 */
-.prompt-card.drag-over {
-  border: 2px dashed var(--primary-color);
-  box-shadow: 0 0 0 4px var(--primary-light);
-}
-
-.prompt-list-item.drag-over {
-  border: 2px dashed var(--primary-color);
-  background-color: var(--primary-light);
-}
-
-/* 提示词卡片背景图 */
-.prompt-card .card__bg {
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-/* 提示词卡片遮罩层 */
-.prompt-card .card__overlay {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.5) 50%, rgba(0, 0, 0, 0.7) 100%);
-}
-
-.prompt-card.is-favorite {
-  border-color: #f59e0b;
-}
-
-/* 无图像提示词卡片样式 */
-.prompt-card.no-images {
-  border-color: #9ca3af;
-  border-style: dashed;
-}
-
-.prompt-card.no-images .prompt-card-overlay {
-  background: linear-gradient(135deg, var(--card-bg) 0%, var(--bg-color) 100%);
-}
-
-
-
-.prompt-card.no-images .prompt-card-content {
-  color: var(--text-secondary);
-  text-shadow: none;
-}
-
-.prompt-card.no-images .tag {
-  color: var(--text-secondary);
-  background: var(--bg-color);
-  backdrop-filter: none;
-}
-
 .prompt-card-no-image-badge {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  background: rgba(107, 114, 128, 0.9);
-  color: white;
   font-size: 10px;
-  font-weight: 600;
   padding: 3px 8px;
   border-radius: 10px;
-  z-index: 10;
-  pointer-events: none;
 }
 
-.prompt-card .card__header {
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
-}
+/* ============================================
+   卡片Hover预览提示框 - 统一新样式
+   ============================================ */
 
-
-
-.prompt-card-actions-left,
-.prompt-card-actions-right {
-  display: flex;
-  gap: 6px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.prompt-card:hover .prompt-card-actions-left,
-.prompt-card:hover .prompt-card-actions-right {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.action-btn {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  background: rgba(255, 255, 255, 0.95);
-  cursor: pointer;
-  border-radius: 50%;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.action-btn:hover {
-  background: var(--bg-color);
-}
-
-.action-btn.delete-btn {
-  background: rgba(239, 68, 68, 0.9);
-  color: white;
-}
-
-.action-btn.delete-btn:hover {
-  background: rgba(220, 38, 38, 1);
-}
-
-.action-btn.favorite-btn {
-  color: var(--text-secondary);
-}
-
-.action-btn.favorite-btn.active {
-  background: #f59e0b;
-  border-color: #f59e0b;
-  color: white;
-}
-
-.prompt-card-content {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 6;
-  line-clamp: 6;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin-bottom: 8px;
-  flex: 1;
-  min-height: 0;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.prompt-card-footer {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-color);
-}
-
-.prompt-card-tags {
-  display: flex;
-  gap: 6px;
-  flex-wrap: nowrap;
-  overflow: hidden;
-  max-height: 24px;
-}
-
-
-
-/* 提示词预览浮动框 - 左右布局 */
-.prompt-preview-tooltip {
+.card-preview-tooltip {
   position: fixed;
   z-index: 1000;
   background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: 12px;
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
   display: flex;
   gap: 12px;
   max-width: 600px;
   max-height: 400px;
 }
 
-.prompt-preview-tooltip.show {
+.card-preview-tooltip.show {
   opacity: 1;
+  visibility: visible;
 }
 
+.card-preview-content {
+  flex: 1;
+  min-width: 200px;
+  max-width: 280px;
+  max-height: 376px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.card-preview-image {
+  flex-shrink: 0;
+  max-width: 280px;
+  max-height: 376px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.card-preview-image img {
+  max-width: 280px;
+  max-height: 376px;
+  object-fit: contain;
+  display: block;
+}
+
+/* 无图像时隐藏图像区域 */
+.card-preview-tooltip.no-image .card-preview-image {
+  display: none;
+}
+
+.card-preview-tooltip.no-image {
+  max-width: 300px;
+}
+
+/* 兼容旧类名 - 继承新样式 */
+.image-prompt-tooltip,
+.prompt-preview-tooltip {
+  position: fixed;
+  z-index: 1000;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 12px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  display: flex;
+  gap: 12px;
+  max-width: 600px;
+  max-height: 400px;
+}
+
+.image-prompt-tooltip.show,
+.prompt-preview-tooltip.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.image-prompt-tooltip-content,
 .prompt-preview-content {
   flex: 1;
   min-width: 200px;
@@ -2172,7 +2110,7 @@ body {
   max-height: 376px;
   overflow-y: auto;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-word;
@@ -2198,10 +2136,12 @@ body {
 }
 
 /* 无图像时隐藏图像区域 */
+.image-prompt-tooltip.no-image .prompt-preview-image,
 .prompt-preview-tooltip.no-image .prompt-preview-image {
   display: none;
 }
 
+.image-prompt-tooltip.no-image,
 .prompt-preview-tooltip.no-image {
   max-width: 300px;
 }
@@ -4111,7 +4051,7 @@ body {
   overflow: hidden;
 }
 
-.recycle-bin-actions {
+.trash-actions {
   display: flex;
   justify-content: space-between;
   margin-bottom: 16px;
@@ -4125,103 +4065,7 @@ body {
   gap: 16px;
 }
 
-/* 回收站卡片 - 继承通用卡片 */
-.recycle-bin-card {
-  position: relative;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.3s ease, border-color 0.3s ease;
-  aspect-ratio: 1;
-  cursor: pointer;
-  width: 100%;
-  height: 100%;
-}
-
-.recycle-bin-card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--primary-color);
-}
-
-.recycle-bin-card .card__bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  background-color: var(--bg-secondary);
-}
-
-.recycle-bin-card .card__overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 30%);
-  justify-content: space-between;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.recycle-bin-card:hover .card__overlay {
-  opacity: 1;
-}
-
-.recycle-bin-card .card__header {
-  justify-content: flex-start;
-  gap: 6px;
-}
-
-.recycle-bin-card .card__btn--danger {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-}
-
-.recycle-bin-card-info {
-  font-size: 11px;
-  color: white;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.6);
-  background: rgba(0,0,0,0.3);
-  padding: 2px 6px;
-  border-radius: 4px;
-  display: inline-block;
-}
-
-.recycle-bin-card-meta {
-  font-size: 10px;
-  color: rgba(255,255,255,0.8);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
-
-.recycle-bin-card-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: white;
-  margin-bottom: 4px;
-}
-
-.card__footer {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 12px;
-  background: rgba(0,0,0,0.7);
-  color: white;
-}
-
-.recycle-bin-item-thumbnail-placeholder {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-}
-
-.recycle-bin-empty {
+.trash-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -4230,90 +4074,13 @@ body {
   color: var(--text-secondary);
 }
 
-.recycle-bin-empty svg {
+.trash-empty svg {
   margin-bottom: 16px;
   opacity: 0.5;
 }
 
-.recycle-bin-empty p {
+.trash-empty p {
   font-size: 14px;
-}
-
-#imageTrashList {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 280px);
-  grid-auto-rows: 280px;
-  gap: 16px;
-}
-
-/* 回收站卡片 - 继承通用卡片 */
-.recycle-bin-card {
-  position: relative;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.3s ease, border-color 0.3s ease;
-  aspect-ratio: 1;
-  cursor: pointer;
-  width: 100%;
-  height: 100%;
-}
-
-.recycle-bin-card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--primary-color);
-}
-
-.recycle-bin-card .card__bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  background-color: var(--bg-secondary);
-}
-
-.recycle-bin-card .card__overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 30%);
-  justify-content: space-between;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.recycle-bin-card:hover .card__overlay {
-  opacity: 1;
-}
-
-.recycle-bin-card .card__header {
-  justify-content: flex-start;
-  gap: 6px;
-}
-
-.recycle-bin-card .card__btn--danger {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-}
-
-.recycle-bin-card-info {
-  font-size: 11px;
-  color: white;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.6);
-  background: rgba(0,0,0,0.3);
-  padding: 2px 6px;
-  border-radius: 4px;
-  display: inline-block;
-}
-
-.recycle-bin-card-meta {
-  font-size: 10px;
-  color: rgba(255,255,255,0.8);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
 /* 标签管理样式 */

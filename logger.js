@@ -132,9 +132,37 @@ export function logDebug(component, message, data) {
 }
 
 export function logError(component, message, error) {
-  const isErrorObject = error instanceof Error;
-  const data = isErrorObject ? { message: error.message, name: error.name } : error;
-  log('ERROR', component, message, data, true, isErrorObject ? error : null);
+  // 处理从渲染进程传递过来的序列化错误对象
+  const isSerializedError = error && typeof error === 'object' && error.stack;
+  const isErrorObject = error instanceof Error || isSerializedError;
+
+  // 提取错误数据（保留 stack 字段）
+  const data = isErrorObject
+    ? { message: error.message, name: error.name, stack: error.stack }
+    : error;
+
+  // 如果有 stack，格式化显示
+  let stackStr = '';
+  if (isSerializedError && error.stack) {
+    const lines = error.stack.split('\n').slice(1, 15); // 取前15行
+    const formattedStack = lines
+      .map((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+        const arrow = index === 0 ? '👉 ' : '   ';
+        return `${arrow}${trimmed}`;
+      })
+      .filter(line => line !== null)
+      .join('\n');
+    stackStr = formattedStack ? '\n  Stack:\n' + formattedStack : '';
+  }
+
+  log('ERROR', component, message, data, !isSerializedError, isErrorObject && !isSerializedError ? error : null);
+
+  // 如果有格式化好的堆栈，追加到日志
+  if (stackStr) {
+    writeLogToFile(stackStr);
+  }
 }
 
 export function logWarn(component, message, data) {

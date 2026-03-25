@@ -17,7 +17,7 @@ renderer/
 │
 ├── config/                      # 配置目录
 │   ├── index.js                 # 配置统一导出
-│   └── BatchToolbarConfig.js    # 批量操作工具栏配置
+│   └── BatchConfig.js           # 批量操作配置
 │
 ├── managers/                    # 管理器层 - 业务逻辑核心
 │   ├── index.js                 # 管理器统一导出
@@ -45,7 +45,8 @@ renderer/
 │   ├── TagUI.js                 # 标签 UI 组件，生成标签 HTML 和渲染
 │   ├── TagGroupModalManager.js  # 标签组模态框管理器
 │   │
-│   ├── BatchToolbarController.js    # 批量操作工具栏控制器
+│   ├── BatchProcessor.js            # 批量操作处理器，执行批量添加标签/收藏等操作
+│   ├── BatchToolbarUI.js            # 批量操作工具栏 UI 控制器
 │   ├── SearchSortManager.js         # 搜索排序管理器，处理搜索和排序逻辑
 │   │
 │   ├── NavigationManager.js      # 导航管理器，处理面板切换导航
@@ -58,7 +59,11 @@ renderer/
 │   └── SharedComponents/        # 共享组件
 │       ├── index.js             # 共享组件统一导出
 │       ├── PanelRenderer.js     # 面板渲染器，渲染列表/网格视图容器
-│       ├── PanelItemRenderer.js # 面板项渲染器，渲染单个提示词/图像项
+│       ├── UnifiedCardRenderer.js   # 统一卡片渲染器，渲染所有类型卡片
+│       ├── CardConfig.js        # 卡片配置类，定义卡片结构和行为
+│       ├── UnifiedListRenderer.js   # 统一列表渲染器，渲染所有类型列表项
+│       ├── ListConfig.js        # 列表配置类，定义列表项结构和行为
+│       ├── ButtonFactory.js     # 按钮工厂，创建各类卡片按钮
 │       ├── TagFilterHeader.js   # 标签筛选头部组件，渲染标签筛选栏
 │       └── TagHtmlGenerator.js  # 标签 HTML 生成器，生成标签 HTML 字符串
 │
@@ -68,11 +73,12 @@ renderer/
 │
 ├── services/                    # 服务层
 │   ├── index.js                 # 服务统一导出
-│   ├── SafeRatingService.js     # 安全评级服务，处理内容安全过滤
 │   ├── DialogService.js         # 对话框服务，管理确认对话框
 │   ├── ImageUploadService.js    # 图像上传服务，核心上传逻辑
-│   ├── UploadStrategies.js       # 上传策略，DelaySaveStrategy/DirectSaveStrategy
-│   └── UploadNotificationService.js # 上传通知服务，处理上传成功/失败通知
+│   ├── SafeRatingService.js     # 安全评级服务，处理内容安全过滤
+│   ├── TagAutocomplete.js       # 标签自动完成服务，提供标签输入自动完成功能
+│   ├── UploadNotificationService.js # 上传通知服务，处理上传成功/失败通知
+│   └── UploadStrategies.js      # 上传策略，DelaySaveStrategy/DirectSaveStrategy
 │
 ├── renderer_utils/              # 渲染进程工具类
 │   ├── index.js                 # 工具类统一导出
@@ -114,14 +120,14 @@ verify-imports.js                # JS 文件导入验证脚本（node verify-imp
 |------|--------|------|
 | 主进程 | 3 | main.js, database.js, logger.js |
 | renderer/config | 2 | 配置目录（含 index.js） |
-| renderer/managers | 24 | 业务管理器 |
-| renderer/managers/SharedComponents | 5 | 共享组件（含 index.js） |
+| renderer/managers | 25 | 业务管理器 |
+| renderer/managers/SharedComponents | 9 | 共享组件（含 index.js）|
 | renderer/renderer_utils | 5 | 渲染进程工具类（含 index.js） |
 | renderer/components | 2 | UI 组件（含 index.js） |
-| renderer/services | 6 | 服务类（含 index.js） |
+| renderer/services | 7 | 服务类（含 index.js） |
 | 根目录 utils | 10 | 共享工具类（含 index.js） |
 | 工具脚本 | 1 | verify-imports.js |
-| **总计** | **58** | - |
+| **总计** | **64** | - |
 
 ## 架构分层
 

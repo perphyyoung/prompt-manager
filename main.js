@@ -504,7 +504,7 @@ ipcMain.handle('get-prompt-trash', async () => {
     // 为提示词添加 type 字段
     return deletedPrompts.map(prompt => ({
       ...prompt,
-      type: 'prompt'
+      type: 'trash-prompt'
     }));
   } catch (error) {
     logError('Main', 'Get prompt trash error:', error);
@@ -569,7 +569,7 @@ ipcMain.handle('get-image-trash', async () => {
     // 为图像添加 type 字段
     return deletedImages.map(image => ({
       ...image,
-      type: 'image'
+      type: 'trash-image'
     }));
   } catch (error) {
     logError('Main', 'Get image trash error:', error);

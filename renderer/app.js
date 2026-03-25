@@ -380,21 +380,42 @@ class PromptManager {
    * 绑定工具栏事件
    */
   bindToolbarEvents() {
+    // 卡片信息显示开关
+    const cardInfoToggleBtn = document.getElementById('cardInfoToggleBtn');
+    const CARDS_INFO_VISIBLE_KEY = 'cardsInfoVisible';
+    
+    // 从 localStorage 加载状态
+    const isInfoVisible = localStorage.getItem(CARDS_INFO_VISIBLE_KEY) !== 'false';
+    if (!isInfoVisible) {
+      document.body.classList.add('cards-info-hidden');
+      cardInfoToggleBtn?.classList.remove('active');
+    }
+    
+    cardInfoToggleBtn?.addEventListener('click', () => {
+      const isHidden = document.body.classList.toggle('cards-info-hidden');
+      cardInfoToggleBtn.classList.toggle('active');
+      localStorage.setItem(CARDS_INFO_VISIBLE_KEY, !isHidden);
+      
+      // 更新提示
+      const action = isHidden ? '已隐藏' : '已显示';
+      this.showToast(`${action}卡片信息`, 'info');
+    });
+
     // 刷新按钮
     document.getElementById('reloadBtn')?.addEventListener('click', () => this.refreshData());
 
     // 提示词工具栏
     document.getElementById('promptAddBtn')?.addEventListener('click', () => this.newPromptManager.open());
-    document.getElementById('promptTrashBtn')?.addEventListener('click', () => this.trashManager.open('prompt'));
+    document.getElementById('promptTrashBtn')?.addEventListener('click', () => this.trashManager.open('trash-prompt'));
     document.getElementById('closePromptTrashModal')?.addEventListener('click', () => this.trashManager.close());
-    document.getElementById('restoreAllPromptTrashBtn')?.addEventListener('click', () => this.trashManager.restoreAll('prompt'));
+    document.getElementById('restoreAllPromptTrashBtn')?.addEventListener('click', () => this.trashManager.restoreAll('trash-prompt'));
     document.getElementById('emptyPromptTrashBtn')?.addEventListener('click', () => this.trashManager.empty());
 
     // 图像工具栏
     document.getElementById('imageAddBtn')?.addEventListener('click', () => this.imageUploadManager.open());
-    document.getElementById('imageTrashBtn')?.addEventListener('click', () => this.trashManager.open('image'));
+    document.getElementById('imageTrashBtn')?.addEventListener('click', () => this.trashManager.open('trash-image'));
     document.getElementById('closeImageTrashModal')?.addEventListener('click', () => this.trashManager.close());
-    document.getElementById('restoreAllImageTrashBtn')?.addEventListener('click', () => this.trashManager.restoreAll('image'));
+    document.getElementById('restoreAllImageTrashBtn')?.addEventListener('click', () => this.trashManager.restoreAll('trash-image'));
     document.getElementById('emptyImageTrashBtn')?.addEventListener('click', () => this.trashManager.empty());
 
     // 绑定图像上传事件

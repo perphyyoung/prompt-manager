@@ -46,6 +46,9 @@ export class ShortcutManager {
 
     // 刷新
     this.register('F5', 'refresh', '刷新数据');
+
+    // 卡片信息显示
+    this.register('Ctrl+I', 'toggleCardInfo', '切换卡片信息显示');
   }
 
   /**
@@ -178,6 +181,11 @@ export class ShortcutManager {
           this.refreshData();
           break;
 
+        // 卡片信息显示
+        case 'toggleCardInfo':
+          this.toggleCardInfo();
+          break;
+
         default:
           console.warn(`Unknown action: ${action}`);
       }
@@ -305,6 +313,16 @@ export class ShortcutManager {
   async refreshData() {
     if (this.app) {
       await this.app.refreshData();
+    }
+  }
+
+  /**
+   * 切换卡片信息显示
+   */
+  toggleCardInfo() {
+    const cardInfoToggleBtn = document.getElementById('cardInfoToggleBtn');
+    if (cardInfoToggleBtn) {
+      cardInfoToggleBtn.click();
     }
   }
 

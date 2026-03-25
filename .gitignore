@@ -5,6 +5,7 @@ renderer/styles-*
 testing-playwright/*
 重构/*
 app copy.js
+styles copy.css
 app.refactored.js
 
 # Dependencies

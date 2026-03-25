@@ -12,7 +12,7 @@ async function getAllJsFiles(dir, files = []) {
   const items = await fs.readdir(dir, { withFileTypes: true });
   for (const item of items) {
     const fullPath = path.join(dir, item.name);
-    if (item.name === 'node_modules' || item.name === '.git') continue;
+    if (item.name === 'node_modules' || item.name === '.git' || item.name === 'tests') continue;
     if (item.isDirectory()) {
       await getAllJsFiles(fullPath, files);
     } else if (item.name.endsWith('.js')) {

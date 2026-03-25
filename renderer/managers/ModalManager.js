@@ -251,15 +251,15 @@ export class ModalManager {
    * 回收站模态框配置
    */
   static TRASH_MODAL_CONFIG = {
-    prompt: { modalId: 'promptTrashModal', name: 'promptTrashModal' },
-    image: { modalId: 'imageTrashModal', name: 'imageTrashModal' }
+    'trash-prompt': { modalId: 'promptTrashModal', name: 'promptTrashModal' },
+    'trash-image': { modalId: 'imageTrashModal', name: 'imageTrashModal' }
   };
 
   /**
    * 打开回收站模态框
-   * @param {string} type - 类型 ('prompt' | 'image')
+   * @param {string} type - 类型 ('trash-prompt' | 'trash-image')
    */
-  openTrashModal(type = 'prompt') {
+  openTrashModal(type = 'trash-prompt') {
     const config = ModalManager.TRASH_MODAL_CONFIG[type];
     if (!config) return;
 
@@ -272,9 +272,9 @@ export class ModalManager {
 
   /**
    * 关闭回收站模态框
-   * @param {string} type - 类型 ('prompt' | 'image')
+   * @param {string} type - 类型 ('trash-prompt' | 'trash-image')
    */
-  closeTrashModal(type = 'prompt') {
+  closeTrashModal(type = 'trash-prompt') {
     const config = ModalManager.TRASH_MODAL_CONFIG[type];
     if (!config) return;
 

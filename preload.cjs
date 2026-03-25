@@ -185,7 +185,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   /** 记录调试日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 */
   logDebug: (component, message, data) => { ipcRenderer.invoke('renderer-log', 'debug', component, message, data); },
   /** 记录错误日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 */
-  logError: (component, message, data) => { ipcRenderer.invoke('renderer-log', 'error', component, message, data); },
+  logError: (component, message, data) => {
+    // 在渲染进程控制台输出完整错误（便于开发调试）
+    console.error(`[${component}] ${message}`, data);
+    // 传递原始数据，由主进程处理序列化
+    ipcRenderer.invoke('renderer-log', 'error', component, message, data);
+  },
   /** 记录警告日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 */
   logWarn: (component, message, data) => { ipcRenderer.invoke('renderer-log', 'warn', component, message, data); },
   /** 记录信息日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 */

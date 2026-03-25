@@ -1,5 +1,7 @@
 import { DialogService, DialogConfig } from '../services/index.js';
 import { localTime } from '../../utils/index.js';
+import { UnifiedCardRenderer, PromptTrashConfig, ImageTrashConfig } from './SharedComponents/index.js';
+import { Constants } from '../constants.js';
 
 /**
  * 回收站管理器
@@ -10,7 +12,7 @@ export class TrashManager {
    * 回收站类型配置
    */
   static TRASH_CONFIG = {
-    prompt: {
+    'trash-prompt': {
       api: 'getPromptTrash',
       emptyApi: 'emptyPromptTrash',
       restoreApi: 'restorePromptFromTrash',
@@ -18,7 +20,7 @@ export class TrashManager {
       containerId: 'promptTrashList',
       label: '提示词'
     },
-    image: {
+    'trash-image': {
       api: 'getImageTrash',
       emptyApi: 'emptyImageTrash',
       restoreApi: 'restoreImageFromTrash',
@@ -38,7 +40,7 @@ export class TrashManager {
     this.app = options.app;
     this.eventBus = options.eventBus;
     this.trashItems = [];
-    this.currentType = 'prompt'; // 'prompt' | 'image'
+    this.currentType = 'trash-prompt'; // 'trash-prompt' | 'trash-image'
   }
 
   /**
@@ -63,8 +65,14 @@ export class TrashManager {
   async loadTrash() {
     try {
       const config = this.getCurrentConfig();
-      this.trashItems = await window.electronAPI[config.api]();
-      
+      const items = await window.electronAPI[config.api]();
+
+      // 为每个项目添加 type 字段
+      this.trashItems = items.map(item => ({
+        ...item,
+        type: this.currentType
+      }));
+
       await this.renderTrashList();
       this.eventBus.emit('trashLoaded', { items: this.trashItems });
     } catch (error) {
@@ -88,19 +96,18 @@ export class TrashManager {
    * 渲染回收站列表
    */
   async renderTrashList() {
-    // 分别渲染提示词和图像到各自的容器
-    await this.renderTrashListForType('prompt');
-    await this.renderTrashListForType('image');
+    // 只渲染当前类型的数据
+    await this.renderTrashListForType(this.currentType);
   }
 
   /**
    * 渲染指定类型的回收站列表
-   * @param {string} type - 类型 ('prompt' | 'image')
+   * @param {string} type - 类型 ('trash-prompt' | 'trash-image')
    */
   async renderTrashListForType(type) {
-    const containerId = type === 'prompt' ? 'promptTrashList' : 'imageTrashList';
+    const containerId = type === 'trash-prompt' ? 'promptTrashList' : 'imageTrashList';
     const container = document.getElementById(containerId);
-    
+
     if (!container) return;
 
     // 过滤出该类型的项目
@@ -131,38 +138,13 @@ export class TrashManager {
    * @returns {string} HTML 字符串
    */
   renderTrashItem(item) {
-    const dateStr = item.deletedAt;
-    
-    // 图像显示空背景（后续异步加载），提示词也显示空背景（后续加载关联图像）
-    // 都不需要图标占位符
-    const bgHTML = `<div class="card__bg"></div>`;
-    
-    return `
-      <div class="recycle-bin-card" data-id="${item.id}" data-type="${item.type}">
-        ${bgHTML}
-        <div class="card__overlay">
-          <div class="card__header">
-            <button class="btn btn-sm card__btn--primary" style="position: absolute; top: 8px; left: 8px;" data-action="restore">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="1 4 1 10 7 10"></polyline>
-                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-              </svg>
-            </button>
-            <span class="recycle-bin-card-info">${item.type === 'prompt' ? '提示词' : '图像'}</span>
-          </div>
-          <button class="btn btn-sm card__btn--danger" data-action="delete">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-          </button>
-        </div>
-        <div class="card__footer">
-          <div class="recycle-bin-card-title">${item.title || item.fileName || '无标题'}</div>
-          <div class="recycle-bin-card-meta">删除于 ${dateStr}</div>
-        </div>
-      </div>
-    `;
+    // 根据 type 选择配置（图像回收站使用 'trash-image'）
+    const config = item.type === 'trash-image' ? ImageTrashConfig : PromptTrashConfig;
+    return UnifiedCardRenderer.render(config, item, {
+      icons: Constants.ICONS,
+      sortBy: null,
+      app: this.app
+    });
   }
 
   /**
@@ -170,7 +152,7 @@ export class TrashManager {
    * @param {HTMLElement} container - 容器元素
    */
   bindTrashItemEventsForContainer(container) {
-    const items = container.querySelectorAll('.recycle-bin-card');
+    const items = container.querySelectorAll('.trash-card');
     
     items.forEach(item => {
       // 恢复按钮
@@ -185,7 +167,7 @@ export class TrashManager {
       }
 
       // 删除按钮
-      const deleteBtn = item.querySelector('[data-action="delete"]');
+      const deleteBtn = item.querySelector('[data-action="permanentDelete"]');
       if (deleteBtn) {
         deleteBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
@@ -194,17 +176,6 @@ export class TrashManager {
           await this.permanentlyDeleteItem(itemId, itemType);
         });
       }
-
-      // 点击卡片本身恢复
-      item.addEventListener('click', async (e) => {
-        // 如果点击的是按钮，不触发恢复
-        if (e.target.closest('[data-action]')) {
-          return;
-        }
-        const itemId = item.dataset.id;
-        const itemType = item.dataset.type;
-        await this.restoreItem(itemId, itemType);
-      });
     });
   }
 
@@ -213,42 +184,45 @@ export class TrashManager {
    * @param {HTMLElement} container - 容器元素
    */
   async loadCardBackgroundsForContainer(container) {
-    const cards = container.querySelectorAll('.recycle-bin-card');
-    
+    const cards = container.querySelectorAll('.trash-card');
+
     for (const card of cards) {
       const itemId = card.dataset.id;
       const itemType = card.dataset.type;
-      
+
       const item = this.trashItems.find(i => String(i.id) === String(itemId));
-      
-      // 获取图像路径
+      if (!item) continue;
+
+      // 获取图像路径（与主界面保持一致：优先使用 thumbnailPath，否则使用 relativePath）
       let imagePath = null;
-      if (itemType === 'image') {
-        // 图像类型：使用自身的 thumbnailPath
-        imagePath = item.thumbnailPath;
-      } else if (itemType === 'prompt' && item.images && item.images.length > 0) {
+      if (itemType === 'trash-image') {
+        // 图像类型：使用自身的 thumbnailPath 或 relativePath
+        imagePath = item.thumbnailPath || item.relativePath;
+      } else if (itemType === 'trash-prompt') {
         // 提示词类型：使用关联的第一张图像
-        imagePath = item.images[0].thumbnailPath;
+        if (item.images && item.images.length > 0) {
+          imagePath = item.images[0].thumbnailPath || item.images[0].relativePath;
+        }
       }
-      
+
       if (!imagePath) continue;
 
       try {
         const fullPath = await window.electronAPI.getImagePath(imagePath);
-        const bgElement = card.querySelector('.card__bg');
+        const bgElement = card.querySelector('.trash-card-bg, .card__bg');
         if (bgElement) {
           bgElement.style.backgroundImage = `url('file://${fullPath.replace(/\\/g, '/')}')`;
         }
       } catch (error) {
-        window.electronAPI.logError('TrashManager.js', 'Failed to load recycle bin card background:', error);
+        window.electronAPI.logError('TrashManager.js', 'Failed to load trash card background:', error);
       }
     }
   }
 
   /**
-   * 恢复项目
+   * 恢复单个项目
    * @param {string} itemId - 项目 ID
-   * @param {string} itemType - 项目类型 (prompt/image)
+   * @param {string} itemType - 项目类型 ('trash-prompt'/'trash-image')
    */
   async restoreItem(itemId, itemType) {
     try {
@@ -264,21 +238,21 @@ export class TrashManager {
       await this.loadTrash();
 
       // 刷新主界面（使用已更新的缓存数据，无需重新加载）
-      if (itemType === 'prompt' && this.app.promptPanelManager) {
+      if (itemType === 'trash-prompt' && this.app.promptPanelManager) {
         await this.app.promptPanelManager.renderView();
         await this.app.promptPanelManager.renderTagFilters();
         this.app.eventBus?.emit('promptsChanged');
-      } else if (itemType === 'image' && this.app.imagePanelManager) {
+      } else if (itemType === 'trash-image' && this.app.imagePanelManager) {
         await this.app.imagePanelManager.renderView();
         await this.app.imagePanelManager.renderTagFilters();
         this.app.eventBus?.emit('imagesChanged');
       }
-      
+
       // 刷新统计界面
       if (this.app.currentPanel === 'statistics') {
         await this.app.renderStatistics();
       }
-      
+
       // 通知事件
       this.eventBus.emit('itemRestored', {
         id: itemId,
@@ -294,7 +268,7 @@ export class TrashManager {
    * 恢复后更新缓存中的项目状态
    * 使用 cacheManager.updateCachedItem 统一更新缓存
    * @param {string} itemId - 项目 ID
-   * @param {string} itemType - 项目类型 (prompt/image)
+   * @param {string} itemType - 项目类型 ('trash-prompt'/'trash-image')
    */
   updateCacheAfterRestore(itemId, itemType) {
     const now = localTime();
@@ -311,29 +285,29 @@ export class TrashManager {
   /**
    * 批量恢复所有项目
    * 使用缓存更新，避免全量重新加载
-   * @param {string} itemType - 项目类型 (prompt/image)
+   * @param {string} itemType - 项目类型 ('trash-prompt'/'trash-image')
    */
   async restoreAll(itemType) {
     try {
       // 1. 获取当前回收站中该类型的项目
       const itemsToRestore = this.trashItems.filter(item => item.type === itemType);
-      
+
       if (itemsToRestore.length === 0) {
         this.app.showToast('回收站已为空', 'info');
         return;
       }
 
       // 2. 批量恢复数据库
-      if (itemType === 'prompt') {
+      if (itemType === 'trash-prompt') {
         await window.electronAPI.restoreAllPrompts();
-      } else {
+      } else if (itemType === 'trash-image') {
         await window.electronAPI.restoreAllImages();
       }
 
       // 3. 批量更新缓存
       const cacheManager = this.app?.cacheManager;
       const now = localTime();
-      
+
       if (cacheManager) {
         for (const item of itemsToRestore) {
           cacheManager.updateCachedItem(item.id, itemType, {
@@ -350,11 +324,11 @@ export class TrashManager {
       await this.loadTrash();
 
       // 5. 刷新主界面（使用已更新的缓存数据，无需重新加载）
-      if (itemType === 'prompt' && this.app.promptPanelManager) {
+      if (itemType === 'trash-prompt' && this.app.promptPanelManager) {
         await this.app.promptPanelManager.renderView();
         await this.app.promptPanelManager.renderTagFilters();
         this.app.eventBus?.emit('promptsChanged');
-      } else if (itemType === 'image' && this.app.imagePanelManager) {
+      } else if (itemType === 'trash-image' && this.app.imagePanelManager) {
         await this.app.imagePanelManager.renderView();
         await this.app.imagePanelManager.renderTagFilters();
         this.app.eventBus?.emit('imagesChanged');
@@ -373,7 +347,7 @@ export class TrashManager {
   /**
    * 永久删除项目
    * @param {string} itemId - 项目 ID
-   * @param {string} itemType - 项目类型
+   * @param {string} itemType - 项目类型 ('trash-prompt'/'trash-image')
    */
   async permanentlyDeleteItem(itemId, itemType) {
     const confirmed = await DialogService.showConfirmDialogByConfig({
@@ -393,7 +367,7 @@ export class TrashManager {
       await this.loadTrash();
 
       // 刷新主界面数据（使用缓存更新，无需重新加载）
-      if (itemType === 'prompt' && this.app.promptPanelManager) {
+      if (itemType === 'trash-prompt' && this.app.promptPanelManager) {
         const cacheManager = this.app.cacheManager;
         if (cacheManager) {
           cacheManager.removeCachedItem(itemId, itemType);
@@ -401,7 +375,7 @@ export class TrashManager {
         await this.app.promptPanelManager.renderView();
         await this.app.promptPanelManager.renderTagFilters();
         this.app.eventBus?.emit('promptsChanged');
-      } else if (itemType === 'image' && this.app.imagePanelManager) {
+      } else if (itemType === 'trash-image' && this.app.imagePanelManager) {
         const cacheManager = this.app.cacheManager;
         if (cacheManager) {
           cacheManager.removeCachedItem(itemId, itemType);
@@ -432,9 +406,9 @@ export class TrashManager {
 
       await this.loadTrash();
 
-      if (this.currentType === 'prompt') {
+      if (this.currentType === 'trash-prompt') {
         this.app.eventBus?.emit('promptsChanged');
-      } else if (this.currentType === 'image') {
+      } else if (this.currentType === 'trash-image') {
         this.app.eventBus?.emit('imagesChanged');
       }
     } catch (error) {
@@ -481,9 +455,9 @@ export class TrashManager {
 
   /**
    * 打开回收站
-   * @param {string} type - 类型 ('prompt' | 'image')
+   * @param {string} type - 类型 ('trash-prompt' | 'trash-image')
    */
-  async open(type = 'prompt') {
+  async open(type = 'trash-prompt') {
     this.currentType = type;
     await this.loadTrash();
     this.app.modalManager?.openTrashModal(type);
@@ -512,7 +486,7 @@ export class TrashManager {
       this.app.showToast('回收站已清空', 'success');
       await this.loadTrash();
     } catch (error) {
-      window.electronAPI.logError('TrashManager.js', 'Failed to empty recycle bin:', error);
+      window.electronAPI.logError('TrashManager.js', 'Failed to empty trash:', error);
       this.app.showToast('清空回收站失败', 'error');
     }
   }

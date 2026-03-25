@@ -1,6 +1,6 @@
 import { cacheManager } from '../../utils/index.js';
 import { PanelManagerBase } from './PanelManagerBase.js';
-import { PanelRenderer, PanelItemRenderer } from './SharedComponents/index.js';
+import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig, UnifiedListRenderer, ImageListConfig } from './SharedComponents/index.js';
 import { Constants } from '../constants.js';
 import { DialogService, DialogConfig } from '../services/index.js';
 import { BatchConfig } from '../config/index.js';
@@ -157,7 +157,11 @@ export class ImagePanelManager extends PanelManagerBase {
    * @returns {string} HTML 字符串
    */
   createCard(img) {
-    return PanelItemRenderer.createImageGridItem(img, Constants.ICONS, this.sortBy, this.app);
+    return UnifiedCardRenderer.render(ImageMainConfig, img, {
+      icons: Constants.ICONS,
+      sortBy: this.sortBy,
+      app: this.app
+    });
   }
 
   /**
@@ -240,16 +244,15 @@ export class ImagePanelManager extends PanelManagerBase {
 
     const isCompact = this.viewModeType === 'list-compact';
 
-    // 生成列表项 HTML
-    listContainer.innerHTML = filtered.map((img, index) => {
-      return PanelItemRenderer.createImageListItem({
-        img,
+    // 使用统一列表渲染器生成列表项 HTML
+    listContainer.innerHTML = filtered.map((img, index) =>
+      UnifiedListRenderer.render(ImageListConfig, img, {
         icons: Constants.ICONS,
         isCompact,
         isSelected: this.selectedIds.has(img.id),
         index
-      });
-    }).join('');
+      })
+    ).join('');
 
     // 异步加载列表缩略图
     this.loadImageListThumbnails();

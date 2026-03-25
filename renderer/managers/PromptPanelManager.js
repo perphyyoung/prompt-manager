@@ -1,6 +1,6 @@
 import { HtmlUtils, cacheManager } from '../../utils/index.js';
 import { PanelManagerBase } from './PanelManagerBase.js';
-import { PanelRenderer, PanelItemRenderer } from './SharedComponents/index.js';
+import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig, UnifiedListRenderer, PromptListConfig } from './SharedComponents/index.js';
 import { TagUI } from './TagUI.js';
 import { Constants } from '../constants.js';
 import { DialogService, DialogConfig } from '../services/index.js';
@@ -167,7 +167,11 @@ export class PromptPanelManager extends PanelManagerBase {
    * @returns {string} HTML 字符串
    */
   createCard(prompt) {
-    return PanelItemRenderer.createPromptGridItem(prompt, Constants.ICONS, this.sortBy, this.app);
+    return UnifiedCardRenderer.render(PromptMainConfig, prompt, {
+      icons: Constants.ICONS,
+      sortBy: this.sortBy,
+      app: this.app
+    });
   }
 
   /**
@@ -269,34 +273,63 @@ export class PromptPanelManager extends PanelManagerBase {
     const listContainer = document.getElementById('promptList');
     if (!listContainer) return;
 
-    const allImages = await window.electronAPI.getImages();
     const isCompact = this.viewModeType === 'list-compact';
 
-    // 准备提示词数据并生成列表项 HTML
-    const listItemsHtml = await Promise.all(
-      filtered.map(async (prompt, index) => {
-        const hasImages = prompt.images && prompt.images.length > 0;
-        const thumbnailHtml = await this.generatePromptThumbnailHtml(prompt, hasImages, allImages);
-        const isSelected = this.selectedIds.has(String(prompt.id));
-
-        return PanelItemRenderer.createPromptListItem({
-          prompt,
-          icons: Constants.ICONS,
-          isCompact,
-          isSelected,
-          index,
-          thumbnailHtml
-        });
+    // 使用统一列表渲染器生成列表项 HTML
+    const listItemsHtml = filtered.map((prompt, index) =>
+      UnifiedListRenderer.render(PromptListConfig, prompt, {
+        icons: Constants.ICONS,
+        isCompact,
+        isSelected: this.selectedIds.has(String(prompt.id)),
+        index
       })
     );
 
     listContainer.innerHTML = listItemsHtml.join('');
+
+    // 异步加载提示词列表缩略图
+    await this.loadPromptListThumbnails(filtered);
 
     // 绑定事件
     this.bindPromptListItemEvents(listContainer, filtered);
     this.bindHoverPreview('.prompt-list-item');
     this.bindCardDropEvents(listContainer);
     this.toolbarController?.updateUI();
+  }
+
+  /**
+   * 异步加载提示词列表缩略图
+   * @param {Array} filtered - 筛选后的提示词列表
+   */
+  async loadPromptListThumbnails(filtered) {
+    const listContainer = document.getElementById('promptList');
+    if (!listContainer) return;
+
+    const allImages = await window.electronAPI.getImages();
+    const items = listContainer.querySelectorAll('.prompt-list-item');
+
+    for (const item of items) {
+      const promptId = item.dataset.id;
+      const prompt = filtered.find(p => String(p.id) === String(promptId));
+      if (!prompt || !prompt.images || prompt.images.length === 0) continue;
+
+      const firstImageId = prompt.images[0].id || prompt.images[0];
+      const img = this.app.findImageById(firstImageId, allImages);
+      if (!img) continue;
+
+      const imagePath = img.thumbnailPath || img.relativePath;
+      if (!imagePath) continue;
+
+      try {
+        const fullPath = await window.electronAPI.getImagePath(imagePath);
+        const thumbnailEl = item.querySelector('.prompt-list-thumbnail');
+        if (thumbnailEl) {
+          thumbnailEl.src = `file://${fullPath.replace(/"/g, '&quot;')}`;
+        }
+      } catch (error) {
+        window.electronAPI.logError('PromptPanelManager.js', 'Failed to load prompt list thumbnail:', error);
+      }
+    }
   }
 
   /**
