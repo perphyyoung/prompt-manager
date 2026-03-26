@@ -22,6 +22,9 @@ export class PanelManagerBase {
    * @param {Object} options.toolbarConfig - 工具栏配置 { toolbarId, countId, label, onDelete, onAddTag, onSetSafe, onSetUnsafe, onCancel }
    */
   constructor(options) {
+    if (!options.app) {
+      throw new Error('PanelManagerBase requires app instance');
+    }
     this.app = options.app;
     this.tagManager = options.tagManager;
     this.eventBus = options.eventBus;
@@ -32,7 +35,6 @@ export class PanelManagerBase {
     // 通用状态
     this.filteredItems = [];
     this.selectedTags = new Set();
-    this.viewMode = options.app.viewMode || 'safe';
 
     // 从 localStorage 加载视图模式和排序设置
     this.viewModeType = localStorage.getItem(`${this.storagePrefix}ViewMode`) || 'grid';
@@ -91,7 +93,7 @@ export class PanelManagerBase {
         if (this.viewModeType === 'list' || this.viewModeType === 'compact') {
           // 检查是否有可见项目
           const visibleItems = this.getItems().filter(
-            item => !item.isDeleted && (this.viewMode !== 'safe' || item.isSafe !== 0)
+            item => !item.isDeleted && (this.app.viewMode !== 'safe' || item.isSafe !== 0)
           );
           if (visibleItems.length > 0) {
             e.preventDefault();
@@ -121,7 +123,7 @@ export class PanelManagerBase {
    */
   selectAllVisibleItems() {
     const visibleItems = this.getItems().filter(
-      item => !item.isDeleted && (this.viewMode !== 'safe' || item.isSafe !== 0)
+      item => !item.isDeleted && (this.app.viewMode !== 'safe' || item.isSafe !== 0)
     );
 
     visibleItems.forEach(item => {
@@ -386,7 +388,7 @@ export class PanelManagerBase {
       filtered = filtered.filter(item => !item.isDeleted);
 
       // 根据 viewMode 过滤
-      if (this.viewMode === 'safe') {
+      if (this.app.viewMode === 'safe') {
         filtered = filtered.filter(item => item.isSafe !== 0);
       }
 
@@ -464,7 +466,7 @@ export class PanelManagerBase {
       const tagCounts = this.calculateTagCounts(tags);
 
       // 获取可见项目
-      const visibleItems = this.getItems().filter(item => !item.isDeleted && (this.viewMode !== 'safe' || item.isSafe !== 0));
+      const visibleItems = this.getItems().filter(item => !item.isDeleted && (this.app.viewMode !== 'safe' || item.isSafe !== 0));
 
       // 计算特殊标签计数
       const specialTags = this.calculateSpecialTagCounts(visibleItems);
@@ -499,7 +501,7 @@ export class PanelManagerBase {
    * @returns {Object} 标签计数对象
    */
   calculateTagCounts(tags) {
-    const visibleItems = this.getItems().filter(item => !item.isDeleted && (this.viewMode !== 'safe' || item.isSafe !== 0));
+    const visibleItems = this.getItems().filter(item => !item.isDeleted && (this.app.viewMode !== 'safe' || item.isSafe !== 0));
 
     const tagCounts = {};
     visibleItems.forEach(item => {

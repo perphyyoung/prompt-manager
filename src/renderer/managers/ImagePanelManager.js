@@ -574,7 +574,7 @@ export class ImagePanelManager extends PanelManagerBase {
     }
 
     // NSFW 模式下显示安全评级标签
-    if (this.viewMode === 'nsfw') {
+    if (this.app?.viewMode === 'nsfw') {
       const safeCount = visibleItems.filter(img => img.isSafe !== 0).length;
       const unsafeCount = visibleItems.filter(img => img.isSafe === 0).length;
       if (safeCount > 0) {

@@ -18,7 +18,6 @@ export class SettingsManager {
 
     // 设置状态
     this.currentTheme = 'light';
-    this.viewMode = 'safe';
   }
 
   /**
@@ -49,16 +48,10 @@ export class SettingsManager {
       this.setFontFamily(savedFont, false);
     }
 
-    // 加载视图模式
+    // 加载视图模式到 app
     const savedViewMode = localStorage.getItem(Constants.LocalStorageKey.VIEW_MODE);
-    if (savedViewMode) {
-      this.viewMode = savedViewMode;
-      if (this.app.promptPanelManager) {
-        this.app.promptPanelManager.viewMode = savedViewMode;
-      }
-      if (this.app.imagePanelManager) {
-        this.app.imagePanelManager.viewMode = savedViewMode;
-      }
+    if (savedViewMode && this.app) {
+      this.app.viewMode = savedViewMode;
     }
   }
 
@@ -76,7 +69,7 @@ export class SettingsManager {
     // 视图模式
     const viewModeSelect = document.getElementById('viewModeSelect');
     if (viewModeSelect) {
-      viewModeSelect.value = this.viewMode;
+      viewModeSelect.value = this.app?.viewMode || Constants.ViewMode.SAFE;
       viewModeSelect.addEventListener('change', () => this.handleViewModeChange(viewModeSelect.value));
     }
 
@@ -253,23 +246,23 @@ export class SettingsManager {
 
   /**
    * 处理视图模式变更
-   * @param {string} mode - 视图模式 (safe/all)
+   * @param {'safe' | 'nsfw'} mode - 视图模式
    * @private
    */
   async handleViewModeChange(mode) {
-    this.viewMode = mode;
     localStorage.setItem(Constants.LocalStorageKey.VIEW_MODE, mode);
+
+    // 更新 app 的 viewMode
+    this.app.viewMode = mode;
 
     this.app.showToast?.(mode === 'safe' ? '已切换到安全模式' : '已切换到 NSFW 模式', 'info');
 
     // 更新面板管理器
     if (this.app.promptPanelManager) {
-      this.app.promptPanelManager.viewMode = mode;
       await this.app.promptPanelManager.renderView();
       await this.app.promptPanelManager.renderTagFilters();
     }
     if (this.app.imagePanelManager) {
-      this.app.imagePanelManager.viewMode = mode;
       await this.app.imagePanelManager.renderView();
       await this.app.imagePanelManager.renderTagFilters();
     }
@@ -328,10 +321,10 @@ export class SettingsManager {
 
   /**
    * 获取视图模式
-   * @returns {string}
+   * @returns {'safe' | 'nsfw'}
    */
   getViewMode() {
-    return this.viewMode;
+    return this.app?.viewMode || Constants.ViewMode.SAFE;
   }
 
   /**
@@ -368,7 +361,7 @@ export class SettingsManager {
 
   /**
    * 设置视图模式
-   * @param {string} mode - 视图模式 (safe/all)
+   * @param {'safe' | 'nsfw'} mode - 视图模式
    */
   async setViewMode(mode) {
     await this.handleViewModeChange(mode);

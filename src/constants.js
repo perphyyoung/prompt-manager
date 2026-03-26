@@ -28,6 +28,12 @@ export class Constants {
   static NO_IMAGE_TAG = '无图';
   static MULTI_IMAGE_TAG = '多图';
   static SAFE_TAG = '安全';
+
+  // 视图模式值
+  static ViewMode = Object.freeze({
+    SAFE: 'safe',
+    NSFW: 'nsfw'
+  });
   static UNSAFE_TAG = '敏感';
   static NO_TAG_TAG = '无标';
 

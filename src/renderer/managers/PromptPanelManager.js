@@ -597,7 +597,7 @@ export class PromptPanelManager extends PanelManagerBase {
     }
 
     // NSFW 模式下显示安全评级标签
-    if (this.viewMode === 'nsfw') {
+    if (this.app?.viewMode === 'nsfw') {
       const safeCount = visibleItems.filter(p => p.isSafe !== 0).length;
       const unsafeCount = visibleItems.filter(p => p.isSafe === 0).length;
       if (safeCount > 0) {

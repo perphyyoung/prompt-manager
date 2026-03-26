@@ -923,10 +923,6 @@ class PromptManager {
   async toggleViewMode() {
     this.viewMode = this.viewMode === 'safe' ? 'nsfw' : 'safe';
 
-    // 更新两个管理器的视图模式
-    this.promptPanelManager.viewMode = this.viewMode;
-    this.imagePanelManager.viewMode = this.viewMode;
-
     // 重新渲染
     await this.promptPanelManager.renderView();
     await this.promptPanelManager.renderTagFilters();
