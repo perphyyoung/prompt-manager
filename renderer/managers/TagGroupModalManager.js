@@ -41,7 +41,6 @@ export class TagGroupModalManager {
     document.getElementById('tagGroupEditType').value = type;
     document.getElementById('tagGroupEditId').value = groupId || '';
     document.getElementById('tagGroupEditName').value = '';
-    document.getElementById('tagGroupEditSelectType').value = 'multi';
     document.getElementById('tagGroupEditSortOrder').value = '0';
 
     if (groupId) {
@@ -51,7 +50,6 @@ export class TagGroupModalManager {
         const group = groups.find(g => String(g.id) === String(groupId));
         if (group) {
           document.getElementById('tagGroupEditName').value = group.name || '';
-          document.getElementById('tagGroupEditSelectType').value = group.type || 'multi';
           document.getElementById('tagGroupEditSortOrder').value = group.sortOrder || '0';
         }
       }
@@ -80,7 +78,6 @@ export class TagGroupModalManager {
     const type = document.getElementById('tagGroupEditType').value;
     const groupId = document.getElementById('tagGroupEditId').value;
     const name = document.getElementById('tagGroupEditName').value.trim();
-    const selectType = document.getElementById('tagGroupEditSelectType')?.value || 'multi';
     const sortOrder = parseInt(document.getElementById('tagGroupEditSortOrder')?.value || '0', 10);
 
     if (!name) {
@@ -92,9 +89,9 @@ export class TagGroupModalManager {
       const tagRegistry = type === 'prompt' ? this.app.tagRegistry : this.app.imageTagRegistry;
       if (tagRegistry) {
         if (groupId) {
-          await tagRegistry.service.updateGroup(groupId, { name, type: selectType, sortOrder });
+          await tagRegistry.service.updateGroup(groupId, { name, sortOrder });
         } else {
-          await tagRegistry.service.createGroup(name, selectType, sortOrder);
+          await tagRegistry.service.createGroup(name, sortOrder);
         }
         await tagRegistry.render();
         await tagRegistry.refreshPanel();

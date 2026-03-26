@@ -166,13 +166,17 @@ export class ImageUploadManager {
 
     // 获取提示词内容
     const promptContent = document.getElementById('uploadImagePrompt')?.value?.trim();
-    
+
+    // 标记是否需要刷新提示词列表
+    let shouldRefreshPrompts = false;
+
     // 如果有提示词内容，创建提示词并关联图像
     if (promptContent) {
       try {
         const imageIds = result.images.map(img => img.id);
         await this.createPromptWithImages(promptContent, imageIds);
         this.app.showToast(`成功保存 ${result.count} 张图像并创建提示词`, 'success');
+        shouldRefreshPrompts = true;
       } catch (error) {
         window.electronAPI.logError('ImageUploadManager.js', 'Failed to create prompt:', error);
         this.app.showToast(`图像已保存，但提示词创建失败: ${error.message}`, 'warning');
@@ -184,15 +188,18 @@ export class ImageUploadManager {
     // 清理
     this.previewManager.clear();
     this.strategy.clear();
-    
+
     // 清空提示词内容
     const promptTextarea = document.getElementById('uploadImagePrompt');
     if (promptTextarea) {
       promptTextarea.value = '';
     }
 
-    // 触发事件
+    // 按需刷新：始终刷新图像列表，有提示词时刷新提示词列表
     this.app.eventBus?.emit('imagesChanged');
+    if (shouldRefreshPrompts) {
+      this.app.eventBus?.emit('promptsChanged');
+    }
     this.close();
   }
 
@@ -200,6 +207,7 @@ export class ImageUploadManager {
    * 创建提示词并关联图像
    * @param {string} content - 提示词内容
    * @param {string[]} imageIds - 图像ID数组
+   * @returns {Promise<void>}
    */
   async createPromptWithImages(content, imageIds) {
     const prompt = {
@@ -212,7 +220,7 @@ export class ImageUploadManager {
     };
 
     await window.electronAPI.addPrompt(prompt);
-    this.app.eventBus?.emit('promptsChanged');
+    // 注意：不在这里触发事件，由调用方统一处理刷新
   }
 
   /**

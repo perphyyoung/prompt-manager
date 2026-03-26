@@ -123,7 +123,10 @@ export class NewPromptManager {
           }
         }
 
-        this.app.eventBus?.emit('imagesChanged');
+        // 按需刷新：有图像时刷新图像列表，始终刷新提示词列表
+        if (allImages.length > 0) {
+          this.app.eventBus?.emit('imagesChanged');
+        }
         this.app.eventBus?.emit('promptsChanged');
       } catch (error) {
         window.electronAPI.logError('NewPromptManager.js', 'Failed to create prompt:', error);
@@ -142,11 +145,7 @@ export class NewPromptManager {
 
     this.resetState();
 
-    await this.app.loadPrompts();
-    if (this.app.promptPanelManager) {
-      await this.app.promptPanelManager.renderView();
-      await this.app.promptPanelManager.renderTagFilters();
-    }
+    // 注意：刷新通过事件触发，不需要直接调用
   }
 
   /**

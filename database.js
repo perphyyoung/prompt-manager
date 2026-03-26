@@ -96,7 +96,6 @@ async function createTables() {
     `CREATE TABLE IF NOT EXISTS prompt_tag_groups (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
-      type TEXT DEFAULT 'multi',
       sort_order INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -135,7 +134,6 @@ async function createTables() {
     `CREATE TABLE IF NOT EXISTS image_tag_groups (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
-      type TEXT DEFAULT 'multi',
       sort_order INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -170,9 +168,6 @@ async function createTables() {
     version INTEGER PRIMARY KEY,
     applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
-
-  // 初始化特殊标签
-  await initSpecialTags();
 
   // 创建索引以优化查询性能
   await createIndexes();
@@ -254,22 +249,6 @@ async function createIndexes() {
     } catch (error) {
       console.error('Failed to create index:', sql, error);
     }
-  }
-}
-
-/**
- * 初始化特殊标签
- * 插入系统保留的特殊标签（如违单）
- */
-async function initSpecialTags() {
-  // 违单标签 - 用于标记违反单选组限制的图像/提示词
-  const violatingTag = await get('SELECT id FROM image_tags WHERE name = ?', ['违单']);
-  if (!violatingTag) {
-    const _time = localTime();
-    await run(
-      'INSERT INTO image_tags (name, created_at, updated_at) VALUES (?, ?, ?)',
-      ['违单', _time, _time]
-    );
   }
 }
 
@@ -414,38 +393,52 @@ function all(sql, params = []) {
 /**
  * 创建提示词标签组
  * @param {string} name - 标签组名称
- * @param {string} type - 选择类型: 'single' | 'multi'
  * @param {number} sortOrder - 排序顺序
  */
-async function createPromptTagGroup(name, type = 'multi', sortOrder = 0) {
+async function createPromptTagGroup(name, sortOrder = 0) {
   const now = localTime();
   const sql = `
-    INSERT INTO prompt_tag_groups (name, type, sort_order, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO prompt_tag_groups (name, sort_order, created_at, updated_at)
+    VALUES (?, ?, ?, ?)
   `;
-  const result = await run(sql, [name, type, sortOrder, now, now]);
-  return { id: result.id, name, type, sortOrder };
+  const result = await run(sql, [name, sortOrder, now, now]);
+  return { id: result.id, name, sortOrder };
 }
 
 /**
- * 获取所有提示词标签组（仅组定义，不含标签）
+ * 获取所有提示词标签组（包含标签列表）
+ * @returns {Promise<Array<{id, name, sortOrder, tags: string[]}>>}
  */
-async function getPromptTagGroupsOnly() {
-  const sql = `
-    SELECT id, name, type, sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt
+async function getPromptTagGroups() {
+  const groupsSql = `
+    SELECT id, name, sort_order as sortOrder
     FROM prompt_tag_groups
     ORDER BY sort_order ASC, created_at ASC
   `;
-  return await all(sql);
+  const groups = await all(groupsSql);
+
+  const tagsSql = `
+    SELECT name, group_id as groupId
+    FROM prompt_tags
+  `;
+  const tags = await all(tagsSql);
+
+  // 组装数据
+  return groups.map(group => ({
+    ...group,
+    tags: tags
+      .filter(t => t.groupId === group.id)
+      .map(t => t.name)
+  }));
 }
 
 /**
  * 更新提示词标签组
- * @param {number} id - 标签组ID
+ * @param {number} id - 标签组 ID
  * @param {object} updates - 更新内容
  */
 async function updatePromptTagGroup(id, updates) {
-  const { name, type, sortOrder } = updates;
+  const { name, sortOrder } = updates;
   const now = localTime();
   
   const fields = [];
@@ -454,10 +447,6 @@ async function updatePromptTagGroup(id, updates) {
   if (name !== undefined) {
     fields.push('name = ?');
     values.push(name);
-  }
-  if (type !== undefined) {
-    fields.push('type = ?');
-    values.push(type);
   }
   if (sortOrder !== undefined) {
     fields.push('sort_order = ?');
@@ -478,7 +467,7 @@ async function updatePromptTagGroup(id, updates) {
  */
 async function getPromptTagGroupById(id) {
   const sql = `
-    SELECT id, name, type, sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt
+    SELECT id, name, sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt
     FROM prompt_tag_groups
     WHERE id = ?
   `;
@@ -499,38 +488,52 @@ async function deletePromptTagGroup(id) {
 /**
  * 创建图像标签组
  * @param {string} name - 标签组名称
- * @param {string} type - 选择类型: 'single' | 'multi'
  * @param {number} sortOrder - 排序顺序
  */
-async function createImageTagGroup(name, type = 'multi', sortOrder = 0) {
+async function createImageTagGroup(name, sortOrder = 0) {
   const now = localTime();
   const sql = `
-    INSERT INTO image_tag_groups (name, type, sort_order, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO image_tag_groups (name, sort_order, created_at, updated_at)
+    VALUES (?, ?, ?, ?)
   `;
-  const result = await run(sql, [name, type, sortOrder, now, now]);
-  return { id: result.id, name, type, sortOrder };
+  const result = await run(sql, [name, sortOrder, now, now]);
+  return { id: result.id, name, sortOrder };
 }
 
 /**
- * 获取所有图像标签组（仅组定义，不含标签）
+ * 获取所有图像标签组（包含标签列表）
+ * @returns {Promise<Array<{id, name, sortOrder, tags: string[]}>>}
  */
-async function getImageTagGroupsOnly() {
-  const sql = `
-    SELECT id, name, type, sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt
+async function getImageTagGroups() {
+  const groupsSql = `
+    SELECT id, name, sort_order as sortOrder
     FROM image_tag_groups
     ORDER BY sort_order ASC, created_at ASC
   `;
-  return await all(sql);
+  const groups = await all(groupsSql);
+
+  const tagsSql = `
+    SELECT name, group_id as groupId
+    FROM image_tags
+  `;
+  const tags = await all(tagsSql);
+
+  // 组装数据
+  return groups.map(group => ({
+    ...group,
+    tags: tags
+      .filter(t => t.groupId === group.id)
+      .map(t => t.name)
+  }));
 }
 
 /**
  * 更新图像标签组
- * @param {number} id - 标签组ID
+ * @param {number} id - 标签组 ID
  * @param {object} updates - 更新内容
  */
 async function updateImageTagGroup(id, updates) {
-  const { name, type, sortOrder } = updates;
+  const { name, sortOrder } = updates;
   const now = localTime();
   
   const fields = [];
@@ -539,10 +542,6 @@ async function updateImageTagGroup(id, updates) {
   if (name !== undefined) {
     fields.push('name = ?');
     values.push(name);
-  }
-  if (type !== undefined) {
-    fields.push('type = ?');
-    values.push(type);
   }
   if (sortOrder !== undefined) {
     fields.push('sort_order = ?');
@@ -563,7 +562,7 @@ async function updateImageTagGroup(id, updates) {
  */
 async function getImageTagGroupById(id) {
   const sql = `
-    SELECT id, name, type, sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt
+    SELECT id, name, sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt
     FROM image_tag_groups
     WHERE id = ?
   `;
@@ -1012,26 +1011,6 @@ async function getDeletedPrompts() {
 async function getPromptTags() {
   const rows = await all('SELECT name FROM prompt_tags ORDER BY name');
   return rows.map(row => row.name);
-}
-
-/**
- * 获取所有提示词标签（包含组信息）
- */
-async function getPromptTagsWithGroupInfo() {
-  const sql = `
-    SELECT pt.name, pt.group_id as groupId, ptg.name as groupName, ptg.type as groupType, ptg.sort_order as groupSortOrder
-    FROM prompt_tags pt
-    LEFT JOIN prompt_tag_groups ptg ON pt.group_id = ptg.id
-    ORDER BY ptg.sort_order ASC, pt.name ASC
-  `;
-  const rows = await all(sql);
-  return rows.map(row => ({
-    name: row.name,
-    groupId: row.groupId,
-    groupName: row.groupName,
-    groupType: row.groupType,
-    groupSortOrder: row.groupSortOrder
-  }));
 }
 
 /**
@@ -1725,26 +1704,6 @@ async function getImageTags() {
 }
 
 /**
- * 获取所有图像标签（包含组信息）
- */
-async function getImageTagsWithGroupInfo() {
-  const sql = `
-    SELECT it.name, it.group_id as groupId, itg.name as groupName, itg.type as groupType, itg.sort_order as groupSortOrder
-    FROM image_tags it
-    LEFT JOIN image_tag_groups itg ON it.group_id = itg.id
-    ORDER BY itg.sort_order ASC, it.name ASC
-  `;
-  const rows = await all(sql);
-  return rows.map(row => ({
-    name: row.name,
-    groupId: row.groupId,
-    groupName: row.groupName,
-    groupType: row.groupType,
-    groupSortOrder: row.groupSortOrder
-  }));
-}
-
-/**
  * 添加图像标签
  * @param {string} name - 标签名称
  * @param {number} groupId - 标签组ID（可选）
@@ -1828,6 +1787,121 @@ async function getImageTagsByImageId(imageId) {
   `;
   const rows = await all(sql, [imageId]);
   return rows.map(row => row.name);
+}
+
+/**
+ * 标签同步配置
+ * 定义源表和目标表的映射关系
+ */
+const TAGS_SYNC_CONFIG = {
+  promptToImage: {
+    sourceTagTable: 'prompt_tags',
+    sourceGroupTable: 'prompt_tag_groups',
+    targetTagTable: 'image_tags',
+    targetGroupTable: 'image_tag_groups'
+  },
+  imageToPrompt: {
+    sourceTagTable: 'image_tags',
+    sourceGroupTable: 'image_tag_groups',
+    targetTagTable: 'prompt_tags',
+    targetGroupTable: 'prompt_tag_groups'
+  }
+};
+
+/**
+ * 通用标签同步函数
+ * 根据配置将标签从源表同步到目标表，保留组信息
+ * @param {Object} config - 同步配置
+ * @param {string} config.sourceTagTable - 源标签表名
+ * @param {string} config.sourceGroupTable - 源标签组表名
+ * @param {string} config.targetTagTable - 目标标签表名
+ * @param {string} config.targetGroupTable - 目标标签组表名
+ * @returns {Promise<{imported: number, skipped: number}>} 导入数量和跳过数量
+ */
+async function syncTagsByConfig(config) {
+  const now = localTime();
+  let imported = 0;
+  let skipped = 0;
+
+  const { sourceTagTable, sourceGroupTable, targetTagTable, targetGroupTable } = config;
+
+  // 获取所有源标签及其组信息
+  const sourceTagsSql = `
+    SELECT st.name, st.group_id, sg.name as group_name
+    FROM ${sourceTagTable} st
+    LEFT JOIN ${sourceGroupTable} sg ON st.group_id = sg.id
+  `;
+  const sourceTags = await all(sourceTagsSql);
+
+  // 获取所有现有目标标签
+  const existingTargetTags = await all(`SELECT name FROM ${targetTagTable}`);
+  const existingTagNames = new Set(existingTargetTags.map(t => t.name));
+
+  // 开始事务
+  await run('BEGIN TRANSACTION');
+
+  try {
+    for (const tag of sourceTags) {
+      // 跳过已存在的标签
+      if (existingTagNames.has(tag.name)) {
+        skipped++;
+        continue;
+      }
+
+      // 确保目标标签组存在
+      let targetGroupId = null;
+      if (tag.group_name) {
+        // 查找或创建对应的目标标签组
+        let targetGroup = await get(
+          `SELECT id FROM ${targetGroupTable} WHERE name = ?`,
+          [tag.group_name]
+        );
+
+        if (!targetGroup) {
+          // 创建新的目标标签组
+          const result = await run(
+            `INSERT INTO ${targetGroupTable} (name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?)`,
+            [tag.group_name, 0, now, now]
+          );
+          targetGroupId = result.lastID;
+        } else {
+          targetGroupId = targetGroup.id;
+        }
+      }
+
+      // 创建目标标签
+      await run(
+        `INSERT INTO ${targetTagTable} (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)`,
+        [tag.name, targetGroupId, now, now]
+      );
+      imported++;
+    }
+
+    await run('COMMIT');
+  } catch (error) {
+    await run('ROLLBACK');
+    throw error;
+  }
+
+  return { imported, skipped };
+}
+
+/**
+ * 同步提示词标签到图像标签
+ * 将提示词的所有普通标签（非特殊标签）同步到图像标签，保留组信息
+ * @returns {Promise<{imported: number, skipped: number}>} 导入数量和跳过数量
+ */
+async function syncPromptTagsToImage() {
+  return await syncTagsByConfig(TAGS_SYNC_CONFIG.promptToImage);
+}
+
+/**
+ * 同步图像标签到提示词标签
+ * 将图像的所有普通标签（非特殊标签）同步到提示词标签，保留组信息
+ * @returns {Promise<{imported: number, skipped: number}>} 导入数量和跳过数量
+ */
+async function syncImageTagsToPrompt() {
+  return await syncTagsByConfig(TAGS_SYNC_CONFIG.imageToPrompt);
 }
 
 // ==================== 共享标签 ====================
@@ -1939,27 +2013,34 @@ async function renameDataDirectory(dataDir) {
 
 /**
  * 清空所有数据
- * 删除所有提示词、图像、标签和关联关系
+ * 重命名当前数据目录并创建新的空数据目录，应用将重启
+ * 旧数据目录保留，可手动备份或删除
+ * @param {string} dataDir - 数据目录路径
+ * @returns {Promise<string>} 旧数据目录路径（带日期后缀，用于重启应用后提示用户）
  */
-async function clearAllData() {
+async function clearAllData(dataDir) {
   try {
-    // 删除关联表数据
-    await run('DELETE FROM prompt_tag_relations');
-    await run('DELETE FROM prompt_image_relations');
-    await run('DELETE FROM image_tag_relations');
+    const oldDataDir = dataDir;
+    const timestamp = getFormattedLocalTimeToSecond();
+    const newDataDir = path.join(path.dirname(oldDataDir), `${path.basename(oldDataDir)}_${timestamp}`);
     
-    // 删除主表数据
-    await run('DELETE FROM prompts');
-    await run('DELETE FROM images');
-    await run('DELETE FROM prompt_tags');
-    await run('DELETE FROM image_tags');
+    // 关闭数据库
+    closeDatabase();
     
-    // 重置自增ID
-    await run('DELETE FROM sqlite_sequence WHERE name IN (?, ?, ?, ?, ?, ?, ?)', 
-      ['prompts', 'images', 'prompt_tags', 'image_tags', 'prompt_tag_relations', 'prompt_image_relations', 'image_tag_relations']);
+    // 等待数据库连接完全关闭
+    await new Promise(resolve => setTimeout(resolve, 500));
     
-    console.debug('All data cleared');
-    return true;
+    // 重命名旧数据目录
+    await fs.rename(oldDataDir, newDataDir);
+    
+    // 创建新的空数据目录
+    await fs.mkdir(oldDataDir, { recursive: true });
+    
+    // 重新初始化数据库
+    await initDatabase(oldDataDir);
+    
+    console.debug('All data cleared and database reset');
+    return newDataDir;
   } catch (err) {
     console.error('Clear all data failed:', err);
     throw err;
@@ -1987,13 +2068,12 @@ export {
   getFavoritePrompts,
   // 提示词标签组操作
   createPromptTagGroup,
-  getPromptTagGroupsOnly,
+  getPromptTagGroups,
   getPromptTagGroupById,
   updatePromptTagGroup,
   deletePromptTagGroup,
   // 提示词标签操作
   getPromptTags,
-  getPromptTagsWithGroupInfo,
   addPromptTag,
   addPromptTags,
   updatePromptTagGroupByTagName,
@@ -2018,19 +2098,21 @@ export {
   getFavoriteImages,
   // 图像标签组操作
   createImageTagGroup,
-  getImageTagGroupsOnly,
+  getImageTagGroups,
   getImageTagGroupById,
   updateImageTagGroup,
   deleteImageTagGroup,
   // 图像标签操作
   getImageTags,
-  getImageTagsWithGroupInfo,
   addImageTag,
   addImageTags,
   deleteImageTag,
   assignImageTagToBelongGroup,
   // 共享标签
   getAllTags,
+  // 标签同步
+  syncPromptTagsToImage,
+  syncImageTagsToPrompt,
   // 数据清理
   renameDataDirectory,
   clearAllData,

@@ -282,6 +282,7 @@ export class ImagePanelManager extends PanelManagerBase {
 
     // 绑定事件
     this.bindImageListEvents(filtered);
+    this.bindCardDropEvents(listContainer);
   }
 
   /**
@@ -483,7 +484,13 @@ export class ImagePanelManager extends PanelManagerBase {
           const imageId = card.dataset.id || card.dataset.imageId;
           if (imageId) {
             try {
-              await this.app.addTagToImage(imageId, tagName);
+              await this.handleTagDrop(
+                imageId,
+                tagName,
+                this.app.imageCache,
+                window.electronAPI.updateImage
+              );
+              this.app.showToast('标签已添加', 'success');
             } catch (error) {
               this.app.showToast(error.message, 'error');
             }
@@ -542,22 +549,6 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
-   * 获取带分组的标签（实现基类抽象方法）
-   * @returns {Promise<Array>}
-   */
-  async getTagsWithGroup() {
-    return window.electronAPI.getImageTagsWithGroup();
-  }
-
-  /**
-   * 获取标签组（实现基类抽象方法）
-   * @returns {Promise<Array>}
-   */
-  async getTagGroups() {
-    return window.electronAPI.getImageTagGroups();
-  }
-
-  /**
    * 计算特殊标签计数（实现基类抽象方法）
    * @param {Array} visibleItems - 可见图像列表
    * @returns {Array<{tag: string, count: number}>}
@@ -568,7 +559,6 @@ export class ImagePanelManager extends PanelManagerBase {
     const unreferencedCount = visibleItems.filter(img => !img.promptRefs || img.promptRefs.length === 0).length;
     const multiRefCount = visibleItems.filter(img => img.promptRefs && img.promptRefs.length > 1).length;
     const noTagCount = visibleItems.filter(img => !img.tags || img.tags.length === 0).length;
-    const violatingCount = visibleItems.filter(img => img.tags && img.tags.includes(Constants.VIOLATING_TAG)).length;
 
     if (favoriteCount > 0) {
       specialTags.push({ tag: Constants.FAVORITE_TAG, count: favoriteCount });
@@ -581,9 +571,6 @@ export class ImagePanelManager extends PanelManagerBase {
     }
     if (noTagCount > 0) {
       specialTags.push({ tag: Constants.NO_TAG_TAG, count: noTagCount });
-    }
-    if (violatingCount > 0) {
-      specialTags.push({ tag: Constants.VIOLATING_TAG, count: violatingCount });
     }
 
     // NSFW 模式下显示安全评级标签

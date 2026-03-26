@@ -10,15 +10,14 @@ import { DialogService, DialogConfig } from '../services/index.js';
 export class TagRegistry {
   /**
    * @param {string} type - 类型 ('prompt' | 'image')
-   * @param {Object} context - 上下文对象（app实例）
+   * @param {Object} context - 上下文对象（app 实例）
    */
   constructor(type, context) {
     this.type = type;
     this.context = context;
-    this.service = new TagService(type);
+    this.service = TagService.getInstance(type);
     this.ui = new TagUI(type);
     this.eventBus = context.eventBus;
-    this.tagGroups = [];
     this.selectedTagGroup = null;
 
     // 排序状态
@@ -38,9 +37,7 @@ export class TagRegistry {
   async render(searchTerm = '') {
     try {
       const tags = await this.service.getTags();
-      const tagsWithGroup = await this.service.getTagsWithGroup();
-      await this.loadTagGroups();
-      const groups = this.tagGroups;
+      const groups = await this.service.getTagGroups();
       const container = document.getElementById(this.containerId);
       const emptyState = document.getElementById(this.emptyStateId);
 
@@ -71,7 +68,7 @@ export class TagRegistry {
 
       // 排序和分组
       const sortedTags = this.sortTags(filteredTags, tagCounts);
-      const { groupedTags, ungroupedTags } = this.groupTags(sortedTags, tagsWithGroup, groups);
+      const { groupedTags, ungroupedTags } = this.service.groupTagsByGroup(sortedTags, groups);
 
       // 渲染HTML
       const html = this.ui.generateRegistryHtml(groups, groupedTags, ungroupedTags, specialTags, tagCounts, searchTerm);
@@ -152,37 +149,6 @@ export class TagRegistry {
         return nameA.localeCompare(nameB) * order;
       }
     });
-  }
-
-  /**
-   * 分组标签
-   * @param {Array} tags - 标签数组
-   * @param {Array} tagsWithGroup - 带分组的标签
-   * @param {Array} groups - 标签组
-   * @returns {Object} { groupedTags, ungroupedTags }
-   */
-  groupTags(tags, tagsWithGroup, groups) {
-    const groupedTags = {};
-    const ungroupedTags = [];
-
-    groups.forEach(group => {
-      groupedTags[group.id] = [];
-    });
-
-    tags.forEach(tag => {
-      const tagInfo = tagsWithGroup.find(t => t.name === tag);
-      if (tagInfo && tagInfo.groupId) {
-        if (groupedTags[tagInfo.groupId]) {
-          groupedTags[tagInfo.groupId].push(tag);
-        } else {
-          ungroupedTags.push(tag);
-        }
-      } else {
-        ungroupedTags.push(tag);
-      }
-    });
-
-    return { groupedTags, ungroupedTags };
   }
 
   /**
@@ -461,7 +427,7 @@ export class TagRegistry {
   async pinTagGroupToTop(groupId) {
     try {
       // 获取所有标签组
-      const groups = await this.service.getGroups();
+      const groups = await this.service.getTagGroups();
 
       // 按 sortOrder 排序，第一个即为当前首位
       const sortedGroups = groups.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
@@ -475,7 +441,6 @@ export class TagRegistry {
       if (group) {
         await this.service.updateGroup(groupId, {
           name: group.name,
-          type: group.type,
           sortOrder: newSortOrder
         });
         this.context.showToast('标签组已固定到首位', 'success');
@@ -495,8 +460,8 @@ export class TagRegistry {
    * @param {number|null} defaultGroupId - 默认选中的组ID
    */
   async addTagInManager(defaultValue = '', defaultGroupId = null) {
-    const groups = await this.service.getGroups();
-    const tagsWithGroup = await this.service.getTagsWithGroup();
+    const groups = await this.service.getTagGroups();
+    const allTags = await this.service.getTags();
 
     const result = await this.context.showInputDialog(`新建${this.getTypeLabel()}标签`, '请输入标签名称', defaultValue, {
       showGroupSelect: true,
@@ -515,11 +480,18 @@ export class TagRegistry {
     }
 
     // 检查标签是否已存在
-    const existingTag = tagsWithGroup.find(t => t.name === trimmedTag);
+    const existingTag = allTags.includes(trimmedTag);
     if (existingTag) {
-      const currentGroupName = existingTag.groupName || '未分组';
+      // 查找标签当前所属的组
+      let currentGroupName = '未分组';
+      for (const group of groups) {
+        if (group.tags && group.tags.includes(trimmedTag)) {
+          currentGroupName = group.name;
+          break;
+        }
+      }
       const newGroupName = result.groupId
-        ? groups.find(g => g.id === result.groupId)?.name || '未分组'
+        ? groups.find(g => String(g.id) === String(result.groupId))?.name || '未分组'
         : '未分组';
 
       const confirmed = await DialogService.showConfirmDialogByConfig({
@@ -566,15 +538,6 @@ export class TagRegistry {
   }
 
   /**
-   * 根据 ID 查找标签组
-   * @param {string} groupId - 标签组 ID
-   * @returns {Object|null} 标签组对象
-   */
-  findTagGroupById(groupId) {
-    return this.tagGroups.find(g => String(g.id) === String(groupId));
-  }
-
-  /**
    * 刷新面板标签筛选
    */
   async refreshPanel() {
@@ -584,19 +547,6 @@ export class TagRegistry {
 
     if (panelManager) {
       await panelManager.renderTagFilters();
-    }
-  }
-
-  /**
-   * 加载标签组列表
-   */
-  async loadTagGroups() {
-    try {
-      this.tagGroups = await this.service.getGroups();
-      this.eventBus?.emit('tagGroupsLoaded', { tagGroups: this.tagGroups });
-    } catch (error) {
-      window.electronAPI.logError('TagRegistry.js', 'Failed to load tag groups:', error);
-      this.context.showToast('加载标签组失败', 'error');
     }
   }
 }

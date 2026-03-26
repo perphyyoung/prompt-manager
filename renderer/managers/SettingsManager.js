@@ -1,5 +1,6 @@
 import { Constants } from '../../constants.js';
 import { DialogService, DialogConfig } from '../services/index.js';
+import { ElectronDataClearApi } from '../services/ElectronDataClearApi.js';
 
 /**
  * 设置管理器
@@ -9,13 +10,15 @@ export class SettingsManager {
   /**
    * @param {Object} options - 配置选项
    * @param {Object} options.app - 应用实例
+   * @param {DataClearApi} options.dataClearApi - 数据清空 API（可选，默认为 ElectronDataClearApi）
    */
   constructor(options = {}) {
     this.app = options.app;
+    this.dataClearApi = options.dataClearApi || new ElectronDataClearApi();
 
     // 设置状态
     this.currentTheme = 'light';
-    this.viewMode = 'all';
+    this.viewMode = 'safe';
   }
 
   /**
@@ -100,7 +103,7 @@ export class SettingsManager {
 
       if (!confirmed) return;
 
-      const renamedPath = await window.electronAPI.clearAllData();
+      const renamedPath = await this.dataClearApi.clearAllData();
 
       this.app.showToast?.('数据已清空，正在重启...', 'success');
 

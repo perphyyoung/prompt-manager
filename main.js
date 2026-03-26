@@ -700,10 +700,10 @@ ipcMain.handle('delete-prompt-tag', async (event, tag) => {
 
 // ==================== 提示词标签组 IPC ====================
 
-// 获取所有提示词标签组（仅组定义）
+// 获取所有提示词标签组（包含标签列表）
 ipcMain.handle('get-prompt-tag-groups', async () => {
   try {
-    return await db.getPromptTagGroupsOnly();
+    return await db.getPromptTagGroups();
   } catch (error) {
     logError('Main', 'Get prompt tag groups error:', error);
     throw error;
@@ -736,16 +736,6 @@ ipcMain.handle('delete-prompt-tag-group', async (event, id) => {
     return await db.deletePromptTagGroup(id);
   } catch (error) {
     logError('Main', 'Delete prompt tag group error:', error);
-    throw error;
-  }
-});
-
-// 获取带组信息的提示词标签
-ipcMain.handle('get-prompt-tags-with-group', async () => {
-  try {
-    return await db.getPromptTagsWithGroupInfo();
-  } catch (error) {
-    logError('Main', 'Get prompt tags with group error:', error);
     throw error;
   }
 });
@@ -1106,10 +1096,10 @@ ipcMain.handle('delete-image-tag', async (event, tag) => {
 
 // ==================== 图像标签组 IPC ====================
 
-// 获取所有图像标签组（仅组定义）
+// 获取所有图像标签组（包含标签列表）
 ipcMain.handle('get-image-tag-groups', async () => {
   try {
-    return await db.getImageTagGroupsOnly();
+    return await db.getImageTagGroups();
   } catch (error) {
     logError('Main', 'Get image tag groups error:', error);
     throw error;
@@ -1146,16 +1136,6 @@ ipcMain.handle('delete-image-tag-group', async (event, id) => {
   }
 });
 
-// 获取带组信息的图像标签
-ipcMain.handle('get-image-tags-with-group', async () => {
-  try {
-    return await db.getImageTagsWithGroupInfo();
-  } catch (error) {
-    logError('Main', 'Get image tags with group error:', error);
-    throw error;
-  }
-});
-
 // 获取所有标签（提示词和图像标签合并）
 ipcMain.handle('get-all-tags', async () => {
   // 如果缓存未初始化，先加载
@@ -1171,6 +1151,32 @@ ipcMain.handle('assign-image-tag-to-belong-group', async (event, tagName, groupI
     return await db.assignImageTagToBelongGroup(tagName, groupId);
   } catch (error) {
     logError('Main', 'Assign image tag to belong group error:', error);
+    throw error;
+  }
+});
+
+// 同步提示词标签到图像标签
+ipcMain.handle('sync-prompt-tags-to-image', async () => {
+  try {
+    const result = await db.syncPromptTagsToImage();
+    // 清除标签缓存，让下次获取时重新加载
+    allTagsCache = null;
+    return result;
+  } catch (error) {
+    logError('Main', 'Sync prompt tags to image error:', error);
+    throw error;
+  }
+});
+
+// 同步图像标签到提示词标签
+ipcMain.handle('sync-image-tags-to-prompt', async () => {
+  try {
+    const result = await db.syncImageTagsToPrompt();
+    // 清除标签缓存，让下次获取时重新加载
+    allTagsCache = null;
+    return result;
+  } catch (error) {
+    logError('Main', 'Sync image tags to prompt error:', error);
     throw error;
   }
 });
@@ -1205,15 +1211,7 @@ ipcMain.handle('select-image-files', async () => {
 // 清空所有数据
 ipcMain.handle('clear-all-data', async () => {
   try {
-    const oldDataDir = currentDataDir;
-    const timestamp = getFormattedLocalTimeToSecond();
-    const newDataDir = path.join(path.dirname(oldDataDir), `${path.basename(oldDataDir)}_${timestamp}`);
-    db.closeDatabase();
-    await new Promise(resolve => setTimeout(resolve, 500));
-    await fs.rename(oldDataDir, newDataDir);
-    await fs.mkdir(oldDataDir, { recursive: true });
-    await db.initDatabase(oldDataDir);
-    return newDataDir;
+    return await db.clearAllData(currentDataDir);
   } catch (error) {
     logError('Main', 'Clear all data error:', error);
     throw error;

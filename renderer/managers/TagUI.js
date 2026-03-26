@@ -151,19 +151,17 @@ export class TagUI {
   generateTagGroupCard(group, tags, tagCounts, isFirst = false) {
     const firstBadge = isFirst ? '<span class="tag-group-card-first">首位组</span>' : '';
     const sortBadge = `<span class="tag-group-card-sort">${group.sortOrder || 0}</span>`;
-    const typeText = group.type === 'single' ? '单选' : '多选';
 
     const groupTagsHtml = tags.map(tag => {
       return this.generateTagItemHtml(tag, tagCounts[tag] || 0, group.id, false);
     }).join('');
 
     return `
-      <div class="tag-group-card" data-group-id="${group.id}" data-group-type="${group.type}" data-drop-target="true">
+      <div class="tag-group-card" data-group-id="${group.id}" data-drop-target="true">
         <div class="tag-group-card-header">
           <span class="tag-group-card-name">${HtmlUtils.escapeHtml(group.name)}</span>
           ${sortBadge}
           ${firstBadge}
-          <span class="tag-group-card-type">${typeText}</span>
           <div class="tag-group-card-actions">
             <button class="tag-group-btn edit" data-id="${group.id}" title="编辑">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -200,13 +198,12 @@ export class TagUI {
     const selectedSet = selectedTags instanceof Set ? selectedTags : new Set();
     let html = '';
 
-    // 渲染特殊标签
+    // 渲染特殊标签（特殊标签不允许拖拽）
     if (specialTags && specialTags.length > 0) {
       html += specialTags.map(({ tag, count }) => {
         const isActive = selectedSet.has(tag);
-        const dragType = isImage ? 'image-tag' : 'prompt-tag';
         return `
-          <button class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="true" draggable="true" data-drag-type="${dragType}">
+          <button class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="true">
             <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
             <span class="tag-badge">${count}</span>
           </button>
@@ -246,9 +243,8 @@ export class TagUI {
         const visibleTags = groupData.tags.filter(({ count }) => count > 0);
         if (visibleTags.length === 0) return;
 
-        const groupTypeText = group.type === 'single' ? '单选' : '多选';
-        html += `<div class="tag-filter-group" data-group-id="${group.id}" data-group-type="${group.type}">`;
-        html += `<div class="tag-filter-group-title">${HtmlUtils.escapeHtml(group.name)} <span class="tag-filter-group-type">${groupTypeText}</span></div>`;
+        html += `<div class="tag-filter-group" data-group-id="${group.id}">`;
+        html += `<div class="tag-filter-group-title">${HtmlUtils.escapeHtml(group.name)}</div>`;
         html += '<div class="tag-filter-group-content">';
 
         html += visibleTags.map(({ tag, count }) => {
@@ -359,8 +355,7 @@ export class TagUI {
             count: tagInfo.count,
             className: isActive ? 'active' : '',
             isSpecial: false,
-            isTopGroup: true,
-            isSingleSelect: currentTopGroupInfo.groupType === 'single'
+            isTopGroup: true
           });
         }
       });
@@ -372,13 +367,12 @@ export class TagUI {
       if (t.groupId && !tagToGroupMap.has(t.name)) {
         tagToGroupMap.set(t.name, {
           groupId: t.groupId,
-          groupType: t.groupType,
           groupSortOrder: t.groupSortOrder || 0
         });
       }
     });
 
-    // 确定首位组ID
+    // 确定首位组 ID
     const topGroupId = nonEmptyGroups.length > 0 ? nonEmptyGroups[0].groupId : null;
 
     // 选中的普通标签
@@ -387,15 +381,13 @@ export class TagUI {
         const count = tagCounts[tag] || 0;
         const groupInfo = tagToGroupMap.get(tag);
         const isInTopGroup = groupInfo && groupInfo.groupId === topGroupId;
-        const isSingleSelect = groupInfo && groupInfo.groupType === 'single';
 
         tagsToShow.push({
           tag,
           count,
           className: 'active',
           isSpecial: false,
-          isTopGroup: isInTopGroup,
-          isSingleSelect: isSingleSelect
+          isTopGroup: isInTopGroup
         });
       }
     });
@@ -418,10 +410,18 @@ export class TagUI {
       }).join('');
     }
 
+    // 使用 WeakSet 来跟踪正在拖拽的元素
+    const draggingItems = new WeakSet();
+
     // 绑定点击事件
     if (onTagClick) {
       headerTagsEl.querySelectorAll('.tag-filter-item').forEach(el => {
         el.addEventListener('click', (e) => {
+          // 如果正在拖拽，不触发点击
+          if (draggingItems.has(el)) {
+            draggingItems.delete(el);
+            return;
+          }
           const tag = el.dataset.tag;
           const isTopGroupTag = el.dataset.isTopGroup === 'true';
           const isSingleSelectGroup = el.dataset.isSingleSelect === 'true';
@@ -434,6 +434,8 @@ export class TagUI {
     if (dragType) {
       headerTagsEl.querySelectorAll('.tag-filter-item[draggable="true"]').forEach(el => {
         el.addEventListener('dragstart', (e) => {
+          // 标记为正在拖拽
+          draggingItems.add(el);
           const tag = el.dataset.tag;
           e.dataTransfer.setData('text/plain', tag);
           e.dataTransfer.setData('drag-source', dragType);
@@ -443,6 +445,7 @@ export class TagUI {
 
         el.addEventListener('dragend', () => {
           el.classList.remove('dragging');
+          // 注意：不在 dragend 中删除 draggingItems，因为 click 事件会在 dragend 之后触发
         });
       });
     }

@@ -94,19 +94,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   relaunchApp: (oldDataDir) => ipcRenderer.invoke('relaunch-app', oldDataDir),
 
   // ==================== 提示词标签组管理 ====================
-  /** 获取所有提示词标签组 */
+  /** 获取所有提示词标签组（包含标签列表） */
   getPromptTagGroups: () => ipcRenderer.invoke('get-prompt-tag-groups'),
-  /** 获取标签组（兼容旧 API） */
-  getTagGroups: () => ipcRenderer.invoke('get-prompt-tag-groups'),
-  /** 创建提示词标签组 @param {string} name - 组名称 @param {string} type - 类型 (single/multi) @param {number} sortOrder - 排序 */
-  createPromptTagGroup: (name, type, sortOrder) => ipcRenderer.invoke('create-prompt-tag-group', name, type, sortOrder),
-  /** 更新提示词标签组属性 @param {number} id - 组ID @param {object} updates - 更新内容 */
+  /** 创建提示词标签组 @param {string} name - 组名称 @param {number} sortOrder - 排序 */
+  createPromptTagGroup: (name, sortOrder) => ipcRenderer.invoke('create-prompt-tag-group', name, sortOrder),
+  /** 更新提示词标签组属性 @param {number} id - 组 ID @param {object} updates - 更新内容 */
   updatePromptTagGroupAttrs: (id, updates) => ipcRenderer.invoke('update-prompt-tag-group-attrs', id, updates),
-  /** 删除提示词标签组 @param {number} id - 组ID */
+  /** 删除提示词标签组 @param {number} id - 组 ID */
   deletePromptTagGroup: (id) => ipcRenderer.invoke('delete-prompt-tag-group', id),
-  /** 获取带组信息的提示词标签 */
-  getPromptTagsWithGroup: () => ipcRenderer.invoke('get-prompt-tags-with-group'),
-  /** 分配提示词标签到所属组 @param {string} tagName - 标签名称 @param {number|null} groupId - 组ID */
+  /** 分配提示词标签到所属组 @param {string} tagName - 标签名称 @param {number|null} groupId - 组 ID */
   assignPromptTagToBelongGroup: (tagName, groupId) => ipcRenderer.invoke('assign-prompt-tag-to-belong-group', tagName, groupId),
 
   // ==================== 提示词标签管理 ====================
@@ -122,17 +118,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   renamePromptTag: (oldTag, newTag) => ipcRenderer.invoke('rename-prompt-tag', oldTag, newTag),
 
   // ==================== 图像标签组管理 ====================
-  /** 获取所有图像标签组 */
+  /** 获取所有图像标签组（包含标签列表） */
   getImageTagGroups: () => ipcRenderer.invoke('get-image-tag-groups'),
-  /** 创建图像标签组 @param {string} name - 组名称 @param {string} type - 类型(single/multi) @param {number} sortOrder - 排序 */
-  createImageTagGroup: (name, type, sortOrder) => ipcRenderer.invoke('create-image-tag-group', name, type, sortOrder),
-  /** 更新图像标签组 @param {number} id - 组ID @param {object} updates - 更新内容 */
+  /** 创建图像标签组 @param {string} name - 组名称 @param {number} sortOrder - 排序 */
+  createImageTagGroup: (name, sortOrder) => ipcRenderer.invoke('create-image-tag-group', name, sortOrder),
+  /** 更新图像标签组 @param {number} id - 组 ID @param {object} updates - 更新内容 */
   updateImageTagGroupAttrs: (id, updates) => ipcRenderer.invoke('update-image-tag-group-attrs', id, updates),
-  /** 删除图像标签组 @param {number} id - 组ID */
+  /** 删除图像标签组 @param {number} id - 组 ID */
   deleteImageTagGroup: (id) => ipcRenderer.invoke('delete-image-tag-group', id),
-  /** 获取带组信息的图像标签 */
-  getImageTagsWithGroup: () => ipcRenderer.invoke('get-image-tags-with-group'),
-  /** 分配图像标签到所属组 @param {string} tagName - 标签名称 @param {number|null} groupId - 组ID */
+  /** 分配图像标签到所属组 @param {string} tagName - 标签名称 @param {number|null} groupId - 组 ID */
   assignImageTagToBelongGroup: (tagName, groupId) => ipcRenderer.invoke('assign-image-tag-to-belong-group', tagName, groupId),
 
   // ==================== 图像标签管理 ====================
@@ -172,6 +166,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ==================== 共享标签 ====================
   /** 获取所有标签（提示词和图像标签合并） */
   getAllTags: () => ipcRenderer.invoke('get-all-tags'),
+
+  // ==================== 标签同步 ====================
+  /** 同步提示词标签到图像标签 */
+  syncPromptTagsToImage: () => ipcRenderer.invoke('sync-prompt-tags-to-image'),
+  /** 同步图像标签到提示词标签 */
+  syncImageTagsToPrompt: () => ipcRenderer.invoke('sync-image-tags-to-prompt'),
 
   // ==================== 统计 ====================
   /** 获取数据库统计信息 */

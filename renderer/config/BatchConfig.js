@@ -1,53 +1,24 @@
-import { SimpleTagManager } from '../managers/index.js';
-
-/**
- * 将扁平的标签列表转换为分组格式
- * @param {Array} flatTags - 扁平标签列表 [{ name, groupId, groupName, groupType }]
- * @returns {Array} - 分组格式 [{ id, name, type, tags: [] }]
- */
-function convertTagsToGroupFormat(flatTags) {
-  if (!flatTags || flatTags.length === 0) return [];
-
-  const groupsMap = new Map();
-  flatTags.forEach(tag => {
-    const groupId = tag.groupId || 'ungrouped';
-    if (!groupsMap.has(groupId)) {
-      groupsMap.set(groupId, {
-        id: groupId,
-        name: tag.groupName || '未分组',
-        type: tag.groupType || 'multi',
-        tags: []
-      });
-    }
-    groupsMap.get(groupId).tags.push(tag.name);
-  });
-
-  return Array.from(groupsMap.values());
-}
+import { TagService } from '../managers/TagService.js';
 
 /**
  * 通用批量添加标签处理函数
- * 逻辑与 SimpleTagManager.addTags() 保持一致
- * @param {string[]} ids - 项目ID数组
+ * @param {string[]} ids - 项目 ID 数组
  * @param {string} tagInput - 标签输入字符串（逗号分隔）
  * @param {Object} options - 配置选项
  * @param {Function} options.getItemById - 获取项目的函数 (id) => Promise<Object>
  * @param {Function} options.updateItem - 更新项目的函数 (id, { tags }) => Promise<void>
- * @param {Function} options.getTagsWithGroup - 获取标签组信息的函数 () => Promise<Array>
+ * @param {string} options.type - 'image' | 'prompt'，决定从哪个缓存获取标签组
  * @param {string} options.itemName - 项目名称（用于日志）
  */
 async function processBatchAddTags(ids, tagInput, options) {
-  const { getItemById, updateItem, getTagsWithGroup, itemName } = options;
+  const { getItemById, updateItem, type, itemName } = options;
+  const tagService = TagService.getInstance(type);
 
-  // 解析并去重标签（与 SimpleTagManager.addTags 一致）
+  // 解析并去重标签
   const tagNames = tagInput.split(',').map(t => t.trim()).filter(t => t);
   const uniqueTags = [...new Set(tagNames)];
 
   if (uniqueTags.length === 0) return;
-
-  // 获取标签组信息并转换为分组格式
-  const flatTagsWithGroup = await getTagsWithGroup();
-  const tagsWithGroup = convertTagsToGroupFormat(flatTagsWithGroup);
 
   let hasAnyViolation = false;
   const allViolationGroups = [];
@@ -56,45 +27,36 @@ async function processBatchAddTags(ids, tagInput, options) {
     const item = await getItemById(id);
     if (!item) continue;
 
-    // 过滤掉已存在的标签（与 SimpleTagManager.addTags 一致）
     const currentItemTags = item.tags || [];
-    const tagsToAdd = uniqueTags.filter(tag => !currentItemTags.includes(tag));
+    
+    // 逐个添加标签，使用 TagService 验证
+    for (const tagName of uniqueTags) {
+      if (currentItemTags.includes(tagName)) continue;
+      
+      const result = await tagService.validateTagAddition(currentItemTags, tagName);
+      
+      if (!result.valid) {
+        if (result.error === '该标签已存在') continue;
+        throw new Error(result.error);
+      }
 
-    if (tagsToAdd.length === 0) continue;
+      // 更新标签列表
+      const finalTags = result.newTags.filter(t => t && t.trim());
+      await updateItem(id, { tags: finalTags });
+      currentItemTags.length = 0;
+      currentItemTags.push(...finalTags);
 
-    let currentTags = [...currentItemTags];
-    const violationGroups = [];
-
-    // 逐个添加并检查违规（与 SimpleTagManager.addTags 一致）
-    for (const tagName of tagsToAdd) {
-      const result = await SimpleTagManager.addTagWithViolationCheck(
-        currentTags,
-        tagName,
-        tagsWithGroup
-      );
-      currentTags = result.tags;
-
+      // 收集违规信息
       if (result.hasViolation && result.violationGroup) {
         hasAnyViolation = true;
-        if (!violationGroups.includes(result.violationGroup)) {
-          violationGroups.push(result.violationGroup);
+        if (!allViolationGroups.includes(result.violationGroup)) {
+          allViolationGroups.push(result.violationGroup);
         }
       }
     }
-
-    // 过滤空标签并更新（与 SimpleTagManager.addTags 一致）
-    const finalTags = currentTags.filter(t => t && t.trim());
-    await updateItem(id, { tags: finalTags });
-
-    // 收集违规组
-    violationGroups.forEach(group => {
-      if (!allViolationGroups.includes(group)) {
-        allViolationGroups.push(group);
-      }
-    });
   }
 
-  // 显示违规警告（与 SimpleTagManager.addTags 一致）
+  // 显示违规警告
   if (hasAnyViolation && allViolationGroups.length > 0) {
     const groupNames = allViolationGroups.join(', ');
     window.electronAPI?.showToast?.(`警告：违反单选组限制 (${groupNames})`, 'warning');
@@ -142,7 +104,7 @@ export const BatchConfig = {
           await processBatchAddTags(ids, tagInput, {
             getItemById: (id) => window.electronAPI.getPromptById(id),
             updateItem: (id, data) => window.electronAPI.updatePrompt(id, data),
-            getTagsWithGroup: () => window.electronAPI.getPromptTagsWithGroup(),
+            type: 'prompt',
             itemName: '提示词'
           });
         },
@@ -166,7 +128,6 @@ export const BatchConfig = {
       }
     }
   },
-
   image: {
     toolbarId: 'imageBatchToolbar',
     actionsId: 'imageBatchToolbarActions',
@@ -190,7 +151,7 @@ export const BatchConfig = {
         confirm: true,
         clearSelection: true,
         reloadData: true,
-        successMsg: (count) => `${count} 个图像已删除`,
+        successMsg: (count) => `${count} 张图像已删除`,
         errorMsg: '批量删除失败'
       },
       addTag: {
@@ -203,11 +164,11 @@ export const BatchConfig = {
           await processBatchAddTags(ids, tagInput, {
             getItemById: (id) => window.electronAPI.getImageById(id),
             updateItem: (id, data) => window.electronAPI.updateImage(id, data),
-            getTagsWithGroup: () => window.electronAPI.getImageTagsWithGroup(),
+            type: 'image',
             itemName: '图像'
           });
         },
-        successMsg: (count) => `${count} 个图像已添加标签`,
+        successMsg: (count) => `${count} 张图像已添加标签`,
         errorMsg: '批量添加标签失败'
       },
       favorite: {
@@ -222,7 +183,7 @@ export const BatchConfig = {
             await window.electronAPI.updateImage(id, { isFavorite: newFavoriteStatus });
           }
         },
-        successMsg: (count) => `${count} 个图像已切换收藏状态`,
+        successMsg: (count) => `${count} 张图像已切换收藏状态`,
         errorMsg: '批量收藏失败'
       }
     }

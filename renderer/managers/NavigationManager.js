@@ -18,9 +18,6 @@ export class NavigationManager {
     this.currentPanel = this.defaultPanel;
     this.panels = new Map();
     this.onPanelChange = null;
-
-    this._unsubscribeImagesChanged = null;
-    this._unsubscribePromptsChanged = null;
   }
 
   /**
@@ -29,26 +26,8 @@ export class NavigationManager {
   init() {
     this.registerPanels();
     this.bindEvents();
-    this._subscribeImageChanges();
-    this._subscribePromptChanges();
-  }
-
-  _subscribeImageChanges() {
-    this._unsubscribeImagesChanged = this.app.eventBus?.on('imagesChanged', async () => {
-      await this.app.imagePanelManager.loadData();
-      if (this.currentPanel === 'image' && this.app.imagePanelManager) {
-        await this.app.imagePanelManager.ensureRendered();
-      }
-    });
-  }
-
-  _subscribePromptChanges() {
-    this._unsubscribePromptsChanged = this.app.eventBus?.on('promptsChanged', async () => {
-      await this.app.promptPanelManager.loadData();
-      if (this.currentPanel === 'prompt' && this.app.promptPanelManager) {
-        await this.app.promptPanelManager.ensureRendered();
-      }
-    });
+    // 注意：数据刷新由 PanelManager 处理，不需要在这里订阅
+    // PromptPanelManager 和 ImagePanelManager 已经订阅了相应的事件
   }
 
   /**

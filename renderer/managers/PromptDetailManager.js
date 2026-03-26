@@ -7,7 +7,7 @@ import { validateTitle, cacheManager } from '../../utils/index.js';
 import { SaveManager, PromptSaveStrategy } from '../renderer_utils/index.js';
 import { Constants } from '../../constants.js';
 import { DirectSaveStrategy, TagAutocomplete } from '../services/index.js';
-import { SimpleTagManager } from './SimpleTagManager.js';
+import { SimpleTagManagerFactory } from './SimpleTagManagerFactory.js';
 import { EditableTagList } from '../components/index.js';
 
 export class PromptDetailManager extends DetailViewManager {
@@ -158,71 +158,26 @@ export class PromptDetailManager extends DetailViewManager {
       this.editableTagList = null;
     }
 
-    // 创建新的标签管理器
-    this.simpleTagManager = new SimpleTagManager({
-      onSave: async (tags, options = {}) => {
-        try {
-          await window.electronAPI.updatePrompt(prompt.id, { tags });
-          // 更新本地数据
-          prompt.tags = tags;
+    // 使用工厂创建新的标签管理器
+    this.simpleTagManager = SimpleTagManagerFactory.createForPrompt(
+      prompt,
+      this.app.promptPanelManager,
+      (msg, type) => this.app.showToast(msg, type)
+    );
 
-          // 显示保存成功提示
-          if (options.action === 'add') {
-            this.app.showToast('标签添加成功', 'success');
-            // 违单提示
-            if (options.hasViolation && options.violationGroup) {
-              this.app.showToast(`警告：违反单选组限制 (${options.violationGroup})`, 'warning');
-            }
-          } else if (options.action === 'remove') {
-            this.app.showToast('标签删除成功', 'success');
+    // 设置渲染回调
+    this.simpleTagManager.onRender = (tags) => {
+      if (!this.editableTagList) {
+        this.editableTagList = new EditableTagList({
+          containerId: 'promptDetailTags',
+          tagManager: this.simpleTagManager,
+          onRemove: async (tagName) => {
+            await this.simpleTagManager.removeTag(tagName);
           }
-
-          // 刷新主界面
-          if (this.app.promptPanelManager) {
-            await this.app.promptPanelManager.refreshAfterUpdate();
-          }
-        } catch (error) {
-          window.electronAPI.logError('PromptDetailManager.js', 'Failed to save prompt tags:', error);
-          throw error;
-        }
-      },
-      onRender: (tags) => {
-        // 使用 EditableTagList 组件渲染
-        if (!this.editableTagList) {
-          this.editableTagList = new EditableTagList({
-            containerId: 'promptDetailTags',
-            tagManager: this.simpleTagManager,
-            onRemove: async (tagName) => {
-              await this.simpleTagManager.removeTag(tagName);
-            }
-          });
-        }
-        this.editableTagList.renderWithInit();
-      },
-      getTagsWithGroup: async () => {
-        // 获取提示词标签及其组信息
-        const allTags = await window.electronAPI.getPromptTagsWithGroup();
-        if (!allTags || allTags.length === 0) return [];
-
-        // 按组组织标签
-        const groupsMap = new Map();
-        allTags.forEach(tag => {
-          const groupId = tag.groupId || 'ungrouped';
-          if (!groupsMap.has(groupId)) {
-            groupsMap.set(groupId, {
-              id: groupId,
-              name: tag.groupName || '未分组',
-              type: tag.groupType || 'multi',
-              tags: []
-            });
-          }
-          groupsMap.get(groupId).tags.push(tag.name);
         });
-
-        return Array.from(groupsMap.values());
-      },
-      saveDelay: 800
-    });
+      }
+      this.editableTagList.renderWithInit();
+    };
 
     // 设置初始标签
     this.simpleTagManager.setTags(prompt.tags);
@@ -249,9 +204,11 @@ export class PromptDetailManager extends DetailViewManager {
       onSelect: async (tagName) => {
         try {
           await this.simpleTagManager.addTag(tagName);
+          return true;
         } catch (error) {
           window.electronAPI.logError('PromptDetailManager.js', 'Failed to add tag:', error);
           this.app.showToast(error.message, 'error');
+          return false;
         }
       },
       onBatchAdd: async (tagNames) => {
@@ -261,9 +218,11 @@ export class PromptDetailManager extends DetailViewManager {
           } else {
             await this.simpleTagManager.addTags(tagNames);
           }
+          return true;
         } catch (error) {
           window.electronAPI.logError('PromptDetailManager.js', 'Failed to add tags:', error);
           this.app.showToast(error.message, 'error');
+          return false;
         }
       },
       containerSelector: '.prompt-tag-input-area'
@@ -300,12 +259,7 @@ export class PromptDetailManager extends DetailViewManager {
       strategy,
       itemId: prompt.id,
       onAfterSave: async () => {
-        if (this.app.promptPanelManager) {
-          await this.app.promptPanelManager.refreshAfterUpdate();
-        }
-        if (this.app.imagePanelManager) {
-          await this.app.imagePanelManager.refreshAfterUpdate();
-        }
+        // 通过事件通知刷新，避免直接调用导致的重复刷新
         this.app.eventBus?.emit('promptsChanged');
         this.app.eventBus?.emit('imagesChanged');
       }

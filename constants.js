@@ -29,7 +29,6 @@ export class Constants {
   static MULTI_IMAGE_TAG = '多图';
   static SAFE_TAG = '安全';
   static UNSAFE_TAG = '敏感';
-  static VIOLATING_TAG = '违单';
   static NO_TAG_TAG = '无标';
 
   // 所有特殊标签集合
@@ -41,7 +40,6 @@ export class Constants {
     Constants.UNSAFE_TAG,
     Constants.MULTI_IMAGE_TAG,
     Constants.NO_IMAGE_TAG,
-    Constants.VIOLATING_TAG,
     Constants.NO_TAG_TAG
   ];
 
@@ -50,7 +48,6 @@ export class Constants {
     Constants.FAVORITE_TAG,
     Constants.MULTI_IMAGE_TAG,
     Constants.NO_IMAGE_TAG,
-    Constants.VIOLATING_TAG,
     Constants.NO_TAG_TAG
   ];
 
@@ -59,7 +56,6 @@ export class Constants {
     Constants.FAVORITE_TAG,
     Constants.UNREFERENCED_TAG,
     Constants.MULTI_REF_TAG,
-    Constants.VIOLATING_TAG,
     Constants.NO_TAG_TAG
   ];
 

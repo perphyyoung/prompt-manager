@@ -1,7 +1,9 @@
-import { HtmlUtils, LRUCache } from '../../utils/index.js';
+import { HtmlUtils } from '../../utils/index.js';
+import { cacheManager } from '../../utils/CacheManager.js';
 import { TagUI } from './TagUI.js';
 import { BatchToolbarUI } from './BatchToolbarUI.js';
 import { BatchProcessor } from './BatchProcessor.js';
+import { TagService } from './TagService.js';
 
 /**
  * 面板管理器基类
@@ -47,9 +49,6 @@ export class PanelManagerBase {
     // 选中状态
     this.selectedIds = new Set();
     this.lastSelectedIndex = -1;
-
-    // 初始化 LRU 缓存，用于缓存标签组数据
-    this.tagsWithGroupCache = new LRUCache(10);
 
     // 初始化批量操作工具栏控制器
     if (options.toolbarConfig) {
@@ -301,24 +300,6 @@ export class PanelManagerBase {
   }
 
   /**
-   * 获取带分组的标签（子类实现）
-   * @abstract
-   * @returns {Promise<Array>}
-   */
-  async getTagsWithGroup() {
-    throw new Error('getTagsWithGroup() must be implemented by subclass');
-  }
-
-  /**
-   * 获取标签组（子类实现）
-   * @abstract
-   * @returns {Promise<Array>}
-   */
-  async getTagGroups() {
-    throw new Error('getTagGroups() must be implemented by subclass');
-  }
-
-  /**
    * 计算特殊标签计数（子类实现）
    * @abstract
    * @param {Array} visibleItems - 可见项目列表
@@ -419,7 +400,11 @@ export class PanelManagerBase {
               return checkFn(item);
             }
             // 普通标签
-            return item.tags && item.tags.includes(tag);
+            if (!item.tags) {
+              window.electronAPI.logError('PanelManagerBase.js', `Item ${item.id} has no tags property`, item);
+              return false;
+            }
+            return item.tags.includes(tag);
           });
         });
       }
@@ -470,10 +455,10 @@ export class PanelManagerBase {
         actionBtn.classList.toggle('has-filters', hasFilters);
       }
 
-      // 获取所有标签
+      // 获取所有标签和标签组
       const tags = await this.getAllTags();
-      const tagsWithGroup = await this.getTagsWithGroup();
-      const groups = await this.getTagGroups();
+      const tagService = TagService.getInstance(this.getItemType());
+      const groups = await tagService.getTagGroups();
 
       // 计算标签计数
       const tagCounts = this.calculateTagCounts(tags);
@@ -483,6 +468,9 @@ export class PanelManagerBase {
 
       // 计算特殊标签计数
       const specialTags = this.calculateSpecialTagCounts(visibleItems);
+
+      // 构建标签与组的映射
+      const tagsWithGroup = tagService.buildTagsWithGroup(tags, groups);
 
       // 对标签进行排序
       const sortedTagsWithGroup = this.sortTagsForFilter(tagsWithGroup, tagCounts);
@@ -629,38 +617,34 @@ export class PanelManagerBase {
       });
     }
 
-    // 普通标签点击
+    // 普通标签点击和拖拽
     if (container) {
+      // 使用 WeakSet 来跟踪正在拖拽的元素
+      const draggingItems = new WeakSet();
+
+      // 先绑定点击事件
       container.querySelectorAll('.tag-filter-item:not([data-is-special="true"])').forEach(item => {
         item.addEventListener('click', async (e) => {
+          // 如果正在拖拽，不触发点击
+          if (draggingItems.has(item)) {
+            draggingItems.delete(item);
+            return;
+          }
           e.stopPropagation();
           const tag = item.dataset.tag;
           const groupId = item.closest('.tag-filter-group')?.dataset.groupId;
 
           // 获取标签所属的组信息
-          const groups = await this.getTagGroups();
+          const tagService = TagService.getInstance(this.getItemType());
+          const groups = await tagService.getTagGroups();
           const group = groups.find(g => String(g.id) === String(groupId));
-          const isSingleSelectGroup = group && group.type === 'single';
 
           if (e.ctrlKey || e.metaKey) {
-            // Ctrl/Cmd + 点击：多选模式（单选组仍限制单选）
-            if (isSingleSelectGroup) {
-              // 单选组：需要从 sortedTagsWithGroup 中获取该组的所有标签
-              const tagsWithGroup = await this.getTagsWithGroup();
-              const groupTags = tagsWithGroup
-                .filter(t => String(t.groupId) === String(groupId))
-                .map(t => t.name);
-              for (const t of groupTags) {
-                this.selectedTags.delete(t);
-              }
-              this.selectedTags.add(tag);
+            // Ctrl/Cmd + 点击：多选模式
+            if (this.selectedTags.has(tag)) {
+              this.selectedTags.delete(tag);
             } else {
-              // 多选模式
-              if (this.selectedTags.has(tag)) {
-                this.selectedTags.delete(tag);
-              } else {
-                this.selectedTags.add(tag);
-              }
+              this.selectedTags.add(tag);
             }
           } else {
             // 普通点击：纯单选模式
@@ -681,6 +665,8 @@ export class PanelManagerBase {
       const draggableItems = container.querySelectorAll('.tag-filter-item[draggable="true"]');
       draggableItems.forEach(item => {
         item.addEventListener('dragstart', (e) => {
+          // 标记为正在拖拽
+          draggingItems.add(item);
           const tag = item.dataset.tag;
           e.dataTransfer.setData('text/plain', tag);
           e.dataTransfer.setData('drag-source', this.getTagDragType());
@@ -690,6 +676,7 @@ export class PanelManagerBase {
 
         item.addEventListener('dragend', () => {
           item.classList.remove('dragging');
+          // 注意：不在 dragend 中删除 draggingItems，因为 click 事件会在 dragend 之后触发
         });
       });
     }
@@ -702,8 +689,9 @@ export class PanelManagerBase {
    * @param {Object} tagCounts - 标签计数对象
    */
   async updateTagFilterHeader(specialTags, sortedTagsWithGroup, tagCounts) {
-    // 使用 LRU 缓存 tagsWithGroup 供 getTopGroupTags 使用
-    this.tagsWithGroupCache.set('current', sortedTagsWithGroup);
+    // 使用 CacheManager 缓存 tagsWithGroup 供 getTopGroupTags 使用
+    const cacheKey = `${this.storagePrefix}TagsWithGroup`;
+    cacheManager.createCache(cacheKey, 10).set('current', sortedTagsWithGroup);
 
     TagUI.renderFilterHeader({
       containerId: this.getTagFilterHeaderContainerId(),
@@ -712,27 +700,14 @@ export class PanelManagerBase {
       tagCounts,
       selectedTags: this.selectedTags,
       dragType: this.getTagDragType(),
-      onTagClick: (tag, isTopGroupTag, isSingleSelectGroup, event) => {
+      onTagClick: (tag, isTopGroupTag, event) => {
         const isCtrlPressed = event && (event.ctrlKey || event.metaKey);
 
-        // 获取标签所属的组信息（从缓存的 tagsWithGroup 中查找）
-        const tagsWithGroup = this.tagsWithGroupCache.get('current') || [];
-        const tagInfo = tagsWithGroup.find(t => t.name === tag);
-        const isInSingleSelectGroup = tagInfo && tagInfo.groupType === 'single';
-        const groupId = tagInfo ? tagInfo.groupId : null;
-
         if (isCtrlPressed) {
-          // Ctrl/Cmd+点击：多选模式（单选组仍限制单选）
+          // Ctrl/Cmd+ 点击：多选模式
           if (this.selectedTags.has(tag)) {
             this.selectedTags.delete(tag);
           } else {
-            if (isInSingleSelectGroup && groupId) {
-              // 单选组：取消同组其他标签
-              const groupTags = tagsWithGroup
-                .filter(t => t.groupId === groupId)
-                .map(t => t.name);
-              groupTags.forEach(t => this.selectedTags.delete(t));
-            }
             this.selectedTags.add(tag);
           }
         } else {
@@ -756,8 +731,9 @@ export class PanelManagerBase {
    * @returns {Array<string>} 首位组的所有标签名称
    */
   getTopGroupTags() {
-    // 使用 LRU 缓存获取 tagsWithGroup 数据
-    const tagsWithGroup = this.tagsWithGroupCache.get('current') || [];
+    // 使用 CacheManager 获取 tagsWithGroup 数据
+    const cacheKey = `${this.storagePrefix}TagsWithGroup`;
+    const tagsWithGroup = cacheManager.getCache(cacheKey)?.get('current') || [];
 
     // 按组分组
     const groupMap = new Map();
@@ -923,6 +899,41 @@ export class PanelManagerBase {
    */
   batchSelectAll() {
     this.batchExecutor?.executeSelectAll();
+  }
+
+  // ==================== 标签拖拽操作 ====================
+
+  /**
+   * 处理标签拖拽到卡片
+   * @param {string} itemId - 项目 ID
+   * @param {string} tagName - 标签名称
+   * @param {Object} cache - 缓存对象
+   * @param {Function} updateApi - 更新 API 函数
+   * @returns {Promise<boolean>} 是否成功
+   */
+  async handleTagDrop(itemId, tagName, cache, updateApi) {
+    const item = cache.get(String(itemId));
+    if (!item) {
+      throw new Error('项目不存在');
+    }
+
+    // 确定类型
+    const type = this.storagePrefix === 'prompt' ? 'prompt' : 'image';
+    const tagService = TagService.getInstance(type);
+    
+    // 验证并添加标签（自动从缓存获取标签组）
+    const result = await tagService.validateTagAddition(item.tags || [], tagName);
+    
+    if (!result.valid) {
+      throw new Error(result.error);
+    }
+
+    // 更新项目标签
+    await updateApi(item.id, { tags: result.newTags });
+    item.tags = result.newTags;
+    
+    await this.refreshAfterUpdate();
+    return true;
   }
 }
 

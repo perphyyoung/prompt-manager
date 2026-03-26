@@ -163,11 +163,14 @@ export class TagAutocomplete {
    * @param {string} tagName - 标签名称
    * @private
    */
-  selectTag(tagName) {
+  async selectTag(tagName) {
+    let success = true;
     if (this.onSelect) {
-      this.onSelect(tagName);
+      success = await this.onSelect(tagName);
     }
-    this.input.value = '';
+    if (success !== false) {
+      this.input.value = '';
+    }
     this.hideDropdown();
   }
 
@@ -250,16 +253,16 @@ export class TagAutocomplete {
    * 处理回车键
    * @private
    */
-  handleEnter(selectedItem) {
+  async handleEnter(selectedItem) {
     // 重新获取当前选中的项
     const currentSelected = this.dropdown.querySelector('.autocomplete-item.selected');
 
     if (currentSelected) {
       // 使用选中的标签
-      this.selectTag(currentSelected.dataset.tag);
+      await this.selectTag(currentSelected.dataset.tag);
     } else {
       // 使用输入框内容，支持批量添加
-      this.handleBatchAdd();
+      await this.handleBatchAdd();
     }
   }
 
@@ -267,15 +270,17 @@ export class TagAutocomplete {
    * 处理批量添加
    * @private
    */
-  handleBatchAdd() {
+  async handleBatchAdd() {
     let tagName = this.input.value.trim();
     tagName = tagName.replace(/^[，,]+|[，,]+$/g, '');
 
     if (tagName && this.onBatchAdd) {
       const tagNames = tagName.split(/[,，\s]+/).filter(t => t.trim());
       if (tagNames.length > 0) {
-        this.onBatchAdd(tagNames);
-        this.input.value = '';
+        const success = await this.onBatchAdd(tagNames);
+        if (success !== false) {
+          this.input.value = '';
+        }
       }
     }
     this.hideDropdown();

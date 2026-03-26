@@ -12,6 +12,7 @@ export { TagUI } from './TagUI.js';
 
 // 保留编辑界面专用标签管理器
 export { SimpleTagManager } from './SimpleTagManager.js';
+export { SimpleTagManagerFactory } from './SimpleTagManagerFactory.js';
 
 export { TrashManager } from './TrashManager.js';
 

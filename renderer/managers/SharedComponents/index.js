@@ -7,5 +7,3 @@ export { CardConfig, CardType, PromptMainConfig, ImageMainConfig, PromptTrashCon
 export { ButtonFactory, BUTTON_ICON_MAP, createListButtonHtml } from './ButtonFactory.js';
 export { UnifiedListRenderer } from './UnifiedListRenderer.js';
 export { ListConfig, ListViewType, PromptListConfig, ImageListConfig } from './ListConfig.js';
-
-// TagHtmlGenerator 和 TagFilterHeader 已合并到 TagUI.js

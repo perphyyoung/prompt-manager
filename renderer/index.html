@@ -828,7 +828,7 @@
             <div class="setting-row setting-row-danger">
               <div class="setting-info">
                 <div class="setting-label">清空所有数据</div>
-                <div class="setting-desc">⚠️ 此操作将永久删除所有提示词、图像和标签的数据库记录，不可恢复！图像文件将保留在 data/images 目录中，可手动删除。</div>
+                <div class="setting-desc">⚠️ 此操作将重命名当前数据目录并创建新的空数据目录，应用将重启。重启后会显示带日期后缀的旧数据目录路径，可手动备份或删除。</div>
               </div>
               <button id="clearAllDataBtn" class="btn btn-danger btn-sm">清空</button>
             </div>
@@ -1025,7 +1025,7 @@
         </button>
       </div>
       <div class="modal-body">
-        <!-- 工具栏（4个按钮） -->
+        <!-- 工具栏 -->
         <div class="tag-manager-toolbar">
           <div class="tag-manager-search">
             <input type="text" id="promptTagManagerSearchInput" placeholder="搜索标签..." class="search-input">
@@ -1036,7 +1036,9 @@
               </svg>
             </button>
           </div>
+          <button id="syncPromptTagsBtn" class="btn btn-sm btn-secondary" title="从图像标签同步">同步标签</button>
           <button id="addPromptTagInManagerBtn" class="btn btn-sm btn-primary">+ 新建标签</button>
+          <button id="addPromptTagGroupBtn" class="btn btn-sm btn-secondary">+ 新建组</button>
           <select id="promptTagManagerSortSelect" class="tag-manager-sort-select">
             <option value="count-desc">数量（多→少）</option>
             <option value="count-asc">数量（少→多）</option>
@@ -1047,10 +1049,6 @@
         </div>
 
         <!-- 标签组卡片区域（包含特殊标签卡片、未分组卡片、标签组卡片） -->
-        <div class="tag-group-cards-header">
-          <span class="tag-group-cards-title">标签组</span>
-          <button id="addPromptTagGroupBtn" class="btn btn-sm btn-secondary">+ 新建组</button>
-        </div>
         <div id="promptTagGroupCards" class="tag-group-cards">
           <!-- 标签组卡片将在这里显示 -->
         </div>
@@ -1090,7 +1088,9 @@
               </svg>
             </button>
           </div>
+          <button id="syncImageTagsBtn" class="btn btn-sm btn-secondary" title="从提示词标签同步">同步标签</button>
           <button id="addImageTagInManagerBtn" class="btn btn-sm btn-primary">+ 新建标签</button>
+          <button id="addImageTagGroupBtn" class="btn btn-sm btn-secondary">+ 新建组</button>
           <select id="imageTagManagerSortSelect" class="tag-manager-sort-select">
             <option value="count-desc">数量（多→少）</option>
             <option value="count-asc">数量（少→多）</option>
@@ -1101,10 +1101,6 @@
         </div>
 
         <!-- 标签组卡片区域（包含特殊标签卡片、未分组卡片、标签组卡片） -->
-        <div class="tag-group-cards-header">
-          <span class="tag-group-cards-title">标签组</span>
-          <button id="addImageTagGroupBtn" class="btn btn-sm btn-secondary">+ 新建组</button>
-        </div>
         <div id="imageTagGroupCards" class="tag-group-cards">
           <!-- 标签组卡片将在这里显示 -->
         </div>
@@ -1248,9 +1244,9 @@
     </div>
   </div>
 
-  <!-- 输入对话框 Modal -->
+  <!-- 新建标签输入框 Modal -->
   <div id="inputModal" class="modal">
-    <div class="modal-content-medium">
+    <div class="modal-content-small">
       <div class="modal-header">
         <h2 id="inputModalTitle">输入</h2>
         <button class="close-btn" id="closeInputModal">
@@ -1261,17 +1257,15 @@
         </button>
       </div>
       <div class="modal-body">
-        <div class="input-modal-row">
-          <div class="input-modal-field">
-            <label id="inputModalLabel" class="form-label">标签名称</label>
-            <input type="text" id="inputModalField" class="form-input" placeholder="">
-          </div>
-          <div class="input-modal-group" id="inputModalGroupSection" style="display: none;">
-            <label class="form-label">所属标签组</label>
-            <select id="inputModalGroupSelect" class="tag-manager-sort-select">
-              <option value="">未分组</option>
-            </select>
-          </div>
+        <div class="form-group required">
+          <label id="inputModalLabel" class="form-label">标签名称</label>
+          <input type="text" id="inputModalField" class="form-input" placeholder="">
+        </div>
+        <div class="form-group" id="inputModalGroupSection" style="display: none;">
+          <label class="form-label">所属标签组</label>
+          <select id="inputModalGroupSelect" class="tag-manager-sort-select">
+            <option value="">未分组</option>
+          </select>
         </div>
       </div>
       <div class="modal-footer input-modal-footer">
@@ -1326,18 +1320,9 @@
           <label class="form-label">组名称</label>
           <input type="text" id="tagGroupEditName" class="form-input" placeholder="输入标签组名称">
         </div>
-        <div class="form-row">
-          <div class="form-group form-group-half">
-            <label class="form-label">选择类型</label>
-            <select id="tagGroupEditSelectType" class="tag-manager-sort-select">
-              <option value="multi">多选</option>
-              <option value="single">单选</option>
-            </select>
-          </div>
-          <div class="form-group form-group-half">
-            <label class="form-label">排序 <span class="form-hint">(数值越小越靠前)</span></label>
-            <input type="number" id="tagGroupEditSortOrder" class="form-input" placeholder="0" value="0">
-          </div>
+        <div class="form-group">
+          <label class="form-label">排序 <span class="form-hint">(数值越小越靠前)</span></label>
+          <input type="number" id="tagGroupEditSortOrder" class="form-input" placeholder="0" value="0">
         </div>
         <div class="form-actions tag-group-form-actions">
           <button id="saveTagGroupBtn" class="btn btn-primary btn-modal">保存</button>

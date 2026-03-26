@@ -507,7 +507,13 @@ export class PromptPanelManager extends PanelManagerBase {
           const promptId = card.dataset.id || card.dataset.promptId;
           if (promptId) {
             try {
-              await this.app.addTagToPrompt(promptId, tagName);
+              await this.handleTagDrop(
+                promptId,
+                tagName,
+                this.app.promptCache,
+                window.electronAPI.updatePrompt
+              );
+              this.app.showToast('标签已添加', 'success');
             } catch (error) {
               this.app.showToast(error.message, 'error');
             }
@@ -566,22 +572,6 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 获取带分组的标签（实现基类抽象方法）
-   * @returns {Promise<Array>}
-   */
-  async getTagsWithGroup() {
-    return window.electronAPI.getPromptTagsWithGroup();
-  }
-
-  /**
-   * 获取标签组（实现基类抽象方法）
-   * @returns {Promise<Array>}
-   */
-  async getTagGroups() {
-    return window.electronAPI.getPromptTagGroups();
-  }
-
-  /**
    * 计算特殊标签计数（实现基类抽象方法）
    * @param {Array} visibleItems - 可见提示词列表
    * @returns {Array<{tag: string, count: number}>}
@@ -592,7 +582,6 @@ export class PromptPanelManager extends PanelManagerBase {
     const multiImageCount = visibleItems.filter(p => p.images && p.images.length >= 2).length;
     const noImageCount = visibleItems.filter(p => !p.images || p.images.length === 0).length;
     const noTagCount = visibleItems.filter(p => !p.tags || p.tags.length === 0).length;
-    const violatingCount = visibleItems.filter(p => p.tags && p.tags.includes(Constants.VIOLATING_TAG)).length;
 
     if (favoriteCount > 0) {
       specialTags.push({ tag: Constants.FAVORITE_TAG, count: favoriteCount });
@@ -605,9 +594,6 @@ export class PromptPanelManager extends PanelManagerBase {
     }
     if (noTagCount > 0) {
       specialTags.push({ tag: Constants.NO_TAG_TAG, count: noTagCount });
-    }
-    if (violatingCount > 0) {
-      specialTags.push({ tag: Constants.VIOLATING_TAG, count: violatingCount });
     }
 
     // NSFW 模式下显示安全评级标签

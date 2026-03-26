@@ -732,6 +732,25 @@ class PromptManager {
       window.electronAPI.logWarn('App', 'addPromptTagInManagerBtn not found');
     }
 
+    // 同步标签按钮
+    const syncPromptTagsBtn = document.getElementById('syncPromptTagsBtn');
+    if (syncPromptTagsBtn) {
+      syncPromptTagsBtn.addEventListener('click', async () => {
+        try {
+          const { TagSyncIpcService } = await import('./services/TagSyncIpcService.js');
+          const result = await TagSyncIpcService.syncImageTagsToPrompt();
+          window.electronAPI.logInfo('App', 'Synced image tags to prompt', result);
+          // 刷新标签列表
+          await this.tagRegistry.refresh();
+          // 显示提示
+          window.showToast?.(`成功导入 ${result.imported} 个标签，跳过 ${result.skipped} 个已存在标签`, 'success');
+        } catch (error) {
+          window.electronAPI.logError('App', 'Failed to sync image tags to prompt', error);
+          window.showToast?.('同步标签失败: ' + error.message, 'error');
+        }
+      });
+    }
+
     // 搜索
     const searchInput = document.getElementById('promptTagManagerSearchInput');
     const clearBtn = document.getElementById('clearPromptTagManagerSearchBtn');
@@ -789,6 +808,25 @@ class PromptManager {
       });
     } else {
       window.electronAPI.logWarn('App', 'addImageTagInManagerBtn not found');
+    }
+
+    // 同步标签按钮
+    const syncImageTagsBtn = document.getElementById('syncImageTagsBtn');
+    if (syncImageTagsBtn) {
+      syncImageTagsBtn.addEventListener('click', async () => {
+        try {
+          const { TagSyncIpcService } = await import('./services/TagSyncIpcService.js');
+          const result = await TagSyncIpcService.syncPromptTagsToImage();
+          window.electronAPI.logInfo('App', 'Synced prompt tags to image', result);
+          // 刷新标签列表
+          await this.imageTagRegistry.refresh();
+          // 显示提示
+          window.showToast?.(`成功导入 ${result.imported} 个标签，跳过 ${result.skipped} 个已存在标签`, 'success');
+        } catch (error) {
+          window.electronAPI.logError('App', 'Failed to sync prompt tags to image', error);
+          window.showToast?.('同步标签失败: ' + error.message, 'error');
+        }
+      });
     }
 
     // 搜索
@@ -1086,86 +1124,6 @@ class PromptManager {
   }
 
   /**
-   * 添加标签到提示词
-   * @param {string} promptId - 提示词 ID
-   * @param {string} tagName - 标签名称
-   */
-  async addTagToPrompt(promptId, tagName) {
-    try {
-      const prompt = this.promptCache.get(String(promptId));
-      if (!prompt) {
-        throw new Error('提示词不存在');
-      }
-
-      if (prompt.tags && prompt.tags.includes(tagName)) {
-        throw new Error('该提示词已存在此标签');
-      }
-
-      const currentTags = prompt.tags ? [...prompt.tags] : [];
-      currentTags.push(tagName);
-
-      await window.electronAPI.updatePrompt(promptId, {
-        tags: currentTags
-      });
-
-      prompt.tags = currentTags;
-
-      // 重新渲染列表
-      await this.promptPanelManager.refreshAfterUpdate();
-
-      this.showToast('标签已添加', 'success');
-    } catch (error) {
-      const errorInfo = {
-        message: error.message,
-        stack: error.stack,
-        promptId,
-        tagName
-      };
-      window.electronAPI.logError('App', 'Failed to add tag to prompt:', errorInfo);
-      this.showToast(error.message, 'error');
-    }
-  }
-
-  /**
-   * 添加标签到图像
-   * @param {string} imageId - 图像 ID
-   * @param {string} tagName - 标签名称
-   */
-  async addTagToImage(imageId, tagName) {
-    try {
-      const img = this.imageCache.get(String(imageId));
-      if (!img) {
-        throw new Error('图像不存在');
-      }
-
-      if (img.tags && img.tags.includes(tagName)) {
-        throw new Error('该图像已存在此标签');
-      }
-
-      const currentTags = img.tags ? [...img.tags] : [];
-      currentTags.push(tagName);
-
-      await window.electronAPI.updateImage(imageId, { tags: currentTags });
-
-      img.tags = currentTags;
-
-      // 重新渲染列表
-      await this.imagePanelManager.refreshAfterUpdate();
-
-      this.showToast('标签已添加', 'success');
-    } catch (error) {
-      const errorInfo = {
-        message: error.message,
-        stack: error.stack,
-        imageId,
-        tagName
-      };
-      window.electronAPI.logError('App', 'Failed to add tag to image:', errorInfo);
-      this.showToast(error.message, 'error');
-    }
-  }
-
-  /**
    * 根据 ID 查找图像
    * 优先从缓存获取，时间复杂度 O(1)；缓存未命中时从 allImages 查找
    * @param {string} id - 图像 ID
@@ -1277,7 +1235,7 @@ class PromptManager {
       // 获取所有数据（包括已删除的）
       const prompts = await window.electronAPI.getPrompts();
       const allImages = await window.electronAPI.getAllImagesForStats();
-      const tagGroups = await window.electronAPI.getTagGroups();
+      const tagGroups = await window.electronAPI.getPromptTagGroups();
 
       // 根据当前视图模式过滤数据（safe 模式只显示 isSafe=1 的项目）
       const isSafeMode = this.viewMode === 'safe';
@@ -1587,12 +1545,9 @@ class PromptManager {
         });
       }
 
-      if (this.promptPanelManager) {
-        await this.promptPanelManager.refreshAfterUpdate();
-      }
-      if (this.imagePanelManager) {
-        await this.imagePanelManager.refreshAfterUpdate();
-      }
+      // 通过事件通知刷新，避免直接调用导致的重复刷新
+      this.eventBus?.emit('promptsChanged');
+      this.eventBus?.emit('imagesChanged');
     } finally {
       this._saveLocks.delete(lockKey);
     }
