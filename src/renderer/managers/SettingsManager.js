@@ -67,10 +67,14 @@ export class SettingsManager {
     document.getElementById('clearAllDataBtn')?.addEventListener('click', () => this.clearAllData());
 
     // 视图模式
-    const viewModeSelect = document.getElementById('viewModeSelect');
-    if (viewModeSelect) {
-      viewModeSelect.value = this.app?.viewMode || Constants.ViewMode.SAFE;
-      viewModeSelect.addEventListener('change', () => this.handleViewModeChange(viewModeSelect.value));
+    const viewModeToggle = document.getElementById('viewModeToggle');
+    if (viewModeToggle) {
+      // 初始化状态：safe = 选中(绿色), nsfw = 未选中(灰色)
+      viewModeToggle.checked = this.app?.viewMode === Constants.ViewMode.SAFE;
+      viewModeToggle.addEventListener('change', () => {
+        const newMode = viewModeToggle.checked ? Constants.ViewMode.SAFE : Constants.ViewMode.NSFW;
+        this.handleViewModeChange(newMode);
+      });
     }
 
     // 主题切换
