@@ -327,6 +327,10 @@ export class PromptDetailManager extends DetailViewManager {
       saveMode: 'debounce',
       delay: 800,
       onChange: (value) => {
+        // 更新 currentItem 的收藏状态
+        if (this.currentItem) {
+          this.currentItem.isFavorite = value;
+        }
         this.updateFavoriteBtnUI(value);
         this.app.showToast(value ? '已收藏' : '已取消收藏', 'success');
       }
