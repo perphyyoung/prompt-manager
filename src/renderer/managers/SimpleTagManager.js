@@ -149,6 +149,41 @@ export class SimpleTagManager {
   }
 
   /**
+   * 批量删除标签（不弹出确认对话框）
+   * @param {string[]} tagNames - 标签名称数组
+   * @returns {Promise<{success: boolean, deleted: number}>}
+   */
+  async removeTags(tagNames) {
+    let deleted = 0;
+    let currentTags = [...this.tags];
+
+    for (const tagName of tagNames) {
+      const trimmedTag = tagName.trim();
+
+      if (!trimmedTag || !currentTags.includes(trimmedTag)) {
+        continue;
+      }
+
+      const result = await this.service.validateTagRemoval(currentTags, trimmedTag);
+
+      if (!result.valid) {
+        continue;
+      }
+
+      currentTags = result.newTags.filter(t => t && t.trim());
+      deleted++;
+    }
+
+    if (deleted > 0) {
+      this.tags = currentTags;
+      this.onRender(this.tags);
+      this.debounceSave({ action: 'remove' });
+    }
+
+    return { success: true, deleted };
+  }
+
+  /**
    * 防抖保存
    * @param {Object} options - 保存选项
    */

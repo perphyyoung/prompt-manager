@@ -8,7 +8,7 @@ import { SaveManager, PromptSaveStrategy } from '../renderer_utils/index.js';
 import { Constants } from '../../constants.js';
 import { DirectSaveStrategy, TagAutocomplete } from '../services/index.js';
 import { SimpleTagManagerFactory } from './SimpleTagManagerFactory.js';
-import { EditableTagList } from '../components/index.js';
+import { EditableTagList, BatchTagManager } from '../components/index.js';
 
 export class PromptDetailManager extends DetailViewManager {
   /**
@@ -158,6 +158,12 @@ export class PromptDetailManager extends DetailViewManager {
       this.editableTagList = null;
     }
 
+    // 清理旧的批量标签管理器
+    if (this.batchTagManager) {
+      this.batchTagManager.destroy();
+      this.batchTagManager = null;
+    }
+
     // 使用工厂创建新的标签管理器
     this.simpleTagManager = SimpleTagManagerFactory.createForPrompt(
       prompt,
@@ -182,8 +188,39 @@ export class PromptDetailManager extends DetailViewManager {
     // 设置初始标签
     this.simpleTagManager.setTags(prompt.tags);
 
+    // 初始化批量标签管理器
+    this.initBatchTagManager();
+
     // 绑定标签输入事件
     this.bindTagInputEvents();
+  }
+
+  /**
+   * 初始化批量标签管理器
+   * @private
+   */
+  initBatchTagManager() {
+    this.batchTagManager = new BatchTagManager({
+      containerId: 'promptDetailTags',
+      batchBtnId: 'promptDetailBatchTagBtn',
+      toolbarId: 'promptDetailBatchTagToolbar',
+      countId: 'promptDetailBatchTagCount',
+      deleteBtnId: 'promptDetailBatchTagDeleteBtn',
+      cancelBtnId: 'promptDetailBatchTagCancelBtn',
+      tagManager: this.simpleTagManager,
+      showToast: (msg, type) => this.app.showToast(msg, type),
+      label: 'PromptDetailManager'
+    });
+
+    // 设置退出批量模式回调
+    this.batchTagManager.setOnExitBatchMode(() => {
+      this.editableTagList?.renderWithInit();
+      // 显示输入区域
+      const inputArea = document.getElementById('promptDetailTagInputArea');
+      if (inputArea) inputArea.style.display = '';
+    });
+
+    this.batchTagManager.init();
   }
 
   /**

@@ -12,7 +12,6 @@
 创建提示词时, toast 不是中文; 参考 DialogService, 实现统一管理的 toast
 renderer\services\DialogService.js 设置相同的提示风格信息
 database optimize-database
-详情界面, 添加标签的批量处理入口, 用于批量删除标签, 给出实现方案
 composes 是 CSS Modules 语法, 当前项目怎样引入
 备份代码位置 D:\develop\comfy-common\py-ele-prompt-bak\代码备份
 
@@ -25,12 +24,17 @@ composes 是 CSS Modules 语法, 当前项目怎样引入
 全面分析当前项目, 有没有什么常见的隐患, 给出优化方案
 排查上步所有可能的问题, 给出修改方案
 检查现有事件绑定中, 有哪些是没有在 html 中出现的, 也没有 动态生成; 给出统计结果
-根据实际 js 文件结构, 更新 js文件树.md, 不需要添加最近修改章节
+根据实际 js/ts 文件结构, 更新 项目文件树.md, 不需要添加最近修改章节
 通过 google-code-review skill 审查本地变更, 使用 `git diff > git-diff.log`, 不要用交互式的 `git diff`
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log
 根据 chat.md 的第 12 行以及 git-diff.log, 更新 readme.md 和 change.md, 并总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 根据 git-diff.log, 总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 标签系统 -> 依赖注入; IPC 服务类
+
+## 20260327
+
+只有一个标签或没有标签时, 点击 批量管理 时, 提示 "无需进入批量管理"
+图像详情界面, 添加标签的批量处理入口, 用于批量删除标签, 给出实现方案
 
 ## 20260326
 

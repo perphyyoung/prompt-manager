@@ -4973,3 +4973,75 @@ body {
 .btn-sidebar-vertical.active svg {
   stroke: white;
 }
+
+/* ==================== 批量标签管理样式 ==================== */
+
+/* 带操作的标题栏 */
+.section-header-with-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.section-header-with-actions h4,
+.section-header-with-actions label {
+  margin: 0;
+}
+
+/* 标题栏操作组 */
+.header-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 内联批量工具栏 */
+.batch-tag-toolbar-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.batch-tag-toolbar-inline .batch-tag-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* 批量模式下的标签样式 - 复选框在右侧 */
+.tag-batch-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  margin: 0 6px 6px 0;
+  transition: all 0.2s ease;
+}
+
+/* 复选框样式 - 放在文字后面 */
+.tag-batch-mode input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
+  order: 2;
+}
+
+.tag-batch-mode span {
+  order: 1;
+}
+
+.tag-batch-mode:hover {
+  background: var(--bg-color);
+}
+
+.tag-batch-mode.selected {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: var(--primary-color);
+}

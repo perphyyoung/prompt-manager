@@ -6,7 +6,7 @@ import { DetailViewManager } from './DetailViewManager.js';
 import { HtmlUtils, validateFileName, isSameId, cacheManager } from '../../utils/index.js';
 import { SaveManager, ImageSaveStrategy } from '../renderer_utils/index.js';
 import { SimpleTagManagerFactory } from './SimpleTagManagerFactory.js';
-import { EditableTagList } from '../components/index.js';
+import { EditableTagList, BatchTagManager } from '../components/index.js';
 import { Constants } from '../../constants.js';
 import { DialogService, DialogConfig, TagAutocomplete } from '../services/index.js';
 
@@ -205,6 +205,12 @@ export class ImageDetailManager extends DetailViewManager {
       this.editableTagList = null;
     }
 
+    // 清理旧的批量标签管理器
+    if (this.batchTagManager) {
+      this.batchTagManager.destroy();
+      this.batchTagManager = null;
+    }
+
     // 使用工厂创建新的标签管理器
     this.simpleTagManager = SimpleTagManagerFactory.createForImage(
       image,
@@ -229,8 +235,39 @@ export class ImageDetailManager extends DetailViewManager {
     // 设置初始标签
     this.simpleTagManager.setTags(image.tags);
 
+    // 初始化批量标签管理器
+    this.initBatchTagManager();
+
     // 绑定标签输入事件
     this.bindTagInputEvents();
+  }
+
+  /**
+   * 初始化批量标签管理器
+   * @private
+   */
+  initBatchTagManager() {
+    this.batchTagManager = new BatchTagManager({
+      containerId: 'imageDetailImageTags',
+      batchBtnId: 'imageDetailBatchTagBtn',
+      toolbarId: 'imageDetailBatchTagToolbar',
+      countId: 'imageDetailBatchTagCount',
+      deleteBtnId: 'imageDetailBatchTagDeleteBtn',
+      cancelBtnId: 'imageDetailBatchTagCancelBtn',
+      tagManager: this.simpleTagManager,
+      showToast: (msg, type) => this.app.showToast(msg, type),
+      label: 'ImageDetailManager'
+    });
+
+    // 设置退出批量模式回调
+    this.batchTagManager.setOnExitBatchMode(() => {
+      this.editableTagList?.renderWithInit();
+      // 显示输入区域
+      const inputArea = document.getElementById('imageDetailTagInputArea');
+      if (inputArea) inputArea.style.display = '';
+    });
+
+    this.batchTagManager.init();
   }
 
   /**

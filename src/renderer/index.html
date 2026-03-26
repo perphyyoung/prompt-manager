@@ -471,9 +471,19 @@
               <textarea id="promptDetailTranslate" class="auto-resize" placeholder="输入提示词翻译（可选）..."></textarea>
             </div>
             <div class="form-group">
-              <label>提示词标签</label>
+              <div class="section-header-with-actions">
+                <label>提示词标签</label>
+                <div class="header-actions-group">
+                  <div id="promptDetailBatchTagToolbar" class="batch-tag-toolbar-inline" style="display: none;">
+                    <span class="batch-tag-count"><span id="promptDetailBatchTagCount">0</span> 个</span>
+                    <button type="button" id="promptDetailBatchTagDeleteBtn" class="btn btn-sm btn-danger">删除</button>
+                    <button type="button" id="promptDetailBatchTagCancelBtn" class="btn btn-sm btn-secondary">取消</button>
+                  </div>
+                  <button type="button" id="promptDetailBatchTagBtn" class="btn btn-sm btn-outline">批量管理</button>
+                </div>
+              </div>
               <div id="promptDetailTags" class="edit-tags-list"></div>
-              <div class="prompt-tag-input-area">
+              <div class="prompt-tag-input-area" id="promptDetailTagInputArea">
                 <input type="text" id="promptDetailTagsInput" placeholder="输入标签，按回车添加" autocomplete="off">
                 <div id="promptDetailTagAutocomplete" class="autocomplete-dropdown"></div>
               </div>
@@ -646,9 +656,19 @@
                 <input type="text" id="imageDetailFileName" class="file-name-input" value="-" />
               </div>
               <div class="info-section">
-                <h4>图像标签</h4>
+                <div class="section-header-with-actions">
+                  <h4>图像标签</h4>
+                  <div class="header-actions-group">
+                    <div id="imageDetailBatchTagToolbar" class="batch-tag-toolbar-inline" style="display: none;">
+                      <span class="batch-tag-count"><span id="imageDetailBatchTagCount">0</span> 个</span>
+                      <button type="button" id="imageDetailBatchTagDeleteBtn" class="btn btn-sm btn-danger">删除</button>
+                      <button type="button" id="imageDetailBatchTagCancelBtn" class="btn btn-sm btn-secondary">取消</button>
+                    </div>
+                    <button type="button" id="imageDetailBatchTagBtn" class="btn btn-sm btn-outline">批量管理</button>
+                  </div>
+                </div>
                 <div id="imageDetailImageTags" class="tags-list">-</div>
-                <div class="image-tag-input-area">
+                <div class="image-tag-input-area" id="imageDetailTagInputArea">
                   <input type="text" id="imageDetailTagInput" placeholder="输入标签，按回车添加" autocomplete="off">
                   <div id="imageDetailTagAutocomplete" class="autocomplete-dropdown"></div>
                 </div>
