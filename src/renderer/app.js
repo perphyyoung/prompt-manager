@@ -732,21 +732,35 @@ class PromptManager {
       window.electronAPI.logWarn('App', 'addPromptTagInManagerBtn not found');
     }
 
-    // 同步标签按钮
+    // 批量管理按钮
+    const batchManagePromptTagsBtn = document.getElementById('batchManagePromptTagsBtn');
+    if (batchManagePromptTagsBtn) {
+      batchManagePromptTagsBtn.addEventListener('click', () => {
+        this.tagRegistry.toggleBatchMode();
+      });
+    }
+
+    // 同步标签按钮（双向同步）
     const syncPromptTagsBtn = document.getElementById('syncPromptTagsBtn');
     if (syncPromptTagsBtn) {
       syncPromptTagsBtn.addEventListener('click', async () => {
         try {
-          const { TagSyncIpcService } = await import('./services/TagSyncIpcService.js');
-          const result = await TagSyncIpcService.syncImageTagsToPrompt();
-          window.electronAPI.logInfo('App', 'Synced image tags to prompt', result);
-          // 刷新标签列表
-          await this.tagRegistry.refresh();
-          // 显示提示
-          window.showToast?.(`成功导入 ${result.imported} 个标签，跳过 ${result.skipped} 个已存在标签`, 'success');
+          const result = await window.electronAPI.syncTagsBidirectional();
+          // 清除标签缓存并刷新页面
+          if (result.promptToImage.tags && result.promptToImage.tags.length > 0) {
+            this.imageTagRegistry.service._clearCache(this.imageTagRegistry.service.cacheKey);
+            this.imageTagRegistry.service._clearCache(this.imageTagRegistry.service.cacheKeyGroups);
+          }
+          if (result.imageToPrompt.tags && result.imageToPrompt.tags.length > 0) {
+            this.tagRegistry.service._clearCache(this.tagRegistry.service.cacheKey);
+            this.tagRegistry.service._clearCache(this.tagRegistry.service.cacheKeyGroups);
+          }
+          await Promise.all([this.tagRegistry.refresh(), this.imageTagRegistry.refresh()]);
+          // 显示同步结果对话框
+          DialogService.showConfirmDialogByConfig(DialogConfig.SYNC_TAGS_BIDIRECTIONAL, result);
         } catch (error) {
-          window.electronAPI.logError('App', 'Failed to sync image tags to prompt', error);
-          window.showToast?.('同步标签失败: ' + error.message, 'error');
+          window.electronAPI.logError('App', 'Failed to sync tags bidirectional', error);
+          this.showToast('同步标签失败: ' + error.message, 'error');
         }
       });
     }
@@ -810,21 +824,35 @@ class PromptManager {
       window.electronAPI.logWarn('App', 'addImageTagInManagerBtn not found');
     }
 
-    // 同步标签按钮
+    // 批量管理按钮
+    const batchManageImageTagsBtn = document.getElementById('batchManageImageTagsBtn');
+    if (batchManageImageTagsBtn) {
+      batchManageImageTagsBtn.addEventListener('click', () => {
+        this.imageTagRegistry.toggleBatchMode();
+      });
+    }
+
+    // 同步标签按钮（双向同步）
     const syncImageTagsBtn = document.getElementById('syncImageTagsBtn');
     if (syncImageTagsBtn) {
       syncImageTagsBtn.addEventListener('click', async () => {
         try {
-          const { TagSyncIpcService } = await import('./services/TagSyncIpcService.js');
-          const result = await TagSyncIpcService.syncPromptTagsToImage();
-          window.electronAPI.logInfo('App', 'Synced prompt tags to image', result);
-          // 刷新标签列表
-          await this.imageTagRegistry.refresh();
-          // 显示提示
-          window.showToast?.(`成功导入 ${result.imported} 个标签，跳过 ${result.skipped} 个已存在标签`, 'success');
+          const result = await window.electronAPI.syncTagsBidirectional();
+          // 清除标签缓存并刷新页面
+          if (result.promptToImage.tags && result.promptToImage.tags.length > 0) {
+            this.imageTagRegistry.service._clearCache(this.imageTagRegistry.service.cacheKey);
+            this.imageTagRegistry.service._clearCache(this.imageTagRegistry.service.cacheKeyGroups);
+          }
+          if (result.imageToPrompt.tags && result.imageToPrompt.tags.length > 0) {
+            this.tagRegistry.service._clearCache(this.tagRegistry.service.cacheKey);
+            this.tagRegistry.service._clearCache(this.tagRegistry.service.cacheKeyGroups);
+          }
+          await Promise.all([this.tagRegistry.refresh(), this.imageTagRegistry.refresh()]);
+          // 显示同步结果对话框
+          DialogService.showConfirmDialogByConfig(DialogConfig.SYNC_TAGS_BIDIRECTIONAL, result);
         } catch (error) {
-          window.electronAPI.logError('App', 'Failed to sync prompt tags to image', error);
-          window.showToast?.('同步标签失败: ' + error.message, 'error');
+          window.electronAPI.logError('App', 'Failed to sync tags bidirectional', error);
+          this.showToast('同步标签失败: ' + error.message, 'error');
         }
       });
     }
@@ -1779,10 +1807,10 @@ async function initApp() {
   await app.init();
   const oldDataDir = await window.electronAPI.getOldDataDir();
   if (oldDataDir) {
-    DialogService.showConfirmDialogByConfig({
-      ...DialogConfig.DATA_RESET,
-      data: { oldDataDir }
-    });
+    DialogService.showConfirmDialogByConfig(
+      DialogConfig.DATA_RESET,
+      { oldDataDir }
+    );
   }
 }
 

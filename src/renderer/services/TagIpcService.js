@@ -28,7 +28,6 @@ export class TagIpcService {
   static async createPromptTagGroup(name, sortOrder) {
     try {
       const result = await window.electronAPI.createPromptTagGroup(name, sortOrder);
-      console.log(`[TagIpcService] 创建提示词标签组成功：${name}`);
       return result;
     } catch (error) {
       console.error(`[TagIpcService] 创建提示词标签组失败：${name}`, error);
@@ -45,7 +44,6 @@ export class TagIpcService {
   static async updatePromptTagGroupAttrs(id, updates) {
     try {
       const result = await window.electronAPI.updatePromptTagGroupAttrs(id, updates);
-      console.log(`[TagIpcService] 更新提示词标签组成功：${id}`);
       return result;
     } catch (error) {
       console.error(`[TagIpcService] 更新提示词标签组失败：${id}`, error);
@@ -61,7 +59,6 @@ export class TagIpcService {
   static async deletePromptTagGroup(id) {
     try {
       await window.electronAPI.deletePromptTagGroup(id);
-      console.log(`[TagIpcService] 删除提示词标签组成功：${id}`);
     } catch (error) {
       console.error(`[TagIpcService] 删除提示词标签组失败：${id}`, error);
       throw error;
@@ -77,7 +74,6 @@ export class TagIpcService {
   static async assignPromptTagToBelongGroup(tagName, groupId) {
     try {
       await window.electronAPI.assignPromptTagToBelongGroup(tagName, groupId);
-      console.log(`[TagIpcService] 分配提示词标签到组成功：${tagName} -> ${groupId}`);
     } catch (error) {
       console.error(`[TagIpcService] 分配提示词标签到组失败：${tagName}`, error);
       throw error;
@@ -93,7 +89,6 @@ export class TagIpcService {
   static async getPromptTags() {
     try {
       const result = await window.electronAPI.getPromptTags();
-      console.log('[TagIpcService] 获取提示词标签成功');
       return result;
     } catch (error) {
       console.error('[TagIpcService] 获取提示词标签失败:', error);
@@ -109,7 +104,6 @@ export class TagIpcService {
   static async addPromptTag(tag) {
     try {
       const result = await window.electronAPI.addPromptTag(tag);
-      console.log(`[TagIpcService] 添加提示词标签成功：${tag}`);
       return result;
     } catch (error) {
       console.error(`[TagIpcService] 添加提示词标签失败：${tag}`, error);
@@ -126,7 +120,6 @@ export class TagIpcService {
   static async addPromptTags(promptId, tagNames) {
     try {
       await window.electronAPI.addPromptTags(promptId, tagNames);
-      console.log(`[TagIpcService] 为提示词添加多个标签成功：${promptId}`);
     } catch (error) {
       console.error(`[TagIpcService] 为提示词添加多个标签失败：${promptId}`, error);
       throw error;
@@ -141,7 +134,6 @@ export class TagIpcService {
   static async deletePromptTag(tag) {
     try {
       await window.electronAPI.deletePromptTag(tag);
-      console.log(`[TagIpcService] 删除提示词标签成功：${tag}`);
     } catch (error) {
       console.error(`[TagIpcService] 删除提示词标签失败：${tag}`, error);
       throw error;
@@ -157,7 +149,6 @@ export class TagIpcService {
   static async renamePromptTag(oldTag, newTag) {
     try {
       await window.electronAPI.renamePromptTag(oldTag, newTag);
-      console.log(`[TagIpcService] 重命名提示词标签成功：${oldTag} -> ${newTag}`);
     } catch (error) {
       console.error(`[TagIpcService] 重命名提示词标签失败：${oldTag} -> ${newTag}`, error);
       throw error;
@@ -189,7 +180,6 @@ export class TagIpcService {
   static async createImageTagGroup(name, sortOrder) {
     try {
       const result = await window.electronAPI.createImageTagGroup(name, sortOrder);
-      console.log(`[TagIpcService] 创建图像标签组成功：${name}`);
       return result;
     } catch (error) {
       console.error(`[TagIpcService] 创建图像标签组失败：${name}`, error);
@@ -206,7 +196,6 @@ export class TagIpcService {
   static async updateImageTagGroupAttrs(id, updates) {
     try {
       const result = await window.electronAPI.updateImageTagGroupAttrs(id, updates);
-      console.log(`[TagIpcService] 更新图像标签组成功：${id}`);
       return result;
     } catch (error) {
       console.error(`[TagIpcService] 更新图像标签组失败：${id}`, error);
@@ -222,7 +211,6 @@ export class TagIpcService {
   static async deleteImageTagGroup(id) {
     try {
       await window.electronAPI.deleteImageTagGroup(id);
-      console.log(`[TagIpcService] 删除图像标签组成功：${id}`);
     } catch (error) {
       console.error(`[TagIpcService] 删除图像标签组失败：${id}`, error);
       throw error;
@@ -238,7 +226,6 @@ export class TagIpcService {
   static async assignImageTagToBelongGroup(tagName, groupId) {
     try {
       await window.electronAPI.assignImageTagToBelongGroup(tagName, groupId);
-      console.log(`[TagIpcService] 分配图像标签到组成功：${tagName} -> ${groupId}`);
     } catch (error) {
       console.error(`[TagIpcService] 分配图像标签到组失败：${tagName}`, error);
       throw error;
@@ -254,7 +241,6 @@ export class TagIpcService {
   static async getImageTags() {
     try {
       const result = await window.electronAPI.getImageTags();
-      console.log('[TagIpcService] 获取图像标签成功');
       return result;
     } catch (error) {
       console.error('[TagIpcService] 获取图像标签失败:', error);
@@ -270,7 +256,6 @@ export class TagIpcService {
   static async addImageTag(tag) {
     try {
       const result = await window.electronAPI.addImageTag(tag);
-      console.log(`[TagIpcService] 添加图像标签成功：${tag}`);
       return result;
     } catch (error) {
       console.error(`[TagIpcService] 添加图像标签失败：${tag}`, error);
@@ -287,7 +272,6 @@ export class TagIpcService {
   static async addImageTags(imageId, tagNames) {
     try {
       await window.electronAPI.addImageTags(imageId, tagNames);
-      console.log(`[TagIpcService] 为图像添加多个标签成功：${imageId}`);
     } catch (error) {
       console.error(`[TagIpcService] 为图像添加多个标签失败：${imageId}`, error);
       throw error;
@@ -302,7 +286,6 @@ export class TagIpcService {
   static async deleteImageTag(tag) {
     try {
       await window.electronAPI.deleteImageTag(tag);
-      console.log(`[TagIpcService] 删除图像标签成功：${tag}`);
     } catch (error) {
       console.error(`[TagIpcService] 删除图像标签失败：${tag}`, error);
       throw error;
@@ -318,7 +301,6 @@ export class TagIpcService {
   static async renameImageTag(oldTag, newTag) {
     try {
       await window.electronAPI.renameImageTag(oldTag, newTag);
-      console.log(`[TagIpcService] 重命名图像标签成功：${oldTag} -> ${newTag}`);
     } catch (error) {
       console.error(`[TagIpcService] 重命名图像标签失败：${oldTag} -> ${newTag}`, error);
       throw error;
@@ -334,7 +316,6 @@ export class TagIpcService {
   static async getAllTags() {
     try {
       const result = await window.electronAPI.getAllTags();
-      console.log('[TagIpcService] 获取所有标签成功');
       return result;
     } catch (error) {
       console.error('[TagIpcService] 获取所有标签失败:', error);

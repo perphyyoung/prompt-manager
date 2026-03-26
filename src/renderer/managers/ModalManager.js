@@ -81,6 +81,11 @@ export class ModalManager {
       if (inputLabel) inputLabel.textContent = label;
       input.value = defaultValue;
 
+      // 将光标移到末尾
+      setTimeout(() => {
+        input.selectionStart = input.selectionEnd = input.value.length;
+      }, 0);
+
       // 设置输入类型
       if (options.multiline) {
         input.rows = 4;

@@ -212,10 +212,10 @@ export class PromptPanelManager extends PanelManagerBase {
       if (deleteBtn) {
         deleteBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          const confirmed = await DialogService.showConfirmDialogByConfig({
-            ...DialogConfig.DELETE_PROMPT,
-            data: { name: prompt.title || '未命名' }
-          });
+          const confirmed = await DialogService.showConfirmDialogByConfig(
+            DialogConfig.DELETE_PROMPT,
+            { name: prompt.title || '未命名' }
+          );
           if (confirmed) {
             await this.deleteItem(prompt.id);
           }
@@ -445,10 +445,10 @@ export class PromptPanelManager extends PanelManagerBase {
       if (deleteBtn) {
         deleteBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          const confirmed = await DialogService.showConfirmDialogByConfig({
-            ...DialogConfig.DELETE_PROMPT,
-            data: { name: prompt.title || '未命名' }
-          });
+          const confirmed = await DialogService.showConfirmDialogByConfig(
+            DialogConfig.DELETE_PROMPT,
+            { name: prompt.title || '未命名' }
+          );
           if (confirmed) {
             await this.deleteItem(prompt.id);
           }

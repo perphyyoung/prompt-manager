@@ -504,10 +504,10 @@ export class ImageDetailManager extends DetailViewManager {
    * @private
    */
   async unlinkFromPrompt(imageId, promptId, promptTitle) {
-    const confirmed = await DialogService.showConfirmDialogByConfig({
-      ...DialogConfig.UNLINK_FROM_PROMPT,
-      data: { promptTitle }
-    });
+    const confirmed = await DialogService.showConfirmDialogByConfig(
+      DialogConfig.UNLINK_FROM_PROMPT,
+      { promptTitle }
+    );
 
     if (!confirmed) return;
 

@@ -88,6 +88,9 @@ export class Constants {
     // 主题
     THEME: 'theme',
 
+    // 字体
+    FONT_FAMILY: 'fontFamily',
+
     // 视图
     VIEW_MODE: 'viewMode',
     CURRENT_PANEL: 'currentPanel',
@@ -125,6 +128,15 @@ export class Constants {
     PROMPT_TAG_FILTER_COLLAPSED: 'promptTagFilterCollapsed',
     IMAGE_TAG_FILTER_COLLAPSED: 'imageTagFilterCollapsed'
   });
+
+  // 字体选项
+  static FONT_OPTIONS = Object.freeze([
+    { value: 'system-ui', label: '系统默认' },
+    { value: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', label: '现代无衬线' },
+    { value: '"Microsoft YaHei", "PingFang SC", sans-serif', label: '中文优化' },
+    { value: 'Georgia, "Times New Roman", serif', label: '衬线字体' },
+    { value: '"Courier New", Consolas, monospace', label: '等宽字体' }
+  ]);
 
   // 回收站类型常量
   static TrashType = Object.freeze({

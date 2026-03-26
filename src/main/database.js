@@ -7,7 +7,7 @@ import sqlite3 from 'sqlite3';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { logError } from './logger.js';
-import { getFormattedLocalTimeToSecond, localTime } from './utils/index.js';
+import { getFormattedLocalTimeToSecond, localTime } from '../utils/index.js';
 
 sqlite3.verbose();
 
@@ -1058,6 +1058,76 @@ async function updatePromptTagGroupByTagName(tagName, groupId) {
 }
 
 /**
+ * 标签配置定义
+ */
+const TagConfig = {
+  prompt: {
+    tagTable: 'prompt_tags',
+    relationTable: 'prompt_tag_relations',
+    itemIdColumn: 'prompt_id',
+    tagIdColumn: 'tag_id',
+    getTags: getPromptTags
+  },
+  image: {
+    tagTable: 'image_tags',
+    relationTable: 'image_tag_relations',
+    itemIdColumn: 'image_id',
+    tagIdColumn: 'tag_id',
+    getTags: getImageTags
+  }
+};
+
+/**
+ * 通用标签重命名函数（配置驱动）
+ * @param {string} type - 标签类型: 'prompt' | 'image'
+ * @param {string} oldTag - 旧标签名
+ * @param {string} newTag - 新标签名
+ * @returns {Promise<Array>} - 最新的标签列表
+ */
+async function renameTag(type, oldTag, newTag) {
+  const config = TagConfig[type];
+  if (!config) {
+    throw new Error(`Unknown tag type: ${type}`);
+  }
+
+  const { tagTable, relationTable, itemIdColumn, tagIdColumn, getTags } = config;
+
+  // 获取旧标签的 ID
+  const oldTagRow = await get(`SELECT id FROM ${tagTable} WHERE name = ?`, [oldTag]);
+  if (!oldTagRow) {
+    return await getTags();
+  }
+
+  // 检查新标签是否已存在
+  const newTagRow = await get(`SELECT id FROM ${tagTable} WHERE name = ?`, [newTag]);
+
+  if (newTagRow) {
+    // 新标签已存在，将所有旧标签的关联迁移到新标签
+    const relations = await all(
+      `SELECT ${itemIdColumn} FROM ${relationTable} WHERE ${tagIdColumn} = ?`,
+      [oldTagRow.id]
+    );
+    for (const rel of relations) {
+      try {
+        await run(
+          `INSERT INTO ${relationTable} (${itemIdColumn}, ${tagIdColumn}) VALUES (?, ?)`,
+          [rel[itemIdColumn], newTagRow.id]
+        );
+      } catch (err) {
+        // 关联已存在，忽略
+      }
+    }
+    // 删除旧标签
+    await run(`DELETE FROM ${tagTable} WHERE id = ?`, [oldTagRow.id]);
+  } else {
+    // 新标签不存在，直接重命名
+    await run(`UPDATE ${tagTable} SET name = ? WHERE id = ?`, [newTag, oldTagRow.id]);
+  }
+
+  return await getTags();
+}
+
+/**
  * 为提示词添加标签
  */
 async function addPromptTags(promptId, tagNames) {
@@ -1790,91 +1860,124 @@ async function getImageTagsByImageId(imageId) {
 }
 
 /**
- * 标签同步配置
- * 定义源表和目标表的映射关系
+ * 双向同步标签
+ * 将提示词和图像双方的标签差异同步到对方，保留组信息
+ * @returns {Promise<{promptToImage: {imported: number, skipped: number, tags: string[], tagGroups: Array}, imageToPrompt: {imported: number, skipped: number, tags: string[], tagGroups: Array}>}>}
  */
-const TAGS_SYNC_CONFIG = {
-  promptToImage: {
-    sourceTagTable: 'prompt_tags',
-    sourceGroupTable: 'prompt_tag_groups',
-    targetTagTable: 'image_tags',
-    targetGroupTable: 'image_tag_groups'
-  },
-  imageToPrompt: {
-    sourceTagTable: 'image_tags',
-    sourceGroupTable: 'image_tag_groups',
-    targetTagTable: 'prompt_tags',
-    targetGroupTable: 'prompt_tag_groups'
-  }
-};
-
-/**
- * 通用标签同步函数
- * 根据配置将标签从源表同步到目标表，保留组信息
- * @param {Object} config - 同步配置
- * @param {string} config.sourceTagTable - 源标签表名
- * @param {string} config.sourceGroupTable - 源标签组表名
- * @param {string} config.targetTagTable - 目标标签表名
- * @param {string} config.targetGroupTable - 目标标签组表名
- * @returns {Promise<{imported: number, skipped: number}>} 导入数量和跳过数量
- */
-async function syncTagsByConfig(config) {
+async function syncTagsBidirectional() {
   const now = localTime();
-  let imported = 0;
-  let skipped = 0;
 
-  const { sourceTagTable, sourceGroupTable, targetTagTable, targetGroupTable } = config;
-
-  // 获取所有源标签及其组信息
-  const sourceTagsSql = `
-    SELECT st.name, st.group_id, sg.name as group_name
-    FROM ${sourceTagTable} st
-    LEFT JOIN ${sourceGroupTable} sg ON st.group_id = sg.id
+  // 获取提示词标签和图像标签
+  const promptTagsSql = `
+    SELECT pt.name, pt.group_id, pg.name as group_name
+    FROM prompt_tags pt
+    LEFT JOIN prompt_tag_groups pg ON pt.group_id = pg.id
   `;
-  const sourceTags = await all(sourceTagsSql);
+  const imageTagsSql = `
+    SELECT it.name, it.group_id, ig.name as group_name
+    FROM image_tags it
+    LEFT JOIN image_tag_groups ig ON it.group_id = ig.id
+  `;
 
-  // 获取所有现有目标标签
-  const existingTargetTags = await all(`SELECT name FROM ${targetTagTable}`);
-  const existingTagNames = new Set(existingTargetTags.map(t => t.name));
+  const promptTags = await all(promptTagsSql);
+  const imageTags = await all(imageTagsSql);
+
+  const promptTagNames = new Set(promptTags.map(t => t.name));
+  const imageTagNames = new Set(imageTags.map(t => t.name));
+
+  // 找出差异：提示词有而图像没有的 → 同步到图像
+  const toImageTags = promptTags.filter(t => !imageTagNames.has(t.name));
+  // 找出差异：图像有而提示词没有的 → 同步到提示词
+  const toPromptTags = imageTags.filter(t => !promptTagNames.has(t.name));
+
+  // 准备结果
+  const result = {
+    promptToImage: { imported: 0, skipped: 0, tags: [], tagGroups: [], ungroupedTags: [] },
+    imageToPrompt: { imported: 0, skipped: 0, tags: [], tagGroups: [], ungroupedTags: [] }
+  };
+
+  if (toImageTags.length === 0 && toPromptTags.length === 0) {
+    return result;
+  }
 
   // 开始事务
   await run('BEGIN TRANSACTION');
 
   try {
-    for (const tag of sourceTags) {
-      // 跳过已存在的标签
-      if (existingTagNames.has(tag.name)) {
-        skipped++;
-        continue;
-      }
+    // 同步到图像
+    if (toImageTags.length > 0) {
+      const tagGroupsMap = new Map();
+      const existingImageTags = new Set((await all('SELECT name FROM image_tags')).map(t => t.name));
 
-      // 确保目标标签组存在
-      let targetGroupId = null;
-      if (tag.group_name) {
-        // 查找或创建对应的目标标签组
-        let targetGroup = await get(
-          `SELECT id FROM ${targetGroupTable} WHERE name = ?`,
-          [tag.group_name]
-        );
+      for (const tag of toImageTags) {
+        if (existingImageTags.has(tag.name)) {
+          result.promptToImage.skipped++;
+          continue;
+        }
 
-        if (!targetGroup) {
-          // 创建新的目标标签组
-          const result = await run(
-            `INSERT INTO ${targetGroupTable} (name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?)`,
-            [tag.group_name, 0, now, now]
-          );
-          targetGroupId = result.lastID;
-        } else {
-          targetGroupId = targetGroup.id;
+        let targetGroupId = null;
+        if (tag.group_name) {
+          let targetGroup = await get('SELECT id FROM image_tag_groups WHERE name = ?', [tag.group_name]);
+          if (!targetGroup) {
+            const res = await run('INSERT INTO image_tag_groups (name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?)', [tag.group_name, 0, now, now]);
+            targetGroupId = res.lastID;
+          } else {
+            targetGroupId = targetGroup.id;
+          }
+          if (!tagGroupsMap.has(tag.group_name)) {
+            tagGroupsMap.set(tag.group_name, []);
+          }
+          tagGroupsMap.get(tag.group_name).push(tag.name);
+        }
+
+        await run('INSERT INTO image_tags (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)', [tag.name, targetGroupId, now, now]);
+        result.promptToImage.imported++;
+        result.promptToImage.tags.push(tag.name);
+        // 记录未分组标签
+        if (!tag.group_name) {
+          result.promptToImage.ungroupedTags.push(tag.name);
         }
       }
 
-      // 创建目标标签
-      await run(
-        `INSERT INTO ${targetTagTable} (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)`,
-        [tag.name, targetGroupId, now, now]
-      );
-      imported++;
+      result.promptToImage.tagGroups = Array.from(tagGroupsMap.entries()).map(([groupName, tags]) => ({ groupName, tags }));
+    }
+
+    // 同步到提示词
+    if (toPromptTags.length > 0) {
+      const tagGroupsMap = new Map();
+      const existingPromptTags = new Set((await all('SELECT name FROM prompt_tags')).map(t => t.name));
+
+      for (const tag of toPromptTags) {
+        if (existingPromptTags.has(tag.name)) {
+          result.imageToPrompt.skipped++;
+          continue;
+        }
+
+        let targetGroupId = null;
+        if (tag.group_name) {
+          let targetGroup = await get('SELECT id FROM prompt_tag_groups WHERE name = ?', [tag.group_name]);
+          if (!targetGroup) {
+            const res = await run('INSERT INTO prompt_tag_groups (name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?)', [tag.group_name, 0, now, now]);
+            targetGroupId = res.lastID;
+          } else {
+            targetGroupId = targetGroup.id;
+          }
+          if (!tagGroupsMap.has(tag.group_name)) {
+            tagGroupsMap.set(tag.group_name, []);
+          }
+          tagGroupsMap.get(tag.group_name).push(tag.name);
+        }
+
+        await run('INSERT INTO prompt_tags (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)', [tag.name, targetGroupId, now, now]);
+        result.imageToPrompt.imported++;
+        result.imageToPrompt.tags.push(tag.name);
+        // 记录未分组标签
+        if (!tag.group_name) {
+          result.imageToPrompt.ungroupedTags.push(tag.name);
+        }
+      }
+
+      result.imageToPrompt.tagGroups = Array.from(tagGroupsMap.entries()).map(([groupName, tags]) => ({ groupName, tags }));
     }
 
     await run('COMMIT');
@@ -1883,25 +1986,7 @@ async function syncTagsByConfig(config) {
     throw error;
   }
 
-  return { imported, skipped };
-}
-
-/**
- * 同步提示词标签到图像标签
- * 将提示词的所有普通标签（非特殊标签）同步到图像标签，保留组信息
- * @returns {Promise<{imported: number, skipped: number}>} 导入数量和跳过数量
- */
-async function syncPromptTagsToImage() {
-  return await syncTagsByConfig(TAGS_SYNC_CONFIG.promptToImage);
-}
-
-/**
- * 同步图像标签到提示词标签
- * 将图像的所有普通标签（非特殊标签）同步到提示词标签，保留组信息
- * @returns {Promise<{imported: number, skipped: number}>} 导入数量和跳过数量
- */
-async function syncImageTagsToPrompt() {
-  return await syncTagsByConfig(TAGS_SYNC_CONFIG.imageToPrompt);
+  return result;
 }
 
 // ==================== 共享标签 ====================
@@ -2077,6 +2162,8 @@ export {
   addPromptTag,
   addPromptTags,
   updatePromptTagGroupByTagName,
+  // 通用标签操作
+  renameTag,
   // 图像操作
   getImages,
   getImagesByIds,
@@ -2111,8 +2198,7 @@ export {
   // 共享标签
   getAllTags,
   // 标签同步
-  syncPromptTagsToImage,
-  syncImageTagsToPrompt,
+  syncTagsBidirectional,
   // 数据清理
   renameDataDirectory,
   clearAllData,

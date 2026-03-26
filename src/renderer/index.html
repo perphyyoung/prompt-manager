@@ -97,7 +97,7 @@
               <circle cx="11" cy="11" r="8"></circle>
               <path d="m21 21-4.35-4.35"></path>
             </svg>
-            <input type="text" id="promptSearchInput" placeholder="搜索 Prompts...">
+            <input type="text" id="promptSearchInput" placeholder="搜索提示词...">
             <button type="button" id="clearPromptSearchBtn" class="clear-search-btn" style="display: none;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -726,6 +726,17 @@
                 <span id="settingsThemeText">暗黑</span>
               </button>
             </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-label">自定义字体</div>
+                <div class="setting-desc">导入本地字体文件 (.ttf, .otf, .woff)</div>
+              </div>
+              <div class="sort-dropdown">
+                <select id="customFontSelect" class="sort-select">
+                </select>
+              </div>
+              <button id="selectFontFileBtn" class="btn btn-outline btn-sm">选择字体文件</button>
+            </div>
           </div>
         </div>
 
@@ -1026,7 +1037,7 @@
       </div>
       <div class="modal-body">
         <!-- 工具栏 -->
-        <div class="tag-manager-toolbar">
+        <div id="promptTagManagerToolbar" class="tag-manager-toolbar">
           <div class="tag-manager-search">
             <input type="text" id="promptTagManagerSearchInput" placeholder="搜索标签..." class="search-input">
             <button type="button" id="clearPromptTagManagerSearchBtn" class="clear-search-btn" style="display: none;">
@@ -1037,6 +1048,7 @@
             </button>
           </div>
           <button id="syncPromptTagsBtn" class="btn btn-sm btn-secondary" title="从图像标签同步">同步标签</button>
+          <button id="batchManagePromptTagsBtn" class="btn btn-sm btn-secondary">批量管理</button>
           <button id="addPromptTagInManagerBtn" class="btn btn-sm btn-primary">+ 新建标签</button>
           <button id="addPromptTagGroupBtn" class="btn btn-sm btn-secondary">+ 新建组</button>
           <select id="promptTagManagerSortSelect" class="tag-manager-sort-select">
@@ -1078,7 +1090,7 @@
       </div>
       <div class="modal-body">
         <!-- 工具栏 -->
-        <div class="tag-manager-toolbar">
+        <div id="imageTagManagerToolbar" class="tag-manager-toolbar">
           <div class="tag-manager-search">
             <input type="text" id="imageTagManagerSearchInput" placeholder="搜索标签..." class="search-input">
             <button type="button" id="clearImageTagManagerSearchBtn" class="clear-search-btn" style="display: none;">
@@ -1089,6 +1101,7 @@
             </button>
           </div>
           <button id="syncImageTagsBtn" class="btn btn-sm btn-secondary" title="从提示词标签同步">同步标签</button>
+          <button id="batchManageImageTagsBtn" class="btn btn-sm btn-secondary">批量管理</button>
           <button id="addImageTagInManagerBtn" class="btn btn-sm btn-primary">+ 新建标签</button>
           <button id="addImageTagGroupBtn" class="btn btn-sm btn-secondary">+ 新建组</button>
           <select id="imageTagManagerSortSelect" class="tag-manager-sort-select">
@@ -1233,7 +1246,6 @@
       </div>
       <div class="modal-body">
         <div class="confirm-message">
-          <div class="confirm-icon">⚠️</div>
           <p id="confirmModalMessage">确定要执行此操作吗？</p>
         </div>
       </div>

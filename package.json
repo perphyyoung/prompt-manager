@@ -2,7 +2,7 @@
   "name": "prompt-manager",
   "version": "1.0.0",
   "description": "本地 Prompt 管理工具",
-  "main": "main.js",
+  "main": "out/main/index.js",
   "type": "module",
   "engines": {
     "node": ">=18.18.0",
@@ -13,8 +13,9 @@
     "Electron 28.0"
   ],
   "scripts": {
-    "start": "npm run build:ts && electron .",
-    "dev": "npm run build:ts && electron . --dev",
+    "start": "electron-vite preview",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
     "build:ts": "tsc --noEmit || true",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
@@ -38,8 +39,10 @@
     "@vitest/ui": "^4.1.0",
     "V8": "^12.0+",
     "electron": "^28.0.0",
+    "electron-vite": "^5.0.0",
     "happy-dom": "^20.8.4",
     "typescript": "^6.0.2",
+    "vite": "^8.0.2",
     "vitest": "^4.1.0"
   }
 }

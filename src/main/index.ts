@@ -5,25 +5,28 @@
 
 import { app, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage, clipboard, session } from 'electron';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { promises as fs } from 'fs';
 import os from 'os';
 import sharp from 'sharp';
 import crypto from 'crypto';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import * as db from './database.js';
-import { generatePromptId, generateImageId } from './utils/idGenerator.js';
-import { getFormattedLocalTimeToSecond, getFormattedYearMonth } from './utils/index.js';
+import { generatePromptId, generateImageId } from '../utils/idGenerator.js';
+import { getFormattedLocalTimeToSecond, getFormattedYearMonth } from '../utils/index.js';
 import { logInfo, logDebug, logError, logWarn } from './logger.js';
-import { Constants } from './constants.js';
+import { Constants } from '../constants.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const execAsync = promisify(exec);
 
-// 配置文件路径（当前项目目录下）
-const CONFIG_FILE = path.join(__dirname, 'config.json');
+// 项目根目录（基于 __dirname 反向推导：out/main/ -> 项目根目录）
+const ROOT_DIR = path.join(__dirname, '..', '..');
 
-// 默认数据目录（相对于应用目录）
-const DEFAULT_DATA_DIR = path.join(__dirname, 'py-data');
+// 配置文件路径（项目根目录）
+const CONFIG_FILE = path.join(ROOT_DIR, 'config.json');
+
+// 默认数据目录（项目根目录）
+const DEFAULT_DATA_DIR = path.join(ROOT_DIR, 'py-data');
 
 let mainWindow;
 let tray = null;
@@ -62,8 +65,8 @@ async function loadConfig() {
       if (path.isAbsolute(config.dataDir)) {
         currentDataDir = config.dataDir;
       } else {
-        // 相对路径：相对于应用目录
-        currentDataDir = path.resolve(__dirname, config.dataDir);
+        // 相对路径：相对于项目根目录
+        currentDataDir = path.resolve(ROOT_DIR, config.dataDir);
       }
     }
   } catch {
@@ -341,15 +344,15 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.cjs')
+      preload: path.join(__dirname, '..', 'preload', 'index.js')
     },
     frame: true,
     show: false,
     fullscreenable: true,
-    icon: path.join(__dirname, 'assets', 'icon.png')
+    icon: path.join(__dirname, '..', '..', 'assets', 'icon.png')
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -412,7 +415,7 @@ function relaunchApp(oldDataDir) {
  */
 function createTray() {
   // 从文件加载图标
-  const iconPath = path.join(__dirname, 'assets', 'icon.png');
+  const iconPath = path.join(__dirname, '..', '..', 'assets', 'icon.png');
   tray = new Tray(iconPath);
 
   const contextMenu = Menu.buildFromTemplate([
@@ -427,8 +430,21 @@ function createTray() {
     },
     {
       label: '重启',
-      click: () => {
-        relaunchApp();
+      click: async () => {
+        const { exec } = await import('child_process');
+        const cwd = process.cwd();
+        exec('npm run build', { cwd }, (error, stdout, stderr) => {
+          if (error) {
+            dialog.showMessageBox(mainWindow, {
+              type: 'error',
+              title: '构建失败',
+              message: '构建失败，请检查代码错误',
+              detail: stderr || error.message
+            });
+            return;
+          }
+          relaunchApp();
+        });
       }
     },
     {
@@ -753,39 +769,7 @@ ipcMain.handle('assign-prompt-tag-to-belong-group', async (event, tagName, group
 // 重命名提示词标签
 ipcMain.handle('rename-prompt-tag', async (event, oldTag, newTag) => {
   try {
-    // 获取旧标签的 ID
-    const oldTagRow = await db.get('SELECT id FROM prompt_tags WHERE name = ?', [oldTag]);
-    if (!oldTagRow) {
-      return await db.getPromptTags();
-    }
-
-    // 检查新标签是否已存在
-    const newTagRow = await db.get('SELECT id FROM prompt_tags WHERE name = ?', [newTag]);
-
-    if (newTagRow) {
-      // 新标签已存在，将所有旧标签的关联迁移到新标签
-      const relations = await db.all(
-        'SELECT prompt_id FROM prompt_tag_relations WHERE tag_id = ?',
-        [oldTagRow.id]
-      );
-      for (const rel of relations) {
-        try {
-          await db.run(
-            'INSERT INTO prompt_tag_relations (prompt_id, tag_id) VALUES (?, ?)',
-            [rel.prompt_id, newTagRow.id]
-          );
-        } catch (err) {
-          // 关联已存在，忽略
-        }
-      }
-      // 删除旧标签
-      await db.run('DELETE FROM prompt_tags WHERE id = ?', [oldTagRow.id]);
-    } else {
-      // 新标签不存在，直接重命名
-      await db.run('UPDATE prompt_tags SET name = ? WHERE id = ?', [newTag, oldTagRow.id]);
-    }
-    
-    return await db.getPromptTags();
+    return await db.renameTag('prompt', oldTag, newTag);
   } catch (error) {
     logError('Main', 'Rename prompt tag error:', error);
     throw error;
@@ -1052,18 +1036,7 @@ ipcMain.handle('update-image', async (event, id, updates) => {
 // 重命名图像标签
 ipcMain.handle('rename-image-tag', async (event, oldTag, newTag) => {
   try {
-    // 获取所有图像
-    const images = await db.getImages();
-    
-    // 更新每个包含该标签的图像
-    for (const image of images) {
-      if (image.tags && image.tags.includes(oldTag)) {
-        const newTags = image.tags.map(tag => tag === oldTag ? newTag : tag);
-        await db.updateImage(image.id, { tags: newTags });
-      }
-    }
-    
-    return true;
+    return await db.renameTag('image', oldTag, newTag);
   } catch (error) {
     logError('Main', 'Rename image tag error:', error);
     throw error;
@@ -1155,28 +1128,15 @@ ipcMain.handle('assign-image-tag-to-belong-group', async (event, tagName, groupI
   }
 });
 
-// 同步提示词标签到图像标签
-ipcMain.handle('sync-prompt-tags-to-image', async () => {
+// 双向同步标签
+ipcMain.handle('sync-tags-bidirectional', async () => {
   try {
-    const result = await db.syncPromptTagsToImage();
+    const result = await db.syncTagsBidirectional();
     // 清除标签缓存，让下次获取时重新加载
     allTagsCache = null;
     return result;
   } catch (error) {
-    logError('Main', 'Sync prompt tags to image error:', error);
-    throw error;
-  }
-});
-
-// 同步图像标签到提示词标签
-ipcMain.handle('sync-image-tags-to-prompt', async () => {
-  try {
-    const result = await db.syncImageTagsToPrompt();
-    // 清除标签缓存，让下次获取时重新加载
-    allTagsCache = null;
-    return result;
-  } catch (error) {
-    logError('Main', 'Sync image tags to prompt error:', error);
+    logError('Main', 'Sync tags bidirectional error:', error);
     throw error;
   }
 });
@@ -1333,6 +1293,73 @@ ipcMain.handle('scan-orphan-files', async () => {
   }
 });
 
+// 选择并安装自定义字体文件
+ipcMain.handle('select-and-install-font', async () => {
+  try {
+    // 打开字体文件选择对话框
+    const result = await dialog.showOpenDialog({
+      title: '选择字体文件',
+      properties: ['openFile'],
+      filters: [
+        { name: '字体文件', extensions: ['ttf', 'otf', 'ttc', 'woff', 'woff2'] },
+        { name: '所有文件', extensions: ['*'] }
+      ]
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+
+    const sourcePath = result.filePaths[0];
+    const fileName = path.basename(sourcePath);
+    const fontName = fileName.replace(/\.(ttf|otf|ttc|woff|woff2)$/i, '');
+
+    // 创建应用字体目录
+    const fontsDir = path.join(currentDataDir, 'fonts');
+    await fs.mkdir(fontsDir, { recursive: true });
+
+    // 复制字体文件到应用目录
+    const targetPath = path.join(fontsDir, fileName);
+    await fs.copyFile(sourcePath, targetPath);
+
+    return {
+      fontName,
+      fileName,
+      filePath: targetPath
+    };
+  } catch (error) {
+    logError('Main', 'Failed to select and install font:', error);
+    throw error;
+  }
+});
+
+// 获取已安装的自定义字体列表
+ipcMain.handle('get-installed-fonts', async () => {
+  try {
+    const fontsDir = path.join(currentDataDir, 'fonts');
+
+    try {
+      await fs.access(fontsDir);
+    } catch {
+      return [];
+    }
+
+    const files = await fs.readdir(fontsDir);
+    const fonts = files
+      .filter(file => /\.(ttf|otf|ttc|woff|woff2)$/i.test(file))
+      .map(file => ({
+        fontName: file.replace(/\.(ttf|otf|ttc|woff|woff2)$/i, ''),
+        fileName: file,
+        filePath: path.join(fontsDir, file)
+      }));
+
+    return fonts;
+  } catch (error) {
+    logError('Main', 'Failed to get installed fonts:', error);
+    return [];
+  }
+});
+
 // 导出并删除孤儿文件
 ipcMain.handle('export-and-delete-orphan-files', async (event, orphanFiles, exportDir) => {
   try {
@@ -1387,7 +1414,7 @@ ipcMain.handle('export-and-delete-orphan-files', async (event, orphanFiles, expo
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
-  logInfo('Main', 'Another instance is already running. Quitting...');
+  logError('Main', 'Another instance is already running. Quitting...');
   app.quit();
 }
 
@@ -1435,7 +1462,7 @@ app.whenReady().then(async () => {
   });
 
   // 设置应用图标（Windows 任务栏）
-  const iconPath = path.join(__dirname, 'assets', 'icon.png');
+  const iconPath = path.join(__dirname, '..', '..', 'assets', 'icon.png');
   try {
     await fs.access(iconPath);
     app.setAppUserModelId('com.promptmanager.app');

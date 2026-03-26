@@ -128,10 +128,10 @@ export class SimpleTagManager {
     }
 
     // 显示确认对话框
-    const confirmed = await DialogService.showConfirmDialogByConfig({
-      ...DialogConfig.DELETE_TAG,
-      data: { name: trimmedTag }
-    });
+    const confirmed = await DialogService.showConfirmDialogByConfig(
+      DialogConfig.DELETE_TAG,
+      { name: trimmedTag }
+    );
     
     if (!confirmed) return false;
 

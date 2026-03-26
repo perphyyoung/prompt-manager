@@ -37,7 +37,6 @@ export class TagService {
     this.api = api;  // 依赖注入的 API
     this.cacheKey = type === 'prompt' ? 'promptTags' : 'imageTags';
     this.cacheKeyGroups = type === 'prompt' ? 'promptTagGroups' : 'imageTagGroups';
-    this.cacheExpiry = 30000; // 30 秒缓存
   }
 
   // ========== 缓存辅助方法 ==========
@@ -45,11 +44,7 @@ export class TagService {
   _getFromCache(key) {
     const cache = cacheManager.getCache(key);
     if (!cache) return null;
-    const cached = cache.get('data');
-    if (cached && Date.now() - cached.time < this.cacheExpiry) {
-      return cached.data;
-    }
-    return null;
+    return cache.get('data')?.data || null;
   }
 
   _setCache(key, data) {
@@ -59,6 +54,20 @@ export class TagService {
 
   _clearCache(key) {
     cacheManager.deleteCache(key);
+  }
+
+  addTagsToCache(newTags) {
+    if (!newTags || newTags.length === 0) return;
+    const cached = this._getFromCache(this.cacheKey) || [];
+    const merged = [...new Set([...cached, ...newTags])];
+    this._setCache(this.cacheKey, merged);
+  }
+
+  removeTagsFromCache(removedTags) {
+    if (!removedTags || removedTags.length === 0) return;
+    const cached = this._getFromCache(this.cacheKey) || [];
+    const filtered = cached.filter(tag => !removedTags.includes(tag));
+    this._setCache(this.cacheKey, filtered);
   }
 
   // ========== 标签 API ==========
@@ -92,6 +101,7 @@ export class TagService {
       ? this.api.addPromptTag(tag)
       : this.api.addImageTag(tag));
     this._clearCache(this.cacheKey);
+    this._clearCache(this.cacheKeyGroups);
     return result;
   }
 
@@ -100,6 +110,7 @@ export class TagService {
       ? this.api.renamePromptTag(oldTag, newTag)
       : this.api.renameImageTag(oldTag, newTag));
     this._clearCache(this.cacheKey);
+    this._clearCache(this.cacheKeyGroups);
     return result;
   }
 
@@ -108,6 +119,7 @@ export class TagService {
       ? this.api.deletePromptTag(tag)
       : this.api.deleteImageTag(tag));
     this._clearCache(this.cacheKey);
+    this._clearCache(this.cacheKeyGroups);
     return result;
   }
 

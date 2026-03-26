@@ -33,6 +33,11 @@ export const DialogConfig = {
     title: '确认批量删除',
     message: (data) => `确定要删除选中的 ${data.count} 个项目吗？\n删除后可在回收站恢复。`
   },
+  /** 批量删除标签 */
+  BATCH_DELETE_TAGS: {
+    title: '确认批量删除标签',
+    message: (data) => `确定要删除选中的 ${data.count} 个标签吗？\n此操作不可恢复，标签将从所有关联项目中移除。`
+  },
 
   // ==================== 移动/恢复类 ====================
   /** 恢复 */
@@ -64,14 +69,14 @@ export const DialogConfig = {
   },
   /** 清空所有数据 */
   CLEAR_ALL_DATA: {
-    title: '⚠️ 危险操作',
+    title: '危险操作',
     message: '确定要清空所有数据吗？\n\n此操作将重命名当前数据目录并创建新的空数据目录，应用将重启。\n\n重启后会显示带日期后缀的旧数据目录路径，可手动备份或删除。'
   },
   /** 数据已重置 */
   DATA_RESET: {
+    type: 'info',
     title: '数据已重置',
-    message: (data) => `旧数据目录已重命名为:\n${data.oldDataDir}\n\n您可以手动备份或删除此目录。`,
-    singleButton: true
+    message: (data) => `旧数据目录已重命名为:\n${data.oldDataDir}\n\n您可以手动备份或删除此目录。`
   },
 
   // ==================== 其他 ====================
@@ -84,6 +89,60 @@ export const DialogConfig = {
   TAG_EXISTS: {
     title: '标签已存在',
     message: (data) => `标签 "${data.tagName}" 已存在，当前所属组：${data.currentGroupName}\n\n是否覆盖并移动到：${data.newGroupName}？`
+  },
+
+  /** 双向同步标签结果 */
+  SYNC_TAGS_BIDIRECTIONAL: {
+    type: 'info',
+    title: '同步完成',
+    message: (data) => {
+      let msg = '';
+
+      // 提示词 → 图像
+      if (data.promptToImage.imported > 0) {
+        msg += `提示词 → 图像：导入 ${data.promptToImage.imported} 个`;
+        if (data.promptToImage.skipped > 0) {
+          msg += `（跳过 ${data.promptToImage.skipped} 个）`;
+        }
+        msg += '\n';
+        // 显示分组标签
+        if (data.promptToImage.tagGroups && data.promptToImage.tagGroups.length > 0) {
+          for (const group of data.promptToImage.tagGroups) {
+            msg += `  [${group.groupName}] ${group.tags.join(', ')}\n`;
+          }
+        }
+        // 显示未分组标签
+        if (data.promptToImage.ungroupedTags && data.promptToImage.ungroupedTags.length > 0) {
+          msg += `  [未分组] ${data.promptToImage.ungroupedTags.join(', ')}\n`;
+        }
+        msg += '\n';
+      }
+
+      // 图像 → 提示词
+      if (data.imageToPrompt.imported > 0) {
+        msg += `图像 → 提示词：导入 ${data.imageToPrompt.imported} 个`;
+        if (data.imageToPrompt.skipped > 0) {
+          msg += `（跳过 ${data.imageToPrompt.skipped} 个）`;
+        }
+        msg += '\n';
+        // 显示分组标签
+        if (data.imageToPrompt.tagGroups && data.imageToPrompt.tagGroups.length > 0) {
+          for (const group of data.imageToPrompt.tagGroups) {
+            msg += `  [${group.groupName}] ${group.tags.join(', ')}\n`;
+          }
+        }
+        // 显示未分组标签
+        if (data.imageToPrompt.ungroupedTags && data.imageToPrompt.ungroupedTags.length > 0) {
+          msg += `  [未分组] ${data.imageToPrompt.ungroupedTags.join(', ')}\n`;
+        }
+      }
+
+      if (data.promptToImage.imported === 0 && data.imageToPrompt.imported === 0) {
+        msg = '双方标签已同步，无需导入新标签';
+      }
+
+      return msg;
+    }
   }
 };
 
@@ -109,7 +168,7 @@ export class DialogService {
     _buttonsBound = true;
   }
 
-  static async showConfirmDialogByConfig(config) {
+  static async showConfirmDialogByConfig(config, data = null) {
     DialogService._bindButtonEvents();
 
     if (_confirmCallback) {
@@ -117,8 +176,9 @@ export class DialogService {
       return false;
     }
 
-    const title = typeof config.title === 'function' ? config.title(config.data) : config.title;
-    const msg = typeof config.message === 'function' ? config.message(config.data) : config.message;
+    const title = typeof config.title === 'function' ? config.title(data) : config.title;
+    const msg = typeof config.message === 'function' ? config.message(data) : config.message;
+    const dialogType = config.type || 'warning';
 
     return new Promise((resolve) => {
       const modal = document.getElementById('confirmModal');
@@ -130,12 +190,24 @@ export class DialogService {
         return;
       }
 
-      if (modalTitle) modalTitle.textContent = title;
+      if (modalTitle) {
+        const iconMap = {
+          info: '✓',
+          warning: '⚠️'
+        };
+        const icon = iconMap[dialogType] || iconMap.warning;
+        modalTitle.innerHTML = `<span class="title-icon">${icon}</span>${title}`;
+      }
       if (modalMessage) modalMessage.innerHTML = msg.replace(/\n/g, '<br>');
+
+      // 设置对话框类型样式
+      modal.dataset.dialogType = dialogType;
 
       const cancelBtn = document.getElementById('confirmCancelBtn');
       const okBtn = document.getElementById('confirmOkBtn');
-      if (config.singleButton) {
+      
+      // info 类型只显示确认按钮
+      if (dialogType === 'info') {
         cancelBtn.style.display = 'none';
         okBtn.style.margin = '0 auto';
       } else {

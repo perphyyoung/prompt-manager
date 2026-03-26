@@ -7,7 +7,7 @@ export { ImagePanelManager } from './ImagePanelManager.js';
 
 // 标签系统重构后的导出（3个文件替代原来的6个）
 export { TagService } from './TagService.js';
-export { TagRegistry } from './TagRegistry.js';
+export { TagRegistry } from './TagRegistry.ts';
 export { TagUI } from './TagUI.js';
 
 // 保留编辑界面专用标签管理器

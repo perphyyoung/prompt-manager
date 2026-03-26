@@ -5,14 +5,10 @@
 
 import path from 'path';
 import { promises as fs } from 'fs';
-import { fileURLToPath } from 'url';
-import { TimeUtils } from './utils/index.js';
+import { TimeUtils } from '../utils/index.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// 调试日志文件路径
-const DEBUG_LOG_FILE = path.join(__dirname, 'debug.log');
+// 调试日志文件路径（项目根目录）
+const DEBUG_LOG_FILE = path.join(process.cwd(), 'debug.log');
 
 // 日志文件写入队列
 let logQueue = [];

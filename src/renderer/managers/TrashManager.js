@@ -364,10 +364,10 @@ export class TrashManager {
    * @param {string} itemType - 项目类型 (Constants.TrashType.PROMPT/Constants.TrashType.IMAGE)
    */
   async permanentlyDeleteItem(itemId, itemType) {
-    const confirmed = await DialogService.showConfirmDialogByConfig({
-      ...DialogConfig.PERMANENT_DELETE,
-      data: { type: itemType }
-    });
+    const confirmed = await DialogService.showConfirmDialogByConfig(
+      DialogConfig.PERMANENT_DELETE,
+      { type: itemType }
+    );
 
     if (!confirmed) return;
 
@@ -475,10 +475,10 @@ export class TrashManager {
    * 清空回收站
    */
   async empty() {
-    const confirmed = await DialogService.showConfirmDialogByConfig({
-      ...DialogConfig.EMPTY_TRASH,
-      data: { type: this.currentType }
-    });
+    const confirmed = await DialogService.showConfirmDialogByConfig(
+      DialogConfig.EMPTY_TRASH,
+      { type: this.currentType }
+    );
     if (!confirmed) return;
 
     try {

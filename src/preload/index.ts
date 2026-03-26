@@ -54,6 +54,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectDataPath: () => ipcRenderer.invoke('select-data-path'),
   /** 选择目录（通用） */
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
+  /** 选择并安装自定义字体文件 */
+  selectAndInstallFont: () => ipcRenderer.invoke('select-and-install-font'),
+  /** 获取已安装的自定义字体列表 */
+  getInstalledFonts: () => ipcRenderer.invoke('get-installed-fonts'),
 
   // ==================== 图像文件操作 ====================
   /** 保存图像文件 @param {string} sourcePath - 源路径 @param {string} fileName - 文件名 */
@@ -168,10 +172,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAllTags: () => ipcRenderer.invoke('get-all-tags'),
 
   // ==================== 标签同步 ====================
-  /** 同步提示词标签到图像标签 */
-  syncPromptTagsToImage: () => ipcRenderer.invoke('sync-prompt-tags-to-image'),
-  /** 同步图像标签到提示词标签 */
-  syncImageTagsToPrompt: () => ipcRenderer.invoke('sync-image-tags-to-prompt'),
+  /** 双向同步标签 */
+  syncTagsBidirectional: () => ipcRenderer.invoke('sync-tags-bidirectional'),
 
   // ==================== 统计 ====================
   /** 获取数据库统计信息 */

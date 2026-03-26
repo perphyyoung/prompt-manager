@@ -50,10 +50,10 @@ export class BatchProcessor {
 
     // 确认对话框
     if (config.confirm) {
-      const confirmed = await DialogService.showConfirmDialogByConfig({
-        ...DialogConfig.BATCH_DELETE,
-        data: { count: ids.length }
-      });
+      const confirmed = await DialogService.showConfirmDialogByConfig(
+        DialogConfig.BATCH_DELETE,
+        { count: ids.length }
+      );
       if (!confirmed) return;
     }
 

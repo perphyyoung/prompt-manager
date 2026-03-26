@@ -24,19 +24,21 @@ export class TagUI {
    * @param {Array} specialTags - 特殊标签
    * @param {Object} tagCounts - 标签计数
    * @param {string} searchTerm - 搜索词
+   * @param {boolean} isBatchMode - 是否为批量管理模式
+   * @param {Set} selectedTags - 已选中的标签集合
    * @returns {string} HTML 字符串
    */
-  generateRegistryHtml(groups, groupedTags, ungroupedTags, specialTags, tagCounts, searchTerm) {
+  generateRegistryHtml(groups, groupedTags, ungroupedTags, specialTags, tagCounts, searchTerm, isBatchMode = false, selectedTags = new Set()) {
     let html = '';
 
     // 特殊标签卡片
     if (specialTags.length > 0) {
-      html += this.generateSpecialTagCard(specialTags, tagCounts);
+      html += this.generateSpecialTagCard(specialTags, tagCounts, isBatchMode, selectedTags);
     }
 
     // 未分组标签卡片
     if (ungroupedTags.length > 0) {
-      html += this.generateUngroupedTagCard(ungroupedTags, tagCounts);
+      html += this.generateUngroupedTagCard(ungroupedTags, tagCounts, isBatchMode, selectedTags);
     }
 
     // 标签组卡片（按排序顺序）
@@ -45,7 +47,7 @@ export class TagUI {
       const tags = groupedTags[group.id] || [];
       // 搜索模式下只显示有标签的组，非搜索模式显示所有组
       if (tags.length > 0 || !searchTerm) {
-        html += this.generateTagGroupCard(group, tags, tagCounts, index === 0);
+        html += this.generateTagGroupCard(group, tags, tagCounts, index === 0, isBatchMode, selectedTags);
       }
     });
 
@@ -58,13 +60,28 @@ export class TagUI {
    * @param {number} count - 标签计数
    * @param {string|null} groupId - 所属组ID
    * @param {boolean} isSpecial - 是否为特殊标签
+   * @param {boolean} isBatchMode - 是否为批量管理模式
+   * @param {boolean} isSelected - 是否被选中
    * @returns {string} HTML 字符串
    */
-  generateTagItemHtml(tag, count, groupId = null, isSpecial = false) {
+  generateTagItemHtml(tag, count, groupId = null, isSpecial = false, isBatchMode = false, isSelected = false) {
     if (isSpecial) {
       return `
         <div class="tag-manager-item special-tag-in-card" data-tag="${HtmlUtils.escapeHtml(tag)}">
           <div class="tag-manager-badges">
+            <span class="tag-badge-count">${count}</span>
+          </div>
+          <div class="tag-manager-item-name">${HtmlUtils.escapeHtml(tag)}</div>
+        </div>
+      `;
+    }
+
+    // 批量模式
+    if (isBatchMode) {
+      return `
+        <div class="tag-manager-item tag-in-card ${isSelected ? 'tag-selected' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-group-id="${groupId || ''}">
+          <div class="tag-manager-badges">
+            <input type="checkbox" class="tag-batch-checkbox" data-tag="${HtmlUtils.escapeHtml(tag)}" ${isSelected ? 'checked' : ''}>
             <span class="tag-badge-count">${count}</span>
           </div>
           <div class="tag-manager-item-name">${HtmlUtils.escapeHtml(tag)}</div>
@@ -98,11 +115,13 @@ export class TagUI {
    * 生成特殊标签卡片 HTML
    * @param {Array} specialTags - 特殊标签数组
    * @param {Object} tagCounts - 标签计数
+   * @param {boolean} isBatchMode - 是否为批量管理模式
+   * @param {Set} selectedTags - 已选中的标签集合
    * @returns {string} HTML 字符串
    */
-  generateSpecialTagCard(specialTags, tagCounts) {
+  generateSpecialTagCard(specialTags, tagCounts, isBatchMode = false, selectedTags = new Set()) {
     const specialTagsHtml = specialTags.map(tag => {
-      return this.generateTagItemHtml(tag, tagCounts[tag] || 0, null, true);
+      return this.generateTagItemHtml(tag, tagCounts[tag] || 0, null, true, isBatchMode, selectedTags.has(tag));
     }).join('');
 
     return `
@@ -121,11 +140,13 @@ export class TagUI {
    * 生成未分组标签卡片 HTML
    * @param {Array} tags - 标签数组
    * @param {Object} tagCounts - 标签计数
+   * @param {boolean} isBatchMode - 是否为批量管理模式
+   * @param {Set} selectedTags - 已选中的标签集合
    * @returns {string} HTML 字符串
    */
-  generateUngroupedTagCard(tags, tagCounts) {
+  generateUngroupedTagCard(tags, tagCounts, isBatchMode = false, selectedTags = new Set()) {
     const ungroupedTagsHtml = tags.map(tag => {
-      return this.generateTagItemHtml(tag, tagCounts[tag] || 0, null, false);
+      return this.generateTagItemHtml(tag, tagCounts[tag] || 0, null, false, isBatchMode, selectedTags.has(tag));
     }).join('');
 
     return `
@@ -146,14 +167,16 @@ export class TagUI {
    * @param {Array} tags - 标签数组
    * @param {Object} tagCounts - 标签计数
    * @param {boolean} isFirst - 是否为首组
+   * @param {boolean} isBatchMode - 是否为批量管理模式
+   * @param {Set} selectedTags - 已选中的标签集合
    * @returns {string} HTML 字符串
    */
-  generateTagGroupCard(group, tags, tagCounts, isFirst = false) {
+  generateTagGroupCard(group, tags, tagCounts, isFirst = false, isBatchMode = false, selectedTags = new Set()) {
     const firstBadge = isFirst ? '<span class="tag-group-card-first">首位组</span>' : '';
     const sortBadge = `<span class="tag-group-card-sort">${group.sortOrder || 0}</span>`;
 
     const groupTagsHtml = tags.map(tag => {
-      return this.generateTagItemHtml(tag, tagCounts[tag] || 0, group.id, false);
+      return this.generateTagItemHtml(tag, tagCounts[tag] || 0, group.id, false, isBatchMode, selectedTags.has(tag));
     }).join('');
 
     return `
