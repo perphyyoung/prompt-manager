@@ -282,6 +282,7 @@ export class ImagePanelManager extends PanelManagerBase {
 
     // 绑定事件
     this.bindImageListEvents(filtered);
+    this.bindHoverPreview('.list-item--image');
     this.bindCardDropEvents(listContainer);
   }
 
