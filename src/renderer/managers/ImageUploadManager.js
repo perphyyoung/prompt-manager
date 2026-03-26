@@ -117,12 +117,6 @@ export class ImageUploadManager {
 
       // 显示预览
       this.previewManager.render(this.strategy.getFilePaths());
-
-      // 启用确定按钮
-      const confirmBtn = document.getElementById('confirmImageUploadBtn');
-      if (confirmBtn) {
-        confirmBtn.disabled = false;
-      }
     } finally {
       // 延迟重置标志，确保对话框完全关闭
       setTimeout(() => {
@@ -146,6 +140,13 @@ export class ImageUploadManager {
    * 确认上传（延迟保存）
    */
   async handleConfirm() {
+    // 检查是否有已上传的图像
+    const filePaths = this.strategy.getFilePaths();
+    if (!filePaths || filePaths.length === 0) {
+      this.app.showToast('必须上传图像才能保存', 'warning');
+      return;
+    }
+
     // 显示进度提示
     const progressToast = this.app.showToast('正在保存图像...', 'info', 0);
 
