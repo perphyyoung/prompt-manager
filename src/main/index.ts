@@ -1908,11 +1908,14 @@ ipcMain.handle('import-full-backup', async () => {
           percent: 40,
           status: '正在恢复数据库...'
         });
-        
+
         const dbSource = path.join(tempDir, 'database', 'prompt-manager.db');
         const dbTarget = path.join(currentDataDir, 'prompt-manager.db');
         await fs.copyFile(dbSource, dbTarget);
-        
+
+        // 重新初始化数据库连接
+        await db.initDatabase(currentDataDir);
+
         // 恢复图像 (50% -> 80%)
         const imagesSource = path.join(tempDir, 'files', 'images');
         const imagesTarget = path.join(currentDataDir, 'images');
