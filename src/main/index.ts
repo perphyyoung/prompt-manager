@@ -1892,7 +1892,7 @@ ipcMain.handle('import-full-backup', async () => {
       });
 
       // 关闭数据库连接以释放文件锁
-      db.closeDatabase();
+      await db.closeDatabase();
 
       const timestamp = getFormattedLocalTimeToSecond().replace(/[:\s]/g, '-');
       const backupDir = `${currentDataDir}_${timestamp}`;

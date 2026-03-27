@@ -42,12 +42,24 @@ async function initDatabase(dataDir) {
 
 /**
  * 关闭数据库连接
+ * @returns {Promise<void>}
  */
 function closeDatabase() {
-  if (db) {
-    db.close();
-    db = null;
-  }
+  return new Promise((resolve, reject) => {
+    if (db) {
+      db.close((err) => {
+        if (err) {
+          logError('Database', 'Failed to close database', { error: err.message });
+          reject(err);
+          return;
+        }
+        db = null;
+        resolve();
+      });
+    } else {
+      resolve();
+    }
+  });
 }
 
 /**
