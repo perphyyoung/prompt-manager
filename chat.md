@@ -23,7 +23,6 @@ composes 是 CSS Modules 语法, 当前项目怎样引入
 调试解决, 写入 debug.log, 不是 控制台
 全面分析当前项目, 有没有什么常见的隐患, 给出优化方案
 排查上步所有可能的问题, 给出修改方案
-检查现有事件绑定中, 有哪些是没有在 html 中出现的, 也没有 动态生成; 给出统计结果
 根据实际 js/ts 文件结构, 更新 项目文件树.md, 不需要添加最近修改章节
 通过 google-code-review skill 审查本地变更, 使用 `git diff > git-diff.log`, 不要用交互式的 `git diff`
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log
