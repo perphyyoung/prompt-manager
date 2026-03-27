@@ -83,6 +83,9 @@ export class SettingsManager {
     // 自定义字体文件选择
     document.getElementById('selectFontFileBtn')?.addEventListener('click', () => this.selectCustomFont());
 
+    // 导出孤儿文件
+    document.getElementById('exportOrphanFilesBtn')?.addEventListener('click', () => this.exportOrphanFiles());
+
     // 绑定自定义字体下拉框事件
     const customFontSelect = document.getElementById('customFontSelect');
     if (customFontSelect) {
@@ -388,5 +391,17 @@ export class SettingsManager {
     await this.setViewMode('all');
 
     this.app.showToast?.('设置已重置', 'success');
+  }
+
+  /**
+   * 导出孤儿文件
+   * @private
+   */
+  async exportOrphanFiles() {
+    try {
+      await this.app.importExportManager?.exportOrphanFiles();
+    } catch (error) {
+      window.electronAPI.logError('SettingsManager.js', 'Failed to export orphan files:', error);
+    }
   }
 }

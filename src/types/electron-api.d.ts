@@ -98,6 +98,10 @@ export interface ElectronAPI {
   permanentDeleteImage(id: string): Promise<any>;
   emptyImageTrash(): Promise<any>;
 
+  // 导出孤儿文件
+  scanOrphanFiles(): Promise<{ totalCount: number; files: Array<{ fullPath: string; relativePath: string }> }>;
+  exportOrphanFiles(exportDir: string): Promise<{ successCount: number; failedCount: number; exportPath: string }>;
+
   // 标签同步
   syncTagsBidirectional(): Promise<{
     promptToImage: { imported: number; skipped: number; tags: string[]; tagGroups: { groupName: string; tags: string[] }[] };

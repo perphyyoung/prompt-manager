@@ -33,6 +33,7 @@ composes 是 CSS Modules 语法, 当前项目怎样引入
 
 ## 20260327
 
+修改 windows 默认为 utf-8, 避免控制台乱码 <https://learn.microsoft.com/zh-cn/answers/questions/4000580/win11>
 只有一个标签或没有标签时, 点击 批量管理 时, 提示 "无需进入批量管理"
 图像详情界面, 添加标签的批量处理入口, 用于批量删除标签, 给出实现方案
 
