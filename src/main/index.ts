@@ -13,7 +13,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as db from './database.js';
 import { generatePromptId, generateImageId } from '../utils/idGenerator.js';
-import { getFormattedLocalTimeToSecond, getFormattedYearMonth } from '../utils/index.js';
+import { getFormattedLocalTimeToSecond, getFormattedYearMonth, localTime } from '../utils/index.js';
 import { logInfo, logDebug, logError, logWarn } from './logger.js';
 import { Constants } from '../constants.js';
 
@@ -1317,10 +1317,7 @@ async function getBackupStats() {
   const stats = {
     database: true,
     prompts: { count: 0 },
-    images: { count: 0, size: 0 },
-    thumbnails: { count: 0, size: 0 },
-    fonts: { count: 0, size: 0 },
-    settings: true
+    images: { count: 0, size: 0 }
   };
 
   // 统计提示词
@@ -1337,27 +1334,6 @@ async function getBackupStats() {
     const imageFiles = await getAllFiles(imagesDir, currentDataDir);
     stats.images.count = imageFiles.length;
     stats.images.size = imageFiles.reduce((sum, f) => sum + f.size, 0);
-  } catch {
-    // 目录可能不存在
-  }
-
-  // 统计缩略图
-  try {
-    const thumbnailsDir = getThumbnailsDir();
-    const thumbnailFiles = await getAllFiles(thumbnailsDir, currentDataDir);
-    stats.thumbnails.count = thumbnailFiles.length;
-    stats.thumbnails.size = thumbnailFiles.reduce((sum, f) => sum + f.size, 0);
-  } catch {
-    // 目录可能不存在
-  }
-
-  // 统计字体
-  try {
-    const fontsDir = path.join(currentDataDir, 'fonts');
-    await fs.access(fontsDir);
-    const fontFiles = await getAllFiles(fontsDir, currentDataDir);
-    stats.fonts.count = fontFiles.length;
-    stats.fonts.size = fontFiles.reduce((sum, f) => sum + f.size, 0);
   } catch {
     // 目录可能不存在
   }
@@ -1751,21 +1727,12 @@ ipcMain.handle('export-full-backup', async () => {
       });
       
       const stats = await getBackupStats();
-      // 标记缩略图将在导入时重新生成
-      const manifestStats = {
-        ...stats,
-        thumbnails: {
-          ...stats.thumbnails,
-          regenerated: true
-        }
-      };
       const manifest = {
         version: '1.0.0',
         appName: 'prompt-manager',
-        appVersion: app.getVersion() || '1.0.0',
-        exportedAt: new Date().toISOString(),
+        exportedAt: localTime(),
         dataVersion: 1,
-        contents: manifestStats
+        contents: stats
       };
       await fs.writeFile(
         path.join(tempDir, 'manifest.json'),
@@ -1809,46 +1776,12 @@ ipcMain.handle('export-full-backup', async () => {
         }
       });
       
-      // 注意：缩略图不导出，导入时将根据原图重新生成
+      // 注意：缩略图、字体和设置不导出
       
-      // 4. 复制字体 (80% -> 85%)
-      const fontsSource = path.join(currentDataDir, 'fonts');
-      const fontsTarget = path.join(tempDir, 'files', 'fonts');
-      
-      sendBackupProgress({
-        stage: 'fonts',
-        percent: 80,
-        status: '正在复制字体文件...',
-        detail: `共 ${stats.fonts.count} 个文件`
-      });
-      
-      try {
-        await fs.access(fontsSource);
-        await copyDirectoryWithProgress(fontsSource, fontsTarget);
-      } catch {
-        // 字体目录可能不存在
-      }
-      
-      // 6. 导出设置 (85% -> 90%)
-      sendBackupProgress({
-        stage: 'config',
-        percent: 85,
-        status: '正在导出设置...'
-      });
-      
-      const configSource = CONFIG_FILE;
-      const configTarget = path.join(tempDir, 'config', 'settings.json');
-      await fs.mkdir(path.join(tempDir, 'config'), { recursive: true });
-      try {
-        await fs.copyFile(configSource, configTarget);
-      } catch {
-        // 配置文件可能不存在
-      }
-      
-      // 7. 压缩为 ZIP (90% -> 100%)
+      // 4. 压缩为 ZIP (80% -> 100%)
       sendBackupProgress({
         stage: 'compress',
-        percent: 90,
+        percent: 80,
         status: '正在压缩备份文件...'
       });
       
@@ -1942,16 +1875,15 @@ ipcMain.handle('import-full-backup', async () => {
         percent: 25,
         status: '正在检查版本兼容性...'
       });
-      
-      const currentVersion = app.getVersion() || '1.0.0';
-      const backupVersion = manifest.appVersion || '1.0.0';
-      const backupMajor = backupVersion.split('.')[0];
-      const currentMajor = currentVersion.split('.')[0];
-      
-      if (backupMajor !== currentMajor) {
-        throw new Error(`版本不兼容：备份版本 ${backupVersion}，当前版本 ${currentVersion}`);
+
+      // 使用 dataVersion 进行数据格式兼容性检查
+      const backupDataVersion = manifest.dataVersion || 1;
+      const currentDataVersion = 1; // 当前支持的数据格式版本
+
+      if (backupDataVersion !== currentDataVersion) {
+        throw new Error(`数据格式版本不兼容：备份数据版本 ${backupDataVersion}，当前支持版本 ${currentDataVersion}`);
       }
-      
+
       // 4. 备份当前数据 (30% -> 40%)
       sendBackupProgress({
         stage: 'database',
@@ -2002,48 +1934,15 @@ ipcMain.handle('import-full-backup', async () => {
           }
         });
         
-        // 注意：缩略图不恢复，将根据原图重新生成
-        
-        // 恢复字体 (90% -> 95%)
-        sendBackupProgress({
-          stage: 'fonts',
-          percent: 90,
-          status: '正在恢复字体文件...'
-        });
-        
-        const fontsSource = path.join(tempDir, 'files', 'fonts');
-        const fontsTarget = path.join(currentDataDir, 'fonts');
-        try {
-          await fs.access(fontsSource);
-          await copyDirectoryWithProgress(fontsSource, fontsTarget);
-        } catch {
-          // 备份中可能没有字体
-        }
-        
-        // 恢复设置 (95% -> 100%)
-        sendBackupProgress({
-          stage: 'config',
-          percent: 95,
-          status: '正在恢复设置...'
-        });
-        
-        const configSource = path.join(tempDir, 'config', 'settings.json');
-        try {
-          await fs.access(configSource);
-          await fs.copyFile(configSource, CONFIG_FILE);
-        } catch {
-          // 备份中可能没有设置
-        }
-        
-        // 重新生成缩略图
+        // 重新生成缩略图 (90% -> 100%)
         sendBackupProgress({
           stage: 'thumbnails',
-          percent: 95,
+          percent: 90,
           status: '正在重新生成缩略图...'
         });
         
         await regenerateAllThumbnails((current, total, fileName) => {
-          const percent = 95 + (current / total) * 5;
+          const percent = 90 + (current / total) * 10;
           sendBackupProgress({
             stage: 'thumbnails',
             percent: Math.round(percent),

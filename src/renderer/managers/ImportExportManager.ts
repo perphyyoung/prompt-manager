@@ -217,7 +217,7 @@ export class ImportExportManager {
 
       if ('success' in result && result.success) {
         const manifest = result.manifest;
-        const exportedAt = new Date(manifest.exportedAt).toLocaleString();
+        const exportedAt = manifest.exportedAt;
 
         progressDialog.complete(`导入成功！备份时间：${exportedAt}\n点击关闭按钮后将重启应用`);
 

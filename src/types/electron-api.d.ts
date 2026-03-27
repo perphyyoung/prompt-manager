@@ -8,24 +8,25 @@ export interface BackupStats {
   database: boolean;
   prompts: { count: number };
   images: { count: number; size: number };
-  thumbnails: { count: number; size: number; regenerated?: boolean };
-  fonts: { count: number; size: number };
-  settings: boolean;
 }
 
 // 备份清单
 export interface BackupManifest {
+  /** manifest 格式版本 */
   version: string;
+  /** 应用名称 */
   appName: string;
-  appVersion: string;
+  /** 导出时间（本地时间格式：YYYY/M/D H:mm:ss） */
   exportedAt: string;
+  /** 数据格式版本，用于兼容性检查 */
   dataVersion: number;
+  /** 备份内容统计信息 */
   contents: BackupStats;
 }
 
 // 备份进度
 export interface BackupProgress {
-  stage: 'start' | 'manifest' | 'database' | 'images' | 'thumbnails' | 'fonts' | 'config' | 'compress' | 'complete' | 'error';
+  stage: 'start' | 'manifest' | 'database' | 'images' | 'thumbnails' | 'compress' | 'complete' | 'error';
   percent: number;
   status: string;
   detail?: string;
