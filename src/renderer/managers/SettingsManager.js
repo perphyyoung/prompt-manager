@@ -86,6 +86,12 @@ export class SettingsManager {
     // 导出孤儿文件
     document.getElementById('exportOrphanFilesBtn')?.addEventListener('click', () => this.exportOrphanFiles());
 
+    // 完整备份导出
+    document.getElementById('exportFullBackupBtn')?.addEventListener('click', () => this.exportFullBackup());
+
+    // 完整备份导入
+    document.getElementById('importFullBackupBtn')?.addEventListener('click', () => this.importFullBackup());
+
     // 绑定自定义字体下拉框事件
     const customFontSelect = document.getElementById('customFontSelect');
     if (customFontSelect) {
@@ -402,6 +408,41 @@ export class SettingsManager {
       await this.app.importExportManager?.exportOrphanFiles();
     } catch (error) {
       window.electronAPI.logError('SettingsManager.js', 'Failed to export orphan files:', error);
+    }
+  }
+
+  /**
+   * 导出完整备份
+   * @private
+   */
+  async exportFullBackup() {
+    try {
+      await this.app.importExportManager?.exportFullBackup();
+    } catch (error) {
+      window.electronAPI.logError('SettingsManager.js', 'Failed to export full backup:', error);
+    }
+  }
+
+  /**
+   * 导入完整备份
+   * @private
+   */
+  async importFullBackup() {
+    try {
+      // 显示确认对话框
+      const confirmed = await DialogService.showConfirmDialogByConfig({
+        title: '确认导入备份',
+        message: '导入备份将替换当前所有数据。建议在导入前导出当前数据的备份。是否继续？',
+        type: 'warning'
+      });
+
+      if (!confirmed) {
+        return;
+      }
+
+      await this.app.importExportManager?.importFullBackup();
+    } catch (error) {
+      window.electronAPI.logError('SettingsManager.js', 'Failed to import full backup:', error);
     }
   }
 }

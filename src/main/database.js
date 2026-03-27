@@ -1456,6 +1456,38 @@ async function updateImage(id, updates) {
 }
 
 /**
+ * 批量更新图像缩略图信息
+ * 用于导入备份后批量更新缩略图路径和 MD5
+ * @param {Array<{id: string, thumbnailPath: string, thumbnailMD5: string}>} updates - 更新列表
+ */
+async function updateImagesBatch(updates) {
+  if (!updates || updates.length === 0) {
+    return;
+  }
+
+  const now = localTime();
+
+  return runInTransaction(async () => {
+    const stmt = db.prepare(
+      'UPDATE images SET thumbnail_path = ?, thumbnail_md5 = ?, updated_at = ? WHERE id = ?'
+    );
+
+    try {
+      for (const update of updates) {
+        await new Promise((resolve, reject) => {
+          stmt.run(update.thumbnailPath, update.thumbnailMD5, now, update.id, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      }
+    } finally {
+      stmt.finalize();
+    }
+  });
+}
+
+/**
  * 获取收藏的图像
  */
 async function getFavoriteImages() {
@@ -2182,6 +2214,7 @@ export {
   getPromptImages,
   getUnreferencedImages,
   updateImage,
+  updateImagesBatch,
   getFavoriteImages,
   // 图像标签组操作
   createImageTagGroup,

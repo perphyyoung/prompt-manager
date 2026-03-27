@@ -4,6 +4,7 @@
  */
 
 import type PromptManager from '../app';
+import type { BackupStats, BackupManifest } from '../../types/electron-api';
 
 interface ExportOrphanFilesResult {
   successCount: number;
@@ -93,5 +94,151 @@ export class ImportExportManager {
    */
   getIsExporting(): boolean {
     return this.isExporting;
+  }
+
+  /**
+   * 导出完整备份
+   * @returns 是否成功
+   */
+  async exportFullBackup(): Promise<boolean> {
+    if (this.isExporting) {
+      this.app.showToast?.('备份正在进行中，请稍候', 'warning');
+      return false;
+    }
+
+    this.isExporting = true;
+
+    // 动态导入 ProgressDialog
+    const { progressDialog } = await import('../components/ProgressDialog');
+
+    // 设置进度回调
+    const handleProgress = (progress: { stage: string; percent: number; status: string; detail?: string }) => {
+      progressDialog.updateProgress(progress.percent, progress.status, progress.detail);
+    };
+
+    try {
+      // 显示进度对话框
+      progressDialog.show({
+        title: '正在创建备份...',
+        status: '准备中...',
+        onCancel: () => {
+          // 取消操作（当前版本不支持中断，仅关闭对话框）
+          progressDialog.hide();
+        }
+      });
+
+      // 监听进度更新
+      window.electronAPI.onBackupProgress(handleProgress);
+
+      const result = await window.electronAPI.exportFullBackup();
+
+      // 移除进度监听
+      window.electronAPI.offBackupProgress(handleProgress);
+
+      if ('cancelled' in result && result.cancelled) {
+        progressDialog.hide();
+        return false;
+      }
+
+      if ('success' in result && result.success) {
+        const stats = result.stats;
+        const promptsCount = stats.prompts.count;
+        const imageCount = stats.images.count;
+
+        progressDialog.complete(`备份成功！包含 ${promptsCount} 个提示词，${imageCount} 个图像\n保存位置：${result.filePath}`);
+
+        // 等待用户点击关闭按钮，不自动关闭
+        return true;
+      }
+
+      throw new Error('备份失败');
+    } catch (error) {
+      // 移除进度监听
+      window.electronAPI.offBackupProgress(handleProgress);
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      window.electronAPI.logError('ImportExportManager.ts', 'Failed to export full backup:', error);
+
+      progressDialog.error('备份失败：' + errorMessage);
+
+      return false;
+    } finally {
+      this.isExporting = false;
+    }
+  }
+
+  /**
+   * 导入完整备份
+   * @returns 是否成功
+   */
+  async importFullBackup(): Promise<boolean> {
+    if (this.isExporting) {
+      this.app.showToast?.('操作正在进行中，请稍候', 'warning');
+      return false;
+    }
+
+    this.isExporting = true;
+
+    // 动态导入 ProgressDialog
+    const { progressDialog } = await import('../components/ProgressDialog');
+
+    // 设置进度回调
+    const handleProgress = (progress: { stage: string; percent: number; status: string; detail?: string }) => {
+      progressDialog.updateProgress(progress.percent, progress.status, progress.detail);
+    };
+
+    try {
+      // 显示进度对话框
+      progressDialog.show({
+        title: '正在导入备份...',
+        status: '准备中...',
+        onCancel: () => {
+          // 取消操作（当前版本不支持中断，仅关闭对话框）
+          progressDialog.hide();
+        },
+        onComplete: () => {
+          // 用户点击关闭按钮后重启应用
+          window.electronAPI.relaunchApp();
+        }
+      });
+
+      // 监听进度更新
+      window.electronAPI.onBackupProgress(handleProgress);
+
+      const result = await window.electronAPI.importFullBackup();
+
+      // 移除进度监听
+      window.electronAPI.offBackupProgress(handleProgress);
+
+      if ('cancelled' in result && result.cancelled) {
+        progressDialog.hide();
+        return false;
+      }
+
+      if ('success' in result && result.success) {
+        const manifest = result.manifest;
+        const exportedAt = new Date(manifest.exportedAt).toLocaleString();
+
+        progressDialog.complete(`导入成功！备份时间：${exportedAt}\n点击关闭按钮后将重启应用`);
+
+        // 等待用户点击关闭按钮后再重启应用
+        // 通过 onComplete 回调实现
+        return true;
+      }
+
+      throw new Error('导入失败');
+    } catch (error) {
+      // 移除进度监听
+      window.electronAPI.offBackupProgress(handleProgress);
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      window.electronAPI.logError('ImportExportManager.ts', 'Failed to import full backup:', error);
+
+      progressDialog.error('导入失败：' + errorMessage);
+
+      return false;
+    } finally {
+      this.isExporting = false;
+    }
   }
 }

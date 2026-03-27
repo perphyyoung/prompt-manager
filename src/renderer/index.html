@@ -789,6 +789,16 @@
             </div>
             <div class="setting-row">
               <div class="setting-info">
+                <div class="setting-label">完整备份</div>
+                <div class="setting-desc">备份或恢复所有数据（提示词、图像、缩略图、设置）</div>
+              </div>
+              <div class="setting-actions">
+                <button id="exportFullBackupBtn" class="btn btn-outline btn-sm">导出</button>
+                <button id="importFullBackupBtn" class="btn btn-outline btn-sm">导入</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
                 <div class="setting-label">内容显示模式</div>
               </div>
               <label class="toggle-switch" title="安全/NSFW 模式">
@@ -1330,6 +1340,38 @@
     <div class="prompt-preview-content" id="promptPreviewContent"></div>
     <div class="prompt-preview-image">
       <img src="" alt="" id="promptPreviewImage">
+    </div>
+  </div>
+
+  <!-- 进度对话框 -->
+  <div id="progressDialog" class="modal progress-dialog">
+    <div class="modal-content-small">
+      <div class="modal-header">
+        <h2 id="progressDialogTitle">正在处理...</h2>
+        <button class="close-btn" id="closeProgressDialog" style="display: none;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="progress-container">
+          <div class="progress-bar-wrapper">
+            <div class="progress-bar" id="progressBar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <span class="progress-percent" id="progressPercent">0%</span>
+          </div>
+          <div class="progress-status" id="progressStatus">准备中...</div>
+          <div class="progress-detail" id="progressDetail"></div>
+          <div class="progress-time" id="progressTime"></div>
+        </div>
+        <div class="progress-actions" id="progressActions">
+          <button type="button" class="btn btn-outline btn-sm" id="cancelProgressBtn">取消</button>
+          <button type="button" class="btn btn-primary btn-sm" id="closeProgressBtn" style="display: none;">关闭</button>
+        </div>
+      </div>
     </div>
   </div>
 

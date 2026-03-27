@@ -3,6 +3,34 @@
  * 为 window.electronAPI 提供 TypeScript 类型支持
  */
 
+// 备份统计信息
+export interface BackupStats {
+  database: boolean;
+  prompts: { count: number };
+  images: { count: number; size: number };
+  thumbnails: { count: number; size: number; regenerated?: boolean };
+  fonts: { count: number; size: number };
+  settings: boolean;
+}
+
+// 备份清单
+export interface BackupManifest {
+  version: string;
+  appName: string;
+  appVersion: string;
+  exportedAt: string;
+  dataVersion: number;
+  contents: BackupStats;
+}
+
+// 备份进度
+export interface BackupProgress {
+  stage: 'start' | 'manifest' | 'database' | 'images' | 'thumbnails' | 'fonts' | 'config' | 'compress' | 'complete' | 'error';
+  percent: number;
+  status: string;
+  detail?: string;
+}
+
 export interface ElectronAPI {
   // 日志方法
   logDebug(component: string, message: string, data?: any): void;
@@ -101,6 +129,12 @@ export interface ElectronAPI {
   // 导出孤儿文件
   scanOrphanFiles(): Promise<{ totalCount: number; files: Array<{ fullPath: string; relativePath: string }> }>;
   exportOrphanFiles(exportDir: string): Promise<{ successCount: number; failedCount: number; exportPath: string }>;
+
+  // 完整备份
+  exportFullBackup(): Promise<{ success: boolean; filePath: string; stats: BackupStats } | { cancelled: true }>;
+  importFullBackup(): Promise<{ success: boolean; manifest: BackupManifest; oldDataDir: string } | { cancelled: true }>;
+  onBackupProgress(callback: (progress: BackupProgress) => void): void;
+  offBackupProgress(callback: (progress: BackupProgress) => void): void;
 
   // 标签同步
   syncTagsBidirectional(): Promise<{

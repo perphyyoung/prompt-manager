@@ -198,6 +198,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   /** 记录信息日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 */
   logInfo: (component, message, data) => { ipcRenderer.invoke('renderer-log', 'info', component, message, data); },
 
+  // ==================== 完整备份 ====================
+  /** 导出完整备份 */
+  exportFullBackup: () => ipcRenderer.invoke('export-full-backup'),
+  /** 导入完整备份 */
+  importFullBackup: () => ipcRenderer.invoke('import-full-backup'),
+  /** 监听备份进度 @param {Function} callback - 进度回调 */
+  onBackupProgress: (callback) => {
+    ipcRenderer.on('backup-progress', (event, progress) => callback(progress));
+  },
+  /** 移除备份进度监听 @param {Function} callback - 进度回调 */
+  offBackupProgress: (callback) => {
+    ipcRenderer.removeListener('backup-progress', callback);
+  },
+
   // ==================== 其他 ====================
   /** 获取旧数据目录路径（清空数据后） */
   getOldDataDir: () => ipcRenderer.invoke('get-old-data-dir')

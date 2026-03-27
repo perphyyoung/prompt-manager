@@ -213,6 +213,103 @@ async function generateThumbnail(imagePath, storedName, subDir = '') {
 }
 
 /**
+ * 重新生成所有图像的缩略图
+ * 用于导入备份后恢复缩略图
+ * @param {Function} onProgress - 进度回调函数 (current, total, fileName) => void
+ * @param {number} concurrency - 并发数，默认 5
+ */
+async function regenerateAllThumbnails(onProgress = null, concurrency = 5) {
+  try {
+    // 获取所有图像
+    const images = await db.getAllImages();
+    const total = images.length;
+
+    if (total === 0) {
+      logInfo('Main', 'No images to regenerate thumbnails');
+      return { success: true, regenerated: 0, total: 0 };
+    }
+
+    logInfo('Main', `Starting to regenerate thumbnails for ${total} images with concurrency ${concurrency}`);
+
+    let completed = 0;
+    let regenerated = 0;
+    let failed = 0;
+    const updates = [];
+
+    // 处理单个图像的缩略图生成
+    async function processImage(image) {
+      try {
+        // 构建原图路径
+        const imagePath = path.join(currentDataDir, image.relativePath);
+
+        // 检查原图是否存在
+        try {
+          await fs.access(imagePath);
+        } catch {
+          logWarn('Main', `Image file not found: ${imagePath}`);
+          return { success: false, image };
+        }
+
+        // 从 relativePath 提取年月子目录
+        const pathParts = image.relativePath.split('/');
+        const subDir = pathParts.length >= 2 ? pathParts[1] : '';
+
+        // 重新生成缩略图
+        const thumbnailInfo = await generateThumbnail(imagePath, image.storedName, subDir);
+
+        if (thumbnailInfo) {
+          // 收集更新数据，稍后批量更新
+          updates.push({
+            id: image.id,
+            thumbnailPath: thumbnailInfo.relativePath,
+            thumbnailMD5: thumbnailInfo.thumbnailMD5
+          });
+          return { success: true, image };
+        } else {
+          return { success: false, image };
+        }
+      } catch (error) {
+        logError('Main', `Failed to regenerate thumbnail for image ${image.id}:`, error);
+        return { success: false, image };
+      }
+    }
+
+    // 分批处理，控制并发数
+    for (let i = 0; i < images.length; i += concurrency) {
+      const batch = images.slice(i, i + concurrency);
+      const results = await Promise.all(batch.map(img => processImage(img)));
+
+      // 统计结果
+      for (const result of results) {
+        completed++;
+        if (result.success) {
+          regenerated++;
+        } else {
+          failed++;
+        }
+
+        // 报告进度
+        if (onProgress) {
+          onProgress(completed, total, result.image.fileName);
+        }
+      }
+    }
+
+    // 批量更新数据库
+    if (updates.length > 0) {
+      logInfo('Main', `Batch updating ${updates.length} thumbnail records`);
+      await db.updateImagesBatch(updates);
+    }
+
+    logInfo('Main', `Thumbnail regeneration complete: ${regenerated} succeeded, ${failed} failed`);
+    return { success: true, regenerated, failed, total };
+  } catch (error) {
+    logError('Main', 'Failed to regenerate all thumbnails:', error);
+    throw error;
+  }
+}
+
+/**
  * 保存图像文件到数据目录
  * 通过 MD5 检测避免重复存储相同图像
  * 图像信息单独存储到 images.json
@@ -1213,6 +1310,161 @@ ipcMain.handle('renderer-log', async (event, level, component, message, data) =>
 });
 
 /**
+ * 获取备份统计信息
+ * @returns {Promise<Object>} 统计信息
+ */
+async function getBackupStats() {
+  const stats = {
+    database: true,
+    prompts: { count: 0 },
+    images: { count: 0, size: 0 },
+    thumbnails: { count: 0, size: 0 },
+    fonts: { count: 0, size: 0 },
+    settings: true
+  };
+
+  // 统计提示词
+  try {
+    const prompts = await db.getPrompts();
+    stats.prompts.count = prompts.length;
+  } catch {
+    // 数据库可能为空
+  }
+
+  // 统计图像
+  try {
+    const imagesDir = getImagesDir();
+    const imageFiles = await getAllFiles(imagesDir, currentDataDir);
+    stats.images.count = imageFiles.length;
+    stats.images.size = imageFiles.reduce((sum, f) => sum + f.size, 0);
+  } catch {
+    // 目录可能不存在
+  }
+
+  // 统计缩略图
+  try {
+    const thumbnailsDir = getThumbnailsDir();
+    const thumbnailFiles = await getAllFiles(thumbnailsDir, currentDataDir);
+    stats.thumbnails.count = thumbnailFiles.length;
+    stats.thumbnails.size = thumbnailFiles.reduce((sum, f) => sum + f.size, 0);
+  } catch {
+    // 目录可能不存在
+  }
+
+  // 统计字体
+  try {
+    const fontsDir = path.join(currentDataDir, 'fonts');
+    await fs.access(fontsDir);
+    const fontFiles = await getAllFiles(fontsDir, currentDataDir);
+    stats.fonts.count = fontFiles.length;
+    stats.fonts.size = fontFiles.reduce((sum, f) => sum + f.size, 0);
+  } catch {
+    // 目录可能不存在
+  }
+
+  return stats;
+}
+
+/**
+ * 递归复制目录
+ * @param {string} source - 源目录
+ * @param {string} target - 目标目录
+ */
+async function copyDirectory(source, target) {
+  try {
+    await fs.access(source);
+  } catch {
+    return; // 源目录不存在
+  }
+  
+  await fs.mkdir(target, { recursive: true });
+  const entries = await fs.readdir(source, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const sourcePath = path.join(source, entry.name);
+    const targetPath = path.join(target, entry.name);
+    
+    if (entry.isDirectory()) {
+      await copyDirectory(sourcePath, targetPath);
+    } else {
+      await fs.copyFile(sourcePath, targetPath);
+    }
+  }
+}
+
+/**
+ * 递归删除目录
+ * @param {string} dir - 要删除的目录
+ */
+async function removeDirectory(dir) {
+  try {
+    await fs.access(dir);
+  } catch {
+    return; // 目录不存在
+  }
+  
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await removeDirectory(fullPath);
+    } else {
+      await fs.unlink(fullPath);
+    }
+  }
+  
+  await fs.rmdir(dir);
+}
+
+/**
+ * 创建 ZIP 压缩包
+ * @param {string} sourceDir - 源目录
+ * @param {string} zipPath - ZIP 文件路径
+ */
+async function createZipArchive(sourceDir, zipPath) {
+  const { exec } = require('child_process');
+  const { promisify } = require('util');
+  const execAsync = promisify(exec);
+  
+  // 使用系统命令创建 ZIP（Windows 使用 PowerShell，其他使用 zip 命令）
+  const isWindows = process.platform === 'win32';
+  
+  if (isWindows) {
+    // Windows: 使用 PowerShell Compress-Archive
+    const parentDir = path.dirname(sourceDir);
+    const dirName = path.basename(sourceDir);
+    await execAsync(`powershell -command "Compress-Archive -Path '${sourceDir}\\*' -DestinationPath '${zipPath}' -Force"`);
+  } else {
+    // Linux/Mac: 使用 zip 命令
+    const parentDir = path.dirname(sourceDir);
+    const dirName = path.basename(sourceDir);
+    await execAsync(`cd "${parentDir}" && zip -r "${zipPath}" "${dirName}"`);
+  }
+}
+
+/**
+ * 解压 ZIP 压缩包
+ * @param {string} zipPath - ZIP 文件路径
+ * @param {string} targetDir - 目标目录
+ */
+async function extractZipArchive(zipPath, targetDir) {
+  const { exec } = require('child_process');
+  const { promisify } = require('util');
+  const execAsync = promisify(exec);
+  
+  const isWindows = process.platform === 'win32';
+  
+  if (isWindows) {
+    // Windows: 使用 PowerShell Expand-Archive
+    await execAsync(`powershell -command "Expand-Archive -Path '${zipPath}' -DestinationPath '${targetDir}' -Force"`);
+  } else {
+    // Linux/Mac: 使用 unzip 命令
+    await execAsync(`unzip -o "${zipPath}" -d "${targetDir}"`);
+  }
+}
+
+/**
  * 递归获取目录下所有文件
  * @param {string} dir - 目录路径
  * @param {string} baseDir - 基础目录（用于计算相对路径）
@@ -1406,6 +1658,437 @@ ipcMain.handle('export-and-delete-orphan-files', async (event, orphanFiles, expo
     };
   } catch (error) {
     logError('Main', 'Export and delete orphan files error:', error);
+    throw error;
+  }
+});
+
+// 发送备份进度到渲染进程
+function sendBackupProgress(progress) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('backup-progress', progress);
+  }
+}
+
+// 带进度报告的复制目录
+async function copyDirectoryWithProgress(source, target, options = {}) {
+  const { onProgress, totalSize = 0, baseProgress = 0, progressWeight = 1 } = options;
+  
+  try {
+    await fs.access(source);
+  } catch {
+    return { copiedCount: 0, copiedSize: 0 };
+  }
+  
+  await fs.mkdir(target, { recursive: true });
+  const entries = await fs.readdir(source, { withFileTypes: true });
+  
+  let copiedCount = 0;
+  let copiedSize = 0;
+  
+  for (const entry of entries) {
+    const sourcePath = path.join(source, entry.name);
+    const targetPath = path.join(target, entry.name);
+    
+    if (entry.isDirectory()) {
+      const result = await copyDirectoryWithProgress(sourcePath, targetPath, options);
+      copiedCount += result.copiedCount;
+      copiedSize += result.copiedSize;
+    } else {
+      const stats = await fs.stat(sourcePath);
+      await fs.copyFile(sourcePath, targetPath);
+      copiedCount++;
+      copiedSize += stats.size;
+      
+      if (onProgress && totalSize > 0) {
+        const fileProgress = (copiedSize / totalSize) * progressWeight;
+        onProgress(baseProgress + fileProgress, entry.name);
+      }
+    }
+  }
+  
+  return { copiedCount, copiedSize };
+}
+
+// 完整备份导出
+ipcMain.handle('export-full-backup', async () => {
+  try {
+    // 选择保存目录（先让用户选择目录）
+    const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: '选择备份保存位置',
+      properties: ['openDirectory'],
+      buttonLabel: '保存备份'
+    });
+
+    if (!filePaths || filePaths.length === 0) {
+      return { cancelled: true };
+    }
+
+    const exportDir = filePaths[0];
+
+    // 发送开始进度
+    sendBackupProgress({
+      stage: 'start',
+      percent: 0,
+      status: '准备中...',
+      detail: '正在统计文件...'
+    });
+
+    // 在实际开始备份时生成文件名（确保时间戳准确）
+    const timestamp = getFormattedLocalTimeToSecond().replace(/[:\s]/g, '-');
+    const fileName = `prompt-manager-backup-${timestamp}.zip`;
+    const filePath = path.join(exportDir, fileName);
+    
+    // 创建临时目录
+    const tempDir = path.join(os.tmpdir(), `prompt-manager-backup-${Date.now()}`);
+    await fs.mkdir(tempDir, { recursive: true });
+    
+    try {
+      // 1. 生成 manifest.json (5%)
+      sendBackupProgress({
+        stage: 'manifest',
+        percent: 5,
+        status: '正在生成备份清单...'
+      });
+      
+      const stats = await getBackupStats();
+      // 标记缩略图将在导入时重新生成
+      const manifestStats = {
+        ...stats,
+        thumbnails: {
+          ...stats.thumbnails,
+          regenerated: true
+        }
+      };
+      const manifest = {
+        version: '1.0.0',
+        appName: 'prompt-manager',
+        appVersion: app.getVersion() || '1.0.0',
+        exportedAt: new Date().toISOString(),
+        dataVersion: 1,
+        contents: manifestStats
+      };
+      await fs.writeFile(
+        path.join(tempDir, 'manifest.json'),
+        JSON.stringify(manifest, null, 2),
+        'utf8'
+      );
+      
+      // 2. 复制数据库 (5% -> 15%)
+      sendBackupProgress({
+        stage: 'database',
+        percent: 15,
+        status: '正在复制数据库...'
+      });
+      
+      const dbDir = path.join(tempDir, 'database');
+      await fs.mkdir(dbDir, { recursive: true });
+      const dbSource = path.join(currentDataDir, 'prompt-manager.db');
+      const dbTarget = path.join(dbDir, 'prompt-manager.db');
+      await fs.copyFile(dbSource, dbTarget);
+      
+      // 3. 复制图像文件 (15% -> 80%)
+      const imagesSource = path.join(currentDataDir, 'images');
+      const imagesTarget = path.join(tempDir, 'files', 'images');
+      
+      sendBackupProgress({
+        stage: 'images',
+        percent: 15,
+        status: '正在复制图像文件...',
+        detail: `共 ${stats.images.count} 个文件`
+      });
+      
+      await copyDirectoryWithProgress(imagesSource, imagesTarget, {
+        onProgress: (progress, fileName) => {
+          const percent = 15 + progress * 65;
+          sendBackupProgress({
+            stage: 'images',
+            percent: Math.round(percent),
+            status: '正在复制图像文件...',
+            detail: fileName
+          });
+        }
+      });
+      
+      // 注意：缩略图不导出，导入时将根据原图重新生成
+      
+      // 4. 复制字体 (80% -> 85%)
+      const fontsSource = path.join(currentDataDir, 'fonts');
+      const fontsTarget = path.join(tempDir, 'files', 'fonts');
+      
+      sendBackupProgress({
+        stage: 'fonts',
+        percent: 80,
+        status: '正在复制字体文件...',
+        detail: `共 ${stats.fonts.count} 个文件`
+      });
+      
+      try {
+        await fs.access(fontsSource);
+        await copyDirectoryWithProgress(fontsSource, fontsTarget);
+      } catch {
+        // 字体目录可能不存在
+      }
+      
+      // 6. 导出设置 (85% -> 90%)
+      sendBackupProgress({
+        stage: 'config',
+        percent: 85,
+        status: '正在导出设置...'
+      });
+      
+      const configSource = CONFIG_FILE;
+      const configTarget = path.join(tempDir, 'config', 'settings.json');
+      await fs.mkdir(path.join(tempDir, 'config'), { recursive: true });
+      try {
+        await fs.copyFile(configSource, configTarget);
+      } catch {
+        // 配置文件可能不存在
+      }
+      
+      // 7. 压缩为 ZIP (90% -> 100%)
+      sendBackupProgress({
+        stage: 'compress',
+        percent: 90,
+        status: '正在压缩备份文件...'
+      });
+      
+      await createZipArchive(tempDir, filePath);
+      
+      // 完成
+      sendBackupProgress({
+        stage: 'complete',
+        percent: 100,
+        status: '备份完成！'
+      });
+      
+      return { 
+        success: true, 
+        filePath,
+        stats
+      };
+    } finally {
+      // 清理临时目录
+      await removeDirectory(tempDir);
+    }
+  } catch (error) {
+    logError('Main', 'Export full backup error:', error);
+    sendBackupProgress({
+      stage: 'error',
+      percent: 0,
+      status: '备份失败',
+      detail: error.message
+    });
+    throw error;
+  }
+});
+
+// 完整备份导入
+ipcMain.handle('import-full-backup', async () => {
+  try {
+    // 选择备份文件
+    const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: '导入完整备份',
+      filters: [{ name: 'ZIP Files', extensions: ['zip'] }],
+      properties: ['openFile']
+    });
+    
+    if (!filePaths || filePaths.length === 0) {
+      return { cancelled: true };
+    }
+    
+    const zipPath = filePaths[0];
+    
+    // 发送开始进度
+    sendBackupProgress({
+      stage: 'start',
+      percent: 0,
+      status: '准备导入...',
+      detail: '正在准备导入环境...'
+    });
+    
+    // 解压到临时目录
+    const tempDir = path.join(os.tmpdir(), `prompt-manager-restore-${Date.now()}`);
+    await fs.mkdir(tempDir, { recursive: true });
+    
+    try {
+      // 1. 解压 ZIP (0% -> 20%)
+      sendBackupProgress({
+        stage: 'compress',
+        percent: 5,
+        status: '正在解压备份文件...'
+      });
+      
+      await extractZipArchive(zipPath, tempDir);
+      
+      // 2. 验证 manifest (20% -> 25%)
+      sendBackupProgress({
+        stage: 'manifest',
+        percent: 20,
+        status: '正在验证备份文件...'
+      });
+      
+      const manifestPath = path.join(tempDir, 'manifest.json');
+      let manifest;
+      try {
+        const manifestContent = await fs.readFile(manifestPath, 'utf8');
+        manifest = JSON.parse(manifestContent);
+      } catch {
+        throw new Error('无效的备份文件：缺少 manifest.json');
+      }
+      
+      // 3. 版本兼容性检查 (25% -> 30%)
+      sendBackupProgress({
+        stage: 'manifest',
+        percent: 25,
+        status: '正在检查版本兼容性...'
+      });
+      
+      const currentVersion = app.getVersion() || '1.0.0';
+      const backupVersion = manifest.appVersion || '1.0.0';
+      const backupMajor = backupVersion.split('.')[0];
+      const currentMajor = currentVersion.split('.')[0];
+      
+      if (backupMajor !== currentMajor) {
+        throw new Error(`版本不兼容：备份版本 ${backupVersion}，当前版本 ${currentVersion}`);
+      }
+      
+      // 4. 备份当前数据 (30% -> 40%)
+      sendBackupProgress({
+        stage: 'database',
+        percent: 30,
+        status: '正在备份当前数据...'
+      });
+      
+      const timestamp = getFormattedLocalTimeToSecond().replace(/[:\s]/g, '-');
+      const backupDir = `${currentDataDir}_${timestamp}`;
+      await fs.rename(currentDataDir, backupDir);
+      
+      try {
+        // 5. 恢复数据
+        await fs.mkdir(currentDataDir, { recursive: true });
+        
+        // 恢复数据库 (40% -> 50%)
+        sendBackupProgress({
+          stage: 'database',
+          percent: 40,
+          status: '正在恢复数据库...'
+        });
+        
+        const dbSource = path.join(tempDir, 'database', 'prompt-manager.db');
+        const dbTarget = path.join(currentDataDir, 'prompt-manager.db');
+        await fs.copyFile(dbSource, dbTarget);
+        
+        // 恢复图像 (50% -> 80%)
+        const imagesSource = path.join(tempDir, 'files', 'images');
+        const imagesTarget = path.join(currentDataDir, 'images');
+        const imageStats = manifest.contents?.images || { count: 0 };
+        
+        sendBackupProgress({
+          stage: 'images',
+          percent: 50,
+          status: '正在恢复图像文件...',
+          detail: `共 ${imageStats.count} 个文件`
+        });
+        
+        await copyDirectoryWithProgress(imagesSource, imagesTarget, {
+          onProgress: (progress, fileName) => {
+            const percent = 50 + progress * 40;
+            sendBackupProgress({
+              stage: 'images',
+              percent: Math.round(percent),
+              status: '正在恢复图像文件...',
+              detail: fileName
+            });
+          }
+        });
+        
+        // 注意：缩略图不恢复，将根据原图重新生成
+        
+        // 恢复字体 (90% -> 95%)
+        sendBackupProgress({
+          stage: 'fonts',
+          percent: 90,
+          status: '正在恢复字体文件...'
+        });
+        
+        const fontsSource = path.join(tempDir, 'files', 'fonts');
+        const fontsTarget = path.join(currentDataDir, 'fonts');
+        try {
+          await fs.access(fontsSource);
+          await copyDirectoryWithProgress(fontsSource, fontsTarget);
+        } catch {
+          // 备份中可能没有字体
+        }
+        
+        // 恢复设置 (95% -> 100%)
+        sendBackupProgress({
+          stage: 'config',
+          percent: 95,
+          status: '正在恢复设置...'
+        });
+        
+        const configSource = path.join(tempDir, 'config', 'settings.json');
+        try {
+          await fs.access(configSource);
+          await fs.copyFile(configSource, CONFIG_FILE);
+        } catch {
+          // 备份中可能没有设置
+        }
+        
+        // 重新生成缩略图
+        sendBackupProgress({
+          stage: 'thumbnails',
+          percent: 95,
+          status: '正在重新生成缩略图...'
+        });
+        
+        await regenerateAllThumbnails((current, total, fileName) => {
+          const percent = 95 + (current / total) * 5;
+          sendBackupProgress({
+            stage: 'thumbnails',
+            percent: Math.round(percent),
+            status: '正在重新生成缩略图...',
+            detail: `${current}/${total} ${fileName || ''}`
+          });
+        });
+        
+        // 完成
+        sendBackupProgress({
+          stage: 'complete',
+          percent: 100,
+          status: '导入完成！'
+        });
+        
+        return { 
+          success: true, 
+          manifest,
+          oldDataDir: backupDir
+        };
+      } catch (error) {
+        // 恢复失败，尝试回滚
+        logError('Main', 'Restore failed, attempting rollback:', error);
+        sendBackupProgress({
+          stage: 'error',
+          percent: 0,
+          status: '导入失败，正在回滚...',
+          detail: '正在恢复到原数据...'
+        });
+        await removeDirectory(currentDataDir);
+        await fs.rename(backupDir, currentDataDir);
+        throw new Error('导入失败，已自动回滚到原数据');
+      }
+    } finally {
+      // 清理临时目录
+      await removeDirectory(tempDir);
+    }
+  } catch (error) {
+    logError('Main', 'Import full backup error:', error);
+    sendBackupProgress({
+      stage: 'error',
+      percent: 0,
+      status: '导入失败',
+      detail: error.message
+    });
     throw error;
   }
 });
