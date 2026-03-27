@@ -1890,7 +1890,10 @@ ipcMain.handle('import-full-backup', async () => {
         percent: 30,
         status: '正在备份当前数据...'
       });
-      
+
+      // 关闭数据库连接以释放文件锁
+      db.closeDatabase();
+
       const timestamp = getFormattedLocalTimeToSecond().replace(/[:\s]/g, '-');
       const backupDir = `${currentDataDir}_${timestamp}`;
       await fs.rename(currentDataDir, backupDir);
