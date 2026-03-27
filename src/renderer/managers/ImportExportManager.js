@@ -102,45 +102,6 @@ export class ImportExportManager {
   }
 
   /**
-   * 导出图像
-   * @returns {Promise<boolean>} 是否成功
-   */
-  async exportImages() {
-    if (this.isExporting) {
-      this.app.showToast?.('导出正在进行中，请稍候', 'warning');
-      return false;
-    }
-
-    this.isExporting = true;
-
-    try {
-      const images = this.app.imagePanelManager?.images || [];
-
-      if (images.length === 0) {
-        this.app.showToast?.('没有可导出的图像', 'warning');
-        return false;
-      }
-
-      const result = await window.electronAPI.exportImages(images);
-
-      if (result && result.success) {
-        this.app.showToast?.(`成功导出 ${result.count || images.length} 个图像`, 'success');
-        return true;
-      } else if (result && result.cancelled) {
-        return false;
-      } else {
-        throw new Error(result?.message || '导出失败');
-      }
-    } catch (error) {
-      window.electronAPI.logError('ImportExportManager.js', 'Failed to export images:', error);
-      this.app.showToast?.('导出失败：' + error.message, 'error');
-      return false;
-    } finally {
-      this.isExporting = false;
-    }
-  }
-
-  /**
    * 导出孤儿文件
    * @returns {Promise<boolean>} 是否成功
    */
@@ -188,80 +149,6 @@ export class ImportExportManager {
       return false;
     } finally {
       this.isExporting = false;
-    }
-  }
-
-  /**
-   * 备份所有数据
-   * @returns {Promise<boolean>} 是否成功
-   */
-  async backupAllData() {
-    if (this.isExporting) {
-      this.app.showToast?.('备份正在进行中，请稍候', 'warning');
-      return false;
-    }
-
-    this.isExporting = true;
-
-    try {
-      const result = await window.electronAPI.backupAllData();
-
-      if (result && result.success) {
-        this.app.showToast?.('数据备份成功', 'success');
-        return true;
-      } else if (result && result.cancelled) {
-        return false;
-      } else {
-        throw new Error(result?.message || '备份失败');
-      }
-    } catch (error) {
-      window.electronAPI.logError('ImportExportManager.js', 'Failed to backup data:', error);
-      this.app.showToast?.('备份失败：' + error.message, 'error');
-      return false;
-    } finally {
-      this.isExporting = false;
-    }
-  }
-
-  /**
-   * 从备份恢复数据
-   * @returns {Promise<boolean>} 是否成功
-   */
-  async restoreFromBackup() {
-    if (this.isImporting) {
-      this.app.showToast?.('恢复正在进行中，请稍候', 'warning');
-      return false;
-    }
-
-    this.isImporting = true;
-
-    try {
-      const result = await window.electronAPI.restoreFromBackup();
-
-      if (result && result.success) {
-        // 刷新所有数据
-        if (this.app.promptPanelManager) {
-          await this.app.promptPanelManager.loadData();
-          await this.app.promptPanelManager.renderView();
-        }
-        if (this.app.imagePanelManager) {
-          await this.app.imagePanelManager.loadData();
-          await this.app.imagePanelManager.renderView();
-        }
-
-        this.app.showToast?.('数据恢复成功', 'success');
-        return true;
-      } else if (result && result.cancelled) {
-        return false;
-      } else {
-        throw new Error(result?.message || '恢复失败');
-      }
-    } catch (error) {
-      window.electronAPI.logError('ImportExportManager.js', 'Failed to restore data:', error);
-      this.app.showToast?.('恢复失败：' + error.message, 'error');
-      return false;
-    } finally {
-      this.isImporting = false;
     }
   }
 
