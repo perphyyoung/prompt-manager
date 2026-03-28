@@ -34,6 +34,14 @@ export class Constants {
     SAFE: 'safe',
     NSFW: 'nsfw'
   });
+
+  // 字体大小设置
+  static FontSize = Object.freeze({
+    MIN: 0.8,
+    MAX: 1.3,
+    STEP: 0.1,
+    DEFAULT: 1
+  });
   static UNSAFE_TAG = '敏感';
   static NO_TAG_TAG = '无标';
 
@@ -96,6 +104,7 @@ export class Constants {
 
     // 字体
     FONT_FAMILY: 'fontFamily',
+    FONT_SIZE_SCALE: 'fontSizeScale',
 
     // 视图
     VIEW_MODE: 'viewMode',

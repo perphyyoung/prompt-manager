@@ -48,6 +48,12 @@ export class SettingsManager {
       this.setFontFamily(savedFont, false);
     }
 
+    // 加载字体大小设置
+    const savedFontSize = localStorage.getItem(Constants.LocalStorageKey.FONT_SIZE_SCALE);
+    if (savedFontSize) {
+      this.setFontSizeScale(parseFloat(savedFontSize), false);
+    }
+
     // 加载视图模式到 app
     const savedViewMode = localStorage.getItem(Constants.LocalStorageKey.VIEW_MODE);
     if (savedViewMode && this.app) {
@@ -99,6 +105,25 @@ export class SettingsManager {
         if (customFontSelect.value) {
           this.setFontFamily(customFontSelect.value, true);
         }
+      });
+    }
+
+    // 绑定字体大小按钮事件
+    const fontSizeDecrease = document.getElementById('fontSizeDecrease');
+    const fontSizeIncrease = document.getElementById('fontSizeIncrease');
+    const fontSizeValue = document.getElementById('fontSizeValue');
+
+    if (fontSizeDecrease && fontSizeIncrease && fontSizeValue) {
+      // 初始化显示值
+      const savedScale = this.getFontSizeScale();
+      fontSizeValue.textContent = `${Math.round(savedScale * 100)}%`;
+
+      fontSizeDecrease.addEventListener('click', () => {
+        this.adjustFontSize(-Constants.FontSize.STEP, fontSizeValue);
+      });
+
+      fontSizeIncrease.addEventListener('click', () => {
+        this.adjustFontSize(Constants.FontSize.STEP, fontSizeValue);
       });
     }
   }
@@ -370,6 +395,52 @@ export class SettingsManager {
    */
   getFontFamily() {
     return localStorage.getItem(Constants.LocalStorageKey.FONT_FAMILY) || 'system-ui';
+  }
+
+  /**
+   * 设置字体大小缩放比例
+   * @param {number} scale - 缩放比例 (0.8 - 1.3)
+   * @param {boolean} showToast - 是否显示提示
+   */
+  setFontSizeScale(scale, showToast = true) {
+    const clampedScale = Math.max(Constants.FontSize.MIN, Math.min(Constants.FontSize.MAX, scale));
+    const root = document.documentElement;
+    root.style.setProperty('--font-size-scale', clampedScale);
+
+    if (showToast) {
+      window.toastService?.success(`字体大小已调整为 ${Math.round(clampedScale * 100)}%`);
+    }
+  }
+
+  /**
+   * 获取当前字体大小缩放比例
+   * @returns {number}
+   */
+  getFontSizeScale() {
+    const saved = localStorage.getItem(Constants.LocalStorageKey.FONT_SIZE_SCALE);
+    return saved ? parseFloat(saved) : Constants.FontSize.DEFAULT;
+  }
+
+  /**
+   * 调整字体大小
+   * @param {number} delta - 调整量 (正数增大，负数减小)
+   * @param {HTMLElement} displayElement - 显示当前值的元素
+   * @private
+   */
+  adjustFontSize(delta, displayElement) {
+    const currentScale = this.getFontSizeScale();
+    const newScale = Math.max(
+      Constants.FontSize.MIN,
+      Math.min(
+        Constants.FontSize.MAX,
+        Math.round((currentScale + delta) * 10) / 10
+      )
+    );
+    if (newScale !== currentScale) {
+      this.setFontSizeScale(newScale);
+      displayElement.textContent = `${Math.round(newScale * 100)}%`;
+      localStorage.setItem(Constants.LocalStorageKey.FONT_SIZE_SCALE, newScale.toString());
+    }
   }
 
   /**
