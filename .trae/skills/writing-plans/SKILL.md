@@ -18,6 +18,32 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 **Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
 - (User preferences for plan location override this default)
 
+## Project-Specific Requirements
+
+The following requirements from project rules must be followed in every plan:
+
+1. **Unit Testing**: After code changes, all involved methods (including new and called ones) need unit tests. Only test the modified parts, not all unit tests.
+
+2. **Caching**: New caching should uniformly use the implemented `CacheManager` class. If the feature has special requirements, ask the user if a custom cache class is needed.
+
+3. **Multiple Approaches**: Each time a plan is given, provide at least two different implementation approaches and compare their pros and cons.
+
+4. **Approach Combination**: When approaches are complementary, give combination recommendations.
+
+5. **User Choice**: During implementation, if multiple approaches are available, ask the user which one to choose and execute accordingly. Do not only consider the simple approach.
+
+6. **Quality Factors**: When giving implementation plans, consider maintainability, scalability, performance, etc. Do not only consider current requirements.
+
+7. **Numbered Options**: Do not use "or" in plans. If there are multiple options, list them with numbers and give brief explanations.
+
+8. **No PowerShell**: Do not use PowerShell for replacements. Use JS replacements instead.
+
+9. **No Code Changes Without Approval**: When the user has not entered "modify" or "implement", do not immediately change code. Only output ideas for preparation. Code blocks are not necessary unless required.
+
+10. **Dead Code Check**: After the plan is completed, check for unused variables, functions, classes, etc. Confirm whether they need to be deleted.
+
+11. **Industry Standard Check**: If the user's requirements are inconsistent with industry standard solutions, remind the user to confirm if they really need to implement it this way.
+
 ## Scope Check
 
 If the spec covers multiple independent subsystems, it should have been broken into sub-project specs during brainstorming. If it wasn't, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
@@ -56,6 +82,12 @@ This structure informs the task decomposition. Each task should produce self-con
 **Architecture:** [2-3 sentences about approach]
 
 **Tech Stack:** [Key technologies/libraries]
+
+**Approaches Considered:**
+1. [Approach 1 name] - [Brief description and pros/cons]
+2. [Approach 2 name] - [Brief description and pros/cons]
+
+**Selected Approach:** [Which one and why]
 
 ---
 ```
@@ -118,6 +150,7 @@ Every step must contain the actual content an engineer needs. These are **plan f
 - Complete code in every step — if a step changes code, show the code
 - Exact commands with expected output
 - DRY, YAGNI, TDD, frequent commits
+- Follow project-specific requirements listed above
 
 ## Self-Review
 
@@ -128,6 +161,12 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 **2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them.
 
 **3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
+
+**4. Approach comparison:** Did you provide at least two approaches with pros/cons comparison as required?
+
+**5. Test coverage:** Did you include unit test steps for all modified methods?
+
+**6. Dead code check:** Will the implementation produce unused variables, functions, or classes?
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 

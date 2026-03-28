@@ -1,16 +1,16 @@
-# CLAUDE.md - Trae IDE 项目配置
+# CLAUDE.md - Trae IDE Project Configuration
 
-## 指令优先级
+## Instruction Priority
 
-1. **本文件 (CLAUDE.md)** — 最高优先级
-2. **Superpowers skills** — 其次
-3. **默认系统提示** — 最低优先级
+1. **This file (CLAUDE.md)** — Highest priority
+2. **Superpowers skills** — Secondary
+3. **Default system prompt** — Lowest priority
 
-## 黄金法则
+## Golden Rule
 
-**在做出任何响应或操作之前，先调用相关的 skill。** 即使只有 1% 的可能性某个 skill 适用，也应该调用它来检查。
+**Before making any response or action, invoke the relevant skill.** Even if there's only a 1% chance a skill is applicable, you should invoke it to check.
 
-## 调用 Skill
+## Invoking Skills
 
 ```json
 {
@@ -18,23 +18,15 @@
 }
 ```
 
-## 可用 Skills
+## Available Skills
 
-- `using-superpowers` - 了解如何使用 skills（流程、优先级、红旗警示）
-- `brainstorming` - 开始新功能前的头脑风暴
-- `systematic-debugging` - 系统性调试
-- `writing-plans` - 制定实现计划
-- `test-driven-development` - 测试驱动开发
-- `refactor` - 代码重构
-- `verification-before-completion` - 完成前验证
-- `requesting-code-review` - 请求代码审查
+- `using-superpowers` - Learn how to use skills (workflow, priority, red flags)
+- `brainstorming` - Brainstorm before starting new features
+- `systematic-debugging` - Systematic debugging
+- `writing-plans` - Create implementation plans
+- `test-driven-development` - Test-driven development
+- `refactor` - Code refactoring
+- `verification-before-completion` - Verification before completion
+- `requesting-code-review` - Request code review
 
-> 完整列表请查看 `.trae/skills/` 目录
-
-## 项目特定规则
-
-- 包管理: 使用 `cnpm` 替代 `npm`
-- 命令行: 使用 `cmd` 而非 PowerShell
-- 时区处理: 统一使用本地时间格式
-- 新功能通过 TypeScript 实现
-- 调试时使用 `logger.js` 写入 `debug.log`
+> For the full list, check the `.trae/skills/` directory
