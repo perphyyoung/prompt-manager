@@ -179,13 +179,10 @@ async function generateThumbnail(imagePath, storedName, subDir = '') {
     // 检查缩略图是否已存在
     try {
       await fs.access(thumbnailPath);
-      // 计算现有缩略图的 MD5
-      const thumbnailMD5 = await calculateFileMD5(thumbnailPath);
       return {
         thumbnailName,
         thumbnailPath,
-        relativePath: subDir ? 'thumbnails/' + subDir + '/' + thumbnailName : 'thumbnails/' + thumbnailName,
-        thumbnailMD5
+        relativePath: subDir ? 'thumbnails/' + subDir + '/' + thumbnailName : 'thumbnails/' + thumbnailName
       };
     } catch {
       // 缩略图不存在，需要生成
@@ -197,14 +194,10 @@ async function generateThumbnail(imagePath, storedName, subDir = '') {
       .jpeg({ quality: 80 })
       .toFile(thumbnailPath);
 
-    // 计算缩略图 MD5
-    const thumbnailMD5 = await calculateFileMD5(thumbnailPath);
-
     return {
       thumbnailName,
       thumbnailPath,
-      relativePath: subDir ? 'thumbnails/' + subDir + '/' + thumbnailName : 'thumbnails/' + thumbnailName,
-      thumbnailMD5
+      relativePath: subDir ? 'thumbnails/' + subDir + '/' + thumbnailName : 'thumbnails/' + thumbnailName
     };
   } catch (error) {
     logError('Main', 'Failed to generate thumbnail:', error);
@@ -261,8 +254,7 @@ async function regenerateAllThumbnails(onProgress = null, concurrency = 5) {
           // 收集更新数据，稍后批量更新
           updates.push({
             id: image.id,
-            thumbnailPath: thumbnailInfo.relativePath,
-            thumbnailMD5: thumbnailInfo.thumbnailMD5
+            thumbnailPath: thumbnailInfo.relativePath
           });
           return { success: true, image };
         } else {
@@ -370,7 +362,6 @@ async function saveImageFile(sourcePath, fileName) {
     relativePath: 'images/' + yearMonth + '/' + uniqueName,
     thumbnailPath: thumbnailInfo ? thumbnailInfo.relativePath : null,
     md5: sourceMD5,
-    thumbnailMD5: thumbnailInfo ? thumbnailInfo.thumbnailMD5 : null,
     width: width,
     height: height,
     fileSize: fileSize

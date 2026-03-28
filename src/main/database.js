@@ -90,7 +90,6 @@ async function createTables() {
       relative_path TEXT NOT NULL,
       thumbnail_path TEXT,
       md5 TEXT UNIQUE,
-      thumbnail_md5 TEXT,
       width INTEGER,
       height INTEGER,
       file_size INTEGER DEFAULT 0,
@@ -1469,8 +1468,8 @@ async function updateImage(id, updates) {
 
 /**
  * 批量更新图像缩略图信息
- * 用于导入备份后批量更新缩略图路径和 MD5
- * @param {Array<{id: string, thumbnailPath: string, thumbnailMD5: string}>} updates - 更新列表
+ * 用于导入备份后批量更新缩略图路径
+ * @param {Array<{id: string, thumbnailPath: string}>} updates - 更新列表
  */
 async function updateImagesBatch(updates) {
   if (!updates || updates.length === 0) {
@@ -1481,13 +1480,13 @@ async function updateImagesBatch(updates) {
 
   return runInTransaction(async () => {
     const stmt = db.prepare(
-      'UPDATE images SET thumbnail_path = ?, thumbnail_md5 = ?, updated_at = ? WHERE id = ?'
+      'UPDATE images SET thumbnail_path = ?, updated_at = ? WHERE id = ?'
     );
 
     try {
       for (const update of updates) {
         await new Promise((resolve, reject) => {
-          stmt.run(update.thumbnailPath, update.thumbnailMD5, now, update.id, (err) => {
+          stmt.run(update.thumbnailPath, now, update.id, (err) => {
             if (err) reject(err);
             else resolve();
           });
@@ -1535,7 +1534,6 @@ async function addImage(image) {
     relativePath,
     thumbnailPath,
     md5,
-    thumbnailMD5,
     width,
     height,
     fileSize
@@ -1544,9 +1542,9 @@ async function addImage(image) {
   const now = localTime();
 
   await run(
-    `INSERT INTO images (id, file_name, stored_name, relative_path, thumbnail_path, md5, thumbnail_md5, width, height, file_size, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, fileName, storedName, relativePath, thumbnailPath, md5, thumbnailMD5, width || null, height || null, fileSize || 0, now, now]
+    `INSERT INTO images (id, file_name, stored_name, relative_path, thumbnail_path, md5, width, height, file_size, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, fileName, storedName, relativePath, thumbnailPath, md5, width || null, height || null, fileSize || 0, now, now]
   );
 
   return getImageById(id);
