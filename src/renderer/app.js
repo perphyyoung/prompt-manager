@@ -1259,7 +1259,8 @@ class PromptManager {
       // 获取所有数据（包括已删除的）
       const prompts = await window.electronAPI.getPrompts();
       const allImages = await window.electronAPI.getAllImagesForStats();
-      const tagGroups = await window.electronAPI.getPromptTagGroups();
+      const promptTagGroups = await window.electronAPI.getPromptTagGroups();
+      const imageTagGroups = await window.electronAPI.getImageTagGroups();
 
       // 根据当前视图模式过滤数据（safe 模式只显示 isSafe=1 的项目）
       const isSafeMode = this.viewMode === 'safe';
@@ -1269,31 +1270,30 @@ class PromptManager {
       // 提示词统计（基于过滤后的数据）
       const totalPrompts = filteredPrompts.length;
       const deletedPrompts = filteredPrompts.filter(p => p.isDeleted).length;
-      const activePrompts = totalPrompts - deletedPrompts;
-      const promptsWithImages = filteredPrompts.filter(p => p.images && p.images.length > 0).length;
-      const totalPromptTags = tagGroups.reduce((sum, group) => sum + (group.tags ? group.tags.length : 0), 0);
+      const favoritePrompts = filteredPrompts.filter(p => p.isFavorite && !p.isDeleted).length;
+      const promptsWithImages = filteredPrompts.filter(p => p.images && p.images.length > 0 && !p.isDeleted).length;
+      const totalPromptTags = promptTagGroups.reduce((sum, group) => sum + (group.tags ? group.tags.length : 0), 0);
 
       // 图像统计（基于过滤后的数据）
       const totalImages = filteredImages.length;
       const deletedImages = filteredImages.filter(i => i.isDeleted).length;
-      const activeImages = totalImages - deletedImages;
-      const favoriteImages = filteredImages.filter(i => i.isFavorite).length;
-      const referencedImages = filteredImages.filter(i => i.promptRefs && i.promptRefs.length > 0).length;
-      const unreferencedImages = activeImages - referencedImages;
-      const totalImageTags = filteredImages.reduce((sum, img) => sum + (img.tags ? img.tags.length : 0), 0);
+      const favoriteImages = filteredImages.filter(i => i.isFavorite && !i.isDeleted).length;
+      const referencedImages = filteredImages.filter(i => i.promptRefs && i.promptRefs.length > 0 && !i.isDeleted).length;
+      const totalImageTags = imageTagGroups.reduce((sum, group) => sum + (group.tags ? group.tags.length : 0), 0);
 
       // 更新 DOM
       this.updateStatElement('statPromptsTotal', totalPrompts);
       this.updateStatElement('statPromptsDeleted', deletedPrompts);
-      this.updateStatElement('statPromptsActive', activePrompts);
+      this.updateStatElement('statPromptsFavorite', favoritePrompts);
       this.updateStatElement('statPromptsWithImages', promptsWithImages);
-      this.updateStatElement('statPromptTagGroups', tagGroups.length);
+      this.updateStatElement('statPromptTagGroups', promptTagGroups.length);
       this.updateStatElement('statPromptTagsTotal', totalPromptTags);
 
       this.updateStatElement('statImagesTotal', totalImages);
       this.updateStatElement('statImagesDeleted', deletedImages);
       this.updateStatElement('statImagesFavorite', favoriteImages);
-      this.updateStatElement('statImagesUnreferenced', unreferencedImages);
+      this.updateStatElement('statImagesReferenced', referencedImages);
+      this.updateStatElement('statImageTagGroups', imageTagGroups.length);
       this.updateStatElement('statImageTagsTotal', totalImageTags);
     } catch (error) {
       window.electronAPI.logError('App', 'Failed to render statistics:', error);
