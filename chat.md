@@ -25,11 +25,15 @@ composes 是 CSS Modules 语法, 当前项目怎样引入
 全面分析当前项目, 有没有什么常见的隐患, 给出优化方案
 排查上步所有可能的问题, 给出修改方案
 根据实际 js/ts 文件结构, 更新 项目文件树.md, 不需要添加最近修改章节
-通过 google-code-review skill 审查本地变更, 使用 `git diff > git-diff.log`, 不要用交互式的 `git diff`
-我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log
 根据 chat.md 的第 12 行以及 git-diff.log, 更新 readme.md 和 change.md, 并总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
-根据 git-diff.log, 总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 标签系统 -> 依赖注入; IPC 服务类
+我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
+
+## 20260328
+
+font-family 也参考 font-size 的设计, 应该全局只需要一个字体吧, 给出统一的方案
+现在已经有了字体选择, 默认的字体大小是多少, 在设置里添加 调节字体大小 的功能, 也在字体行, 不额外占空间; 给出方案
+数据库中, 包括 thumbnail_md5,  还有 哪些字段 没有实际用到, 可以建议删除, 给出方案
 
 ## 20260327
 

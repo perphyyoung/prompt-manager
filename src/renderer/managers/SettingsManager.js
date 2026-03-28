@@ -381,7 +381,9 @@ export class SettingsManager {
    */
   setFontFamily(fontFamily, showToast = true) {
     const root = document.documentElement;
-    root.style.setProperty('--font-family', fontFamily);
+    // 添加回退字体栈，确保自定义字体加载失败时有备用字体
+    const fontStack = `${fontFamily}, ${Constants.FontFamily.FALLBACK}`;
+    root.style.setProperty('--font-family', fontStack);
     localStorage.setItem(Constants.LocalStorageKey.FONT_FAMILY, fontFamily);
 
     if (showToast) {
@@ -394,7 +396,8 @@ export class SettingsManager {
    * @returns {string}
    */
   getFontFamily() {
-    return localStorage.getItem(Constants.LocalStorageKey.FONT_FAMILY) || 'system-ui';
+    return localStorage.getItem(Constants.LocalStorageKey.FONT_FAMILY)
+      || Constants.FontFamily.DEFAULT;
   }
 
   /**

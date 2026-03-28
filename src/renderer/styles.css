@@ -59,6 +59,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* 确保所有元素继承字体 */
+body * {
+  font-family: var(--font-family);
+}
+
 .app {
   display: flex;
   height: 100vh;
@@ -73,7 +78,7 @@ body {
   flex-direction: column;
   padding: 24px;
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.02);
-  font-family: inherit;
+
 }
 
 .sidebar-header {
@@ -169,7 +174,7 @@ body {
   border-radius: var(--radius);
   font-size: var(--font-size-base);
   font-weight: 600;
-  font-family: inherit;
+
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -326,7 +331,7 @@ body {
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   font-size: var(--font-size-base);
-  font-family: inherit;
+
   outline: none;
   transition: all 0.2s;
   background: white;
@@ -483,7 +488,7 @@ body {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
-  font-family: inherit;
+
 }
 
 /* 工具栏按钮 - 使用flex自动分配宽度 */
@@ -600,7 +605,7 @@ body {
   padding: 10px 16px;
   font-size: var(--font-size-base);
   font-weight: 500;
-  font-family: inherit;
+
   color: var(--text-primary);
   background: var(--bg-color);
   border: 1px solid var(--border-color);
@@ -642,7 +647,7 @@ body {
   border: none;
   background: transparent;
   font-size: var(--font-size-sm);
-  font-family: inherit;
+
   color: var(--text-primary);
   outline: none;
 }
@@ -773,7 +778,7 @@ body {
 .tag-filter-title {
   font-size: var(--font-size-base);
   font-weight: 600;
-  font-family: inherit;
+
   color: var(--text-primary);
   flex-shrink: 0;
 }
@@ -886,7 +891,7 @@ body {
   background: var(--bg-color);
   color: var(--text-primary);
   font-size: 12px;
-  font-family: inherit;
+
   cursor: pointer;
   outline: none;
 }
@@ -926,7 +931,7 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 12px;
-  font-family: inherit;
+
   white-space: nowrap;
 }
 
@@ -939,7 +944,7 @@ body {
 
 .tag-filter-clear {
   font-size: 10px;
-  font-family: inherit;
+
   color: var(--danger-color, #ff4d4f);
   background: none;
   border: 1px solid var(--danger-color, #ff4d4f);
@@ -984,7 +989,7 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 20px;
   font-size: var(--font-size-sm);
-  font-family: inherit;
+
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -2292,7 +2297,7 @@ body {
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   font-size: var(--font-size-base);
-  font-family: inherit;
+
   outline: none;
   transition: border-color 0.2s;
   background: var(--bg-color);
@@ -3498,7 +3503,7 @@ body {
   color: var(--text-primary);
   font-size: var(--font-size-sm);
   resize: vertical;
-  font-family: inherit;
+
 }
 
 .note-textarea:focus {
@@ -3519,7 +3524,7 @@ body {
   background: var(--bg-secondary);
   color: var(--text-primary);
   font-size: var(--font-size-sm);
-  font-family: inherit;
+
   transition: border-color 0.2s;
 }
 

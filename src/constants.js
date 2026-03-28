@@ -42,6 +42,12 @@ export class Constants {
     STEP: 0.1,
     DEFAULT: 1
   });
+
+  // 字体设置
+  static FontFamily = Object.freeze({
+    DEFAULT: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    FALLBACK: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  });
   static UNSAFE_TAG = '敏感';
   static NO_TAG_TAG = '无标';
 
