@@ -1798,6 +1798,9 @@ class PromptManager {
 const app = new PromptManager();
 window.app = app;
 
+// 暴露 DialogService 供 main 进程调用
+window.dialogService = DialogService;
+
 // DOM 加载完成后初始化
 async function initApp() {
   await app.init();

@@ -20,8 +20,14 @@ let db = null;
 async function initDatabase(dataDir) {
   // 确保数据目录存在
   try {
-    await fs.access(dataDir);
+    const stats = await fs.stat(dataDir);
+    if (!stats.isDirectory()) {
+      // 如果路径存在但不是目录，删除它
+      await fs.unlink(dataDir);
+      await fs.mkdir(dataDir, { recursive: true });
+    }
   } catch {
+    // 目录不存在，创建它
     await fs.mkdir(dataDir, { recursive: true });
   }
 

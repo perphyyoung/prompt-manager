@@ -1251,6 +1251,50 @@
     </div>
   </div>
 
+  <!-- 数据目录迁移对话框 Modal -->
+  <div id="migrateModal" class="modal">
+    <div class="modal-content migrate-dialog">
+      <div class="modal-header">
+        <h2 id="migrateModalTitle">更改数据目录</h2>
+        <button class="close-btn" id="closeMigrateModal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="migrate-paths">
+          <div class="migrate-path-item">
+            <span class="path-label">当前目录：</span>
+            <span class="path-value" id="migrateOldPath"></span>
+          </div>
+          <div class="migrate-path-item">
+            <span class="path-label">新目录：</span>
+            <span class="path-value" id="migrateNewPath"></span>
+          </div>
+        </div>
+        <div class="migrate-options">
+          <button type="button" class="migrate-option-btn migrate-option-primary" data-action="copy">
+            <div class="option-content">
+              <div class="option-title">复制当前数据</div>
+              <div class="option-desc">将清空新目录，然后把当前数据复制到新目录</div>
+            </div>
+          </button>
+          <button type="button" class="migrate-option-btn migrate-option-secondary" data-action="use">
+            <div class="option-content">
+              <div class="option-title">直接使用新目录</div>
+              <div class="option-desc">不复制数据，直接使用新目录中的现有数据</div>
+            </div>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer migrate-footer">
+        <button type="button" class="btn btn-secondary" id="migrateCancelBtn">取消</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 新建标签输入框 Modal -->
   <div id="inputModal" class="modal">
     <div class="modal-content-small">

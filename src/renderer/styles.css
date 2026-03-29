@@ -2199,6 +2199,115 @@ body * {
   color: var(--warning-color, #f59e0b);
 }
 
+/* ==================== 数据目录迁移对话框样式 ==================== */
+.migrate-dialog {
+  max-width: 480px;
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.migrate-paths {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.migrate-path-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.migrate-path-item:last-child {
+  margin-bottom: 0;
+}
+
+.path-label {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.path-value {
+  color: var(--text-primary);
+  word-break: break-all;
+  font-family: monospace;
+}
+
+.migrate-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.migrate-option-btn {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+
+/* 主要选项 - 复制数据 */
+.migrate-option-primary {
+  background: var(--primary-light);
+  border: 2px solid var(--primary-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.migrate-option-primary:hover {
+  background: var(--primary-color);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.migrate-option-primary:hover .option-title,
+.migrate-option-primary:hover .option-desc {
+  color: white;
+}
+
+/* 次要选项 - 直接使用 */
+.migrate-option-secondary {
+  background: var(--card-bg);
+  border: 2px solid var(--border-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.migrate-option-secondary:hover {
+  border-color: var(--primary-color);
+  background: var(--primary-light);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.migrate-option-btn .option-content {
+  flex: 1;
+}
+
+.migrate-option-btn .option-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.migrate-option-btn .option-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.migrate-footer {
+  justify-content: center;
+}
+
 /* 输入对话框底部按钮居中 */
 .input-modal-footer {
   justify-content: center;

@@ -14,19 +14,37 @@ import { promisify } from 'util';
 import * as db from './database.js';
 import { generatePromptId, generateImageId } from '../utils/idGenerator.js';
 import { getFormattedLocalTimeToSecond, getFormattedYearMonth, localTime } from '../utils/index.js';
-import { logInfo, logDebug, logError, logWarn } from './logger.js';
+import { logInfo, logDebug, logError, logWarn, initLogger } from './logger.js';
 import { Constants } from '../constants.js';
+import { copyDirectory, copyDirectoryWithProgress, calculateDirectorySize } from '../utils/FileUtils.js';
+import { ConfigManager } from './ConfigManager.js';
 
 const execAsync = promisify(exec);
+
+// 检测是否为生产环境（打包后的应用）
+// 打包后 __dirname 包含 app.asar，开发环境不包含
+const isProduction = __dirname.includes('app.asar');
+
+// 获取基础目录：生产环境使用 userData，开发环境使用项目根目录
+function getBaseDir(): string {
+  return isProduction ? app.getPath('userData') : path.join(__dirname, '..', '..');
+}
 
 // 项目根目录（基于 __dirname 反向推导：out/main/ -> 项目根目录）
 const ROOT_DIR = path.join(__dirname, '..', '..');
 
-// 配置文件路径（项目根目录）
-const CONFIG_FILE = path.join(ROOT_DIR, 'config.json');
+// 配置文件路径（生产环境使用应用安装目录，开发环境使用项目根目录）
+const CONFIG_FILE = isProduction
+  ? path.join(path.dirname(app.getPath('exe')), 'config.json')
+  : path.join(ROOT_DIR, 'config.json');
 
-// 默认数据目录（项目根目录）
-const DEFAULT_DATA_DIR = path.join(ROOT_DIR, 'py-data');
+// 默认数据目录（生产环境使用应用安装目录下的 data 文件夹，开发环境使用项目根目录）
+const DEFAULT_DATA_DIR = isProduction
+  ? path.join(path.dirname(app.getPath('exe')), 'data')
+  : path.join(ROOT_DIR, 'py-data');
+
+// 初始化配置管理器
+const configManager = new ConfigManager(CONFIG_FILE, isProduction ? path.dirname(app.getPath('exe')) : ROOT_DIR);
 
 let mainWindow;
 let tray = null;
@@ -55,31 +73,51 @@ parseArgs();
 /**
  * 加载应用配置
  * 从 config.json 读取数据目录设置
+ * @returns {Promise<{rootDir: string, dataDir: string}>} 配置对象
  */
 async function loadConfig() {
-  try {
-    const data = await fs.readFile(CONFIG_FILE, 'utf8');
-    const config = JSON.parse(data);
-    if (config.dataDir) {
-      // 判断是否为绝对路径
-      if (path.isAbsolute(config.dataDir)) {
-        currentDataDir = config.dataDir;
-      } else {
-        // 相对路径：相对于项目根目录
-        currentDataDir = path.resolve(ROOT_DIR, config.dataDir);
-      }
-    }
-  } catch {
-    // 使用默认配置
-  }
+  const config = await configManager.loadConfig();
+  currentDataDir = config.dataDir;
+  return config;
 }
 
 /**
  * 保存应用配置
  * @param {Object} config - 配置对象
+ * @param {boolean} merge - 是否合并现有配置
  */
-async function saveConfig(config) {
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
+async function saveConfig(config, merge = false) {
+  await configManager.saveConfig(config, merge);
+  if (config.dataDir) {
+    currentDataDir = config.dataDir;
+  }
+}
+
+/**
+ * 迁移数据到新的数据目录
+ * @param {string} oldDir - 旧数据目录
+ * @param {string} newDir - 新数据目录
+ * @returns {Promise<boolean>} 是否成功
+ */
+async function migrateData(oldDir, newDir) {
+  try {
+    // 检查旧目录是否存在
+    try {
+      await fs.access(oldDir);
+    } catch {
+      // 旧目录不存在，无需迁移
+      return true;
+    }
+
+    // 清空新目录并复制数据
+    await fs.rm(newDir, { recursive: true, force: true });
+    await fs.mkdir(newDir, { recursive: true });
+    await copyDirectory(oldDir, newDir);
+    return true;
+  } catch (err) {
+    logError('Main', 'Data migration failed', err);
+    return false;
+  }
 }
 
 /**
@@ -429,6 +467,7 @@ function createWindow() {
     height: 800,
     minWidth: 800,
     minHeight: 600,
+    title: 'PromptManager',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -437,7 +476,7 @@ function createWindow() {
     frame: true,
     show: false,
     fullscreenable: true,
-    icon: path.join(__dirname, '..', '..', 'assets', 'icon.png')
+    icon: path.join(__dirname, '..', '..', 'assets', 'icon.ico')
   });
 
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
@@ -503,7 +542,7 @@ function relaunchApp(oldDataDir) {
  */
 function createTray() {
   // 从文件加载图标
-  const iconPath = path.join(__dirname, '..', '..', 'assets', 'icon.png');
+  const iconPath = path.join(__dirname, '..', '..', 'assets', 'icon.ico');
   tray = new Tray(iconPath);
 
   const contextMenu = Menu.buildFromTemplate([
@@ -518,21 +557,8 @@ function createTray() {
     },
     {
       label: '重启',
-      click: async () => {
-        const { exec } = await import('child_process');
-        const cwd = process.cwd();
-        exec('npm run build', { cwd }, (error, stdout, stderr) => {
-          if (error) {
-            dialog.showMessageBox(mainWindow, {
-              type: 'error',
-              title: '构建失败',
-              message: '构建失败，请检查代码错误',
-              detail: stderr || error.message
-            });
-            return;
-          }
-          relaunchApp();
-        });
+      click: () => {
+        relaunchApp();
       }
     },
     {
@@ -956,11 +982,37 @@ ipcMain.handle('select-data-path', async () => {
   if (!result.canceled && result.filePaths.length > 0) {
     const newPath = result.filePaths[0];
 
-    // 如果路径改变，更新配置
+    // 如果路径改变，处理数据目录变更
     if (newPath !== currentDataDir) {
+      const oldPath = currentDataDir;
+
+      // 显示迁移对话框
+      const migrateAction = await mainWindow.webContents.executeJavaScript(
+        `window.dialogService?.showMigrateDialog(${JSON.stringify(oldPath)}, ${JSON.stringify(newPath)})`
+      ).catch(() => null);
+
+      if (!migrateAction || migrateAction === 'cancel') {
+        // 用户取消或对话框调用失败
+        return null;
+      }
+
+      // 更新配置（使用 merge=true 保留现有字段）
       currentDataDir = newPath;
-      await saveConfig({ dataDir: newPath });
-      return newPath;
+      await saveConfig({ dataDir: newPath }, true);
+
+      // 迁移数据（如果用户选择复制）
+      if (migrateAction === 'copy') {
+        const success = await migrateData(oldPath, newPath);
+        if (!success) {
+          // 迁移失败或用户取消，恢复旧配置
+          currentDataDir = oldPath;
+          await saveConfig({ dataDir: oldPath }, true);
+          return null;
+        }
+      }
+
+      // 无论选择复制还是直接使用新目录，都重启应用
+      relaunchApp();
     }
   }
 
@@ -1333,33 +1385,6 @@ async function getBackupStats() {
 }
 
 /**
- * 递归复制目录
- * @param {string} source - 源目录
- * @param {string} target - 目标目录
- */
-async function copyDirectory(source, target) {
-  try {
-    await fs.access(source);
-  } catch {
-    return; // 源目录不存在
-  }
-  
-  await fs.mkdir(target, { recursive: true });
-  const entries = await fs.readdir(source, { withFileTypes: true });
-  
-  for (const entry of entries) {
-    const sourcePath = path.join(source, entry.name);
-    const targetPath = path.join(target, entry.name);
-    
-    if (entry.isDirectory()) {
-      await copyDirectory(sourcePath, targetPath);
-    } else {
-      await fs.copyFile(sourcePath, targetPath);
-    }
-  }
-}
-
-/**
  * 递归删除目录
  * @param {string} dir - 要删除的目录
  */
@@ -1634,46 +1659,6 @@ function sendBackupProgress(progress) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('backup-progress', progress);
   }
-}
-
-// 带进度报告的复制目录
-async function copyDirectoryWithProgress(source, target, options = {}) {
-  const { onProgress, totalSize = 0, baseProgress = 0, progressWeight = 1 } = options;
-  
-  try {
-    await fs.access(source);
-  } catch {
-    return { copiedCount: 0, copiedSize: 0 };
-  }
-  
-  await fs.mkdir(target, { recursive: true });
-  const entries = await fs.readdir(source, { withFileTypes: true });
-  
-  let copiedCount = 0;
-  let copiedSize = 0;
-  
-  for (const entry of entries) {
-    const sourcePath = path.join(source, entry.name);
-    const targetPath = path.join(target, entry.name);
-    
-    if (entry.isDirectory()) {
-      const result = await copyDirectoryWithProgress(sourcePath, targetPath, options);
-      copiedCount += result.copiedCount;
-      copiedSize += result.copiedSize;
-    } else {
-      const stats = await fs.stat(sourcePath);
-      await fs.copyFile(sourcePath, targetPath);
-      copiedCount++;
-      copiedSize += stats.size;
-      
-      if (onProgress && totalSize > 0) {
-        const fileProgress = (copiedSize / totalSize) * progressWeight;
-        onProgress(baseProgress + fileProgress, entry.name);
-      }
-    }
-  }
-  
-  return { copiedCount, copiedSize };
 }
 
 // 完整备份导出
@@ -2009,11 +1994,15 @@ app.on('second-instance', (event, commandLine, workingDirectory) => {
 });
 
 app.whenReady().then(async () => {
-  await loadConfig();
+  // 加载配置
+  const config = await loadConfig();
+
+  // 初始化日志系统
+  initLogger(config.rootDir);
+
   // 初始化数据库
   try {
     await db.initDatabase(currentDataDir);
-    // Database initialized
   } catch (err) {
     logError('Main', 'Failed to initialize database:', err);
   }
@@ -2041,7 +2030,7 @@ app.whenReady().then(async () => {
   });
 
   // 设置应用图标（Windows 任务栏）
-  const iconPath = path.join(__dirname, '..', '..', 'assets', 'icon.png');
+  const iconPath = path.join(__dirname, '..', '..', 'assets', 'icon.ico');
   try {
     await fs.access(iconPath);
     app.setAppUserModelId('com.promptmanager.app');
@@ -2054,6 +2043,7 @@ app.whenReady().then(async () => {
     // 图标不存在，忽略
   }
 
+  // 创建主窗口
   createWindow();
 });
 

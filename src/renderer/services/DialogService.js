@@ -168,6 +168,66 @@ export class DialogService {
     _buttonsBound = true;
   }
 
+  /**
+   * 显示数据目录迁移对话框
+   * @param {string} oldPath - 当前数据目录路径
+   * @param {string} newPath - 新数据目录路径
+   * @returns {Promise<'copy'|'use'|'cancel'>} 用户选择的操作
+   */
+  static async showMigrateDialog(oldPath, newPath) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('migrateModal');
+      const oldPathEl = document.getElementById('migrateOldPath');
+      const newPathEl = document.getElementById('migrateNewPath');
+      const closeBtn = document.getElementById('closeMigrateModal');
+      const cancelBtn = document.getElementById('migrateCancelBtn');
+      const optionBtns = modal?.querySelectorAll('.migrate-option-btn');
+
+      if (!modal) {
+        // 回退到原生对话框
+        const useCopy = confirm(`\u66f4\u6539\u6570\u636e\u76ee\u5f55\n\n\u5f53\u524d\uff1a${oldPath}\n\u65b0\uff1a${newPath}\n\n\u70b9\u51fb\u300c\u786e\u5b9a\u300d\u590d\u5236\u5f53\u524d\u6570\u636e\u5230\u65b0\u76ee\u5f55\uff0c\u70b9\u51fb\u300c\u53d6\u6d88\u300d\u4f7f\u7528\u65b0\u76ee\u5f55\u73b0\u6709\u6570\u636e`);
+        resolve(useCopy ? 'copy' : 'use');
+        return;
+      }
+
+      // 设置路径
+      if (oldPathEl) oldPathEl.textContent = oldPath;
+      if (newPathEl) newPathEl.textContent = newPath;
+
+      // 显示对话框
+      modal.style.display = 'flex';
+      _activeModals.add('migrateModal');
+
+      // 处理选项按钮点击
+      const handleOptionClick = (e) => {
+        const btn = e.currentTarget;
+        const action = btn.dataset.action;
+        cleanup();
+        resolve(action);
+      };
+
+      // 处理关闭/取消
+      const handleCancel = () => {
+        cleanup();
+        resolve('cancel');
+      };
+
+      // 清理函数
+      const cleanup = () => {
+        modal.style.display = 'none';
+        _activeModals.delete('migrateModal');
+        optionBtns?.forEach(btn => btn.removeEventListener('click', handleOptionClick));
+        closeBtn?.removeEventListener('click', handleCancel);
+        cancelBtn?.removeEventListener('click', handleCancel);
+      };
+
+      // 绑定事件
+      optionBtns?.forEach(btn => btn.addEventListener('click', handleOptionClick));
+      closeBtn?.addEventListener('click', handleCancel);
+      cancelBtn?.addEventListener('click', handleCancel);
+    });
+  }
+
   static async showConfirmDialogByConfig(config, data = null) {
     DialogService._bindButtonEvents();
 
