@@ -1,6 +1,8 @@
 # Custom files
+py-data*/
 tests/*
 *.diff
+*.db
 renderer/styles-*
 testing-playwright/*
 重构/*
@@ -51,14 +53,3 @@ coverage/
 # OS
 .DS_Store
 Thumbs.db
-
-# Application data
-py-data/
-py-data_*/
-*.json
-!package.json
-!config.json
-
-# Images
-images/
-thumbnails/
