@@ -28,6 +28,7 @@
 | **数据库** | SQLite3 | 轻量级本地存储，无需额外服务 |
 | **图像处理** | Sharp 0.33.0 | 高性能图像处理和缩略图生成 |
 | **架构模式** | ES Module + 模块化 | 清晰的依赖管理，支持 Tree Shaking |
+| **打包工具** | electron-builder | 生成 Windows 安装包和可执行文件 |
 
 ## 快速开始
 
@@ -60,6 +61,13 @@ start-hidden.vbs
 
 ```bash
 start-debug.bat
+```
+
+### 打包构建
+
+```bash
+# 构建 Windows MSI 安装包
+cnpm run dist:win:msi
 ```
 
 ## 架构亮点
