@@ -841,9 +841,9 @@ ipcMain.handle('get-prompt-tag-groups', async () => {
 });
 
 // 创建提示词标签组
-ipcMain.handle('create-prompt-tag-group', async (event, name, type, sortOrder) => {
+ipcMain.handle('create-prompt-tag-group', async (event, name, sortOrder) => {
   try {
-    return await db.createPromptTagGroup(name, type, sortOrder);
+    return await db.createPromptTagGroup(name, sortOrder);
   } catch (error) {
     logError('Main', 'Create prompt tag group error:', error);
     throw error;
@@ -1220,9 +1220,9 @@ ipcMain.handle('get-image-tag-groups', async () => {
 });
 
 // 创建图像标签组
-ipcMain.handle('create-image-tag-group', async (event, name, type, sortOrder) => {
+ipcMain.handle('create-image-tag-group', async (event, name, sortOrder) => {
   try {
-    return await db.createImageTagGroup(name, type, sortOrder);
+    return await db.createImageTagGroup(name, sortOrder);
   } catch (error) {
     logError('Main', 'Create image tag group error:', error);
     throw error;

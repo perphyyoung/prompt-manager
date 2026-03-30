@@ -32,6 +32,10 @@ cnpm run dist:win:nsis -> exe
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
 
+## 20260330
+
+/plan 检查所有的对话框是否符合 html 规范 -> 取消在左
+
 ## 20260329
 
 只考虑 windows, 如何打包使得生成的 exe 或 msi 文件大小最小? 结合项目实际回答

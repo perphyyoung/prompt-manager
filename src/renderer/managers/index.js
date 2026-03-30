@@ -25,7 +25,7 @@ export { DetailViewManager } from './DetailViewManager.js';
 export { PromptDetailManager } from './PromptDetailManager.js';
 export { ImageDetailManager } from './ImageDetailManager.js';
 export { ModalManager } from './ModalManager.js';
-export { TagGroupModalManager } from './TagGroupModalManager.js';
+export { TagGroupModalManager } from './TagGroupModalManager.ts';
 export { ToastManager } from './ToastManager.js';
 export { NavigationManager } from './NavigationManager.js';
 export { SearchSortManager } from './SearchSortManager.js';

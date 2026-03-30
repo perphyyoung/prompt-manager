@@ -2069,6 +2069,10 @@ body * {
   animation: fadeIn 0.2s ease;
 }
 
+#confirmModal {
+  z-index: 2000;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -2353,17 +2357,6 @@ body * {
 .form-group-half .form-input {
   width: 100%;
   box-sizing: border-box;
-}
-
-.tag-group-form-actions {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 24px;
-}
-
-.tag-group-form-actions .btn-modal {
-  min-width: 100px;
 }
 
 .form-hint {

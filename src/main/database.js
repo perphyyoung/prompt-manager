@@ -413,6 +413,10 @@ function all(sql, params = []) {
  * @param {number} sortOrder - 排序顺序
  */
 async function createPromptTagGroup(name, sortOrder = 0) {
+  const existing = await checkTagGroupNameDuplicate('prompt', name);
+  if (existing) {
+    throw new Error('DUPLICATE_NAME');
+  }
   const now = localTime();
   const sql = `
     INSERT INTO prompt_tag_groups (name, sort_order, created_at, updated_at)
@@ -457,6 +461,13 @@ async function getPromptTagGroups() {
 async function updatePromptTagGroup(id, updates) {
   const { name, sortOrder } = updates;
   const now = localTime();
+  
+  if (name !== undefined) {
+    const existing = await checkTagGroupNameDuplicate('prompt', name, id);
+    if (existing) {
+      throw new Error('DUPLICATE_NAME');
+    }
+  }
   
   const fields = [];
   const values = [];
@@ -508,6 +519,10 @@ async function deletePromptTagGroup(id) {
  * @param {number} sortOrder - 排序顺序
  */
 async function createImageTagGroup(name, sortOrder = 0) {
+  const existing = await checkTagGroupNameDuplicate('image', name);
+  if (existing) {
+    throw new Error('DUPLICATE_NAME');
+  }
   const now = localTime();
   const sql = `
     INSERT INTO image_tag_groups (name, sort_order, created_at, updated_at)
@@ -552,6 +567,13 @@ async function getImageTagGroups() {
 async function updateImageTagGroup(id, updates) {
   const { name, sortOrder } = updates;
   const now = localTime();
+  
+  if (name !== undefined) {
+    const existing = await checkTagGroupNameDuplicate('image', name, id);
+    if (existing) {
+      throw new Error('DUPLICATE_NAME');
+    }
+  }
   
   const fields = [];
   const values = [];
@@ -1083,16 +1105,43 @@ const TagConfig = {
     relationTable: 'prompt_tag_relations',
     itemIdColumn: 'prompt_id',
     tagIdColumn: 'tag_id',
-    getTags: getPromptTags
+    getTags: getPromptTags,
+    groupTable: 'prompt_tag_groups'
   },
   image: {
     tagTable: 'image_tags',
     relationTable: 'image_tag_relations',
     itemIdColumn: 'image_id',
     tagIdColumn: 'tag_id',
-    getTags: getImageTags
+    getTags: getImageTags,
+    groupTable: 'image_tag_groups'
   }
 };
+
+/**
+ * 检查标签组名称是否重复（配置驱动）
+ * @param {string} type - 标签类型: 'prompt' | 'image'
+ * @param {string} name - 标签组名称
+ * @param {string|null} excludeId - 排除的标签组ID（用于更新时检查）
+ * @returns {Promise<object|null>} - 存在返回记录，不存在返回null
+ */
+async function checkTagGroupNameDuplicate(type, name, excludeId = null) {
+  const config = TagConfig[type];
+  if (!config) {
+    throw new Error(`Unknown tag type: ${type}`);
+  }
+
+  const { groupTable } = config;
+  let sql = `SELECT id FROM ${groupTable} WHERE name = ?`;
+  const params = [name];
+
+  if (excludeId) {
+    sql += ` AND id != ?`;
+    params.push(excludeId);
+  }
+
+  return await get(sql, params);
+}
 
 /**
  * 通用标签重命名函数（配置驱动）
@@ -2212,6 +2261,7 @@ export {
   updatePromptTagGroupByTagName,
   // 通用标签操作
   renameTag,
+  checkTagGroupNameDuplicate,
   // 图像操作
   getImages,
   getImagesByIds,

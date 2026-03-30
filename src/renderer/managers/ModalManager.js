@@ -1,4 +1,5 @@
 import { Constants } from '../../constants.js';
+import { focusInput } from '../renderer_utils/index.js';
 
 /**
  * 模态框管理器
@@ -116,7 +117,7 @@ export class ModalManager {
       this.activeModals.add('inputModal');
 
       // 聚焦输入框
-      setTimeout(() => input.focus(), 100);
+      focusInput(input);
 
       // 存储回调
       this.inputCallbacks.set('inputModal', resolve);

@@ -79,6 +79,14 @@ export const DialogConfig = {
     message: (data) => `旧数据目录已重命名为:\n${data.oldDataDir}\n\n您可以手动备份或删除此目录。`
   },
 
+  // ==================== 标签组类 ====================
+  /** 标签组名称重复 */
+  TAG_GROUP_DUPLICATE_NAME: {
+    title: '名称重复',
+    message: (data) => `标签组名称 "${data.name}" 已存在，请使用其他名称。`,
+    confirmText: '确定'
+  },
+
   // ==================== 其他 ====================
   /** 重启应用 */
   RELAUNCH_APP: {

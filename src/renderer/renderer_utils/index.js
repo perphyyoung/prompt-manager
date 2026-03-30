@@ -7,3 +7,4 @@ export { HoverTooltipManager } from './HoverTooltipManager.js';
 export { SaveManager } from './SaveManager.js';
 export { ShortcutManager } from './ShortcutManager.js';
 export { SaveStrategy, PromptSaveStrategy, ImageSaveStrategy } from './SaveStrategy.js';
+export { focusInput } from './DomUtils.js';

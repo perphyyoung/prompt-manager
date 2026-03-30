@@ -725,7 +725,6 @@ class PromptManager {
     const addPromptTagInManagerBtn = document.getElementById('addPromptTagInManagerBtn');
     if (addPromptTagInManagerBtn) {
       addPromptTagInManagerBtn.addEventListener('click', () => {
-        console.log('Add prompt tag in manager clicked');
         this.tagRegistry.addTagInManager();
       });
     } else {
@@ -817,7 +816,6 @@ class PromptManager {
     const addImageTagInManagerBtn = document.getElementById('addImageTagInManagerBtn');
     if (addImageTagInManagerBtn) {
       addImageTagInManagerBtn.addEventListener('click', () => {
-        console.log('Add image tag in manager clicked');
         this.imageTagRegistry.addTagInManager();
       });
     } else {
@@ -1800,6 +1798,20 @@ window.app = app;
 
 // 暴露 DialogService 供 main 进程调用
 window.dialogService = DialogService;
+
+// 全局错误处理 - 未捕获的 Promise 错误
+window.addEventListener('unhandledrejection', (event) => {
+  const error = event.reason;
+  const message = error?.message || error?.toString() || 'Unknown unhandled rejection';
+  window.electronAPI?.logError('Renderer', `Unhandled Promise Rejection: ${message}`, error);
+});
+
+// 全局错误处理 - 未捕获的同步错误
+window.onerror = (message, source, lineno, colno, error) => {
+  const errorMsg = error?.message || message;
+  window.electronAPI?.logError('Renderer', `Uncaught Error: ${errorMsg}`, error);
+  return false;
+};
 
 // DOM 加载完成后初始化
 async function initApp() {
