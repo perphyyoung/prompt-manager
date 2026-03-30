@@ -1749,7 +1749,7 @@ body * {
 .prompt-card-row2,
 .trash-card-row2 {
   flex: 1 1 auto;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--card-text-color);
   word-break: break-all;
   padding: 0 8px;
