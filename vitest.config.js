@@ -1,6 +1,10 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  resolve: {
+    // 支持 .ts 扩展名导入
+    extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json']
+  },
   test: {
     // 测试环境
     environment: 'happy-dom',
@@ -18,8 +22,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['renderer/**/*.js'],
-      exclude: ['node_modules', 'tests/**/*.js']
+      include: ['renderer/**/*.{js,ts}'],
+      exclude: ['node_modules', 'tests/**/*.{js,ts}']
     },
     
     // UI 配置
@@ -33,6 +37,11 @@ export default defineConfig({
     clearMocks: true,
     
     // 设置文件
-    setupFiles: ['./tests/setup.js']
+    setupFiles: ['./tests/setup.js'],
+
+    // 类型检查
+    typecheck: {
+      enabled: true
+    }
   }
 });

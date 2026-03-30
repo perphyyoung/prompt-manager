@@ -259,12 +259,23 @@ export class TagUI {
 
     // 渲染分组标签
     if (groups && groups.length > 0) {
+      // 使用 TopGroupManager 识别首位组，确保与 collectHeaderTags 逻辑一致
+      const groupMap = TopGroupManager.buildGroupMap(tags, counts);
+      const topGroup = TopGroupManager.getTopGroup(groupMap);
+      const topGroupId = topGroup?.groupId ?? null;
+
+      // 按 sortOrder 排序组
       const sortedGroups = groups.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
       sortedGroups.forEach(group => {
         const groupData = groupedTags[group.name];
         if (!groupData || groupData.tags.length === 0) return;
 
-        const visibleTags = groupData.tags.filter(({ count }) => count > 0);
+        // 首位组显示所有标签，其他组只显示计数>0的标签
+        const isTopGroup = group.id === topGroupId;
+        const visibleTags = isTopGroup
+          ? groupData.tags
+          : groupData.tags.filter(({ count }) => count > 0);
         if (visibleTags.length === 0) return;
 
         html += `<div class="tag-filter-group" data-group-id="${group.id}">`;

@@ -126,10 +126,9 @@ export class TopGroupManager {
     const groupMap = this.buildGroupMap(sortedTags, tagCounts);
     const topGroup = this.getTopGroup(groupMap);
 
-    // 添加首位组标签
+    // 添加首位组标签（包括计数为0的标签）
     if (topGroup) {
       topGroup.tags.forEach(tagInfo => {
-        if (tagInfo.count === 0) return;
         if (!tagsToShow.some(t => t.tag === tagInfo.name)) {
           const isActive = selectedSet.has(tagInfo.name);
           tagsToShow.push({

@@ -1,6 +1,5 @@
 # Custom files
 py-data*/
-tests/*
 *.diff
 *.db
 renderer/styles-*
