@@ -1,3 +1,4 @@
 {
-  "dataDir": "D:\\develop\\comfy-common\\prompt-manager\\py-data-many"
+  "rootDir": ".",
+  "dataDir": "./py-data"
 }

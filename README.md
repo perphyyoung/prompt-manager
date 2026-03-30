@@ -67,8 +67,8 @@ start-debug.bat
 ### 打包构建
 
 ```bash
-# 构建 Windows MSI 安装包
-cnpm run dist:win:msi
+# 构建 Windows NSIS 安装包
+cnpm run dist:win:nsis
 ```
 
 ## 架构亮点

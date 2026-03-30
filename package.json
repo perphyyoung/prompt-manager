@@ -24,7 +24,7 @@
     "test:run": "vitest run",
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win",
-    "dist:win:msi": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build && electron-builder --win msi",
+    "dist:win:nsis": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build && electron-builder --win nsis",
     "postinstall": "electron-builder install-app-deps"
   },
   "keywords": [
@@ -32,8 +32,33 @@
     "prompt",
     "manager"
   ],
-  "author": "Your Name",
+  "author": "py",
   "license": "GPL-3.0",
+  "build": {
+    "files": [
+      "out/**/*",
+      "assets/**/*",
+      "locales/en-US.pak",
+      "locales/zh-CN.pak"
+    ],
+    "icon": "assets/icon.ico",
+    "publish": null,
+    "win": {
+      "verifyUpdateCodeSignature": false,
+      "signAndEditExecutable": false,
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PromptManager",
+      "runAfterFinish": false,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    }
+  },
   "dependencies": {
     "electron-log": "^5.4.3",
     "sharp": "^0.33.0",

@@ -28,11 +28,12 @@ composes 是 CSS Modules 语法, 当前项目怎样引入
 根据实际 js/ts 文件结构, 更新 项目文件树.md, 不需要添加最近修改章节
 根据 chat.md 的第 12 行以及 git-diff.log, 更新 readme.md 和 change.md, 并总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 标签系统 -> 依赖注入; IPC 服务类
+cnpm run dist:win:nsis -> exe
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
+我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
 
 ## 20260329
 
-npm run dist:win:msi
 只考虑 windows, 如何打包使得生成的 exe 或 msi 文件大小最小? 结合项目实际回答
 当前项目设计中, 限制了操作系统的有哪些方面? 需要怎么修改以适配其他系统 -> 不考虑其他系统
 
