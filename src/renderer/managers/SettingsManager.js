@@ -39,6 +39,14 @@ export class SettingsManager {
       this.setTheme(savedTheme, false);
     }
 
+    // 加载卡片文字颜色设置
+    const savedCardTextColor = localStorage.getItem(Constants.LocalStorageKey.CARD_TEXT_COLOR);
+    if (savedCardTextColor) {
+      this.applyCardTextColor(savedCardTextColor);
+      const picker = document.getElementById('cardTextColorPicker');
+      if (picker) picker.value = savedCardTextColor;
+    }
+
     // 先加载自定义字体列表（注入 @font-face）
     await this.loadCustomFonts();
 
@@ -85,6 +93,16 @@ export class SettingsManager {
 
     // 主题切换
     document.getElementById('settingsThemeToggle')?.addEventListener('click', () => this.toggleTheme());
+
+    // 卡片文字颜色选择器
+    const cardTextColorPicker = document.getElementById('cardTextColorPicker');
+    if (cardTextColorPicker) {
+      cardTextColorPicker.addEventListener('change', (e) => {
+        const color = e.target.value;
+        localStorage.setItem(Constants.LocalStorageKey.CARD_TEXT_COLOR, color);
+        this.applyCardTextColor(color);
+      });
+    }
 
     // 自定义字体文件选择
     document.getElementById('selectFontFileBtn')?.addEventListener('click', () => this.selectCustomFont());
@@ -347,6 +365,14 @@ export class SettingsManager {
     if (showToast) {
       this.app.showToast?.(theme === 'dark' ? '已切换到黑暗模式' : '已切换到明亮模式', 'success');
     }
+  }
+
+  /**
+   * 应用卡片文字颜色
+   * @param {string} color - 颜色值
+   */
+  applyCardTextColor(color) {
+    document.documentElement.style.setProperty('--card-text-color', color);
   }
 
   /**

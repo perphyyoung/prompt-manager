@@ -108,6 +108,9 @@ export class Constants {
     // 主题
     THEME: 'theme',
 
+    // 卡片外观
+    CARD_TEXT_COLOR: 'cardTextColor',
+
     // 字体
     FONT_FAMILY: 'fontFamily',
     FONT_SIZE_SCALE: 'fontSizeScale',
