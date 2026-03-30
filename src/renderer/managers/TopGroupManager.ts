@@ -1,0 +1,177 @@
+import {
+  TagInfo,
+  TagWithCount,
+  TopGroupInfo,
+  HeaderTagItem,
+  SpecialTagInfo,
+  TagSortConfig
+} from '../types/TagTypes';
+
+/**
+ * 首位组管理器
+ * 统一管理首位组的识别、排序和标签收集
+ */
+export class TopGroupManager {
+  /**
+   * 按组优先级排序标签
+   * 首位组的标签排在最前面，组内按指定规则排序
+   */
+  static sortTagsWithGroupPriority(
+    tags: TagInfo[],
+    tagCounts: Record<string, number>,
+    config: TagSortConfig
+  ): TagInfo[] {
+    const sorted = [...tags];
+    const order = config.sortOrder === 'asc' ? 1 : -1;
+
+    sorted.sort((a, b) => {
+      // 首先按组排序：有组的排在无组前面，组按 groupSortOrder 排序
+      const groupOrderA = a.groupSortOrder ?? Infinity;
+      const groupOrderB = b.groupSortOrder ?? Infinity;
+      if (groupOrderA !== groupOrderB) {
+        return groupOrderA - groupOrderB;
+      }
+
+      // 同一组内按当前排序规则排序
+      const countA = tagCounts[a.name] || 0;
+      const countB = tagCounts[b.name] || 0;
+      const nameA = (a.name || '').toLowerCase();
+      const nameB = (b.name || '').toLowerCase();
+
+      if (config.sortBy === 'count') {
+        if (countA !== countB) {
+          return (countA - countB) * order;
+        }
+        return nameA.localeCompare(nameB);
+      } else if (config.sortBy === 'name') {
+        return nameA.localeCompare(nameB) * order;
+      }
+      return 0;
+    });
+
+    return sorted;
+  }
+
+  /**
+   * 从标签列表中构建组映射
+   */
+  static buildGroupMap(
+    tags: TagInfo[],
+    tagCounts: Record<string, number>
+  ): Map<number, TopGroupInfo> {
+    const groupMap = new Map<number, TopGroupInfo>();
+
+    tags.forEach(tag => {
+      const count = tagCounts[tag.name] || 0;
+      if (tag.groupId) {
+        if (!groupMap.has(tag.groupId)) {
+          groupMap.set(tag.groupId, {
+            groupId: tag.groupId,
+            groupName: tag.groupName,
+            groupSortOrder: tag.groupSortOrder || 0,
+            tags: []
+          });
+        }
+        groupMap.get(tag.groupId)!.tags.push({ ...tag, count });
+      }
+    });
+
+    return groupMap;
+  }
+
+  /**
+   * 获取排序后的非空组列表
+   */
+  static getNonEmptyGroups(groupMap: Map<number, TopGroupInfo>): TopGroupInfo[] {
+    return Array.from(groupMap.values())
+      .filter(g => g.tags.length > 0)
+      .sort((a, b) => a.groupSortOrder - b.groupSortOrder);
+  }
+
+  /**
+   * 获取首位组
+   */
+  static getTopGroup(groupMap: Map<number, TopGroupInfo>): TopGroupInfo | null {
+    const nonEmptyGroups = this.getNonEmptyGroups(groupMap);
+    return nonEmptyGroups.length > 0 ? nonEmptyGroups[0] : null;
+  }
+
+  /**
+   * 收集头部显示的标签
+   * 包括特殊标签和首位组标签
+   */
+  static collectHeaderTags(
+    specialTags: SpecialTagInfo[],
+    sortedTags: TagInfo[],
+    tagCounts: Record<string, number>,
+    selectedTags: Set<string>,
+    allSpecialTags: string[]
+  ): HeaderTagItem[] {
+    const tagsToShow: HeaderTagItem[] = [];
+    const selectedSet = selectedTags;
+
+    // 添加特殊标签
+    specialTags.forEach(({ tag, count }) => {
+      const isActive = selectedSet.has(tag);
+      tagsToShow.push({
+        tag,
+        count,
+        className: isActive ? 'active' : '',
+        isSpecial: true,
+        isTopGroup: false
+      });
+    });
+
+    // 构建组映射
+    const groupMap = this.buildGroupMap(sortedTags, tagCounts);
+    const topGroup = this.getTopGroup(groupMap);
+
+    // 添加首位组标签
+    if (topGroup) {
+      topGroup.tags.forEach(tagInfo => {
+        if (tagInfo.count === 0) return;
+        if (!tagsToShow.some(t => t.tag === tagInfo.name)) {
+          const isActive = selectedSet.has(tagInfo.name);
+          tagsToShow.push({
+            tag: tagInfo.name,
+            count: tagInfo.count,
+            className: isActive ? 'active' : '',
+            isSpecial: false,
+            isTopGroup: true
+          });
+        }
+      });
+    }
+
+    // 添加选中的普通标签
+    const tagToGroupMap = new Map<string, { groupId: number; groupSortOrder: number }>();
+    sortedTags.forEach(t => {
+      if (t.groupId && !tagToGroupMap.has(t.name)) {
+        tagToGroupMap.set(t.name, {
+          groupId: t.groupId,
+          groupSortOrder: t.groupSortOrder || 0
+        });
+      }
+    });
+
+    const topGroupId = topGroup?.groupId ?? null;
+
+    selectedSet.forEach(tag => {
+      if (!tagsToShow.some(t => t.tag === tag) && !allSpecialTags.includes(tag)) {
+        const count = tagCounts[tag] || 0;
+        const groupInfo = tagToGroupMap.get(tag);
+        const isInTopGroup = groupInfo?.groupId === topGroupId;
+
+        tagsToShow.push({
+          tag,
+          count,
+          className: 'active',
+          isSpecial: false,
+          isTopGroup: isInTopGroup
+        });
+      }
+    });
+
+    return tagsToShow;
+  }
+}

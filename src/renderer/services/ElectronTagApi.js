@@ -46,7 +46,7 @@ export class ElectronTagApi extends TagApi {
 
   /**
    * 更新提示词标签组属性
-   * @param {string} id - 标签组 ID
+   * @param {number} id - 标签组 ID
    * @param {Object} updates - 要更新的属性
    * @returns {Promise<Object>} 更新后的标签组
    */
@@ -56,7 +56,7 @@ export class ElectronTagApi extends TagApi {
 
   /**
    * 更新图像标签组属性
-   * @param {string} id - 标签组 ID
+   * @param {number} id - 标签组 ID
    * @param {Object} updates - 要更新的属性
    * @returns {Promise<Object>} 更新后的标签组
    */
@@ -66,7 +66,7 @@ export class ElectronTagApi extends TagApi {
 
   /**
    * 删除提示词标签组
-   * @param {string} id - 标签组 ID
+   * @param {number} id - 标签组 ID
    * @returns {Promise<void>}
    */
   async deletePromptTagGroup(id) {
@@ -75,7 +75,7 @@ export class ElectronTagApi extends TagApi {
 
   /**
    * 删除图像标签组
-   * @param {string} id - 标签组 ID
+   * @param {number} id - 标签组 ID
    * @returns {Promise<void>}
    */
   async deleteImageTagGroup(id) {

@@ -4,6 +4,7 @@ import { TagUI } from './TagUI.js';
 import { BatchToolbarUI } from './BatchToolbarUI.js';
 import { BatchProcessor } from './BatchProcessor.js';
 import { TagService } from './TagService.js';
+import { TopGroupManager } from './TopGroupManager';
 
 /**
  * 面板管理器基类
@@ -561,27 +562,10 @@ export class PanelManagerBase {
    * @returns {Array} 排序后的标签数组
    */
   sortTagsForFilter(tags, tagCounts) {
-    const sorted = [...tags];
-    const order = this.tagFilterSortOrder === 'asc' ? 1 : -1;
-
-    sorted.sort((a, b) => {
-      const countA = tagCounts[a.name] || 0;
-      const countB = tagCounts[b.name] || 0;
-      const nameA = (a.name || '').toLowerCase();
-      const nameB = (b.name || '').toLowerCase();
-
-      if (this.tagFilterSortBy === 'count') {
-        if (countA !== countB) {
-          return (countA - countB) * order;
-        }
-        return nameA.localeCompare(nameB);
-      } else if (this.tagFilterSortBy === 'name') {
-        return nameA.localeCompare(nameB) * order;
-      }
-      return 0;
+    return TopGroupManager.sortTagsWithGroupPriority(tags, tagCounts, {
+      sortBy: this.tagFilterSortBy,
+      sortOrder: this.tagFilterSortOrder
     });
-
-    return sorted;
   }
 
   /**

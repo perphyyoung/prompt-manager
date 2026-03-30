@@ -1,7 +1,48 @@
 import { Constants } from '../../constants.js';
 import { cacheManager } from '../../utils/CacheManager.js';
-import { TagIpcService } from '../services/TagIpcService.js';
 import { ElectronTagApi } from '../services/ElectronTagApi.js';
+import { TagInfo, TagGroupInfo } from '../types/TagTypes';
+
+/**
+ * TagApi 接口定义
+ */
+interface TagApi {
+  getPromptTags(): Promise<string[]>;
+  getImageTags(): Promise<string[]>;
+  getPromptTagGroups(): Promise<TagGroupInfo[]>;
+  getImageTagGroups(): Promise<TagGroupInfo[]>;
+  addPromptTag(tag: string): Promise<any>;
+  addImageTag(tag: string): Promise<any>;
+  renamePromptTag(oldTag: string, newTag: string): Promise<any>;
+  renameImageTag(oldTag: string, newTag: string): Promise<any>;
+  deletePromptTag(tag: string): Promise<any>;
+  deleteImageTag(tag: string): Promise<any>;
+  assignPromptTagToBelongGroup(tag: string, groupId: number | null): Promise<any>;
+  assignImageTagToBelongGroup(tag: string, groupId: number | null): Promise<any>;
+  createPromptTagGroup(name: string, sortOrder: number): Promise<any>;
+  createImageTagGroup(name: string, sortOrder: number): Promise<any>;
+  updatePromptTagGroupAttrs(id: number, attrs: Record<string, any>): Promise<any>;
+  updateImageTagGroupAttrs(id: number, attrs: Record<string, any>): Promise<any>;
+  deletePromptTagGroup(id: number): Promise<any>;
+  deleteImageTagGroup(id: number): Promise<any>;
+}
+
+/**
+ * 标签验证结果
+ */
+interface TagValidationResult {
+  valid: boolean;
+  error?: string;
+  newTags?: string[];
+}
+
+/**
+ * 标签分组结果
+ */
+interface GroupedTagsResult {
+  groupedTags: Record<number, string[]>;
+  ungroupedTags: string[];
+}
 
 /**
  * 标签服务 - 数据层 + 验证层 + 工具层
@@ -10,28 +51,34 @@ import { ElectronTagApi } from '../services/ElectronTagApi.js';
  * 支持依赖注入，便于测试和替换实现
  */
 export class TagService {
-  static instances = new Map();
-  
+  private static instances = new Map<string, TagService>();
+
+  private type: string;
+  private isPrompt: boolean;
+  private api: TagApi;
+  private cacheKey: string;
+  private cacheKeyGroups: string;
+
   /**
    * 获取单例实例
-   * @param {string} type - 'prompt' | 'image'
-   * @param {TagApi} api - 注入的 API 实现（可选，默认为 ElectronTagApi）
-   * @returns {TagService}
+   * @param type - 'prompt' | 'image'
+   * @param api - 注入的 API 实现（可选，默认为 ElectronTagApi）
+   * @returns TagService 实例
    */
-  static getInstance(type, api = null) {
+  static getInstance(type: string, api: TagApi | null = null): TagService {
     if (!this.instances.has(type)) {
       // 如果没有传入 api，使用默认的 Electron 实现
       const defaultApi = api || new ElectronTagApi();
       this.instances.set(type, new TagService(type, defaultApi));
     }
-    return this.instances.get(type);
+    return this.instances.get(type)!;
   }
 
   /**
-   * @param {string} type - 类型 ('prompt' | 'image')
-   * @param {TagApi} api - API 实现
+   * @param type - 类型 ('prompt' | 'image')
+   * @param api - API 实现
    */
-  constructor(type, api) {
+  constructor(type: string, api: TagApi) {
     this.type = type;
     this.isPrompt = type === 'prompt';
     this.api = api;  // 依赖注入的 API
@@ -41,38 +88,38 @@ export class TagService {
 
   // ========== 缓存辅助方法 ==========
 
-  _getFromCache(key) {
+  private _getFromCache(key: string): any | null {
     const cache = cacheManager.getCache(key);
     if (!cache) return null;
     return cache.get('data')?.data || null;
   }
 
-  _setCache(key, data) {
+  private _setCache(key: string, data: any): void {
     const cache = cacheManager.createCache(key, 10);
     cache.set('data', { data, time: Date.now() });
   }
 
-  _clearCache(key) {
+  private _clearCache(key: string): void {
     cacheManager.deleteCache(key);
   }
 
-  addTagsToCache(newTags) {
+  addTagsToCache(newTags: string[]): void {
     if (!newTags || newTags.length === 0) return;
     const cached = this._getFromCache(this.cacheKey) || [];
     const merged = [...new Set([...cached, ...newTags])];
     this._setCache(this.cacheKey, merged);
   }
 
-  removeTagsFromCache(removedTags) {
+  removeTagsFromCache(removedTags: string[]): void {
     if (!removedTags || removedTags.length === 0) return;
     const cached = this._getFromCache(this.cacheKey) || [];
-    const filtered = cached.filter(tag => !removedTags.includes(tag));
+    const filtered = cached.filter((tag: string) => !removedTags.includes(tag));
     this._setCache(this.cacheKey, filtered);
   }
 
   // ========== 标签 API ==========
 
-  async getTags() {
+  async getTags(): Promise<string[]> {
     const cached = this._getFromCache(this.cacheKey);
     if (cached) return cached;
 
@@ -84,7 +131,7 @@ export class TagService {
     return data;
   }
 
-  async getTagGroups() {
+  async getTagGroups(): Promise<TagGroupInfo[]> {
     const cached = this._getFromCache(this.cacheKeyGroups);
     if (cached) return cached;
 
@@ -96,7 +143,7 @@ export class TagService {
     return data;
   }
 
-  async addTag(tag) {
+  async addTag(tag: string): Promise<any> {
     const result = await (this.isPrompt
       ? this.api.addPromptTag(tag)
       : this.api.addImageTag(tag));
@@ -105,7 +152,7 @@ export class TagService {
     return result;
   }
 
-  async renameTag(oldTag, newTag) {
+  async renameTag(oldTag: string, newTag: string): Promise<any> {
     const result = await (this.isPrompt
       ? this.api.renamePromptTag(oldTag, newTag)
       : this.api.renameImageTag(oldTag, newTag));
@@ -114,7 +161,7 @@ export class TagService {
     return result;
   }
 
-  async deleteTag(tag) {
+  async deleteTag(tag: string): Promise<any> {
     const result = await (this.isPrompt
       ? this.api.deletePromptTag(tag)
       : this.api.deleteImageTag(tag));
@@ -123,7 +170,7 @@ export class TagService {
     return result;
   }
 
-  async assignTagToGroup(tag, groupId) {
+  async assignTagToGroup(tag: string, groupId: number | null): Promise<any> {
     const result = await (this.isPrompt
       ? this.api.assignPromptTagToBelongGroup(tag, groupId)
       : this.api.assignImageTagToBelongGroup(tag, groupId));
@@ -133,7 +180,7 @@ export class TagService {
 
   // ========== 标签组 API ==========
 
-  async createGroup(name, sortOrder) {
+  async createGroup(name: string, sortOrder: number): Promise<any> {
     const result = await (this.isPrompt
       ? this.api.createPromptTagGroup(name, sortOrder)
       : this.api.createImageTagGroup(name, sortOrder));
@@ -141,7 +188,7 @@ export class TagService {
     return result;
   }
 
-  async updateGroup(groupId, attrs) {
+  async updateGroup(groupId: number, attrs: Record<string, any>): Promise<any> {
     const result = await (this.isPrompt
       ? this.api.updatePromptTagGroupAttrs(groupId, attrs)
       : this.api.updateImageTagGroupAttrs(groupId, attrs));
@@ -149,7 +196,7 @@ export class TagService {
     return result;
   }
 
-  async deleteGroup(groupId) {
+  async deleteGroup(groupId: number): Promise<any> {
     const result = await (this.isPrompt
       ? this.api.deletePromptTagGroup(groupId)
       : this.api.deleteImageTagGroup(groupId));
@@ -159,47 +206,47 @@ export class TagService {
 
   // ========== 特殊标签配置 ==========
 
-  getSpecialTags() {
+  getSpecialTags(): string[] {
     return this.isPrompt
       ? [...Constants.PROMPT_SPECIAL_TAGS]
       : [...Constants.IMAGE_SPECIAL_TAGS];
   }
 
-  getSpecialTagChecks() {
+  getSpecialTagChecks(): Map<string, (item: any) => boolean> {
     if (this.isPrompt) {
       return new Map([
-        [Constants.FAVORITE_TAG, (p) => p.isFavorite],
-        [Constants.MULTI_IMAGE_TAG, (p) => p.images && p.images.length >= 2],
-        [Constants.NO_IMAGE_TAG, (p) => !p.images || p.images.length === 0],
-        [Constants.NO_TAG_TAG, (p) => !p.tags || p.tags.length === 0],
-        [Constants.SAFE_TAG, (p) => p.isSafe !== 0],
-        [Constants.UNSAFE_TAG, (p) => p.isSafe === 0]
+        [Constants.FAVORITE_TAG, (p: any) => p.isFavorite],
+        [Constants.MULTI_IMAGE_TAG, (p: any) => p.images && p.images.length >= 2],
+        [Constants.NO_IMAGE_TAG, (p: any) => !p.images || p.images.length === 0],
+        [Constants.NO_TAG_TAG, (p: any) => !p.tags || p.tags.length === 0],
+        [Constants.SAFE_TAG, (p: any) => p.isSafe !== 0],
+        [Constants.UNSAFE_TAG, (p: any) => p.isSafe === 0]
       ]);
     } else {
       return new Map([
-        [Constants.FAVORITE_TAG, (img) => img.isFavorite],
-        [Constants.UNREFERENCED_TAG, (img) => !img.promptRefs || img.promptRefs.length === 0],
-        [Constants.MULTI_REF_TAG, (img) => img.promptRefs && img.promptRefs.length > 1],
-        [Constants.NO_TAG_TAG, (img) => !img.tags || img.tags.length === 0],
-        [Constants.SAFE_TAG, (img) => img.isSafe !== 0],
-        [Constants.UNSAFE_TAG, (img) => img.isSafe === 0]
+        [Constants.FAVORITE_TAG, (img: any) => img.isFavorite],
+        [Constants.UNREFERENCED_TAG, (img: any) => !img.promptRefs || img.promptRefs.length === 0],
+        [Constants.MULTI_REF_TAG, (img: any) => img.promptRefs && img.promptRefs.length > 1],
+        [Constants.NO_TAG_TAG, (img: any) => !img.tags || img.tags.length === 0],
+        [Constants.SAFE_TAG, (img: any) => img.isSafe !== 0],
+        [Constants.UNSAFE_TAG, (img: any) => img.isSafe === 0]
       ]);
     }
   }
 
   /**
    * 验证标签是否可以添加
-   * @param {string[]} currentTags - 当前标签列表
-   * @param {string} newTag - 新标签名称
-   * @returns {{valid: boolean, error?: string, newTags?: string[]}}
+   * @param currentTags - 当前标签列表
+   * @param newTag - 新标签名称
+   * @returns 验证结果
    */
-  async validateTagAddition(currentTags, newTag) {
+  async validateTagAddition(currentTags: string[], newTag: string): Promise<TagValidationResult> {
     const trimmedTag = newTag.trim();
 
     if (!trimmedTag) {
       return { valid: false, error: '标签名称不能为空' };
     }
-    
+
     if (currentTags.includes(trimmedTag)) {
       return { valid: false, error: '该标签已存在' };
     }
@@ -212,29 +259,29 @@ export class TagService {
 
     const newTags = [...currentTags, trimmedTag];
 
-    return { 
-      valid: true, 
+    return {
+      valid: true,
       newTags
     };
   }
 
   /**
    * 验证标签是否可以删除
-   * @param {string[]} currentTags - 当前标签列表
-   * @param {string} tagToRemove - 要删除的标签名称
-   * @returns {{valid: boolean, error?: string, newTags?: string[]}}
+   * @param currentTags - 当前标签列表
+   * @param tagToRemove - 要删除的标签名称
+   * @returns 验证结果
    */
-  async validateTagRemoval(currentTags, tagToRemove) {
+  async validateTagRemoval(currentTags: string[], tagToRemove: string): Promise<TagValidationResult> {
     const trimmedTag = tagToRemove.trim();
-    
+
     if (!trimmedTag) {
       return { valid: false, error: '标签名称不能为空' };
     }
 
     const newTags = currentTags.filter(t => t !== trimmedTag);
 
-    return { 
-      valid: true, 
+    return {
+      valid: true,
       newTags
     };
   }
@@ -243,15 +290,15 @@ export class TagService {
 
   /**
    * 将标签按组分组
-   * @param {Array} tags - 标签数组
-   * @param {Array} groups - 标签组（包含 tags 数组）
-   * @returns {Object} { groupedTags, ungroupedTags }
+   * @param tags - 标签数组
+   * @param groups - 标签组（包含 tags 数组）
+   * @returns 分组结果
    *   - groupedTags: { [groupId]: string[] }
    *   - ungroupedTags: string[]
    */
-  groupTagsByGroup(tags, groups) {
-    const groupedTags = {};
-    const ungroupedTags = [];
+  groupTagsByGroup(tags: string[], groups: TagGroupInfo[]): GroupedTagsResult {
+    const groupedTags: Record<number, string[]> = {};
+    const ungroupedTags: string[] = [];
 
     // 初始化分组
     groups.forEach(group => {
@@ -278,26 +325,33 @@ export class TagService {
 
   /**
    * 构建标签与组的映射
-   * @param {Array} tags - 标签数组
-   * @param {Array} groups - 标签组（包含 tags 数组）
-   * @returns {Array} 带组信息的标签列表
-   *   - { name: string, groupId: string|null, groupName: string }
+   * @param tags - 标签数组
+   * @param groups - 标签组（包含 tags 数组）
+   * @returns 带组信息的标签列表
    */
-  buildTagsWithGroup(tags, groups) {
+  buildTagsWithGroup(tags: string[], groups: TagGroupInfo[]): TagInfo[] {
+    // Special Case Object: 未分组标签的默认结构
+    const UNGROUPED_TAG: Omit<TagInfo, 'name'> = {
+      groupId: null,
+      groupName: '未分组',
+      groupSortOrder: Infinity
+    };
+
     return tags.map(tag => {
       for (const group of groups) {
         if (group.tags && group.tags.includes(tag)) {
           return {
             name: tag,
             groupId: group.id,
-            groupName: group.name
+            groupName: group.name,
+            groupSortOrder: group.sortOrder ?? Infinity
           };
         }
       }
+      // 返回未分组标签的 Special Case Object
       return {
         name: tag,
-        groupId: null,
-        groupName: '未分组'
+        ...UNGROUPED_TAG
       };
     });
   }

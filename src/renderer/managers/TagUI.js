@@ -1,5 +1,6 @@
 import { Constants } from '../../constants.js';
 import { HtmlUtils } from '../../utils/index.js';
+import { TopGroupManager } from './TopGroupManager';
 
 /**
  * 标签 UI - 展示层
@@ -330,90 +331,21 @@ export class TagUI {
     if (!headerTagsEl) return false;
 
     const selectedSet = selectedTags instanceof Set ? selectedTags : new Set(selectedTags);
-    const tagsToShow = [];
 
-    // 特殊标签
-    specialTags.forEach(({ tag, count }) => {
-      const isActive = selectedSet.has(tag);
-      tagsToShow.push({
-        tag,
-        count,
-        className: isActive ? 'active' : '',
-        isSpecial: true,
-        isTopGroup: false
-      });
-    });
+    // 使用 TopGroupManager 收集头部标签
+    const tagsToShow = TopGroupManager.collectHeaderTags(
+      specialTags,
+      sortedTagsWithGroup,
+      tagCounts,
+      selectedSet,
+      Constants.ALL_SPECIAL_TAGS
+    );
 
-    // 优先级最高的标签组
-    const groupMap = new Map();
-    sortedTagsWithGroup.forEach(t => {
-      const count = tagCounts[t.name] || 0;
-      if (t.groupId) {
-        if (!groupMap.has(t.groupId)) {
-          groupMap.set(t.groupId, {
-            groupId: t.groupId,
-            groupName: t.groupName,
-            groupType: t.groupType,
-            groupSortOrder: t.groupSortOrder || 0,
-            tags: []
-          });
-        }
-        groupMap.get(t.groupId).tags.push({...t, count});
-      }
-    });
+    // 获取首位组信息用于返回
+    const groupMap = TopGroupManager.buildGroupMap(sortedTagsWithGroup, tagCounts);
+    const topGroup = TopGroupManager.getTopGroup(groupMap);
 
-    const nonEmptyGroups = Array.from(groupMap.values())
-      .filter(g => g.tags.length > 0)
-      .sort((a, b) => a.groupSortOrder - b.groupSortOrder);
-
-    let currentTopGroupInfo = topGroupInfo;
-    if (nonEmptyGroups.length > 0) {
-      currentTopGroupInfo = nonEmptyGroups[0];
-      currentTopGroupInfo.tags.forEach(tagInfo => {
-        if (tagInfo.count === 0) return;
-        if (!tagsToShow.some(t => t.tag === tagInfo.name)) {
-          const isActive = selectedSet.has(tagInfo.name);
-          tagsToShow.push({
-            tag: tagInfo.name,
-            count: tagInfo.count,
-            className: isActive ? 'active' : '',
-            isSpecial: false,
-            isTopGroup: true
-          });
-        }
-      });
-    }
-
-    // 构建标签到组信息的映射，用于后续查找
-    const tagToGroupMap = new Map();
-    sortedTagsWithGroup.forEach(t => {
-      if (t.groupId && !tagToGroupMap.has(t.name)) {
-        tagToGroupMap.set(t.name, {
-          groupId: t.groupId,
-          groupSortOrder: t.groupSortOrder || 0
-        });
-      }
-    });
-
-    // 确定首位组 ID
-    const topGroupId = nonEmptyGroups.length > 0 ? nonEmptyGroups[0].groupId : null;
-
-    // 选中的普通标签
-    selectedSet.forEach(tag => {
-      if (!tagsToShow.some(t => t.tag === tag) && !Constants.ALL_SPECIAL_TAGS.includes(tag)) {
-        const count = tagCounts[tag] || 0;
-        const groupInfo = tagToGroupMap.get(tag);
-        const isInTopGroup = groupInfo && groupInfo.groupId === topGroupId;
-
-        tagsToShow.push({
-          tag,
-          count,
-          className: 'active',
-          isSpecial: false,
-          isTopGroup: isInTopGroup
-        });
-      }
-    });
+    let currentTopGroupInfo = topGroupInfo || topGroup;
 
     // 渲染 HTML
     if (tagsToShow.length === 0) {
