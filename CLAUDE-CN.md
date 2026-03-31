@@ -32,3 +32,10 @@
 - `requesting-code-review` - 请求代码审查 / Request code review
 
 > 完整列表请查看 `.trae/skills/` 目录 / For the full list, check the `.trae/skills/` directory
+
+## 第一性原理
+
+- 不要假设我清楚自己想要什么; 动机或目标不清晰时, 停下来讨论
+- 目标清晰但路径不是最短的, 直接告诉我并建议更好的方案
+- 遇到问题追根因, 不打补丁; 每个决策都要能回答"为什么"
+- 输出说重点, 砍掉一切不改变决策的信息

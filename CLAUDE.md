@@ -30,3 +30,10 @@
 - `requesting-code-review` - Request code review
 
 > For the full list, check the `.trae/skills/` directory
+
+## First Principles
+
+- Don't assume I know what I want; when motivation or goals are unclear, stop and discuss
+- When the goal is clear but the path is not the shortest, tell me directly and suggest a better approach
+- When encountering problems, trace to the root cause instead of applying patches; every decision must answer "why"
+- Output the key points, cut all information that doesn't change decisions
