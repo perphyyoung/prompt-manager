@@ -3,21 +3,42 @@
  * 管理提示词、图像和它们之间的关系
  */
 
+// @ts-ignore - sqlite3 类型定义不完整
 import sqlite3 from 'sqlite3';
 import path from 'path';
 import { promises as fs } from 'fs';
-import { logError } from './logger.js';
+import { logError, logWarn, logDebug } from './logger.js';
 import { getFormattedLocalTimeToSecond, localTime } from '../utils/index.js';
+import {
+  DatabaseError,
+  DatabaseErrorCode,
+  DuplicateNameError,
+  EntityNotFoundError,
+  ConstraintViolationError,
+  isConstraintError
+} from './database-errors.js';
+import type {
+  PromptRow, ImageRow, PromptTagGroupRow, ImageTagGroupRow,
+  Prompt, Image, ImageRef, PromptRef, PromptImage,
+  PromptTagGroup, ImageTagGroup,
+  TagConfig, TagConfigMap,
+  CreatePromptParams, UpdatePromptParams,
+  CreateImageParams, UpdateImageParams, UpdateThumbnailParams,
+  UpdateTagGroupParams,
+  MapPromptOptions, MapImageOptions, GetImagesOptions,
+  RunResult, TagSyncResult, Statistics, UnreferencedImage,
+  ImageFilePaths, ImageCleanupInfo
+} from './database-types.js';
 
 sqlite3.verbose();
 
-let db = null;
+let db: sqlite3.Database | null = null;
 
 /**
  * 初始化数据库
- * @param {string} dataDir - 数据目录路径
+ * @param dataDir - 数据目录路径
  */
-async function initDatabase(dataDir) {
+async function initDatabase(dataDir: string): Promise<void> {
   // 确保数据目录存在
   try {
     const stats = await fs.stat(dataDir);
@@ -34,7 +55,7 @@ async function initDatabase(dataDir) {
   const dbPath = path.join(dataDir, 'prompt-manager.db');
 
   return new Promise((resolve, reject) => {
-    db = new sqlite3.Database(dbPath, (err) => {
+    db = new sqlite3.Database(dbPath, (err: Error | null) => {
       if (err) {
         logError('Database', 'Failed to open database', { error: err.message });
         reject(err);
@@ -48,12 +69,11 @@ async function initDatabase(dataDir) {
 
 /**
  * 关闭数据库连接
- * @returns {Promise<void>}
  */
-function closeDatabase() {
+function closeDatabase(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (db) {
-      db.close((err) => {
+      db.close((err: Error | null) => {
         if (err) {
           logError('Database', 'Failed to close database', { error: err.message });
           reject(err);
@@ -71,7 +91,7 @@ function closeDatabase() {
 /**
  * 创建数据库表
  */
-async function createTables() {
+async function createTables(): Promise<void> {
   const tables = [
     // 提示词表
     `CREATE TABLE IF NOT EXISTS prompts (
@@ -197,7 +217,7 @@ async function createTables() {
  * 配置数据库 PRAGMA
  * 优化缓存、并发和 I/O 性能
  */
-async function configurePragmas() {
+async function configurePragmas(): Promise<void> {
   const pragmas = [
     { name: 'journal_mode', value: 'WAL' },           // 写前日志模式，提升并发性能
     { name: 'synchronous', value: 'NORMAL' },         // 平衡安全与性能
@@ -210,7 +230,7 @@ async function configurePragmas() {
   for (const { name, value } of pragmas) {
     try {
       await run(`PRAGMA ${name} = ${value}`);
-    } catch (error) {
+    } catch (error: any) {
       console.warn(`Failed to set PRAGMA ${name}:`, error.message);
     }
   }
@@ -220,7 +240,7 @@ async function configurePragmas() {
  * 创建数据库索引
  * 优化常用查询的性能
  */
-async function createIndexes() {
+async function createIndexes(): Promise<void> {
   const indexes = [
     // 提示词表索引
     'CREATE INDEX IF NOT EXISTS idx_prompts_updated_at ON prompts(updated_at DESC)',
@@ -248,7 +268,7 @@ async function createIndexes() {
     'CREATE INDEX IF NOT EXISTS idx_prompt_tag_relations_tag_id ON prompt_tag_relations(tag_id)',
     'CREATE INDEX IF NOT EXISTS idx_image_tag_relations_image_id ON image_tag_relations(image_id)',
     'CREATE INDEX IF NOT EXISTS idx_image_tag_relations_tag_id ON image_tag_relations(tag_id)',
-    
+
     // 标签组索引 - 优化标签组查询
     'CREATE INDEX IF NOT EXISTS idx_prompt_tags_group_id ON prompt_tags(group_id)',
     'CREATE INDEX IF NOT EXISTS idx_image_tags_group_id ON image_tags(group_id)',
@@ -263,7 +283,7 @@ async function createIndexes() {
   for (const sql of indexes) {
     try {
       await run(sql);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create index:', sql, error);
     }
   }
@@ -275,10 +295,10 @@ let transactionDepth = 0;
 /**
  * 在事务中执行异步操作
  * 支持嵌套调用（如果已经在事务中，直接执行函数而不开始新事务）
- * @param {Function} asyncFn - 异步函数
- * @returns {Promise<any>} 函数返回值
+ * @param asyncFn - 异步函数
+ * @returns 函数返回值
  */
-async function runInTransaction(asyncFn) {
+async function runInTransaction<T>(asyncFn: () => Promise<T>): Promise<T> {
   // 如果已经在事务中，直接执行函数
   if (transactionDepth > 0) {
     return await asyncFn();
@@ -298,50 +318,11 @@ async function runInTransaction(asyncFn) {
   }
 }
 
-// 慢查询阈值（毫秒）
-const SLOW_QUERY_THRESHOLD = 100;
-
-/**
- * 包装 all 查询，添加性能监控
- * @param {string} sql - SQL 语句
- * @param {Array} params - 参数
- * @returns {Promise<Array>} 查询结果
- */
-async function timedAll(sql, params = []) {
-  const start = Date.now();
-  try {
-    return await all(sql, params);
-  } finally {
-    const duration = Date.now() - start;
-    if (duration > SLOW_QUERY_THRESHOLD) {
-      console.warn(`[Slow Query] ${duration}ms: ${sql.substring(0, 100)}...`);
-    }
-  }
-}
-
-/**
- * 包装 get 查询，添加性能监控
- * @param {string} sql - SQL 语句
- * @param {Array} params - 参数
- * @returns {Promise<Object>} 查询结果
- */
-async function timedGet(sql, params = []) {
-  const start = Date.now();
-  try {
-    return await get(sql, params);
-  } finally {
-    const duration = Date.now() - start;
-    if (duration > SLOW_QUERY_THRESHOLD) {
-      console.warn(`[Slow Query] ${duration}ms: ${sql.substring(0, 100)}...`);
-    }
-  }
-}
-
 /**
  * 数据库维护优化
  * 定期执行 VACUUM 和 ANALYZE
  */
-async function optimizeDatabase() {
+async function optimizeDatabase(): Promise<boolean> {
   console.log('[DB] Starting optimization...');
 
   try {
@@ -354,8 +335,8 @@ async function optimizeDatabase() {
     console.log('[DB] ANALYZE completed');
 
     // 完整性检查
-    const result = await get('PRAGMA integrity_check');
-    if (result.integrity_check !== 'ok') {
+    const result = await get<{ integrity_check: string }>('PRAGMA integrity_check');
+    if (result && result.integrity_check !== 'ok') {
       console.error('[DB] Integrity check failed:', result);
     } else {
       console.log('[DB] Integrity check passed');
@@ -363,20 +344,139 @@ async function optimizeDatabase() {
 
     console.log('[DB] Optimization completed');
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('[DB] Optimization failed:', error);
     throw error;
   }
 }
 
 /**
+ * 数据库配置
+ * 可通过环境变量或运行时修改
+ */
+const DB_CONFIG = {
+  /**
+   * 慢查询阈值（毫秒）
+   * 超过此时间的查询会被记录为警告
+   */
+  get SLOW_QUERY_THRESHOLD_MS(): number {
+    // 允许通过环境变量覆盖
+    const envValue = process.env.DB_SLOW_QUERY_THRESHOLD;
+    if (envValue) {
+      const parsed = parseInt(envValue, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+    return 100; // 默认值
+  }
+};
+
+/**
+ * 设置慢查询阈值
+ * @param ms - 阈值（毫秒）
+ */
+export function setSlowQueryThreshold(ms: number): void {
+  if (ms <= 0) {
+    throw new Error('慢查询阈值必须大于 0');
+  }
+  // 使用 Object.defineProperty 覆盖 getter
+  Object.defineProperty(DB_CONFIG, 'SLOW_QUERY_THRESHOLD_MS', {
+    value: ms,
+    writable: true,
+    configurable: true
+  });
+}
+
+/**
+ * 获取当前慢查询阈值
+ * @returns 当前阈值（毫秒）
+ */
+export function getSlowQueryThreshold(): number {
+  return DB_CONFIG.SLOW_QUERY_THRESHOLD_MS;
+}
+
+/**
+ * 解析 SQLite 错误，转换为统一的 DatabaseError
+ */
+function parseSQLiteError(err: Error, sql?: string, params?: any[]): DatabaseError {
+  const message = err.message;
+
+  // 唯一约束违反
+  if (message.includes('UNIQUE constraint failed')) {
+    // 提取表名和字段名（支持带引号的标识符，如 "my-table"."my-column"）
+    const match = message.match(/UNIQUE constraint failed:\s*"?([^"\s.]+)"?\."?([^"\s.]+)"?/);
+    const details = match ? `表 ${match[1]} 的 ${match[2]} 字段` : '';
+    return new ConstraintViolationError(
+      details ? `唯一约束违反: ${details} 的值已存在` : message,
+      'UNIQUE',
+      err
+    );
+  }
+
+  // 外键约束违反
+  if (message.includes('FOREIGN KEY constraint failed')) {
+    return new ConstraintViolationError(
+      '外键约束违反: 引用的记录不存在',
+      'FOREIGN_KEY',
+      err
+    );
+  }
+
+  // 检查约束违反
+  if (message.includes('CHECK constraint failed')) {
+    return new ConstraintViolationError(
+      '检查约束违反: 数据不符合约束条件',
+      'CHECK',
+      err
+    );
+  }
+
+  // 非空约束违反
+  if (message.includes('NOT NULL constraint failed')) {
+    // 提取表名和字段名（支持带引号的标识符）
+    const match = message.match(/NOT NULL constraint failed:\s*"?([^"\s.]+)"?\."?([^"\s.]+)"?/);
+    const details = match ? `表 ${match[1]} 的 ${match[2]} 字段` : '';
+    return new ConstraintViolationError(
+      details ? `非空约束违反: ${details} 不能为空` : message,
+      'NOT_NULL',
+      err
+    );
+  }
+
+  // 通用 SQL 错误
+  return new DatabaseError(
+    `数据库操作失败: ${message}`,
+    DatabaseErrorCode.SQL_ERROR,
+    err,
+    { sql: sql?.substring(0, 200), params }
+  );
+}
+
+/**
  * 执行 SQL 语句
  */
-function run(sql, params = []) {
+function run(sql: string, params: any[] = []): Promise<RunResult> {
+  const startTime = Date.now();
   return new Promise((resolve, reject) => {
-    db.run(sql, params, function(err) {
-      if (err) reject(err);
-      else resolve({ id: this.lastID, changes: this.changes });
+    if (!db) {
+      reject(new DatabaseError(
+        '数据库未初始化',
+        DatabaseErrorCode.DB_NOT_INITIALIZED
+      ));
+      return;
+    }
+    db.run(sql, params, function(this: sqlite3.RunResult, err: Error | null) {
+      const duration = Date.now() - startTime;
+      if (duration > DB_CONFIG.SLOW_QUERY_THRESHOLD_MS) {
+        logWarn('Database', `慢查询 (${duration}ms)`, { sql: sql.substring(0, 100) });
+      }
+      if (err) {
+        logError('Database', `SQL 执行失败: ${sql.substring(0, 100)}`, err);
+        reject(parseSQLiteError(err, sql, params));
+      } else {
+        resolve({ id: this.lastID, changes: this.changes });
+      }
     });
   });
 }
@@ -384,11 +484,27 @@ function run(sql, params = []) {
 /**
  * 查询单条记录
  */
-function get(sql, params = []) {
+function get<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
+  const startTime = Date.now();
   return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
+    if (!db) {
+      reject(new DatabaseError(
+        '数据库未初始化',
+        DatabaseErrorCode.DB_NOT_INITIALIZED
+      ));
+      return;
+    }
+    db.get(sql, params, (err: Error | null, row: T) => {
+      const duration = Date.now() - startTime;
+      if (duration > DB_CONFIG.SLOW_QUERY_THRESHOLD_MS) {
+        logWarn('Database', `慢查询 (${duration}ms)`, { sql: sql.substring(0, 100) });
+      }
+      if (err) {
+        logError('Database', `SQL 查询失败: ${sql.substring(0, 100)}`, err);
+        reject(parseSQLiteError(err, sql, params));
+      } else {
+        resolve(row);
+      }
     });
   });
 }
@@ -396,11 +512,27 @@ function get(sql, params = []) {
 /**
  * 查询多条记录
  */
-function all(sql, params = []) {
+function all<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+  const startTime = Date.now();
   return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
+    if (!db) {
+      reject(new DatabaseError(
+        '数据库未初始化',
+        DatabaseErrorCode.DB_NOT_INITIALIZED
+      ));
+      return;
+    }
+    db.all(sql, params, (err: Error | null, rows: T[]) => {
+      const duration = Date.now() - startTime;
+      if (duration > DB_CONFIG.SLOW_QUERY_THRESHOLD_MS) {
+        logWarn('Database', `慢查询 (${duration}ms)`, { sql: sql.substring(0, 100) });
+      }
+      if (err) {
+        logError('Database', `SQL 查询失败: ${sql.substring(0, 100)}`, err);
+        reject(parseSQLiteError(err, sql, params));
+      } else {
+        resolve(rows);
+      }
     });
   });
 }
@@ -409,40 +541,46 @@ function all(sql, params = []) {
 
 /**
  * 创建提示词标签组
- * @param {string} name - 标签组名称
- * @param {number} sortOrder - 排序顺序
+ * @param name - 标签组名称
+ * @param sortOrder - 排序顺序
  */
-async function createPromptTagGroup(name, sortOrder = 0) {
+async function createPromptTagGroup(name: string, sortOrder = 0): Promise<PromptTagGroup> {
   const existing = await checkTagGroupNameDuplicate('prompt', name);
   if (existing) {
-    throw new Error('DUPLICATE_NAME');
+    throw new DuplicateNameError('提示词标签组', name);
   }
   const now = localTime();
   const sql = `
     INSERT INTO prompt_tag_groups (name, sort_order, created_at, updated_at)
     VALUES (?, ?, ?, ?)
   `;
-  const result = await run(sql, [name, sortOrder, now, now]);
-  return { id: result.id, name, sortOrder };
+  try {
+    const result = await run(sql, [name, sortOrder, now, now]);
+    return { id: result.id, name, sortOrder, tags: [] };
+  } catch (error) {
+    if (isConstraintError(error)) {
+      throw new DuplicateNameError('提示词标签组', name);
+    }
+    throw error;
+  }
 }
 
 /**
  * 获取所有提示词标签组（包含标签列表）
- * @returns {Promise<Array<{id, name, sortOrder, tags: string[]}>>}
  */
-async function getPromptTagGroups() {
+async function getPromptTagGroups(): Promise<PromptTagGroup[]> {
   const groupsSql = `
     SELECT id, name, sort_order as sortOrder
     FROM prompt_tag_groups
     ORDER BY sort_order ASC, created_at ASC
   `;
-  const groups = await all(groupsSql);
+  const groups = await all<{ id: number; name: string; sortOrder: number }>(groupsSql);
 
   const tagsSql = `
     SELECT name, group_id as groupId
     FROM prompt_tags
   `;
-  const tags = await all(tagsSql);
+  const tags = await all<{ name: string; groupId: number | null }>(tagsSql);
 
   // 组装数据
   return groups.map(group => ({
@@ -455,23 +593,23 @@ async function getPromptTagGroups() {
 
 /**
  * 更新提示词标签组
- * @param {number} id - 标签组 ID
- * @param {object} updates - 更新内容
+ * @param id - 标签组 ID
+ * @param updates - 更新内容
  */
-async function updatePromptTagGroup(id, updates) {
+async function updatePromptTagGroup(id: number, updates: UpdateTagGroupParams): Promise<PromptTagGroupRow | undefined> {
   const { name, sortOrder } = updates;
   const now = localTime();
-  
+
   if (name !== undefined) {
     const existing = await checkTagGroupNameDuplicate('prompt', name, id);
     if (existing) {
-      throw new Error('DUPLICATE_NAME');
+      throw new DuplicateNameError('提示词标签组', name);
     }
   }
-  
-  const fields = [];
-  const values = [];
-  
+
+  const fields: string[] = [];
+  const values: any[] = [];
+
   if (name !== undefined) {
     fields.push('name = ?');
     values.push(name);
@@ -480,11 +618,11 @@ async function updatePromptTagGroup(id, updates) {
     fields.push('sort_order = ?');
     values.push(sortOrder);
   }
-  
+
   fields.push('updated_at = ?');
   values.push(now);
   values.push(id);
-  
+
   const sql = `UPDATE prompt_tag_groups SET ${fields.join(', ')} WHERE id = ?`;
   await run(sql, values);
   return getPromptTagGroupById(id);
@@ -493,20 +631,20 @@ async function updatePromptTagGroup(id, updates) {
 /**
  * 获取单个提示词标签组
  */
-async function getPromptTagGroupById(id) {
+async function getPromptTagGroupById(id: number): Promise<PromptTagGroupRow | undefined> {
   const sql = `
-    SELECT id, name, sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt
+    SELECT id, name, sort_order as sort_order, created_at as created_at, updated_at as updated_at
     FROM prompt_tag_groups
     WHERE id = ?
   `;
-  return await get(sql, [id]);
+  return await get<PromptTagGroupRow>(sql, [id]);
 }
 
 /**
  * 删除提示词标签组
- * @param {number} id - 标签组ID
+ * @param id - 标签组ID
  */
-async function deletePromptTagGroup(id) {
+async function deletePromptTagGroup(id: number): Promise<boolean> {
   // 关联的标签会被设置为 group_id = NULL (ON DELETE SET NULL)
   const sql = 'DELETE FROM prompt_tag_groups WHERE id = ?';
   await run(sql, [id]);
@@ -515,40 +653,46 @@ async function deletePromptTagGroup(id) {
 
 /**
  * 创建图像标签组
- * @param {string} name - 标签组名称
- * @param {number} sortOrder - 排序顺序
+ * @param name - 标签组名称
+ * @param sortOrder - 排序顺序
  */
-async function createImageTagGroup(name, sortOrder = 0) {
+async function createImageTagGroup(name: string, sortOrder = 0): Promise<ImageTagGroup> {
   const existing = await checkTagGroupNameDuplicate('image', name);
   if (existing) {
-    throw new Error('DUPLICATE_NAME');
+    throw new DuplicateNameError('图像标签组', name);
   }
   const now = localTime();
   const sql = `
     INSERT INTO image_tag_groups (name, sort_order, created_at, updated_at)
     VALUES (?, ?, ?, ?)
   `;
-  const result = await run(sql, [name, sortOrder, now, now]);
-  return { id: result.id, name, sortOrder };
+  try {
+    const result = await run(sql, [name, sortOrder, now, now]);
+    return { id: result.id, name, sortOrder, tags: [] };
+  } catch (error) {
+    if (isConstraintError(error)) {
+      throw new DuplicateNameError('图像标签组', name);
+    }
+    throw error;
+  }
 }
 
 /**
  * 获取所有图像标签组（包含标签列表）
- * @returns {Promise<Array<{id, name, sortOrder, tags: string[]}>>}
  */
-async function getImageTagGroups() {
+async function getImageTagGroups(): Promise<ImageTagGroup[]> {
   const groupsSql = `
     SELECT id, name, sort_order as sortOrder
     FROM image_tag_groups
     ORDER BY sort_order ASC, created_at ASC
   `;
-  const groups = await all(groupsSql);
+  const groups = await all<{ id: number; name: string; sortOrder: number }>(groupsSql);
 
   const tagsSql = `
     SELECT name, group_id as groupId
     FROM image_tags
   `;
-  const tags = await all(tagsSql);
+  const tags = await all<{ name: string; groupId: number | null }>(tagsSql);
 
   // 组装数据
   return groups.map(group => ({
@@ -561,23 +705,23 @@ async function getImageTagGroups() {
 
 /**
  * 更新图像标签组
- * @param {number} id - 标签组 ID
- * @param {object} updates - 更新内容
+ * @param id - 标签组 ID
+ * @param updates - 更新内容
  */
-async function updateImageTagGroup(id, updates) {
+async function updateImageTagGroup(id: number, updates: UpdateTagGroupParams): Promise<ImageTagGroupRow | undefined> {
   const { name, sortOrder } = updates;
   const now = localTime();
-  
+
   if (name !== undefined) {
     const existing = await checkTagGroupNameDuplicate('image', name, id);
     if (existing) {
       throw new Error('DUPLICATE_NAME');
     }
   }
-  
-  const fields = [];
-  const values = [];
-  
+
+  const fields: string[] = [];
+  const values: any[] = [];
+
   if (name !== undefined) {
     fields.push('name = ?');
     values.push(name);
@@ -586,11 +730,11 @@ async function updateImageTagGroup(id, updates) {
     fields.push('sort_order = ?');
     values.push(sortOrder);
   }
-  
+
   fields.push('updated_at = ?');
   values.push(now);
   values.push(id);
-  
+
   const sql = `UPDATE image_tag_groups SET ${fields.join(', ')} WHERE id = ?`;
   await run(sql, values);
   return getImageTagGroupById(id);
@@ -599,20 +743,20 @@ async function updateImageTagGroup(id, updates) {
 /**
  * 获取单个图像标签组
  */
-async function getImageTagGroupById(id) {
+async function getImageTagGroupById(id: number): Promise<ImageTagGroupRow | undefined> {
   const sql = `
-    SELECT id, name, sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt
+    SELECT id, name, sort_order as sort_order, created_at as created_at, updated_at as updated_at
     FROM image_tag_groups
     WHERE id = ?
   `;
-  return await get(sql, [id]);
+  return await get<ImageTagGroupRow>(sql, [id]);
 }
 
 /**
  * 删除图像标签组
- * @param {number} id - 标签组ID
+ * @param id - 标签组ID
  */
-async function deleteImageTagGroup(id) {
+async function deleteImageTagGroup(id: number): Promise<boolean> {
   // 关联的标签会被设置为 group_id = NULL (ON DELETE SET NULL)
   const sql = 'DELETE FROM image_tag_groups WHERE id = ?';
   await run(sql, [id]);
@@ -623,16 +767,14 @@ async function deleteImageTagGroup(id) {
 
 /**
  * 将数据库行映射为提示词对象
- * @param {Object} row - 数据库行
- * @param {Object} options - 可选配置
- * @param {boolean} options.includeImages - 是否包含 images 数组（默认 true）
- * @param {boolean} options.includeDeletedAt - 是否包含 deletedAt 字段（默认 false）
- * @returns {Object} 提示词对象
+ * @param row - 数据库行
+ * @param options - 可选配置
+ * @returns 提示词对象
  */
-function mapRowToPrompt(row, options = {}) {
+function mapRowToPrompt(row: PromptRow, options: MapPromptOptions = {}): Prompt {
   const { includeImages = true, includeDeletedAt = false } = options;
 
-  const prompt = {
+  const prompt: Prompt = {
     id: row.id,
     title: row.title,
     content: row.content,
@@ -660,12 +802,11 @@ function mapRowToPrompt(row, options = {}) {
 /**
  * 批量获取提示词的关联图像
  * 优化 N+1 查询问题，使用单次查询 + JavaScript 分组
- * @param {Array} promptRows - 提示词行数据
- * @param {Object} options - 选项
- * @param {boolean} options.includeDeletedAt - 是否包含 deletedAt 字段
- * @returns {Promise<Array>} 包含图像的提示词列表
+ * @param promptRows - 提示词行数据
+ * @param options - 选项
+ * @returns 包含图像的提示词列表
  */
-async function getPromptsWithImages(promptRows, options = {}) {
+async function getPromptsWithImages(promptRows: PromptRow[], options: MapPromptOptions = {}): Promise<Prompt[]> {
   if (promptRows.length === 0) return [];
 
   const promptIds = promptRows.map(r => r.id);
@@ -680,15 +821,16 @@ async function getPromptsWithImages(promptRows, options = {}) {
     ORDER BY pir.prompt_id, pir.sort_order ASC
   `;
 
-  const allImages = await all(sql, promptIds);
+  const allImages = await all<ImageRef & { prompt_id: string }>(sql, promptIds);
 
-  const imagesByPromptId = {};
+  const imagesByPromptId: Record<string, ImageRef[]> = {};
   for (const img of allImages) {
     const key = String(img.prompt_id);
     if (!imagesByPromptId[key]) {
       imagesByPromptId[key] = [];
     }
-    imagesByPromptId[key].push(img);
+    const { prompt_id, ...imageRef } = img;
+    imagesByPromptId[key].push(imageRef);
   }
 
   return promptRows.map(row => {
@@ -701,12 +843,12 @@ async function getPromptsWithImages(promptRows, options = {}) {
 
 /**
  * 获取所有提示词（不包括已删除的）
- * @param {string} sortBy - 排序字段: 'updatedAt', 'createdAt', 'title'
- * @param {string} sortOrder - 排序顺序: 'asc', 'desc'
+ * @param sortBy - 排序字段: 'updatedAt', 'createdAt', 'title'
+ * @param sortOrder - 排序顺序: 'asc', 'desc'
  */
-async function getPrompts(sortBy = 'updatedAt', sortOrder = 'desc') {
+async function getPrompts(sortBy = 'updatedAt', sortOrder = 'desc'): Promise<Prompt[]> {
   // 排序字段映射
-  const sortFieldMap = {
+  const sortFieldMap: Record<string, string> = {
     'updatedAt': 'p.updated_at',
     'createdAt': 'p.created_at',
     'title': 'p.title'
@@ -724,8 +866,8 @@ async function getPrompts(sortBy = 'updatedAt', sortOrder = 'desc') {
     GROUP BY p.id
     ORDER BY ${sortField} ${order}
   `;
-  
-  const rows = await all(sql);
+
+  const rows = await all<PromptRow>(sql);
 
   // 使用批量查询获取图像，避免 N+1 问题
   return getPromptsWithImages(rows);
@@ -733,27 +875,27 @@ async function getPrompts(sortBy = 'updatedAt', sortOrder = 'desc') {
 
 /**
  * 检查标题是否已存在
- * @param {string} title - 提示词标题
- * @param {string} excludeId - 排除的提示词ID（用于编辑时排除自己）
- * @returns {Promise<boolean>} - 是否存在
+ * @param title - 提示词标题
+ * @param excludeId - 排除的提示词ID（用于编辑时排除自己）
+ * @returns 是否存在
  */
-async function isTitleExists(title, excludeId = null) {
+async function isTitleExists(title: string, excludeId: string | null = null): Promise<boolean> {
   let sql = 'SELECT COUNT(*) as count FROM prompts WHERE title = ? AND is_deleted = 0';
-  const params = [title];
-  
+  const params: any[] = [title];
+
   if (excludeId) {
     sql += ' AND id != ?';
     params.push(excludeId);
   }
-  
-  const result = await get(sql, params);
-  return result.count > 0;
+
+  const result = await get<{ count: number }>(sql, params);
+  return result ? result.count > 0 : false;
 }
 
 /**
  * 获取单个提示词
  */
-async function getPromptById(id) {
+async function getPromptById(id: string): Promise<Prompt | null> {
   const sql = `
     SELECT p.*, GROUP_CONCAT(pt.name) as tags
     FROM prompts p
@@ -762,7 +904,7 @@ async function getPromptById(id) {
     WHERE p.id = ? AND p.is_deleted = 0
     GROUP BY p.id
   `;
-  const row = await get(sql, [id]);
+  const row = await get<PromptRow>(sql, [id]);
   if (!row) return null;
 
   const prompt = mapRowToPrompt(row);
@@ -775,7 +917,7 @@ async function getPromptById(id) {
     JOIN prompt_image_relations pir ON i.id = pir.image_id
     WHERE pir.prompt_id = ?
   `;
-  const images = await all(imagesSql, [id]);
+  const images = await all<ImageRef>(imagesSql, [id]);
   prompt.images = images || [];
 
   return prompt;
@@ -784,10 +926,10 @@ async function getPromptById(id) {
 /**
  * 搜索提示词
  * 在数据库层面进行搜索，支持标题、内容、翻译、标签和备注搜索
- * @param {string} query - 搜索关键词
- * @returns {Promise<Array>} - 匹配的提示词列表
+ * @param query - 搜索关键词
+ * @returns 匹配的提示词列表
  */
-async function searchPrompts(query) {
+async function searchPrompts(query: string): Promise<Prompt[]> {
   const lowerQuery = `%${query.toLowerCase()}%`;
 
   // 搜索提示词（标题、内容、翻译、标签、备注匹配）
@@ -814,7 +956,7 @@ async function searchPrompts(query) {
     ORDER BY p.updated_at DESC
   `;
 
-  const rows = await all(sql, [lowerQuery, lowerQuery, lowerQuery, lowerQuery, lowerQuery]);
+  const rows = await all<PromptRow>(sql, [lowerQuery, lowerQuery, lowerQuery, lowerQuery, lowerQuery]);
 
   // 使用批量查询获取图像，避免 N+1 问题
   return getPromptsWithImages(rows);
@@ -824,7 +966,7 @@ async function searchPrompts(query) {
  * 添加提示词
  * 使用事务确保数据一致性
  */
-async function addPrompt(prompt) {
+async function addPrompt(prompt: CreatePromptParams): Promise<Prompt | null> {
   const { id, title, content, contentTranslate, tags = [], images = [], note = '', isSafe = 1 } = prompt;
   const now = localTime();
 
@@ -853,7 +995,7 @@ async function addPrompt(prompt) {
  * 更新提示词
  * 使用事务确保数据一致性
  */
-async function updatePrompt(id, updates) {
+async function updatePrompt(id: string, updates: UpdatePromptParams): Promise<Prompt | null> {
   const { title, content, contentTranslate, tags, images, note, isSafe, isFavorite } = updates;
   const now = localTime();
 
@@ -862,8 +1004,8 @@ async function updatePrompt(id, updates) {
     const hasBasicFieldUpdate = Object.keys(updates).some(key => !relatedFields.includes(key));
 
     if (hasBasicFieldUpdate) {
-      const fields = [];
-      const values = [];
+      const fields: string[] = [];
+      const values: any[] = [];
 
       if (title !== undefined) {
         fields.push('title = ?');
@@ -883,7 +1025,7 @@ async function updatePrompt(id, updates) {
       }
       if (isSafe !== undefined) {
         fields.push('is_safe = ?');
-        values.push(isSafe);
+        values.push(isSafe ? 1 : 0);
       }
       if (isFavorite !== undefined) {
         fields.push('is_favorite = ?');
@@ -898,7 +1040,7 @@ async function updatePrompt(id, updates) {
 
     // 更新标签 - 增量更新方式
     if (tags !== undefined) {
-      const currentTagsRow = await get(
+      const currentTagsRow = await get<{ tags: string | null }>(
         'SELECT GROUP_CONCAT(pt.name) as tags FROM prompt_tag_relations ptr JOIN prompt_tags pt ON ptr.tag_id = pt.id WHERE ptr.prompt_id = ?',
         [id]
       );
@@ -910,7 +1052,7 @@ async function updatePrompt(id, updates) {
       const tagsChanged = tagsToAdd.length > 0 || tagsToRemove.length > 0;
 
       for (const tagName of tagsToRemove) {
-        const tagRow = await get('SELECT id FROM prompt_tags WHERE name = ?', [tagName]);
+        const tagRow = await get<{ id: number }>('SELECT id FROM prompt_tags WHERE name = ?', [tagName]);
         if (tagRow) {
           await run('DELETE FROM prompt_tag_relations WHERE prompt_id = ? AND tag_id = ?', [id, tagRow.id]);
         }
@@ -927,7 +1069,7 @@ async function updatePrompt(id, updates) {
 
     // 更新图像关联
     if (images !== undefined) {
-      const currentImageRows = await all(
+      const currentImageRows = await all<{ image_id: string }>(
         'SELECT image_id FROM prompt_image_relations WHERE prompt_id = ?',
         [id]
       );
@@ -967,7 +1109,7 @@ async function updatePrompt(id, updates) {
 /**
  * 软删除提示词
  */
-async function deletePrompt(id) {
+async function deletePrompt(id: string): Promise<boolean> {
   const now = localTime();
   await run(
     'UPDATE prompts SET is_deleted = 1, deleted_at = ? WHERE id = ?',
@@ -979,7 +1121,7 @@ async function deletePrompt(id) {
 /**
  * 恢复已删除的提示词
  */
-async function restorePrompt(id) {
+async function restorePrompt(id: string): Promise<Prompt | null> {
   const now = localTime();
   await run(
     'UPDATE prompts SET is_deleted = 0, deleted_at = NULL, updated_at = ? WHERE id = ?',
@@ -991,7 +1133,7 @@ async function restorePrompt(id) {
 /**
  * 永久删除提示词
  */
-async function permanentDeletePrompt(id) {
+async function permanentDeletePrompt(id: string): Promise<boolean> {
   await run('DELETE FROM prompts WHERE id = ?', [id]);
   return true;
 }
@@ -999,7 +1141,7 @@ async function permanentDeletePrompt(id) {
 /**
  * 恢复所有已删除的提示词
  */
-async function restoreAllPrompts() {
+async function restoreAllPrompts(): Promise<boolean> {
   const now = localTime();
   await run(
     'UPDATE prompts SET is_deleted = 0, deleted_at = NULL, updated_at = ? WHERE is_deleted = 1',
@@ -1011,7 +1153,7 @@ async function restoreAllPrompts() {
 /**
  * 获取收藏的提示词
  */
-async function getFavoritePrompts() {
+async function getFavoritePrompts(): Promise<Prompt[]> {
   const sql = `
     SELECT p.*, GROUP_CONCAT(pt.name) as tags
     FROM prompts p
@@ -1021,14 +1163,14 @@ async function getFavoritePrompts() {
     GROUP BY p.id
     ORDER BY p.updated_at DESC
   `;
-  const rows = await all(sql);
+  const rows = await all<PromptRow>(sql);
   return getPromptsWithImages(rows);
 }
 
 /**
  * 获取回收站中的提示词
  */
-async function getDeletedPrompts() {
+async function getDeletedPrompts(): Promise<Prompt[]> {
   const sql = `
     SELECT p.*, GROUP_CONCAT(pt.name) as tags
     FROM prompts p
@@ -1038,7 +1180,7 @@ async function getDeletedPrompts() {
     GROUP BY p.id
     ORDER BY p.deleted_at DESC
   `;
-  const rows = await all(sql);
+  const rows = await all<PromptRow>(sql);
   return getPromptsWithImages(rows, { includeImages: true, includeDeletedAt: true });
 }
 
@@ -1047,24 +1189,24 @@ async function getDeletedPrompts() {
 /**
  * 获取所有提示词标签
  */
-async function getPromptTags() {
-  const rows = await all('SELECT name FROM prompt_tags ORDER BY name');
+async function getPromptTags(): Promise<string[]> {
+  const rows = await all<{ name: string }>('SELECT name FROM prompt_tags ORDER BY name');
   return rows.map(row => row.name);
 }
 
 /**
  * 添加提示词标签
- * @param {string} name - 标签名称
- * @param {number} groupId - 标签组ID（可选）
+ * @param name - 标签名称
+ * @param groupId - 标签组ID（可选）
  */
-async function addPromptTag(name, groupId = null) {
+async function addPromptTag(name: string, groupId: number | null = null): Promise<number | null> {
   const now = localTime();
   try {
     await run(
       'INSERT INTO prompt_tags (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)',
       [name, groupId, now, now]
     );
-  } catch (err) {
+  } catch (err: any) {
     // 标签已存在，更新组ID（如果提供了）
     if (err.message.includes('UNIQUE constraint failed')) {
       if (groupId !== null) {
@@ -1079,16 +1221,16 @@ async function addPromptTag(name, groupId = null) {
   }
 
   // 获取标签 ID
-  const row = await get('SELECT id FROM prompt_tags WHERE name = ?', [name]);
+  const row = await get<{ id: number }>('SELECT id FROM prompt_tags WHERE name = ?', [name]);
   return row ? row.id : null;
 }
 
 /**
  * 更新提示词标签的所属组
- * @param {string} tagName - 标签名称
- * @param {number|null} groupId - 标签组ID
+ * @param tagName - 标签名称
+ * @param groupId - 标签组ID
  */
-async function updatePromptTagGroupByTagName(tagName, groupId) {
+async function updatePromptTagGroupByTagName(tagName: string, groupId: number | null): Promise<void> {
   const now = localTime();
   await run(
     'UPDATE prompt_tags SET group_id = ?, updated_at = ? WHERE name = ?',
@@ -1099,7 +1241,7 @@ async function updatePromptTagGroupByTagName(tagName, groupId) {
 /**
  * 标签配置定义
  */
-const TagConfig = {
+const TagConfig: TagConfigMap = {
   prompt: {
     tagTable: 'prompt_tags',
     relationTable: 'prompt_tag_relations',
@@ -1120,12 +1262,12 @@ const TagConfig = {
 
 /**
  * 检查标签组名称是否重复（配置驱动）
- * @param {string} type - 标签类型: 'prompt' | 'image'
- * @param {string} name - 标签组名称
- * @param {string|null} excludeId - 排除的标签组ID（用于更新时检查）
- * @returns {Promise<object|null>} - 存在返回记录，不存在返回null
+ * @param type - 标签类型: 'prompt' | 'image'
+ * @param name - 标签组名称
+ * @param excludeId - 排除的标签组ID（用于更新时检查）
+ * @returns 存在返回记录，不存在返回null
  */
-async function checkTagGroupNameDuplicate(type, name, excludeId = null) {
+async function checkTagGroupNameDuplicate(type: keyof TagConfigMap, name: string, excludeId: number | null = null): Promise<{ id: number } | undefined> {
   const config = TagConfig[type];
   if (!config) {
     throw new Error(`Unknown tag type: ${type}`);
@@ -1133,24 +1275,24 @@ async function checkTagGroupNameDuplicate(type, name, excludeId = null) {
 
   const { groupTable } = config;
   let sql = `SELECT id FROM ${groupTable} WHERE name = ?`;
-  const params = [name];
+  const params: any[] = [name];
 
   if (excludeId) {
     sql += ` AND id != ?`;
     params.push(excludeId);
   }
 
-  return await get(sql, params);
+  return await get<{ id: number }>(sql, params);
 }
 
 /**
  * 通用标签重命名函数（配置驱动）
- * @param {string} type - 标签类型: 'prompt' | 'image'
- * @param {string} oldTag - 旧标签名
- * @param {string} newTag - 新标签名
- * @returns {Promise<Array>} - 最新的标签列表
+ * @param type - 标签类型: 'prompt' | 'image'
+ * @param oldTag - 旧标签名
+ * @param newTag - 新标签名
+ * @returns 最新的标签列表
  */
-async function renameTag(type, oldTag, newTag) {
+async function renameTag(type: keyof TagConfigMap, oldTag: string, newTag: string): Promise<string[]> {
   const config = TagConfig[type];
   if (!config) {
     throw new Error(`Unknown tag type: ${type}`);
@@ -1159,17 +1301,17 @@ async function renameTag(type, oldTag, newTag) {
   const { tagTable, relationTable, itemIdColumn, tagIdColumn, getTags } = config;
 
   // 获取旧标签的 ID
-  const oldTagRow = await get(`SELECT id FROM ${tagTable} WHERE name = ?`, [oldTag]);
+  const oldTagRow = await get<{ id: number }>(`SELECT id FROM ${tagTable} WHERE name = ?`, [oldTag]);
   if (!oldTagRow) {
     return await getTags();
   }
 
   // 检查新标签是否已存在
-  const newTagRow = await get(`SELECT id FROM ${tagTable} WHERE name = ?`, [newTag]);
+  const newTagRow = await get<{ id: number }>(`SELECT id FROM ${tagTable} WHERE name = ?`, [newTag]);
 
   if (newTagRow) {
     // 新标签已存在，将所有旧标签的关联迁移到新标签
-    const relations = await all(
+    const relations = await all<{ [key: string]: string }>(
       `SELECT ${itemIdColumn} FROM ${relationTable} WHERE ${tagIdColumn} = ?`,
       [oldTagRow.id]
     );
@@ -1179,7 +1321,7 @@ async function renameTag(type, oldTag, newTag) {
           `INSERT INTO ${relationTable} (${itemIdColumn}, ${tagIdColumn}) VALUES (?, ?)`,
           [rel[itemIdColumn], newTagRow.id]
         );
-      } catch (err) {
+      } catch (err: any) {
         // 关联已存在，忽略
       }
     }
@@ -1196,7 +1338,7 @@ async function renameTag(type, oldTag, newTag) {
 /**
  * 为提示词添加标签
  */
-async function addPromptTags(promptId, tagNames) {
+async function addPromptTags(promptId: string, tagNames: string[]): Promise<void> {
   for (const tagName of tagNames) {
     const tagId = await addPromptTag(tagName);
     if (tagId) {
@@ -1205,7 +1347,7 @@ async function addPromptTags(promptId, tagNames) {
           'INSERT INTO prompt_tag_relations (prompt_id, tag_id) VALUES (?, ?)',
           [promptId, tagId]
         );
-      } catch (err) {
+      } catch (err: any) {
         // 关联已存在，忽略错误
         if (!err.message.includes('UNIQUE constraint failed')) {
           throw err;
@@ -1219,16 +1361,15 @@ async function addPromptTags(promptId, tagNames) {
 
 /**
  * 将数据库行映射为图像对象
- * @param {Object} row - 数据库行
- * @param {Array} promptRows - 关联的提示词行
- * @param {Object} options - 可选配置
- * @param {boolean} options.includeDeletedAt - 是否包含 deletedAt 字段
- * @returns {Object} 图像对象
+ * @param row - 数据库行
+ * @param promptRows - 关联的提示词行
+ * @param options - 可选配置
+ * @returns 图像对象
  */
-function mapRowToImage(row, promptRows = [], options = {}) {
+function mapRowToImage(row: ImageRow, promptRows: Array<{ id: string; title: string; content: string }> = [], options: MapImageOptions = {}): Image {
   const { includeDeletedAt = false } = options;
 
-  const image = {
+  const image: Image = {
     id: row.id,
     fileName: row.file_name,
     storedName: row.stored_name,
@@ -1260,10 +1401,10 @@ function mapRowToImage(row, promptRows = [], options = {}) {
 
 /**
  * 批量获取图像的关联提示词引用
- * @param {Array<string>} imageIds - 图像 ID 数组
- * @returns {Promise<Array>} 提示词引用列表
+ * @param imageIds - 图像 ID 数组
+ * @returns 提示词引用列表
  */
-async function getPromptRefsForImages(imageIds) {
+async function getPromptRefsForImages(imageIds: string[]): Promise<Array<{ image_id: string; id: string; title: string; content: string }>> {
   if (imageIds.length === 0) return [];
   const placeholders = imageIds.map(() => '?').join(',');
   const sql = `
@@ -1277,18 +1418,18 @@ async function getPromptRefsForImages(imageIds) {
 
 /**
  * 图像查询公共方法 - 批量获取关联数据避免 N+1 问题
- * @param {string} baseSql - 基础 SQL 查询
- * @param {Array} params - 查询参数
- * @returns {Promise<Array>} 图像列表
+ * @param baseSql - 基础 SQL 查询
+ * @param params - 查询参数
+ * @returns 图像列表
  */
-async function getImagesCore(baseSql, params) {
-  const rows = await all(baseSql, params);
+async function getImagesCore(baseSql: string, params: any[]): Promise<Image[]> {
+  const rows = await all<ImageRow>(baseSql, params);
   if (rows.length === 0) return [];
 
   const imageIds = rows.map(r => r.id);
   const promptRefs = await getPromptRefsForImages(imageIds);
 
-  const refsByImageId = {};
+  const refsByImageId: Record<string, Array<{ id: string; title: string; content: string }>> = {};
   for (const ref of promptRefs) {
     if (!refsByImageId[ref.image_id]) refsByImageId[ref.image_id] = [];
     refsByImageId[ref.image_id].push({ id: ref.id, title: ref.title, content: ref.content });
@@ -1299,11 +1440,11 @@ async function getImagesCore(baseSql, params) {
 
 /**
  * 获取所有图像（不包括已删除的）
- * @param {string} sortBy - 排序字段: 'createdAt', 'fileName', 'width', 'height'
- * @param {string} sortOrder - 排序顺序: 'asc', 'desc'
+ * @param sortBy - 排序字段: 'createdAt', 'fileName', 'width', 'height'
+ * @param sortOrder - 排序顺序: 'asc', 'desc'
  */
-async function getImages(sortBy = 'createdAt', sortOrder = 'desc') {
-  const sortFieldMap = {
+async function getImages(sortBy = 'createdAt', sortOrder = 'desc'): Promise<Image[]> {
+  const sortFieldMap: Record<string, string> = {
     'createdAt': 'i.created_at',
     'updatedAt': 'i.updated_at',
     'fileName': 'i.file_name',
@@ -1330,10 +1471,10 @@ async function getImages(sortBy = 'createdAt', sortOrder = 'desc') {
 
 /**
  * 根据 ID 批量获取图像
- * @param {Array<string>} ids - 图像 ID 数组
- * @returns {Array} 图像列表
+ * @param ids - 图像 ID 数组
+ * @returns 图像列表
  */
-async function getImagesByIds(ids) {
+async function getImagesByIds(ids: string[]): Promise<Image[]> {
   if (!ids || ids.length === 0) return [];
 
   const placeholders = ids.map(() => '?').join(',');
@@ -1350,20 +1491,31 @@ async function getImagesByIds(ids) {
 }
 
 /**
- * 获取所有图像
- * @param {Object} options - 选项
- * @param {boolean} options.forCleanup - 是否用于清理孤儿文件（只返回路径），默认 false
- * @returns {Array} 图像记录
+ * 获取所有图像（用于清理）
+ * @param options - 选项，forCleanup 为 true
+ * @returns 图像清理信息列表
  */
-async function getAllImages(options = {}) {
+async function getAllImages(options: { forCleanup: true }): Promise<ImageCleanupInfo[]>;
+/**
+ * 获取所有图像（完整信息）
+ * @param options - 选项，forCleanup 为 false 或未指定
+ * @returns 图像对象列表
+ */
+async function getAllImages(options?: { forCleanup?: false }): Promise<Image[]>;
+/**
+ * 获取所有图像
+ * @param options - 选项
+ * @returns 图像记录
+ */
+async function getAllImages(options: GetImagesOptions = {}): Promise<Image[] | ImageCleanupInfo[]> {
   const { forCleanup = false } = options;
-  
+
   if (forCleanup) {
     // 清理孤儿文件：只需要路径，不需要关联数据
     const sql = 'SELECT id, relative_path, thumbnail_path FROM images';
-    return await all(sql);
+    return await all<ImageCleanupInfo>(sql);
   }
-  
+
   // 默认：统计或其他场景，使用完整查询
   const imageSql = `
     SELECT i.*,
@@ -1378,20 +1530,20 @@ async function getAllImages(options = {}) {
 }
 
 /**
- * 根据 MD5 查找图像
+ * 根据 ID 查找图像
  */
-async function getImageById(id) {
+async function getImageById(id: string): Promise<Image | null> {
   // 先获取图像基本信息和标签（使用子查询避免重复）
   const imageSql = `
-    SELECT i.*, 
-           (SELECT GROUP_CONCAT(DISTINCT it.name) 
-            FROM image_tag_relations itr 
-            JOIN image_tags it ON itr.tag_id = it.id 
+    SELECT i.*,
+           (SELECT GROUP_CONCAT(DISTINCT it.name)
+            FROM image_tag_relations itr
+            JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
     FROM images i
     WHERE i.id = ?
   `;
-  const row = await get(imageSql, [id]);
+  const row = await get<ImageRow>(imageSql, [id]);
   if (!row) return null;
 
   // 单独获取关联的提示词信息
@@ -1401,23 +1553,17 @@ async function getImageById(id) {
     JOIN prompt_image_relations pir ON p.id = pir.prompt_id
     WHERE pir.image_id = ? AND p.is_deleted = 0
   `;
-  const promptRows = await all(promptSql, [id]);
+  const promptRows = await all<{ id: string; title: string; content: string }>(promptSql, [id]);
 
   return mapRowToImage(row, promptRows);
 }
 
 /**
  * 更新图像
- * @param {string} id - 图像 ID
- * @param {Object} updates - 更新内容
- * @param {boolean} [updates.isFavorite] - 是否收藏
- * @param {boolean} [updates.isSafe] - 是否安全
- * @param {string} [updates.note] - 备注
- * @param {string} [updates.fileName] - 文件名
- * @param {string[]} [updates.tags] - 标签列表（增量更新）
- * @param {Array} [updates.prompts] - 关联的提示词列表（增量更新）
+ * @param id - 图像 ID
+ * @param updates - 更新内容
  */
-async function updateImage(id, updates) {
+async function updateImage(id: string, updates: UpdateImageParams): Promise<Image | null> {
   const { isFavorite, isSafe, note, fileName, tags, prompts } = updates;
   const now = localTime();
 
@@ -1426,8 +1572,8 @@ async function updateImage(id, updates) {
     const hasBasicFieldUpdate = Object.keys(updates).some(key => !relatedFields.includes(key));
 
     if (hasBasicFieldUpdate) {
-      const fields = [];
-      const values = [];
+      const fields: string[] = [];
+      const values: any[] = [];
 
       if (isFavorite !== undefined) {
         fields.push('is_favorite = ?');
@@ -1459,7 +1605,7 @@ async function updateImage(id, updates) {
       const tagsChanged = tagsToAdd.length > 0 || tagsToRemove.length > 0;
 
       for (const tagName of tagsToRemove) {
-        const tagRow = await get('SELECT id FROM image_tags WHERE name = ?', [tagName]);
+        const tagRow = await get<{ id: number }>('SELECT id FROM image_tags WHERE name = ?', [tagName]);
         if (tagRow) {
           await run('DELETE FROM image_tag_relations WHERE image_id = ? AND tag_id = ?', [id, tagRow.id]);
         }
@@ -1475,12 +1621,12 @@ async function updateImage(id, updates) {
     }
 
     if (prompts !== undefined) {
-      const currentPromptRows = await all(
+      const currentPromptRows = await all<{ prompt_id: string }>(
         'SELECT prompt_id FROM prompt_image_relations WHERE image_id = ?',
         [id]
       );
       const currentPromptIds = currentPromptRows.map(r => r.prompt_id);
-      const newPromptIds = prompts.map(p => p.id || p);
+      const newPromptIds = prompts.map(p => typeof p === 'string' ? p : p.id);
 
       const promptsToAdd = newPromptIds.filter(pid => !currentPromptIds.includes(pid));
       const promptsToRemove = currentPromptIds.filter(pid => !newPromptIds.includes(pid));
@@ -1524,9 +1670,12 @@ async function updateImage(id, updates) {
 /**
  * 批量更新图像缩略图信息
  * 用于导入备份后批量更新缩略图路径
- * @param {Array<{id: string, thumbnailPath: string}>} updates - 更新列表
+ * @param updates - 更新列表
+ *
+ * 注意：直接使用 db.prepare 而非封装的 run 函数，以利用 prepared statement 的性能优势。
+ * 批量更新时，复用 prepared statement 可避免重复编译 SQL，显著提升性能。
  */
-async function updateImagesBatch(updates) {
+async function updateImagesBatch(updates: UpdateThumbnailParams[]): Promise<void> {
   if (!updates || updates.length === 0) {
     return;
   }
@@ -1534,14 +1683,17 @@ async function updateImagesBatch(updates) {
   const now = localTime();
 
   return runInTransaction(async () => {
+    if (!db) {
+      throw new Error('Database not initialized');
+    }
     const stmt = db.prepare(
       'UPDATE images SET thumbnail_path = ?, updated_at = ? WHERE id = ?'
     );
 
     try {
       for (const update of updates) {
-        await new Promise((resolve, reject) => {
-          stmt.run(update.thumbnailPath, now, update.id, (err) => {
+        await new Promise<void>((resolve, reject) => {
+          stmt.run(update.thumbnailPath, now, update.id, (err: Error | null) => {
             if (err) reject(err);
             else resolve();
           });
@@ -1556,7 +1708,7 @@ async function updateImagesBatch(updates) {
 /**
  * 获取收藏的图像
  */
-async function getFavoriteImages() {
+async function getFavoriteImages(): Promise<Image[]> {
   const imageSql = `
     SELECT i.*,
            (SELECT GROUP_CONCAT(DISTINCT it.name)
@@ -1571,17 +1723,17 @@ async function getFavoriteImages() {
 }
 
 /**
- * 根据 MD5 查找图像
+ * 根据 MD5 查找图像（仅返回 id）
  */
-async function getImageByMD5(md5) {
-  const row = await get('SELECT * FROM images WHERE md5 = ?', [md5]);
+async function getImageByMD5(md5: string): Promise<{ id: string } | null> {
+  const row = await get<{ id: string }>('SELECT id FROM images WHERE md5 = ?', [md5]);
   return row || null;
 }
 
 /**
  * 添加图像
  */
-async function addImage(image) {
+async function addImage(image: CreateImageParams): Promise<Image | null> {
   const {
     id,
     fileName,
@@ -1608,7 +1760,7 @@ async function addImage(image) {
 /**
  * 软删除图像（移动到回收站）
  */
-async function softDeleteImage(id) {
+async function softDeleteImage(id: string): Promise<boolean> {
   const now = localTime();
   await run(
     'UPDATE images SET is_deleted = 1, deleted_at = ?, updated_at = ? WHERE id = ?',
@@ -1620,7 +1772,7 @@ async function softDeleteImage(id) {
 /**
  * 恢复已删除的图像
  */
-async function restoreImage(id) {
+async function restoreImage(id: string): Promise<Image | null> {
   const now = localTime();
   await run(
     'UPDATE images SET is_deleted = 0, deleted_at = NULL, updated_at = ? WHERE id = ?',
@@ -1631,10 +1783,10 @@ async function restoreImage(id) {
 
 /**
  * 删除图像的物理文件
- * @param {Object} image - 图像对象
- * @param {string} dataDir - 数据目录路径
+ * @param image - 图像对象
+ * @param dataDir - 数据目录路径
  */
-async function deleteImageFiles(image, dataDir) {
+async function deleteImageFiles(image: ImageFilePaths, dataDir: string): Promise<void> {
   try {
     // 删除原图
     if (image.relative_path) {
@@ -1646,24 +1798,27 @@ async function deleteImageFiles(image, dataDir) {
       const thumbnailPath = path.join(dataDir, image.thumbnail_path);
       await fs.unlink(thumbnailPath).catch(() => {});
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to delete image file:', error);
   }
 }
 
 /**
  * 永久删除图像
- * @param {string} id - 图像ID
- * @param {string} dataDir - 数据目录路径
+ * @param id - 图像ID
+ * @param dataDir - 数据目录路径
  */
-async function permanentDeleteImage(id, dataDir) {
-  // 先获取图像信息以删除物理文件
-  const image = await get('SELECT * FROM images WHERE id = ?', [id]);
-  
+async function permanentDeleteImage(id: string, dataDir: string): Promise<boolean> {
+  // 先获取图像信息以删除物理文件（只选择需要的字段）
+  const image = await get<ImageFilePaths>(
+    'SELECT relative_path, thumbnail_path FROM images WHERE id = ?',
+    [id]
+  );
+
   if (image) {
     await deleteImageFiles(image, dataDir);
   }
-  
+
   // 删除数据库记录
   await run('DELETE FROM images WHERE id = ?', [id]);
   return true;
@@ -1672,7 +1827,7 @@ async function permanentDeleteImage(id, dataDir) {
 /**
  * 恢复所有已删除的图像
  */
-async function restoreAllImages() {
+async function restoreAllImages(): Promise<boolean> {
   const now = localTime();
   await run(
     'UPDATE images SET is_deleted = 0, deleted_at = NULL, updated_at = ? WHERE is_deleted = 1',
@@ -1684,44 +1839,56 @@ async function restoreAllImages() {
 /**
  * 获取回收站中的图像
  */
-async function getDeletedImages() {
+async function getDeletedImages(): Promise<Image[]> {
   // 先获取所有已删除的图像基本信息
   const imageSql = `
-    SELECT i.*, 
-           (SELECT GROUP_CONCAT(DISTINCT it.name) 
-            FROM image_tag_relations itr 
-            JOIN image_tags it ON itr.tag_id = it.id 
+    SELECT i.*,
+           (SELECT GROUP_CONCAT(DISTINCT it.name)
+            FROM image_tag_relations itr
+            JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
     FROM images i
     WHERE i.is_deleted = 1
     ORDER BY i.deleted_at DESC
   `;
-  const rows = await all(imageSql);
-  
-  // 为每个图像获取关联的提示词信息
-  const images = [];
-  for (const row of rows) {
-    const promptSql = `
-      SELECT p.id, p.title, p.content
-      FROM prompts p
-      JOIN prompt_image_relations pir ON p.id = pir.prompt_id
-      WHERE pir.image_id = ? AND p.is_deleted = 0
-    `;
-    const promptRows = await all(promptSql, [row.id]);
-    images.push(mapRowToImage(row, promptRows, { includeDeletedAt: true }));
+  const rows = await all<ImageRow>(imageSql);
+
+  if (rows.length === 0) return [];
+
+  // 批量获取所有已删除图像的关联提示词信息，避免 N+1 查询
+  const imageIds = rows.map(r => r.id);
+  const placeholders = imageIds.map(() => '?').join(',');
+  const promptSql = `
+    SELECT pir.image_id, p.id, p.title, p.content
+    FROM prompt_image_relations pir
+    JOIN prompts p ON pir.prompt_id = p.id
+    WHERE pir.image_id IN (${placeholders}) AND p.is_deleted = 0
+  `;
+  const allPromptRows = await all<{ image_id: string; id: string; title: string; content: string }>(promptSql, imageIds);
+
+  // 按 image_id 分组提示词
+  const promptsByImageId: Record<string, Array<{ id: string; title: string; content: string }>> = {};
+  for (const row of allPromptRows) {
+    if (!promptsByImageId[row.image_id]) {
+      promptsByImageId[row.image_id] = [];
+    }
+    promptsByImageId[row.image_id].push({ id: row.id, title: row.title, content: row.content });
   }
 
-  return images;
+  // 组装图像列表
+  return rows.map(row => mapRowToImage(row, promptsByImageId[row.id] || [], { includeDeletedAt: true }));
 }
 
 /**
  * 清空图像回收站
  * 删除所有软删除的图像记录和对应的物理文件
- * @param {string} dataDir - 数据目录路径
+ * @param dataDir - 数据目录路径
  */
-async function emptyImageTrash(dataDir) {
-  // 获取所有软删除的图像
-  const deletedImages = await all('SELECT * FROM images WHERE is_deleted = 1');
+async function emptyImageTrash(dataDir: string): Promise<boolean> {
+  // 获取所有软删除的图像（只选择文件路径相关字段）
+  const deletedImages = await all<ImageFilePaths>(
+    'SELECT relative_path, thumbnail_path FROM images WHERE is_deleted = 1'
+  );
 
   // 删除物理文件
   for (const image of deletedImages) {
@@ -1735,11 +1902,15 @@ async function emptyImageTrash(dataDir) {
 
 /**
  * 为提示词添加图像关联
- * @param {string} promptId - 提示词ID
- * @param {Array} imageIds - 图像ID数组
- * @param {boolean} preserveOrder - 是否保留数组顺序（默认true）
+ * @param promptId - 提示词ID
+ * @param imageIds - 图像ID数组
+ * @param preserveOrder - 是否保留数组顺序（默认true）
+ *
+ * 注意：使用逐行更新而非批量更新，以支持细粒度的错误处理。
+ * 当某个关联已存在（UNIQUE约束）或图像不存在（外键约束）时，
+ * 可以跳过该记录而继续处理其他记录，而不是让整个批量操作失败。
  */
-async function addPromptImages(promptId, imageIds, preserveOrder = true) {
+async function addPromptImages(promptId: string, imageIds: string[], preserveOrder = true): Promise<void> {
   const now = localTime();
 
   for (let i = 0; i < imageIds.length; i++) {
@@ -1757,21 +1928,28 @@ async function addPromptImages(promptId, imageIds, preserveOrder = true) {
 
       // 更新提示词的 updated_at（关联关系改变，双方都需要更新）
       await run('UPDATE prompts SET updated_at = ? WHERE id = ?', [now, promptId]);
-    } catch (err) {
-      if (!err.message.includes('UNIQUE constraint failed') && !err.message.includes('FOREIGN KEY constraint failed')) {
-        throw err;
+    } catch (error) {
+      if (error instanceof ConstraintViolationError) {
+        // 约束违反时跳过，继续处理其他记录
+        logDebug('Database', `跳过关联添加: ${error.message}`, { promptId, imageId });
+        continue;
       }
+      throw error;
     }
   }
 }
 
 /**
  * 为图像添加提示词关联
- * @param {string} imageId - 图像ID
- * @param {Array} promptIds - 提示词ID数组
- * @param {boolean} preserveOrder - 是否保留数组顺序（默认true）
+ * @param imageId - 图像ID
+ * @param promptIds - 提示词ID数组
+ * @param preserveOrder - 是否保留数组顺序（默认true）
+ *
+ * 注意：使用逐行更新而非批量更新，以支持细粒度的错误处理。
+ * 当某个关联已存在（UNIQUE约束）或提示词不存在（外键约束）时，
+ * 可以跳过该记录而继续处理其他记录，而不是让整个批量操作失败。
  */
-async function addImagePrompts(imageId, promptIds, preserveOrder = true) {
+async function addImagePrompts(imageId: string, promptIds: string[], preserveOrder = true): Promise<void> {
   const now = localTime();
 
   for (let i = 0; i < promptIds.length; i++) {
@@ -1789,10 +1967,13 @@ async function addImagePrompts(imageId, promptIds, preserveOrder = true) {
 
       // 更新图像的 updated_at（关联关系改变，双方都需要更新）
       await run('UPDATE images SET updated_at = ? WHERE id = ?', [now, imageId]);
-    } catch (err) {
-      if (!err.message.includes('UNIQUE constraint failed') && !err.message.includes('FOREIGN KEY constraint failed')) {
-        throw err;
+    } catch (error) {
+      if (error instanceof ConstraintViolationError) {
+        // 约束违反时跳过，继续处理其他记录
+        logDebug('Database', `跳过关联添加: ${error.message}`, { imageId, promptId });
+        continue;
       }
+      throw error;
     }
   }
 }
@@ -1800,7 +1981,7 @@ async function addImagePrompts(imageId, promptIds, preserveOrder = true) {
 /**
  * 获取提示词关联的图像
  */
-async function getPromptImages(promptId) {
+async function getPromptImages(promptId: string): Promise<PromptImage[]> {
   const sql = `
     SELECT i.*,
            (SELECT GROUP_CONCAT(DISTINCT it.name)
@@ -1812,7 +1993,7 @@ async function getPromptImages(promptId) {
     WHERE pir.prompt_id = ?
     ORDER BY pir.sort_order ASC
   `;
-  const rows = await all(sql, [promptId]);
+  const rows = await all<ImageRow>(sql, [promptId]);
   return rows.map(row => ({
     id: row.id,
     fileName: row.file_name,
@@ -1823,7 +2004,7 @@ async function getPromptImages(promptId) {
     height: row.height,
     isSafe: row.is_safe === 1 ? 1 : 0,
     note: row.note,
-    isDeleted: row.is_deleted,
+    isDeleted: row.is_deleted === 1,
     deletedAt: row.deleted_at,
     createdAt: row.created_at,
     tags: row.image_tags ? row.image_tags.split(',').filter(t => t) : [],
@@ -1834,14 +2015,14 @@ async function getPromptImages(promptId) {
 /**
  * 获取未被引用的图像
  */
-async function getUnreferencedImages() {
+async function getUnreferencedImages(): Promise<UnreferencedImage[]> {
   const sql = `
     SELECT i.*
     FROM images i
     LEFT JOIN prompt_image_relations pir ON i.id = pir.image_id
     WHERE pir.prompt_id IS NULL
   `;
-  const rows = await all(sql);
+  const rows = await all<ImageRow>(sql);
   return rows.map(row => ({
     id: row.id,
     fileName: row.file_name,
@@ -1850,9 +2031,9 @@ async function getUnreferencedImages() {
     thumbnailPath: row.thumbnail_path,
     width: row.width,
     height: row.height,
-    is_safe: row.is_safe === 1 ? 1 : 0,
+    isSafe: row.is_safe === 1 ? 1 : 0,
     note: row.note,
-    isDeleted: row.is_deleted,
+    isDeleted: row.is_deleted === 1,
     deletedAt: row.deleted_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -1864,25 +2045,25 @@ async function getUnreferencedImages() {
 /**
  * 获取所有图像标签
  */
-async function getImageTags() {
+async function getImageTags(): Promise<string[]> {
   const sql = 'SELECT name FROM image_tags ORDER BY name';
-  const rows = await all(sql);
+  const rows = await all<{ name: string }>(sql);
   return rows.map(row => row.name);
 }
 
 /**
  * 添加图像标签
- * @param {string} name - 标签名称
- * @param {number} groupId - 标签组ID（可选）
+ * @param name - 标签名称
+ * @param groupId - 标签组ID（可选）
  */
-async function addImageTag(name, groupId = null) {
+async function addImageTag(name: string, groupId: number | null = null): Promise<void> {
   const now = localTime();
   try {
     await run(
       'INSERT INTO image_tags (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)',
       [name, groupId, now, now]
     );
-  } catch (err) {
+  } catch (err: any) {
     // 标签已存在，更新组ID（如果提供了）
     if (err.message.includes('UNIQUE constraint failed')) {
       if (groupId !== null) {
@@ -1900,17 +2081,17 @@ async function addImageTag(name, groupId = null) {
 /**
  * 为图像添加多个标签
  */
-async function addImageTags(imageId, tagNames) {
+async function addImageTags(imageId: string, tagNames: string[]): Promise<void> {
   for (const tagName of tagNames) {
     // 先确保标签存在
     await addImageTag(tagName);
 
     // 获取标签ID
-    const tagRow = await get('SELECT id FROM image_tags WHERE name = ?', [tagName]);
+    const tagRow = await get<{ id: number }>('SELECT id FROM image_tags WHERE name = ?', [tagName]);
     if (tagRow) {
       try {
         await run('INSERT INTO image_tag_relations (image_id, tag_id) VALUES (?, ?)', [imageId, tagRow.id]);
-      } catch (err) {
+      } catch (err: any) {
         if (!err.message.includes('UNIQUE constraint failed')) {
           throw err;
         }
@@ -1922,18 +2103,18 @@ async function addImageTags(imageId, tagNames) {
 /**
  * 删除图像标签
  * 从 image_tags 表中删除标签
- * @param {string} name - 标签名称
+ * @param name - 标签名称
  */
-async function deleteImageTag(name) {
+async function deleteImageTag(name: string): Promise<void> {
   await run('DELETE FROM image_tags WHERE name = ?', [name]);
 }
 
 /**
  * 分配图像标签到所属组
- * @param {string} tagName - 标签名称
- * @param {number|null} groupId - 标签组ID
+ * @param tagName - 标签名称
+ * @param groupId - 标签组ID
  */
-async function assignImageTagToBelongGroup(tagName, groupId) {
+async function assignImageTagToBelongGroup(tagName: string, groupId: number | null): Promise<void> {
   const now = localTime();
   await run(
     'UPDATE image_tags SET group_id = ?, updated_at = ? WHERE name = ?',
@@ -1944,7 +2125,7 @@ async function assignImageTagToBelongGroup(tagName, groupId) {
 /**
  * 获取图像的标签
  */
-async function getImageTagsByImageId(imageId) {
+async function getImageTagsByImageId(imageId: string): Promise<string[]> {
   const sql = `
     SELECT it.name
     FROM image_tags it
@@ -1952,16 +2133,15 @@ async function getImageTagsByImageId(imageId) {
     WHERE itr.image_id = ?
     ORDER BY it.name
   `;
-  const rows = await all(sql, [imageId]);
+  const rows = await all<{ name: string }>(sql, [imageId]);
   return rows.map(row => row.name);
 }
 
 /**
  * 双向同步标签
  * 将提示词和图像双方的标签差异同步到对方，保留组信息
- * @returns {Promise<{promptToImage: {imported: number, skipped: number, tags: string[], tagGroups: Array}, imageToPrompt: {imported: number, skipped: number, tags: string[], tagGroups: Array}>}>}
  */
-async function syncTagsBidirectional() {
+async function syncTagsBidirectional(): Promise<TagSyncResult> {
   const now = localTime();
 
   // 获取提示词标签和图像标签
@@ -1976,8 +2156,8 @@ async function syncTagsBidirectional() {
     LEFT JOIN image_tag_groups ig ON it.group_id = ig.id
   `;
 
-  const promptTags = await all(promptTagsSql);
-  const imageTags = await all(imageTagsSql);
+  const promptTags = await all<{ name: string; group_id: number | null; group_name: string | null }>(promptTagsSql);
+  const imageTags = await all<{ name: string; group_id: number | null; group_name: string | null }>(imageTagsSql);
 
   const promptTagNames = new Set(promptTags.map(t => t.name));
   const imageTagNames = new Set(imageTags.map(t => t.name));
@@ -1988,7 +2168,7 @@ async function syncTagsBidirectional() {
   const toPromptTags = imageTags.filter(t => !promptTagNames.has(t.name));
 
   // 准备结果
-  const result = {
+  const result: TagSyncResult = {
     promptToImage: { imported: 0, skipped: 0, tags: [], tagGroups: [], ungroupedTags: [] },
     imageToPrompt: { imported: 0, skipped: 0, tags: [], tagGroups: [], ungroupedTags: [] }
   };
@@ -1997,14 +2177,12 @@ async function syncTagsBidirectional() {
     return result;
   }
 
-  // 开始事务
-  await run('BEGIN TRANSACTION');
-
-  try {
+  // 使用 runInTransaction 管理事务
+  return runInTransaction(async () => {
     // 同步到图像
     if (toImageTags.length > 0) {
-      const tagGroupsMap = new Map();
-      const existingImageTags = new Set((await all('SELECT name FROM image_tags')).map(t => t.name));
+      const tagGroupsMap = new Map<string, string[]>();
+      const existingImageTags = new Set((await all<{ name: string }>('SELECT name FROM image_tags')).map(t => t.name));
 
       for (const tag of toImageTags) {
         if (existingImageTags.has(tag.name)) {
@@ -2012,19 +2190,19 @@ async function syncTagsBidirectional() {
           continue;
         }
 
-        let targetGroupId = null;
+        let targetGroupId: number | null = null;
         if (tag.group_name) {
-          let targetGroup = await get('SELECT id FROM image_tag_groups WHERE name = ?', [tag.group_name]);
+          let targetGroup = await get<{ id: number }>('SELECT id FROM image_tag_groups WHERE name = ?', [tag.group_name]);
           if (!targetGroup) {
             const res = await run('INSERT INTO image_tag_groups (name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?)', [tag.group_name, 0, now, now]);
-            targetGroupId = res.lastID;
+            targetGroupId = res.id;
           } else {
             targetGroupId = targetGroup.id;
           }
           if (!tagGroupsMap.has(tag.group_name)) {
             tagGroupsMap.set(tag.group_name, []);
           }
-          tagGroupsMap.get(tag.group_name).push(tag.name);
+          tagGroupsMap.get(tag.group_name)!.push(tag.name);
         }
 
         await run('INSERT INTO image_tags (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)', [tag.name, targetGroupId, now, now]);
@@ -2041,8 +2219,8 @@ async function syncTagsBidirectional() {
 
     // 同步到提示词
     if (toPromptTags.length > 0) {
-      const tagGroupsMap = new Map();
-      const existingPromptTags = new Set((await all('SELECT name FROM prompt_tags')).map(t => t.name));
+      const tagGroupsMap = new Map<string, string[]>();
+      const existingPromptTags = new Set((await all<{ name: string }>('SELECT name FROM prompt_tags')).map(t => t.name));
 
       for (const tag of toPromptTags) {
         if (existingPromptTags.has(tag.name)) {
@@ -2050,19 +2228,19 @@ async function syncTagsBidirectional() {
           continue;
         }
 
-        let targetGroupId = null;
+        let targetGroupId: number | null = null;
         if (tag.group_name) {
-          let targetGroup = await get('SELECT id FROM prompt_tag_groups WHERE name = ?', [tag.group_name]);
+          let targetGroup = await get<{ id: number }>('SELECT id FROM prompt_tag_groups WHERE name = ?', [tag.group_name]);
           if (!targetGroup) {
             const res = await run('INSERT INTO prompt_tag_groups (name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?)', [tag.group_name, 0, now, now]);
-            targetGroupId = res.lastID;
+            targetGroupId = res.id;
           } else {
             targetGroupId = targetGroup.id;
           }
           if (!tagGroupsMap.has(tag.group_name)) {
             tagGroupsMap.set(tag.group_name, []);
           }
-          tagGroupsMap.get(tag.group_name).push(tag.name);
+          tagGroupsMap.get(tag.group_name)!.push(tag.name);
         }
 
         await run('INSERT INTO prompt_tags (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)', [tag.name, targetGroupId, now, now]);
@@ -2077,13 +2255,8 @@ async function syncTagsBidirectional() {
       result.imageToPrompt.tagGroups = Array.from(tagGroupsMap.entries()).map(([groupName, tags]) => ({ groupName, tags }));
     }
 
-    await run('COMMIT');
-  } catch (error) {
-    await run('ROLLBACK');
-    throw error;
-  }
-
-  return result;
+    return result;
+  });
 }
 
 // ==================== 共享标签 ====================
@@ -2091,16 +2264,16 @@ async function syncTagsBidirectional() {
 /**
  * 获取所有标签（提示词标签和图像标签合并）
  * 用于自动完成功能
- * @returns {Promise<Array<string>>} 合并后的标签列表
+ * @returns 合并后的标签列表
  */
-async function getAllTags() {
+async function getAllTags(): Promise<string[]> {
   const sql = `
     SELECT name FROM prompt_tags
     UNION
     SELECT name FROM image_tags
     ORDER BY name
   `;
-  const rows = await all(sql);
+  const rows = await all<{ name: string }>(sql);
   return rows.map(row => row.name);
 }
 
@@ -2110,11 +2283,15 @@ async function getAllTags() {
  * 获取数据库统计信息
  * 返回提示词、图像、标签等的数量统计
  */
-async function getStatistics() {
+async function getStatistics(): Promise<Statistics> {
   try {
     // 提示词统计
-    const promptStats = await get(`
-      SELECT 
+    const promptStats = await get<{
+      total: number;
+      active: number;
+      deleted: number;
+    }>(`
+      SELECT
         COUNT(*) as total,
         SUM(CASE WHEN is_deleted = 0 THEN 1 ELSE 0 END) as active,
         SUM(CASE WHEN is_deleted = 1 THEN 1 ELSE 0 END) as deleted
@@ -2122,8 +2299,13 @@ async function getStatistics() {
     `);
 
     // 图像统计
-    const imageStats = await get(`
-      SELECT 
+    const imageStats = await get<{
+      total: number;
+      referenced: number;
+      unreferenced: number;
+      deleted: number;
+    }>(`
+      SELECT
         COUNT(*) as total,
         SUM(CASE WHEN is_deleted = 0 AND EXISTS (
           SELECT 1 FROM prompt_image_relations pir WHERE pir.image_id = images.id
@@ -2136,16 +2318,19 @@ async function getStatistics() {
     `);
 
     // 标签统计
-    const promptTagStats = await get(`
+    const promptTagStats = await get<{ total: number }>(`
       SELECT COUNT(*) as total FROM prompt_tags
     `);
 
-    const imageTagStats = await get(`
+    const imageTagStats = await get<{ total: number }>(`
       SELECT COUNT(*) as total FROM image_tags
     `);
 
     // 关联统计
-    const relationStats = await get(`
+    const relationStats = await get<{
+      totalRelations: number;
+      promptsWithImages: number;
+    }>(`
       SELECT
         COUNT(*) as totalRelations,
         COUNT(DISTINCT prompt_id) as promptsWithImages
@@ -2154,24 +2339,24 @@ async function getStatistics() {
 
     return {
       prompts: {
-        total: promptStats.total || 0,
-        active: promptStats.active || 0,
-        deleted: promptStats.deleted || 0,
-        tags: promptTagStats.total || 0
+        total: promptStats?.total || 0,
+        active: promptStats?.active || 0,
+        deleted: promptStats?.deleted || 0,
+        tags: promptTagStats?.total || 0
       },
       images: {
-        total: imageStats.total || 0,
-        referenced: imageStats.referenced || 0,
-        unreferenced: imageStats.unreferenced || 0,
-        deleted: imageStats.deleted || 0,
-        tags: imageTagStats.total || 0
+        total: imageStats?.total || 0,
+        referenced: imageStats?.referenced || 0,
+        unreferenced: imageStats?.unreferenced || 0,
+        deleted: imageStats?.deleted || 0,
+        tags: imageTagStats?.total || 0
       },
       relations: {
-        total: relationStats.totalRelations || 0,
-        promptsWithImages: relationStats.promptsWithImages || 0
+        total: relationStats?.totalRelations || 0,
+        promptsWithImages: relationStats?.promptsWithImages || 0
       }
     };
-  } catch (err) {
+  } catch (err: any) {
     console.error('Get statistics failed:', err);
     throw err;
   }
@@ -2181,10 +2366,10 @@ async function getStatistics() {
 
 /**
  * 重命名数据目录
- * @param {string} dataDir - 当前数据目录路径
- * @returns {Promise<string>} 新目录路径（带时间后缀）
+ * @param dataDir - 当前数据目录路径
+ * @returns 新目录路径（带时间后缀）
  */
-async function renameDataDirectory(dataDir) {
+async function renameDataDirectory(dataDir: string): Promise<string> {
   const timestamp = getFormattedLocalTimeToSecond();
   const parentDir = path.dirname(dataDir);
   const dirName = path.basename(dataDir);
@@ -2197,33 +2382,33 @@ async function renameDataDirectory(dataDir) {
  * 清空所有数据
  * 重命名当前数据目录并创建新的空数据目录，应用将重启
  * 旧数据目录保留，可手动备份或删除
- * @param {string} dataDir - 数据目录路径
- * @returns {Promise<string>} 旧数据目录路径（带日期后缀，用于重启应用后提示用户）
+ * @param dataDir - 数据目录路径
+ * @returns 旧数据目录路径（带日期后缀，用于重启应用后提示用户）
  */
-async function clearAllData(dataDir) {
+async function clearAllData(dataDir: string): Promise<string> {
   try {
     const oldDataDir = dataDir;
     const timestamp = getFormattedLocalTimeToSecond();
     const newDataDir = path.join(path.dirname(oldDataDir), `${path.basename(oldDataDir)}_${timestamp}`);
-    
+
     // 关闭数据库
     closeDatabase();
-    
+
     // 等待数据库连接完全关闭
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     // 重命名旧数据目录
     await fs.rename(oldDataDir, newDataDir);
-    
+
     // 创建新的空数据目录
     await fs.mkdir(oldDataDir, { recursive: true });
-    
+
     // 重新初始化数据库
     await initDatabase(oldDataDir);
-    
+
     console.debug('All data cleared and database reset');
     return newDataDir;
-  } catch (err) {
+  } catch (err: any) {
     console.error('Clear all data failed:', err);
     throw err;
   }
