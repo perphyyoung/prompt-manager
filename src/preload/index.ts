@@ -4,7 +4,226 @@
  * 通过 contextBridge 隔离主进程和渲染进程
  */
 
-const { contextBridge, ipcRenderer } = require('electron');
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+
+// ==================== 类型定义 ====================
+
+/** Prompt 数据 */
+interface IPrompt {
+  id: string;
+  title: string;
+  content: string;
+}
+
+/** 图像数据 */
+interface IImageData {
+  id: string;
+  fileName: string;
+  relativePath: string;
+  isSafe?: number;
+  isFavorite?: number;
+}
+
+/** 标签组 */
+interface ITagGroup {
+  id: number;
+  name: string;
+  sortOrder: number;
+  tags?: string[];
+}
+
+/** 备份进度 */
+interface IBackupProgress {
+  stage: string;
+  percent: number;
+  status: string;
+  detail?: string;
+}
+
+/** 孤儿文件 */
+interface IOrphanFile {
+  fullPath: string;
+  relativePath: string;
+  size: number;
+}
+
+/** 扫描孤儿文件结果 */
+interface IScanOrphanFilesResult {
+  orphanImages: IOrphanFile[];
+  orphanThumbnails: IOrphanFile[];
+  orphanImageCount: number;
+  orphanThumbnailCount: number;
+  orphanImageSize: string;
+  orphanThumbnailSize: string;
+  totalCount: number;
+  totalSize: string;
+}
+
+/** 日志级别 */
+type LogLevel = 'debug' | 'error' | 'warn' | 'info';
+
+/** 备份进度回调类型 */
+type BackupProgressCallback = (progress: IBackupProgress) => void;
+
+/** 备份统计信息 */
+interface IBackupStats {
+  database: boolean;
+  prompts: { count: number };
+  images: { count: number; size: number };
+}
+
+/** 备份清单 */
+interface IBackupManifest {
+  /** manifest 格式版本 */
+  version: string;
+  /** 应用名称 */
+  appName: string;
+  /** 导出时间（本地时间格式：YYYY/M/D H:mm:ss） */
+  exportedAt: string;
+  /** 数据格式版本，用于兼容性检查 */
+  dataVersion: number;
+  /** 备份内容统计信息 */
+  contents: IBackupStats;
+}
+
+// ==================== 内部状态管理 ====================
+
+/**
+ * 使用 WeakMap 存储备份进度回调的包装函数
+ * 优势：
+ * 1. 当原始回调被垃圾回收时，WeakMap 中的条目自动移除
+ * 2. 避免内存泄漏
+ * 3. 不需要修改原始回调对象
+ */
+const backupProgressCallbacks = new WeakMap<BackupProgressCallback, (_event: IpcRendererEvent, progress: IBackupProgress) => void>();
+
+// ==================== API 定义 ====================
+
+interface IElectronAPI {
+  // Prompt 管理
+  getPrompts: (sortBy: string, sortOrder: string) => Promise<IPrompt[]>;
+  getPromptById: (id: string) => Promise<IPrompt | null>;
+  addPrompt: (prompt: Omit<IPrompt, 'id'>) => Promise<IPrompt>;
+  updatePrompt: (id: string, updates: Partial<IPrompt>) => Promise<void>;
+  softDeletePrompt: (id: string) => Promise<void>;
+  searchPrompts: (query: string) => Promise<IPrompt[]>;
+
+  // 剪贴板
+  copyToClipboard: (text: string) => Promise<void>;
+
+  // 全屏控制
+  setFullscreen: (flag: boolean) => Promise<void>;
+
+  // 设置
+  getDataPath: () => Promise<string>;
+  selectDataPath: () => Promise<string | null>;
+  selectDirectory: () => Promise<string | null>;
+  selectAndInstallFont: () => Promise<{ success: boolean; fontName?: string; error?: string }>;
+  getInstalledFonts: () => Promise<string[]>;
+
+  // 图像文件操作
+  saveImageFile: (sourcePath: string, fileName: string) => Promise<{ success: boolean; error?: string }>;
+  getImagePath: (relativePath: string) => Promise<string>;
+  openImageFiles: () => Promise<string[]>;
+  clearAllData: () => Promise<boolean>;
+  getImages: (sortBy: string, sortOrder: string) => Promise<IImageData[]>;
+  getImagesByIds: (ids: string[]) => Promise<IImageData[]>;
+  getAllImagesForStats: () => Promise<IImageData[]>;
+  getImageById: (imageId: string) => Promise<IImageData | null>;
+
+  // 提示词回收站
+  getPromptTrash: () => Promise<Array<IPrompt & { deletedAt: string; type: string }>>;
+  restorePromptFromTrash: (id: string) => Promise<void>;
+  restoreAllPrompts: () => Promise<void>;
+  permanentDeletePrompt: (id: string) => Promise<void>;
+  emptyPromptTrash: () => Promise<void>;
+
+  // 应用控制
+  relaunchApp: (oldDataDir?: string) => Promise<void>;
+
+  // 提示词标签组管理
+  getPromptTagGroups: () => Promise<ITagGroup[]>;
+  createPromptTagGroup: (name: string, sortOrder: number) => Promise<ITagGroup>;
+  updatePromptTagGroupAttrs: (id: number, updates: Partial<ITagGroup>) => Promise<void>;
+  deletePromptTagGroup: (id: number) => Promise<void>;
+  assignPromptTagToBelongGroup: (tagName: string, groupId: number | null) => Promise<void>;
+
+  // 提示词标签管理
+  getPromptTags: () => Promise<string[]>;
+  addPromptTag: (tag: string) => Promise<void>;
+  addPromptTags: (promptId: string, tagNames: string[]) => Promise<void>;
+  deletePromptTag: (tag: string) => Promise<void>;
+  renamePromptTag: (oldTag: string, newTag: string) => Promise<void>;
+
+  // 图像标签组管理
+  getImageTagGroups: () => Promise<ITagGroup[]>;
+  createImageTagGroup: (name: string, sortOrder: number) => Promise<ITagGroup>;
+  updateImageTagGroupAttrs: (id: number, updates: Partial<ITagGroup>) => Promise<void>;
+  deleteImageTagGroup: (id: number) => Promise<void>;
+  assignImageTagToBelongGroup: (tagName: string, groupId: number | null) => Promise<void>;
+
+  // 图像标签管理
+  getImageTags: () => Promise<string[]>;
+  addImageTag: (tag: string) => Promise<void>;
+  addImageTags: (imageId: string, tagNames: string[]) => Promise<void>;
+  updateImage: (id: string, updates: Partial<IImageData>) => Promise<void>;
+  renameImageTag: (oldTag: string, newTag: string) => Promise<void>;
+  deleteImageTag: (tag: string) => Promise<void>;
+
+  // 图像回收站
+  getImageTrash: () => Promise<Array<IImageData & { deletedAt: string }>>;
+  softDeleteImage: (id: string) => Promise<void>;
+  restoreImageFromTrash: (id: string) => Promise<void>;
+  restoreAllImages: () => Promise<void>;
+  permanentDeleteImage: (id: string) => Promise<void>;
+  emptyImageTrash: () => Promise<void>;
+
+  // 导出孤儿文件
+  scanOrphanFiles: () => Promise<IScanOrphanFilesResult>;
+  exportOrphanFiles: (exportDir: string) => Promise<{ successCount: number; failedCount: number; exportPath: string }>;
+
+  // 共享标签
+  getAllTags: () => Promise<string[]>;
+
+  // 标签同步
+  syncTagsBidirectional: () => Promise<void>;
+
+  // 统计
+  getStatistics: () => Promise<{
+    prompts: { total: number; favorite: number; trash: number };
+    images: { total: number; favorite: number; trash: number };
+    tags: { prompt: number; image: number };
+  }>;
+
+  // 调试日志
+  logDebug: (component: string, message: string, data?: unknown) => void;
+  logError: (component: string, message: string, data?: unknown) => void;
+  logWarn: (component: string, message: string, data?: unknown) => void;
+  logInfo: (component: string, message: string, data?: unknown) => void;
+
+  // 完整备份
+  exportFullBackup: () => Promise<{ success: boolean; filePath: string; stats: IBackupStats } | { cancelled: true }>;
+  importFullBackup: () => Promise<{ success: boolean; manifest: IBackupManifest; oldDataDir: string } | { cancelled: true }>;
+  onBackupProgress: (callback: BackupProgressCallback) => void;
+  offBackupProgress: (callback: BackupProgressCallback) => void;
+
+  // 清空重启
+  getOldDataDir: () => Promise<string | null>;
+}
+
+// ==================== 日志辅助函数 ====================
+
+/**
+ * 发送日志到主进程
+ * 错误被静默处理，避免日志系统本身导致的问题
+ */
+function sendLog(level: LogLevel, component: string, message: string, data?: unknown): void {
+  ipcRenderer.invoke('renderer-log', level, component, message, data).catch(() => {
+    // 日志发送失败时静默处理，避免递归错误
+  });
+}
+
+// ==================== 暴露 API ====================
 
 /**
  * 暴露安全的 API 给渲染进程
@@ -12,207 +231,142 @@ const { contextBridge, ipcRenderer } = require('electron');
  */
 contextBridge.exposeInMainWorld('electronAPI', {
   // ==================== Prompt 管理 ====================
-  /** 获取所有 Prompts @param {string} sortBy - 排序字段 @param {string} sortOrder - 排序顺序 */
-  getPrompts: (sortBy, sortOrder) => ipcRenderer.invoke('get-prompts', sortBy, sortOrder),
-  /** 根据 ID 获取 Prompt @param {string} id - Prompt ID */
-  getPromptById: (id) => ipcRenderer.invoke('get-prompt-by-id', id),
-  /** 添加新 Prompt @param {Object} prompt - Prompt 数据 */
-  addPrompt: (prompt) => ipcRenderer.invoke('add-prompt', prompt),
-  /** 更新 Prompt @param {string} id - Prompt ID @param {Object} updates - 更新内容 */
-  updatePrompt: (id, updates) => ipcRenderer.invoke('update-prompt', id, updates),
-  /** 软删除提示词（移动到回收站） @param {string} id - Prompt ID */
-  softDeletePrompt: (id) => ipcRenderer.invoke('soft-delete-prompt', id),
-  /** 检查标题是否已存在 @param {string} title - 标题 @param {string} excludeId - 排除的ID */
-  isTitleExists: (title, excludeId) => ipcRenderer.invoke('is-title-exists', title, excludeId),
-  /** 搜索 Prompts @param {string} query - 搜索关键词 */
-  searchPrompts: (query) => ipcRenderer.invoke('search-prompts', query),
-  /** 保存所有 Prompts @param {Array} prompts - Prompt 数据数组 */
-  savePrompts: (prompts) => ipcRenderer.invoke('save-prompts', prompts),
-  /** 获取收藏的 Prompts */
-  getFavoritePrompts: () => ipcRenderer.invoke('get-favorite-prompts'),
-  /** 获取收藏的图像 */
-  getFavoriteImages: () => ipcRenderer.invoke('get-favorite-images'),
-
-  // ==================== 导入导出 ====================
-  /** 导出 Prompts @param {Array} prompts - Prompt 数据数组 */
-  exportPrompts: (prompts) => ipcRenderer.invoke('export-prompts', prompts),
-  /** 导入 Prompts */
-  importPrompts: () => ipcRenderer.invoke('import-prompts'),
+  getPrompts: (sortBy: string, sortOrder: string) => ipcRenderer.invoke('get-prompts', sortBy, sortOrder),
+  getPromptById: (id: string) => ipcRenderer.invoke('get-prompt-by-id', id),
+  addPrompt: (prompt: Omit<IPrompt, 'id'>) => ipcRenderer.invoke('add-prompt', prompt),
+  updatePrompt: (id: string, updates: Partial<IPrompt>) => ipcRenderer.invoke('update-prompt', id, updates),
+  softDeletePrompt: (id: string) => ipcRenderer.invoke('soft-delete-prompt', id),
+  searchPrompts: (query: string) => ipcRenderer.invoke('search-prompts', query),
 
   // ==================== 剪贴板 ====================
-  /** 复制文本到剪贴板 @param {string} text - 要复制的文本 */
-  copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),
+  copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),
 
   // ==================== 全屏控制 ====================
-  /** 设置全屏状态 @param {boolean} flag - 是否全屏 */
-  setFullscreen: (flag) => ipcRenderer.invoke('set-fullscreen', flag),
+  setFullscreen: (flag: boolean) => ipcRenderer.invoke('set-fullscreen', flag),
 
   // ==================== 设置 ====================
-  /** 获取当前数据路径 */
   getDataPath: () => ipcRenderer.invoke('get-data-path'),
-  /** 选择数据路径 */
   selectDataPath: () => ipcRenderer.invoke('select-data-path'),
-  /** 选择目录（通用） */
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
-  /** 选择并安装自定义字体文件 */
   selectAndInstallFont: () => ipcRenderer.invoke('select-and-install-font'),
-  /** 获取已安装的自定义字体列表 */
   getInstalledFonts: () => ipcRenderer.invoke('get-installed-fonts'),
 
   // ==================== 图像文件操作 ====================
-  /** 保存图像文件 @param {string} sourcePath - 源路径 @param {string} fileName - 文件名 */
-  saveImageFile: (sourcePath, fileName) => ipcRenderer.invoke('save-image-file', sourcePath, fileName),
-  /** 获取图像完整路径 @param {string} relativePath - 相对路径 */
-  getImagePath: (relativePath) => ipcRenderer.invoke('get-image-path', relativePath),
-  /** 选择图像文件 */
-  selectImageFiles: () => ipcRenderer.invoke('select-image-files'),
-  /** 打开图像文件对话框（支持多选）@returns {Promise<string[]>} 选择的文件路径数组 */
+  saveImageFile: (sourcePath: string, fileName: string) => ipcRenderer.invoke('save-image-file', sourcePath, fileName),
+  getImagePath: (relativePath: string) => ipcRenderer.invoke('get-image-path', relativePath),
   openImageFiles: () => ipcRenderer.invoke('dialog:open-image-files'),
-  /** 清空所有数据 */
   clearAllData: () => ipcRenderer.invoke('clear-all-data'),
-  /** 获取所有图像信息 @param {string} sortBy - 排序字段 @param {string} sortOrder - 排序顺序 */
-  getImages: (sortBy, sortOrder) => ipcRenderer.invoke('get-images', sortBy, sortOrder),
-  /** 根据 ID 批量获取图像信息 @param {Array<string>} ids - 图像 ID 数组 */
-  getImagesByIds: (ids) => ipcRenderer.invoke('get-images-by-ids', ids),
-  /** 获取所有图像（用于统计） */
+  getImages: (sortBy: string, sortOrder: string) => ipcRenderer.invoke('get-images', sortBy, sortOrder),
+  getImagesByIds: (ids: string[]) => ipcRenderer.invoke('get-images-by-ids', ids),
   getAllImagesForStats: () => ipcRenderer.invoke('get-all-images-for-stats'),
-  /** 根据 ID 获取图像信息 @param {string} imageId - 图像 ID */
-  getImageById: (imageId) => ipcRenderer.invoke('get-image-by-id', imageId),
-  /** 获取提示词关联的图像 @param {string} promptId - 提示词 ID */
-  getPromptImages: (promptId) => ipcRenderer.invoke('get-prompt-images', promptId),
+  getImageById: (imageId: string) => ipcRenderer.invoke('get-image-by-id', imageId),
 
   // ==================== 提示词回收站 ====================
-  /** 获取提示词回收站内容 */
   getPromptTrash: () => ipcRenderer.invoke('get-prompt-trash'),
-  /** 从提示词回收站恢复 @param {string} id - Prompt ID */
-  restorePromptFromTrash: (id) => ipcRenderer.invoke('restore-prompt-from-trash', id),
-  /** 恢复所有提示词 */
+  restorePromptFromTrash: (id: string) => ipcRenderer.invoke('restore-prompt-from-trash', id),
   restoreAllPrompts: () => ipcRenderer.invoke('restore-all-prompts'),
-  /** 永久删除提示词 @param {string} id - Prompt ID */
-  permanentDeletePrompt: (id) => ipcRenderer.invoke('permanent-delete-prompt', id),
-  /** 清空提示词回收站 */
+  permanentDeletePrompt: (id: string) => ipcRenderer.invoke('permanent-delete-prompt', id),
   emptyPromptTrash: () => ipcRenderer.invoke('empty-prompt-trash'),
 
   // ==================== 应用控制 ====================
-  /** 重启应用 @param {string} oldDataDir - 旧的数据库目录路径（可选） */
-  relaunchApp: (oldDataDir) => ipcRenderer.invoke('relaunch-app', oldDataDir),
+  relaunchApp: (oldDataDir?: string) => ipcRenderer.invoke('relaunch-app', oldDataDir),
 
   // ==================== 提示词标签组管理 ====================
-  /** 获取所有提示词标签组（包含标签列表） */
   getPromptTagGroups: () => ipcRenderer.invoke('get-prompt-tag-groups'),
-  /** 创建提示词标签组 @param {string} name - 组名称 @param {number} sortOrder - 排序 */
-  createPromptTagGroup: (name, sortOrder) => ipcRenderer.invoke('create-prompt-tag-group', name, sortOrder),
-  /** 更新提示词标签组属性 @param {number} id - 组 ID @param {object} updates - 更新内容 */
-  updatePromptTagGroupAttrs: (id, updates) => ipcRenderer.invoke('update-prompt-tag-group-attrs', id, updates),
-  /** 删除提示词标签组 @param {number} id - 组 ID */
-  deletePromptTagGroup: (id) => ipcRenderer.invoke('delete-prompt-tag-group', id),
-  /** 分配提示词标签到所属组 @param {string} tagName - 标签名称 @param {number|null} groupId - 组 ID */
-  assignPromptTagToBelongGroup: (tagName, groupId) => ipcRenderer.invoke('assign-prompt-tag-to-belong-group', tagName, groupId),
+  createPromptTagGroup: (name: string, sortOrder: number) => ipcRenderer.invoke('create-prompt-tag-group', name, sortOrder),
+  updatePromptTagGroupAttrs: (id: number, updates: Partial<ITagGroup>) => ipcRenderer.invoke('update-prompt-tag-group-attrs', id, updates),
+  deletePromptTagGroup: (id: number) => ipcRenderer.invoke('delete-prompt-tag-group', id),
+  assignPromptTagToBelongGroup: (tagName: string, groupId: number | null) => ipcRenderer.invoke('assign-prompt-tag-to-belong-group', tagName, groupId),
 
-  // ==================== 提示词标签管理 ====================
-  /** 获取所有提示词标签 */
+  // 提示词标签管理
   getPromptTags: () => ipcRenderer.invoke('get-prompt-tags'),
-  /** 添加提示词标签 @param {string} tag - 标签名称 */
-  addPromptTag: (tag) => ipcRenderer.invoke('add-prompt-tag', tag),
-  /** 为提示词添加多个标签 @param {string} promptId - 提示词 ID @param {Array} tagNames - 标签名称数组 */
-  addPromptTags: (promptId, tagNames) => ipcRenderer.invoke('add-prompt-tags', promptId, tagNames),
-  /** 删除提示词标签 @param {string} tag - 标签名称 */
-  deletePromptTag: (tag) => ipcRenderer.invoke('delete-prompt-tag', tag),
-  /** 重命名提示词标签 @param {string} oldTag - 原标签名 @param {string} newTag - 新标签名 */
-  renamePromptTag: (oldTag, newTag) => ipcRenderer.invoke('rename-prompt-tag', oldTag, newTag),
+  addPromptTag: (tag: string) => ipcRenderer.invoke('add-prompt-tag', tag),
+  addPromptTags: (promptId: string, tagNames: string[]) => ipcRenderer.invoke('add-prompt-tags', promptId, tagNames),
+  deletePromptTag: (tag: string) => ipcRenderer.invoke('delete-prompt-tag', tag),
+  renamePromptTag: (oldTag: string, newTag: string) => ipcRenderer.invoke('rename-prompt-tag', oldTag, newTag),
 
-  // ==================== 图像标签组管理 ====================
-  /** 获取所有图像标签组（包含标签列表） */
+  // 图像标签组管理
   getImageTagGroups: () => ipcRenderer.invoke('get-image-tag-groups'),
-  /** 创建图像标签组 @param {string} name - 组名称 @param {number} sortOrder - 排序 */
-  createImageTagGroup: (name, sortOrder) => ipcRenderer.invoke('create-image-tag-group', name, sortOrder),
-  /** 更新图像标签组 @param {number} id - 组 ID @param {object} updates - 更新内容 */
-  updateImageTagGroupAttrs: (id, updates) => ipcRenderer.invoke('update-image-tag-group-attrs', id, updates),
-  /** 删除图像标签组 @param {number} id - 组 ID */
-  deleteImageTagGroup: (id) => ipcRenderer.invoke('delete-image-tag-group', id),
-  /** 分配图像标签到所属组 @param {string} tagName - 标签名称 @param {number|null} groupId - 组 ID */
-  assignImageTagToBelongGroup: (tagName, groupId) => ipcRenderer.invoke('assign-image-tag-to-belong-group', tagName, groupId),
+  createImageTagGroup: (name: string, sortOrder: number) => ipcRenderer.invoke('create-image-tag-group', name, sortOrder),
+  updateImageTagGroupAttrs: (id: number, updates: Partial<ITagGroup>) => ipcRenderer.invoke('update-image-tag-group-attrs', id, updates),
+  deleteImageTagGroup: (id: number) => ipcRenderer.invoke('delete-image-tag-group', id),
+  assignImageTagToBelongGroup: (tagName: string, groupId: number | null) => ipcRenderer.invoke('assign-image-tag-to-belong-group', tagName, groupId),
 
   // ==================== 图像标签管理 ====================
-  /** 获取所有图像标签 */
   getImageTags: () => ipcRenderer.invoke('get-image-tags'),
-  /** 添加图像标签 @param {string} tag - 标签名称 */
-  addImageTag: (tag) => ipcRenderer.invoke('add-image-tag', tag),
-  /** 为图像添加多个标签 @param {string} imageId - 图像 ID @param {Array} tagNames - 标签名称数组 */
-  addImageTags: (imageId, tagNames) => ipcRenderer.invoke('add-image-tags', imageId, tagNames),
-  /** 更新图像 @param {string} id - 图像 ID @param {Object} updates - 更新内容 */
-  updateImage: (id, updates) => ipcRenderer.invoke('update-image', id, updates),
-  /** 重命名图像标签 @param {string} oldTag - 原标签名称 @param {string} newTag - 新标签名称 */
-  renameImageTag: (oldTag, newTag) => ipcRenderer.invoke('rename-image-tag', oldTag, newTag),
-  /** 删除图像标签 @param {string} tag - 标签名称 */
-  deleteImageTag: (tag) => ipcRenderer.invoke('delete-image-tag', tag),
+  addImageTag: (tag: string) => ipcRenderer.invoke('add-image-tag', tag),
+  addImageTags: (imageId: string, tagNames: string[]) => ipcRenderer.invoke('add-image-tags', imageId, tagNames),
+  updateImage: (id: string, updates: Partial<IImageData>) => ipcRenderer.invoke('update-image', id, updates),
+  renameImageTag: (oldTag: string, newTag: string) => ipcRenderer.invoke('rename-image-tag', oldTag, newTag),
+  deleteImageTag: (tag: string) => ipcRenderer.invoke('delete-image-tag', tag),
 
   // ==================== 图像回收站 ====================
-  /** 获取图像回收站列表 */
   getImageTrash: () => ipcRenderer.invoke('get-image-trash'),
-  /** 软删除图像（移动到回收站） @param {string} id - 图像 ID */
-  softDeleteImage: (id) => ipcRenderer.invoke('soft-delete-image', id),
-  /** 从回收站恢复图像 @param {string} id - 图像 ID */
-  restoreImageFromTrash: (id) => ipcRenderer.invoke('restore-image-from-trash', id),
-  /** 恢复所有图像 */
+  softDeleteImage: (id: string) => ipcRenderer.invoke('soft-delete-image', id),
+  restoreImageFromTrash: (id: string) => ipcRenderer.invoke('restore-image-from-trash', id),
   restoreAllImages: () => ipcRenderer.invoke('restore-all-images'),
-  /** 永久删除图像 @param {string} id - 图像 ID */
-  permanentDeleteImage: (id) => ipcRenderer.invoke('permanent-delete-image', id),
-  /** 清空图像回收站 */
+  permanentDeleteImage: (id: string) => ipcRenderer.invoke('permanent-delete-image', id),
   emptyImageTrash: () => ipcRenderer.invoke('empty-image-trash'),
 
   // ==================== 导出孤儿文件 ====================
-  /** 扫描孤儿文件 */
   scanOrphanFiles: () => ipcRenderer.invoke('scan-orphan-files'),
-  /** 导出并删除孤儿文件 @param {Array} orphanFiles - 孤儿文件列表 @param {string} exportDir - 导出目录 */
-  exportAndDeleteOrphanFiles: (orphanFiles, exportDir) => ipcRenderer.invoke('export-and-delete-orphan-files', orphanFiles, exportDir),
+  exportOrphanFiles: (exportDir: string) => ipcRenderer.invoke('export-orphan-files', exportDir),
 
   // ==================== 共享标签 ====================
-  /** 获取所有标签（提示词和图像标签合并） */
   getAllTags: () => ipcRenderer.invoke('get-all-tags'),
 
   // ==================== 标签同步 ====================
-  /** 双向同步标签 */
   syncTagsBidirectional: () => ipcRenderer.invoke('sync-tags-bidirectional'),
 
   // ==================== 统计 ====================
-  /** 获取数据库统计信息 */
   getStatistics: () => ipcRenderer.invoke('get-statistics'),
 
-  // ==================== 数据库维护 ====================
-  /** 优化数据库（执行 VACUUM 和 ANALYZE） */
-  optimizeDatabase: () => ipcRenderer.invoke('optimize-database'),
-
   // ==================== 调试日志 ====================
-  /** 记录调试日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 */
-  logDebug: (component, message, data) => { ipcRenderer.invoke('renderer-log', 'debug', component, message, data); },
-  /** 记录错误日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 */
-  logError: (component, message, data) => {
-    // 在渲染进程控制台输出完整错误（便于开发调试）
-    console.error(`[${component}] ${message}`, data);
-    // 传递原始数据，由主进程处理序列化
-    ipcRenderer.invoke('renderer-log', 'error', component, message, data);
+  logDebug: (component: string, message: string, data?: unknown) => {
+    sendLog('debug', component, message, data);
   },
-  /** 记录警告日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 */
-  logWarn: (component, message, data) => { ipcRenderer.invoke('renderer-log', 'warn', component, message, data); },
-  /** 记录信息日志 @param {string} component - 组件名 @param {string} message - 消息 @param {Object} data - 数据 */
-  logInfo: (component, message, data) => { ipcRenderer.invoke('renderer-log', 'info', component, message, data); },
+  logError: (component: string, message: string, data?: unknown) => {
+    if (data !== undefined) {
+      console.error(`[${component}] ${message}`, data);
+    } else {
+      console.error(`[${component}] ${message}`);
+    }
+    sendLog('error', component, message, data);
+  },
+  logWarn: (component: string, message: string, data?: unknown) => {
+    sendLog('warn', component, message, data);
+  },
+  logInfo: (component: string, message: string, data?: unknown) => {
+    sendLog('info', component, message, data);
+  },
 
   // ==================== 完整备份 ====================
-  /** 导出完整备份 */
   exportFullBackup: () => ipcRenderer.invoke('export-full-backup'),
-  /** 导入完整备份 */
   importFullBackup: () => ipcRenderer.invoke('import-full-backup'),
-  /** 监听备份进度 @param {Function} callback - 进度回调 */
-  onBackupProgress: (callback) => {
-    ipcRenderer.on('backup-progress', (event, progress) => callback(progress));
+  onBackupProgress: (callback: BackupProgressCallback) => {
+    const wrappedCallback = (_event: IpcRendererEvent, progress: IBackupProgress) => callback(progress);
+    // 使用 WeakMap 存储包装后的回调，避免内存泄漏
+    backupProgressCallbacks.set(callback, wrappedCallback);
+    ipcRenderer.on('backup-progress', wrappedCallback);
   },
-  /** 移除备份进度监听 @param {Function} callback - 进度回调 */
-  offBackupProgress: (callback) => {
-    ipcRenderer.removeListener('backup-progress', callback);
+  offBackupProgress: (callback: BackupProgressCallback) => {
+    const wrappedCallback = backupProgressCallbacks.get(callback);
+    if (wrappedCallback) {
+      ipcRenderer.removeListener('backup-progress', wrappedCallback);
+      backupProgressCallbacks.delete(callback);
+    }
   },
 
   // ==================== 其他 ====================
-  /** 获取旧数据目录路径（清空数据后） */
   getOldDataDir: () => ipcRenderer.invoke('get-old-data-dir')
-});
+} as IElectronAPI);
+
+// 导出类型供渲染进程使用
+export type { IElectronAPI, IPrompt, IImageData, ITagGroup, IBackupProgress, IOrphanFile, IScanOrphanFilesResult, LogLevel, BackupProgressCallback, IBackupStats, IBackupManifest };
+
+// 全局声明
+declare global {
+  interface Window {
+    electronAPI: IElectronAPI;
+  }
+}
