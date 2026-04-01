@@ -1,7 +1,49 @@
 /**
+ * 对话框配置数据接口
+ */
+export interface DialogConfigData {
+  name?: string;
+  type?: string;
+  count?: number;
+  promptTitle?: string;
+  oldDataDir?: string;
+  tagName?: string;
+  currentGroupName?: string;
+  newGroupName?: string;
+  promptToImage?: {
+    imported: number;
+    skipped: number;
+    tagGroups?: Array<{ groupName: string; tags: string[] }>;
+    ungroupedTags?: string[];
+  };
+  imageToPrompt?: {
+    imported: number;
+    skipped: number;
+    tagGroups?: Array<{ groupName: string; tags: string[] }>;
+    ungroupedTags?: string[];
+  };
+  [key: string]: unknown;
+}
+
+/**
+ * 消息函数类型
+ */
+type MessageFunction = (data: DialogConfigData) => string;
+
+/**
+ * 对话框配置项接口
+ */
+interface DialogConfigItem {
+  type?: string;
+  title: string | MessageFunction;
+  message: string | MessageFunction;
+  confirmText?: string;
+}
+
+/**
  * 对话框配置
  */
-export const DialogConfig = {
+export const DialogConfig: Record<string, DialogConfigItem> = {
   // ==================== 删除类 ====================
   /** 删除提示词 */
   DELETE_PROMPT: {
@@ -65,7 +107,7 @@ export const DialogConfig = {
   /** 清空回收站 */
   EMPTY_TRASH: {
     title: '确认清空',
-    message: (data) => `确定要清空${data.type === 'prompt' ? '提示词' : '图像'}回收站吗？此操作不可恢复。`
+    message: (data) => `确定要清空${data.type === 'trash-prompt' ? '提示词' : '图像'}回收站吗？此操作不可恢复。`
   },
   /** 清空所有数据 */
   CLEAR_ALL_DATA: {
@@ -107,7 +149,7 @@ export const DialogConfig = {
       let msg = '';
 
       // 提示词 → 图像
-      if (data.promptToImage.imported > 0) {
+      if (data.promptToImage && data.promptToImage.imported > 0) {
         msg += `提示词 → 图像：导入 ${data.promptToImage.imported} 个`;
         if (data.promptToImage.skipped > 0) {
           msg += `（跳过 ${data.promptToImage.skipped} 个）`;
@@ -127,7 +169,7 @@ export const DialogConfig = {
       }
 
       // 图像 → 提示词
-      if (data.imageToPrompt.imported > 0) {
+      if (data.imageToPrompt && data.imageToPrompt.imported > 0) {
         msg += `图像 → 提示词：导入 ${data.imageToPrompt.imported} 个`;
         if (data.imageToPrompt.skipped > 0) {
           msg += `（跳过 ${data.imageToPrompt.skipped} 个）`;
@@ -145,7 +187,8 @@ export const DialogConfig = {
         }
       }
 
-      if (data.promptToImage.imported === 0 && data.imageToPrompt.imported === 0) {
+      if ((!data.promptToImage || data.promptToImage.imported === 0) &&
+          (!data.imageToPrompt || data.imageToPrompt.imported === 0)) {
         msg = '双方标签已同步，无需导入新标签';
       }
 
@@ -155,14 +198,21 @@ export const DialogConfig = {
 };
 
 // ==================== 静态变量 ====================
-let _confirmCallback = null;
-let _previousFocus = null;
-let _activeModals = new Set();
+let _confirmCallback: ((result: boolean) => void) | null = null;
+let _previousFocus: Element | null = null;
+const _activeModals = new Set<string>();
 let _buttonsBound = false;
 
 // ==================== 对话框服务 ====================
 export class DialogService {
-  static _bindButtonEvents() {
+  /**
+   * 类型守卫：检查是否为函数
+   */
+  private static isFunction(value: unknown): value is MessageFunction {
+    return typeof value === 'function';
+  }
+
+  private static _bindButtonEvents(): void {
     if (_buttonsBound) return;
     document.getElementById('confirmOkBtn')?.addEventListener('click', () => {
       DialogService._closeConfirm(true);
@@ -178,22 +228,22 @@ export class DialogService {
 
   /**
    * 显示数据目录迁移对话框
-   * @param {string} oldPath - 当前数据目录路径
-   * @param {string} newPath - 新数据目录路径
-   * @returns {Promise<'copy'|'use'|'cancel'>} 用户选择的操作
+   * @param oldPath - 当前数据目录路径
+   * @param newPath - 新数据目录路径
+   * @returns 用户选择的操作
    */
-  static async showMigrateDialog(oldPath, newPath) {
+  static async showMigrateDialog(oldPath: string, newPath: string): Promise<'copy' | 'use' | 'cancel'> {
     return new Promise((resolve) => {
       const modal = document.getElementById('migrateModal');
       const oldPathEl = document.getElementById('migrateOldPath');
       const newPathEl = document.getElementById('migrateNewPath');
       const closeBtn = document.getElementById('closeMigrateModal');
       const cancelBtn = document.getElementById('migrateCancelBtn');
-      const optionBtns = modal?.querySelectorAll('.migrate-option-btn');
+      const optionBtns = modal?.querySelectorAll<HTMLElement>('.migrate-option-btn');
 
       if (!modal) {
         // 回退到原生对话框
-        const useCopy = confirm(`\u66f4\u6539\u6570\u636e\u76ee\u5f55\n\n\u5f53\u524d\uff1a${oldPath}\n\u65b0\uff1a${newPath}\n\n\u70b9\u51fb\u300c\u786e\u5b9a\u300d\u590d\u5236\u5f53\u524d\u6570\u636e\u5230\u65b0\u76ee\u5f55\uff0c\u70b9\u51fb\u300c\u53d6\u6d88\u300d\u4f7f\u7528\u65b0\u76ee\u5f55\u73b0\u6709\u6570\u636e`);
+        const useCopy = confirm(`更改数据目录\n\n当前：${oldPath}\n新：${newPath}\n\n点击「确定」复制当前数据到新目录，点击「取消」使用新目录现有数据`);
         resolve(useCopy ? 'copy' : 'use');
         return;
       }
@@ -203,13 +253,14 @@ export class DialogService {
       if (newPathEl) newPathEl.textContent = newPath;
 
       // 显示对话框
-      modal.style.display = 'flex';
+      (modal as HTMLElement).style.display = 'flex';
       _activeModals.add('migrateModal');
 
       // 处理选项按钮点击
-      const handleOptionClick = (e) => {
-        const btn = e.currentTarget;
-        const action = btn.dataset.action;
+      const handleOptionClick = (e: Event) => {
+        const btn = e.currentTarget as HTMLElement;
+        const action = btn.dataset.action as 'copy' | 'use' | 'cancel';
+        if (!action) return;
         cleanup();
         resolve(action);
       };
@@ -222,7 +273,7 @@ export class DialogService {
 
       // 清理函数
       const cleanup = () => {
-        modal.style.display = 'none';
+        (modal as HTMLElement).style.display = 'none';
         _activeModals.delete('migrateModal');
         optionBtns?.forEach(btn => btn.removeEventListener('click', handleOptionClick));
         closeBtn?.removeEventListener('click', handleCancel);
@@ -236,7 +287,16 @@ export class DialogService {
     });
   }
 
-  static async showConfirmDialogByConfig(config, data = null) {
+  /**
+   * 根据配置显示确认对话框
+   * @param config - 对话框配置
+   * @param data - 对话框数据
+   * @returns 用户是否确认
+   */
+  static async showConfirmDialogByConfig(
+    config: DialogConfigItem,
+    data: DialogConfigData | null = null
+  ): Promise<boolean> {
     DialogService._bindButtonEvents();
 
     if (_confirmCallback) {
@@ -244,8 +304,8 @@ export class DialogService {
       return false;
     }
 
-    const title = typeof config.title === 'function' ? config.title(data) : config.title;
-    const msg = typeof config.message === 'function' ? config.message(data) : config.message;
+    const title = this.isFunction(config.title) ? config.title(data || {}) : config.title;
+    const msg = this.isFunction(config.message) ? config.message(data || {}) : config.message;
     const dialogType = config.type || 'warning';
 
     return new Promise((resolve) => {
@@ -259,7 +319,7 @@ export class DialogService {
       }
 
       if (modalTitle) {
-        const iconMap = {
+        const iconMap: Record<string, string> = {
           info: '✓',
           warning: '⚠️'
         };
@@ -273,26 +333,26 @@ export class DialogService {
 
       const cancelBtn = document.getElementById('confirmCancelBtn');
       const okBtn = document.getElementById('confirmOkBtn');
-      
+
       // info 类型只显示确认按钮
       if (dialogType === 'info') {
-        cancelBtn.style.display = 'none';
-        okBtn.style.margin = '0 auto';
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        if (okBtn) okBtn.style.margin = '0 auto';
       } else {
-        cancelBtn.style.display = '';
-        okBtn.style.margin = '';
+        if (cancelBtn) cancelBtn.style.display = '';
+        if (okBtn) okBtn.style.margin = '';
       }
 
       _previousFocus = document.activeElement;
 
-      modal.style.display = 'flex';
+      (modal as HTMLElement).style.display = 'flex';
       _activeModals.add('confirmModal');
 
       setTimeout(() => {
         document.getElementById('confirmOkBtn')?.focus();
       }, 0);
 
-      _confirmCallback = (result) => {
+      _confirmCallback = (result: boolean) => {
         _confirmCallback = null;
         resolve(result);
       };
@@ -300,8 +360,8 @@ export class DialogService {
     });
   }
 
-  static _bindConfirmKeyboardEvents() {
-    const handleKeyDown = (e) => {
+  private static _bindConfirmKeyboardEvents(): void {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (!_activeModals.has('confirmModal')) {
         document.removeEventListener('keydown', handleKeyDown);
         return;
@@ -321,16 +381,16 @@ export class DialogService {
     document.addEventListener('keydown', handleKeyDown);
   }
 
-  static _closeConfirm(result = false) {
+  private static _closeConfirm(result = false): void {
     const modal = document.getElementById('confirmModal');
     if (modal) {
-      modal.style.display = 'none';
+      (modal as HTMLElement).style.display = 'none';
     }
 
     const cancelBtn = document.getElementById('confirmCancelBtn');
     const okBtn = document.getElementById('confirmOkBtn');
-    if (cancelBtn) cancelBtn.style.display = '';
-    if (okBtn) okBtn.style.margin = '';
+    if (cancelBtn) (cancelBtn as HTMLElement).style.display = '';
+    if (okBtn) (okBtn as HTMLElement).style.margin = '';
 
     if (_confirmCallback) {
       _confirmCallback(result);
@@ -339,7 +399,7 @@ export class DialogService {
 
     _activeModals.delete('confirmModal');
 
-    if (_previousFocus) {
+    if (_previousFocus instanceof HTMLElement) {
       _previousFocus.focus();
       _previousFocus = null;
     }
