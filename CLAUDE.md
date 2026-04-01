@@ -1,16 +1,22 @@
-# CLAUDE.md - Trae IDE Project Configuration
+# CLAUDE.md - Trae IDE 项目配置
 
-## Instruction Priority
+## 核心原则
 
-1. **This file (CLAUDE.md)** — Highest priority
-2. **Superpowers skills** — Secondary
-3. **Default system prompt** — Lowest priority
+- 使用中文回答
+- 添加功能时有更好的想法, 与我商量
+- 禁止自动提交 git commit
 
-## Golden Rule
+## 指令优先级
 
-**Before making any response or action, invoke the relevant skill.** Even if there's only a 1% chance a skill is applicable, you should invoke it to check.
+1. **本文件 (CLAUDE.md)** — 最高优先级
+2. **Superpowers skills** — 其次
+3. **默认系统提示** — 最低优先级
 
-## Invoking Skills
+## 黄金法则 / Golden Rule
+
+**在做出任何响应或操作之前，先调用相关的 skill。** 即使只有 1% 的可能性某个 skill 适用，也应该调用它来检查。
+
+## 调用 Skill
 
 ```json
 {
@@ -18,22 +24,63 @@
 }
 ```
 
-## Available Skills
+## 可用 Skills
 
-- `using-superpowers` - Learn how to use skills (workflow, priority, red flags)
-- `brainstorming` - Brainstorm before starting new features
-- `systematic-debugging` - Systematic debugging
-- `writing-plans` - Create implementation plans
-- `test-driven-development` - Test-driven development
-- `refactor` - Code refactoring
-- `verification-before-completion` - Verification before completion
-- `requesting-code-review` - Request code review
+- `using-superpowers` - 了解如何使用 skills（流程、优先级、红旗警示）
+- `brainstorming` - 开始新功能前的头脑风暴
+- `systematic-debugging` - 系统性调试
+- `writing-plans` - 制定实现计划
+- `test-driven-development` - 测试驱动开发
+- `refactor` - 代码重构
+- `verification-before-completion` - 完成前验证
+- `requesting-code-review` - 请求代码审查
 
-> For the full list, check the `.trae/skills/` directory
+> 完整列表请查看 `.trae/skills/` 目录
 
-## First Principles
+## 第一性原理
 
-- Don't assume I know what I want; when motivation or goals are unclear, stop and discuss
-- When the goal is clear but the path is not the shortest, tell me directly and suggest a better approach
-- When encountering problems, trace to the root cause instead of applying patches; every decision must answer "why"
-- Output the key points, cut all information that doesn't change decisions
+- 不要假设我清楚自己想要什么; 动机或目标不清晰时, 停下来讨论
+- 目标清晰但路径不是最短的, 直接告诉我并建议更好的方案
+- 遇到问题追根因, 不打补丁; 每个决策都要能回答"为什么"
+- 输出说重点, 砍掉一切不改变决策的信息
+
+## 调试流程
+
+- 根据真实逻辑测试
+- 不要过度思考, 问题复杂时, 使用调试日志定位问题
+- 调试时使用 `logger.ts` 写入 `pm.log`
+- 删除日志时, 保留日志系统
+- 做出修改后, 禁止直接删除日志生成语句, 需要我确认才能删除
+
+## 修改原则
+
+- 不要保留弃用方法
+
+## 方案实施
+
+- 改代码前，先简述计划与影响范围; 如果有类似的功能已实现, 给出复用代码的利弊分析
+- 启动应用、安装依赖时提示我来操作, 而不是启动 `npm start`
+- 修改后通过 `npm run build` 验证
+- 删除时, 一次删除不要超过 100 行, 分次删除; 已删除方法的注释也删除
+- 注释简洁; 更改代码时, 需要同步更改注释, 不要修改不必要的空格和空行
+
+## 命名规范
+
+- 数据库 `snake_case`，前端 `camelCase`
+- 命名体现出变量/函数/类的作用和类型, 禁止太泛的通用名称
+- 功能相似的代码, 使用相同的命名规则
+
+## 项目规定
+
+- 项目简介: `README.md`
+- 功能特性: `FEATURES.md`
+- 包管理: 使用 `cnpm` 替代 `npm`
+- 新功能通过 `TypeScript` 实现
+- 字符串字面量定义在 `src/Constants.js` 中
+- 使用 `src/utils/isSameId.js` 的 isSameId() 函数进行 ID 比较，避免类型不匹配
+- 截取字符串时, 使用 slice()
+- 同目录模块之间导入时，直接导入具体文件，不通过 index.js; 跨目录导入时，统一使用 index.js
+- 使用 `src/utils/CacheManager.js` 管理缓存
+- 时区处理: 使用本地时间格式: `src/utils/TimeUtils.js` 的 localTime()
+- 网格视图没有多选功能, 只有列表视图和紧凑视图有多选功能
+- 新建的 utils 文件, 如果不包含 `document`, 放入 `src/utils`; 否则放入 `src/renderer/renderer_utils`
