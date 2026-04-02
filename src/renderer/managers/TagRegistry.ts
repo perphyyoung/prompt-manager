@@ -1,8 +1,8 @@
-import { TagService } from './TagService.js';
-import { TagUI } from './TagUI.js';
-import { Constants } from '../../constants.js';
-import { DialogService, DialogConfig } from '../services/index.js';
-import { ITagRegistry } from './ITagRegistry.js';
+import { TagService } from './TagService.ts';
+import { TagUI } from './TagUI.ts';
+import { Constants } from '../../constants.ts';
+import { DialogService, DialogConfig } from '../services/index.ts';
+import { ITagRegistry, ITagService } from '../../types/entities.ts';
 
 /**
  * 标签注册表 - 业务逻辑层
@@ -12,8 +12,8 @@ export class TagRegistry implements ITagRegistry {
   type: string;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
+  service: ITagService;
   private context: any;
-  private service: any;
   private ui: any;
   private eventBus: any;
   private selectedTagGroup: any;

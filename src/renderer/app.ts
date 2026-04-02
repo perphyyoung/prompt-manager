@@ -1,0 +1,2019 @@
+/**
+ * 重构版应用主类
+ * 作为协调器，整合各个面板管理器
+ */
+
+import { Constants } from '../constants.ts';
+import { DialogService, DialogConfig } from './services/index.ts';
+import {
+  PromptPanelManager, ImagePanelManager,
+  TagRegistry, TrashManager, ImageFullscreenManager,
+  PromptDetailManager, ImageDetailManager,
+  ModalManager, TagGroupModalManager,
+  ToastManager, NavigationManager,
+  SearchSortManager, ToolbarManager,
+  ImportExportManager, SettingsManager,
+  ImageSelectorManager, NewPromptManager,
+  ImageUploadManager, ImageContextMenuManager
+} from './managers/index.ts';
+import { BatchConfig } from './config/index.ts';
+import { EventBus, HtmlUtils, isSameId, cacheManager } from '../utils/index.ts';
+import { HoverTooltipManager, ShortcutManager, SaveManager, PromptSaveStrategy } from './renderer_utils/index.ts';
+import type { ITagRegistry, IPrompt, IImage } from '../types/entities.ts';
+import type {
+  IApp,
+  IPanelManager,
+  IModalManager,
+  IToastManager,
+  IDetailManager,
+  IImageFullscreenManager,
+  INavigationManager,
+  IToolbarManager,
+  ISearchSortManager,
+  IImportExportManager,
+  ISettingsManager,
+  IImageSelectorManager,
+  INewPromptManager,
+  IImageUploadManager,
+  IImageContextMenuManager,
+  ITagGroupModalManager,
+  IHoverTooltipManager,
+  IShortcutManager,
+  IEventBus,
+  ICacheManager
+} from './app.types.ts';
+
+// ==================== 主应用类 ====================
+
+/**
+ * 主应用类 - 协调器
+ * 负责初始化和管理各个子模块，处理全局事件和状态
+ */
+class PromptManager implements IApp {
+  // 缓存管理器
+  cacheManager: ICacheManager;
+
+  // 缓存
+  promptCache: ReturnType<typeof cacheManager.getPromptCache>;
+  imageCache: ReturnType<typeof cacheManager.getImageCache>;
+  currentImagesCache: ReturnType<typeof cacheManager.createCache>;
+
+  // 状态
+  viewMode: string;
+  searchQuery: string;
+  selectedTags: Set<string>;
+  imageSearchQuery: string;
+
+  // 标签排序状态
+  promptTagSortBy: string;
+  promptTagSortOrder: string;
+  imageTagSortBy: string;
+  imageTagSortOrder: string;
+  imageSelectorSortBy: string;
+  imageSelectorSortOrder: string;
+
+  // 标签系统
+  promptTagRegistry: ITagRegistry;
+  imageTagRegistry: ITagRegistry;
+  tagUI: unknown | null;
+
+  // 事件总线
+  eventBus: IEventBus;
+
+  // 面板管理器
+  promptPanelManager: IPanelManager;
+  imagePanelManager: IPanelManager;
+  trashManager: TrashManager;
+  shortcutManager: IShortcutManager;
+  imageFullscreenManager: IImageFullscreenManager;
+  promptDetailManager: PromptDetailManager;
+  imageDetailManager: ImageDetailManager;
+  modalManager: IModalManager;
+  tagGroupModalManager: ITagGroupModalManager;
+  toastManager!: IToastManager;
+  navigationManager: INavigationManager;
+  searchSortManager: ISearchSortManager;
+  toolbarManager: IToolbarManager;
+  importExportManager: IImportExportManager;
+  settingsManager: ISettingsManager;
+  imageSelectorManager: IImageSelectorManager;
+  newPromptManager: INewPromptManager;
+  imageUploadManager: IImageUploadManager;
+  imageContextMenuManager?: IImageContextMenuManager;
+
+  // 当前面板状态
+  currentPanel: string;
+
+  // UI 组件
+  hoverTooltip: unknown | null;
+  promptHoverTooltip: IHoverTooltipManager;
+
+  // 其他
+  isFromDetailJump: boolean;
+  displayedImages?: Array<{ id: string; path: string; isExisting?: boolean }>;
+  private _saveLocks?: Set<string>;
+  private confirmResolve?: ((value: boolean) => void) | null;
+
+  constructor() {
+    // 缓存管理器
+    this.cacheManager = cacheManager;
+
+    // 使用 CacheManager 管理缓存
+    this.promptCache = cacheManager.getPromptCache();
+    this.imageCache = cacheManager.getImageCache();
+    this.currentImagesCache = cacheManager.createCache('currentImages', 100);
+    // 从 localStorage 加载 viewMode（在创建面板管理器之前）
+    this.viewMode = localStorage.getItem(Constants.LocalStorageKey.VIEW_MODE) || 'safe';
+    this.searchQuery = '';
+    this.selectedTags = new Set();
+    this.imageSearchQuery = '';
+
+    // 标签管理排序状态
+    this.promptTagSortBy = localStorage.getItem(Constants.LocalStorageKey.PROMPT_TAG_SORT_BY) || 'count';
+    this.promptTagSortOrder = localStorage.getItem(Constants.LocalStorageKey.PROMPT_TAG_SORT_ORDER) || 'desc';
+    this.imageTagSortBy = localStorage.getItem(Constants.LocalStorageKey.IMAGE_TAG_SORT_BY) || 'count';
+    this.imageTagSortOrder = localStorage.getItem(Constants.LocalStorageKey.IMAGE_TAG_SORT_ORDER) || 'desc';
+
+    // 图像选择器排序状态（独立设置）
+    this.imageSelectorSortBy = localStorage.getItem(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_BY) || 'updatedAt';
+    this.imageSelectorSortOrder = localStorage.getItem(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_ORDER) || 'desc';
+
+    // 事件总线
+    this.eventBus = new EventBus();
+
+    // 初始化回收站管理器
+    this.trashManager = new TrashManager({
+      app: this,
+      eventBus: this.eventBus
+    });
+
+    // 初始化快捷键管理器
+    this.shortcutManager = new ShortcutManager({
+      app: this
+    });
+
+    // 初始化标签注册表（必须在面板管理器之前）
+    this.promptTagRegistry = new TagRegistry('prompt', this);
+    this.imageTagRegistry = new TagRegistry('image', this);
+
+    // 初始化提示词面板管理器
+    this.promptPanelManager = new PromptPanelManager({
+      app: this,
+      tagManager: this.promptTagRegistry,
+      saveManager: new SaveManager({
+        strategy: new PromptSaveStrategy(this),
+        itemId: '',
+        onAfterSave: () => {
+          this.showToast('保存成功', 'success');
+        }
+      }),
+      eventBus: this.eventBus,
+      toolbarConfig: BatchConfig.prompt
+    });
+
+    // 初始化图像面板管理器
+    this.imagePanelManager = new ImagePanelManager({
+      app: this,
+      tagManager: this.imageTagRegistry,
+      eventBus: this.eventBus,
+      toolbarConfig: BatchConfig.image
+    });
+
+    // 初始化图像全屏查看器管理器
+    this.imageFullscreenManager = new ImageFullscreenManager({
+      app: this
+    });
+
+    // 初始化详情管理器
+    this.promptDetailManager = new PromptDetailManager({
+      app: this,
+      tagRegistry: this.promptTagRegistry
+    });
+
+    this.imageDetailManager = new ImageDetailManager({
+      app: this,
+      tagRegistry: this.imageTagRegistry
+    });
+
+    // 初始化模态框管理器
+    this.modalManager = new ModalManager({
+      app: this
+    });
+
+    // 初始化标签组模态框管理器
+    this.tagGroupModalManager = new TagGroupModalManager({
+      app: this
+    });
+
+    // 初始化导航管理器
+    this.navigationManager = new NavigationManager({
+      app: this,
+      storageKey: 'currentPanel',
+      defaultPanel: 'prompt',
+      batchToolbarConfig: BatchConfig
+    });
+
+    // 初始化搜索排序管理器
+    this.searchSortManager = new SearchSortManager({
+      app: this
+    });
+
+    // 初始化工具栏管理器
+    this.toolbarManager = new ToolbarManager({
+      app: this
+    });
+
+    // 初始化导入导出管理器
+    this.importExportManager = new ImportExportManager({
+      app: this
+    });
+
+    // 初始化设置管理器
+    this.settingsManager = new SettingsManager({
+      app: this,
+      dataClearApi: window.electronAPI
+    });
+
+    // 初始化图像选择器管理器
+    this.imageSelectorManager = new ImageSelectorManager({
+      app: this
+    });
+
+    // 初始化新建提示词管理器
+    this.newPromptManager = new NewPromptManager({
+      app: this
+    });
+
+    // 初始化图像上传管理器
+    this.imageUploadManager = new ImageUploadManager({
+      app: this
+    });
+
+    // 当前面板状态 (由 NavigationManager 管理)
+    this.currentPanel = 'prompt'; // 默认打开提示词面板
+
+    // UI 组件
+    this.hoverTooltip = null;
+
+    // 初始化 hover tooltip
+    this.promptHoverTooltip = new HoverTooltipManager('promptPreviewTooltip', 'promptPreviewContent', 'promptPreviewImage');
+
+    // 其他状态
+    this.isFromDetailJump = false;
+  }
+
+  /**
+   * 初始化应用
+   */
+  async init() {
+    try {
+      // 恢复主题
+      this.restoreTheme();
+
+      // 初始化 hover tooltip
+      this.initHoverTooltips();
+
+      // 初始化面板管理器（只加载数据，不渲染视图）
+      await this.initPanelManagers();
+
+      // 绑定工具栏事件
+      this.bindToolbarEvents();
+
+      // 绑定全局事件
+      await this.bindGlobalEvents();
+
+      // 加载数据（初始化，不刷新）
+      await this.loadData(false);
+
+      // 恢复上次打开的面板（会触发当前面板的渲染）
+      this.navigationManager?.restorePanelState();
+    } catch (error) {
+      window.electronAPI.logError('App', 'Failed to initialize application:', error);
+      this.showToast('应用初始化失败', 'error');
+    }
+  }
+
+  /**
+   * 恢复主题
+   */
+  restoreTheme() {
+    const savedTheme = localStorage.getItem(Constants.LocalStorageKey.THEME) || 'dark';
+    const html = document.documentElement;
+    html.setAttribute('data-theme', savedTheme);
+
+    // 更新主题按钮文本
+    const themeToggle = document.getElementById('settingsThemeToggle');
+    if (themeToggle) {
+      themeToggle.innerHTML = savedTheme === 'dark'
+        ? '<span>☀️</span> 明亮'
+        : '<span>🌙</span> 暗黑';
+    }
+  }
+
+  /**
+   * 初始化 Hover Tooltip
+   */
+  initHoverTooltips() {
+    // 提示词预览 tooltip（左右布局，同时显示内容和图像）
+    this.promptHoverTooltip = new HoverTooltipManager('promptPreviewTooltip', 'promptPreviewContent', 'promptPreviewImage');
+  }
+
+  /**
+   * 初始化面板管理器
+   */
+  async initPanelManagers() {
+    // 初始化回收站管理器
+    this.trashManager = new TrashManager({
+      app: this,
+      eventBus: this.eventBus
+    });
+    await this.trashManager.init();
+
+    // 初始化快捷键管理器
+    this.shortcutManager = new ShortcutManager({
+      app: this
+    });
+    this.shortcutManager.bind();
+
+    // 初始化提示词面板管理器
+    this.promptPanelManager = new PromptPanelManager({
+      app: this,
+      eventBus: this.eventBus,
+      toolbarConfig: BatchConfig.prompt
+    });
+
+    // 初始化图像面板管理器
+    this.imagePanelManager = new ImagePanelManager({
+      app: this,
+      eventBus: this.eventBus,
+      toolbarConfig: BatchConfig.image
+    });
+
+    // 初始化标签注册表（重构后，用配置替代继承）
+    this.promptTagRegistry = new TagRegistry('prompt', this);
+    this.imageTagRegistry = new TagRegistry('image', this);
+
+    // 初始化图像全屏查看器管理器
+    this.imageFullscreenManager = new ImageFullscreenManager({
+      app: this
+    });
+    this.imageFullscreenManager.init();
+
+    // 初始化详情管理器
+    this.promptDetailManager = new PromptDetailManager({
+      app: this,
+      tagRegistry: this.promptTagRegistry
+    });
+
+    this.imageDetailManager = new ImageDetailManager({
+      app: this,
+      tagRegistry: this.imageTagRegistry
+    });
+
+    // 初始化模态框管理器
+    this.modalManager = new ModalManager({
+      app: this
+    });
+    this.modalManager.init?.();
+
+    // 初始化标签组模态框管理器
+    this.tagGroupModalManager = new TagGroupModalManager({
+      app: this
+    });
+    this.tagGroupModalManager.init?.();
+
+    // 初始化 Toast 管理器
+    this.toastManager = new ToastManager({
+      duration: 3000,
+      containerId: 'toastContainer',
+      messageId: 'toastMessage'
+    });
+    this.toastManager.init();
+
+    // 初始化导航管理器
+    this.navigationManager = new NavigationManager({
+      app: this,
+      storageKey: 'currentPanel',
+      defaultPanel: 'prompt',
+      batchToolbarConfig: BatchConfig
+    });
+    this.navigationManager.init?.();
+
+    // 同步 currentPanel 引用
+    this.syncCurrentPanel();
+
+    // 初始化搜索排序管理器
+    this.searchSortManager = new SearchSortManager({
+      app: this
+    });
+    this.searchSortManager.init();
+
+    // 初始化工具栏管理器
+    this.toolbarManager = new ToolbarManager({
+      app: this
+    });
+    this.toolbarManager.init();
+
+    // 初始化导入导出管理器
+    this.importExportManager = new ImportExportManager({
+      app: this
+    });
+    this.importExportManager.init();
+
+    // 初始化设置管理器
+    this.settingsManager = new SettingsManager({
+      app: this,
+      dataClearApi: window.electronAPI
+    });
+    this.settingsManager.init?.();
+
+    // 初始化图像选择器管理器
+    this.imageSelectorManager = new ImageSelectorManager({
+      app: this
+    });
+
+    // 初始化新建提示词管理器
+    this.newPromptManager = new NewPromptManager({
+      app: this
+    });
+
+    // 初始化图像上传管理器
+    this.imageUploadManager = new ImageUploadManager({
+      app: this
+    });
+
+    // 初始化图像右键菜单管理器
+    this.imageContextMenuManager = new ImageContextMenuManager({});
+
+    // 并行初始化（只加载数据，不渲染）
+    await Promise.all([
+      this.promptPanelManager.init?.(),
+      this.imagePanelManager.init?.()
+    ]);
+  }
+
+  /**
+   * 同步 currentPanel 引用
+   * 保持与 NavigationManager 的同步
+   */
+  syncCurrentPanel() {
+    Object.defineProperty(this, 'currentPanel', {
+      get: () => this.navigationManager?.getCurrentPanel() || 'prompt',
+      set: (value) => {
+        if (this.navigationManager) {
+          this.navigationManager.switchTo(value);
+        }
+      }
+    });
+  }
+
+  /**
+   * 加载数据
+   * @param refresh - 是否强制刷新面板
+   */
+  async loadData(refresh = false) {
+    // 数据已由面板管理器加载到 CacheManager
+    // 但某些操作（如上传图像）可能需要刷新面板
+    if (refresh) {
+      if (this.promptPanelManager) {
+        await this.promptPanelManager.loadData?.();
+        await this.promptPanelManager.renderView();
+      }
+      if (this.imagePanelManager) {
+        await this.imagePanelManager.loadData?.();
+        await this.imagePanelManager.renderView();
+      }
+    }
+  }
+
+  /**
+   * 绑定全局事件
+   */
+  async bindGlobalEvents() {
+    this.bindSidebarEvents();
+    await this.bindNavigationEvents();
+    // 工具栏事件由 ToolbarManager 处理
+    // 搜索、排序、视图切换事件由 SearchSortManager 处理
+    this.bindTagFilterEvents();
+    this.bindDialogEvents();
+    this.bindSettingsEvents();
+    this.bindPromptTagManagerEvents();
+    this.bindImageTagManagerEvents();
+    this.bindDetailModalEvents();
+    // 全屏查看器事件由 ImageFullscreenManager 处理
+    this.bindTextSelectEvents();
+  }
+
+  /**
+   * 绑定文本全选事件（Ctrl+A）
+   * 使用事件委托处理所有文本编辑框和查看框
+   */
+  bindTextSelectEvents() {
+    document.addEventListener('keydown', (e) => {
+      // 检查是否按下了 Ctrl+A (或 Cmd+A on Mac)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        const target = e.target as HTMLElement;
+
+        // 检查目标是否是文本输入框或文本查看框
+        const isTextInput = target.tagName === 'INPUT' &&
+          ['text', 'search', 'url', 'email', 'password', 'number'].includes((target as HTMLInputElement).type);
+        const isTextArea = target.tagName === 'TEXTAREA';
+        const isContentEditable = target.isContentEditable;
+        const isTextViewer = target.classList.contains('prompt-content');
+
+        // 如果是文本编辑/查看框，执行全选
+        if (isTextInput || isTextArea || isContentEditable || isTextViewer) {
+          e.preventDefault(); // 阻止默认行为，使用自定义全选
+
+          if (isContentEditable || isTextViewer) {
+            // 对于 contenteditable 元素和文本查看框
+            const range = document.createRange();
+            range.selectNodeContents(target);
+            const selection = window.getSelection();
+            if (selection) {
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+          } else {
+            // 对于普通输入框
+            (target as HTMLInputElement).select();
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * 绑定侧边栏事件
+   */
+  bindSidebarEvents() {
+    const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+    const sidebar = document.getElementById('sidebar');
+    if (!toggleSidebarBtn || !sidebar) return;
+
+    toggleSidebarBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      const isCollapsed = sidebar.classList.contains('collapsed');
+      toggleSidebarBtn.title = isCollapsed ? '展开侧边栏' : '收起侧边栏';
+      localStorage.setItem(Constants.LocalStorageKey.SIDEBAR_COLLAPSED, String(isCollapsed));
+    });
+
+    // 恢复侧边栏状态
+    if (localStorage.getItem(Constants.LocalStorageKey.SIDEBAR_COLLAPSED) === 'true') {
+      sidebar.classList.add('collapsed');
+      toggleSidebarBtn.title = '展开侧边栏';
+    }
+  }
+
+  /**
+   * 绑定导航事件
+   */
+  async bindNavigationEvents() {
+    // 导航事件由 NavigationManager 处理
+    const settingsBtn = document.getElementById('settingsBtn');
+
+    settingsBtn?.addEventListener('click', async () => {
+      this.openSettingsModal();
+    });
+
+    // 统计模态框关闭按钮
+    document.getElementById('closeStatisticsModal')?.addEventListener('click', () => this.closeStatisticsModal());
+
+    // 统计模态框点击背景关闭
+    const statisticsModal = document.getElementById('statisticsModal');
+    if (statisticsModal) {
+      statisticsModal.addEventListener('click', (e) => {
+        if (e.target === statisticsModal) {
+          this.closeStatisticsModal();
+        }
+      });
+    }
+  }
+
+  /**
+   * 绑定工具栏事件
+   */
+  bindToolbarEvents() {
+    // 卡片信息显示开关
+    const cardInfoToggleBtn = document.getElementById('cardInfoToggleBtn');
+    const CARDS_INFO_VISIBLE_KEY = 'cardsInfoVisible';
+    
+    // 从 localStorage 加载状态
+    const isInfoVisible = localStorage.getItem(CARDS_INFO_VISIBLE_KEY) !== 'false';
+    if (!isInfoVisible) {
+      document.body.classList.add('cards-info-hidden');
+      cardInfoToggleBtn?.classList.remove('active');
+    }
+    
+    cardInfoToggleBtn?.addEventListener('click', () => {
+      const isHidden = document.body.classList.toggle('cards-info-hidden');
+      cardInfoToggleBtn.classList.toggle('active');
+      localStorage.setItem(CARDS_INFO_VISIBLE_KEY, String(!isHidden));
+      
+      // 更新提示
+      const action = isHidden ? '已隐藏' : '已显示';
+      this.showToast(`${action}卡片信息`, 'info');
+    });
+
+    // 刷新按钮
+    document.getElementById('reloadBtn')?.addEventListener('click', () => this.refreshData());
+
+    // 提示词工具栏
+    document.getElementById('promptAddBtn')?.addEventListener('click', () => this.newPromptManager.open());
+
+    // 图像工具栏
+    document.getElementById('imageAddBtn')?.addEventListener('click', () => this.imageUploadManager.open());
+
+    // 绑定图像上传事件
+    this.imageUploadManager.bindEvents();
+
+    // 标签筛选动作按钮
+    document.getElementById('promptTagFilterActionBtn')?.addEventListener('click', () => this.promptPanelManager.handleFilterAction?.());
+    document.getElementById('imageTagFilterActionBtn')?.addEventListener('click', () => this.imagePanelManager.handleFilterAction?.());
+
+    // 标签管理按钮
+    document.getElementById('promptTagManagerBtn')?.addEventListener('click', () => this.openPromptTagManagerModal());
+    document.getElementById('imageTagManagerBtn')?.addEventListener('click', () => this.openImageTagManagerModal());
+  }
+
+  /**
+   * 绑定搜索事件
+   */
+  bindSearchEvents() {
+    // 提示词搜索
+    const promptSearchInput = document.getElementById('promptSearchInput') as HTMLInputElement | null;
+    const clearPromptSearchBtn = document.getElementById('clearPromptSearchBtn');
+    if (promptSearchInput) {
+      promptSearchInput.addEventListener('input', (e) => {
+        const target = e.target as HTMLInputElement;
+        this.searchQuery = target.value;
+        this.promptPanelManager.renderView();
+        if (clearPromptSearchBtn) {
+          clearPromptSearchBtn.style.display = target.value ? 'flex' : 'none';
+        }
+      });
+    }
+    if (clearPromptSearchBtn && promptSearchInput) {
+      clearPromptSearchBtn.addEventListener('click', () => {
+        promptSearchInput.value = '';
+        this.searchQuery = '';
+        this.promptPanelManager.renderView();
+        clearPromptSearchBtn.style.display = 'none';
+        promptSearchInput.focus();
+      });
+    }
+
+    // 图像搜索
+    const imageSearchInput = document.getElementById('imageSearchInput') as HTMLInputElement | null;
+    const clearImageSearchBtn = document.getElementById('clearImageSearchBtn');
+    if (imageSearchInput) {
+      imageSearchInput.addEventListener('input', (e) => {
+        const target = e.target as HTMLInputElement;
+        this.imageSearchQuery = target.value;
+        this.imagePanelManager.renderView();
+        if (clearImageSearchBtn) {
+          clearImageSearchBtn.style.display = target.value ? 'flex' : 'none';
+        }
+      });
+    }
+    if (clearImageSearchBtn && imageSearchInput) {
+      clearImageSearchBtn.addEventListener('click', () => {
+        imageSearchInput.value = '';
+        this.imageSearchQuery = '';
+        this.imagePanelManager.renderView();
+        clearImageSearchBtn.style.display = 'none';
+        imageSearchInput.focus();
+      });
+    }
+  }
+
+  /**
+   * 绑定视图切换事件
+   */
+  bindViewToggleEvents() {
+    // 提示词视图
+    document.getElementById('promptGridViewBtn')?.addEventListener('click', () => {
+      this.promptPanelManager.setViewMode?.('grid');
+      this.updatePromptViewButtons('grid');
+    });
+    document.getElementById('promptListViewBtn')?.addEventListener('click', () => {
+      this.promptPanelManager.setViewMode?.('list');
+      this.updatePromptViewButtons('list');
+    });
+    document.getElementById('promptCompactViewBtn')?.addEventListener('click', () => {
+      this.promptPanelManager.setViewMode?.('list-compact');
+      this.updatePromptViewButtons('list-compact');
+    });
+
+    // 图像视图
+    document.getElementById('imageGridViewBtn')?.addEventListener('click', () => {
+      this.imagePanelManager.setViewMode?.('grid');
+      this.updateImageViewButtons('grid');
+    });
+    document.getElementById('imageListViewBtn')?.addEventListener('click', () => {
+      this.imagePanelManager.setViewMode?.('list');
+      this.updateImageViewButtons('list');
+    });
+    document.getElementById('imageCompactViewBtn')?.addEventListener('click', () => {
+      this.imagePanelManager.setViewMode?.('list-compact');
+      this.updateImageViewButtons('list-compact');
+    });
+  }
+
+  /**
+   * 绑定排序事件
+   */
+  bindSortEvents() {
+    // 提示词排序
+    const promptSortSelect = document.getElementById('promptSortSelect') as HTMLSelectElement | null;
+    const promptSortReverseBtn = document.getElementById('promptSortReverseBtn');
+    if (promptSortSelect) {
+      promptSortSelect.value = `${this.promptPanelManager.sortBy}-${this.promptPanelManager.sortOrder}`;
+      promptSortSelect.addEventListener('change', (e) => {
+        const target = e.target as HTMLSelectElement;
+        const [sortBy, sortOrder] = target.value.split('-');
+        this.promptPanelManager.sortBy = sortBy;
+        this.promptPanelManager.sortOrder = sortOrder;
+        localStorage.setItem(Constants.LocalStorageKey.PROMPT_SORT_BY, sortBy);
+        localStorage.setItem(Constants.LocalStorageKey.PROMPT_SORT_ORDER, sortOrder);
+        this.promptPanelManager.renderView();
+      });
+    }
+    if (promptSortReverseBtn) {
+      promptSortReverseBtn.addEventListener('click', () => {
+        const newOrder = this.promptPanelManager.sortOrder === 'asc' ? 'desc' : 'asc';
+        this.promptPanelManager.sortOrder = newOrder;
+        localStorage.setItem(Constants.LocalStorageKey.PROMPT_SORT_ORDER, newOrder);
+        if (promptSortSelect) {
+          promptSortSelect.value = `${this.promptPanelManager.sortBy}-${newOrder}`;
+        }
+        this.promptPanelManager.renderView();
+      });
+    }
+
+    // 提示词卡片大小
+    const promptCardSizeSlider = document.getElementById('promptCardSizeSlider') as HTMLInputElement | null;
+    if (promptCardSizeSlider) {
+      promptCardSizeSlider.value = String(this.promptPanelManager.cardSize);
+      this.promptPanelManager.setCardSize?.(this.promptPanelManager.cardSize);
+      promptCardSizeSlider.addEventListener('input', (e) => {
+        const target = e.target as HTMLInputElement;
+        this.promptPanelManager.setCardSize?.(parseInt(target.value));
+      });
+      promptCardSizeSlider.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement;
+        localStorage.setItem(Constants.LocalStorageKey.PROMPT_CARD_SIZE, target.value);
+      });
+    }
+
+    // 图像排序
+    const imageSortSelect = document.getElementById('imageSortSelect') as HTMLSelectElement | null;
+    const imageSortReverseBtn = document.getElementById('imageSortReverseBtn');
+    if (imageSortSelect) {
+      imageSortSelect.value = `${this.imagePanelManager.sortBy}-${this.imagePanelManager.sortOrder}`;
+      imageSortSelect.addEventListener('change', (e) => {
+        const target = e.target as HTMLSelectElement;
+        const [sortBy, sortOrder] = target.value.split('-');
+        this.imagePanelManager.sortBy = sortBy;
+        this.imagePanelManager.sortOrder = sortOrder;
+        localStorage.setItem(Constants.LocalStorageKey.IMAGE_SORT_BY, sortBy);
+        localStorage.setItem(Constants.LocalStorageKey.IMAGE_SORT_ORDER, sortOrder);
+        this.imagePanelManager.renderView();
+      });
+    }
+    if (imageSortReverseBtn) {
+      imageSortReverseBtn.addEventListener('click', () => {
+        const newOrder = this.imagePanelManager.sortOrder === 'asc' ? 'desc' : 'asc';
+        this.imagePanelManager.sortOrder = newOrder;
+        localStorage.setItem(Constants.LocalStorageKey.IMAGE_SORT_ORDER, newOrder);
+        if (imageSortSelect) {
+          imageSortSelect.value = `${this.imagePanelManager.sortBy}-${newOrder}`;
+        }
+        this.imagePanelManager.renderView();
+      });
+    }
+
+    // 图像卡片大小
+    const imageCardSizeSlider = document.getElementById('imageCardSizeSlider') as HTMLInputElement | null;
+    if (imageCardSizeSlider) {
+      imageCardSizeSlider.value = String(this.imagePanelManager.cardSize);
+      this.imagePanelManager.setCardSize?.(this.imagePanelManager.cardSize);
+      imageCardSizeSlider.addEventListener('input', (e) => {
+        const target = e.target as HTMLInputElement;
+        this.imagePanelManager.setCardSize?.(parseInt(target.value));
+      });
+      imageCardSizeSlider.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement;
+        localStorage.setItem(Constants.LocalStorageKey.IMAGE_CARD_SIZE, target.value);
+      });
+    }
+  }
+
+  /**
+   * 绑定标签筛选事件
+   */
+  bindTagFilterEvents() {
+    // 图像标签筛选排序
+    const imageTagFilterSortSelect = document.getElementById('imageTagFilterSortSelect') as HTMLSelectElement | null;
+    const imageTagFilterOrderBtn = document.getElementById('imageTagFilterOrderBtn');
+    if (imageTagFilterSortSelect) {
+      imageTagFilterSortSelect.value = `${this.imagePanelManager.tagFilterSortBy}-${this.imagePanelManager.tagFilterSortOrder}`;
+      imageTagFilterSortSelect.addEventListener('change', (e) => {
+        const target = e.target as HTMLSelectElement;
+        const [sortBy, sortOrder] = target.value.split('-');
+        this.imagePanelManager.tagFilterSortBy = sortBy;
+        this.imagePanelManager.tagFilterSortOrder = sortOrder;
+        localStorage.setItem(Constants.LocalStorageKey.IMAGE_TAG_FILTER_SORT_BY, sortBy);
+        localStorage.setItem(Constants.LocalStorageKey.IMAGE_TAG_FILTER_SORT_ORDER, sortOrder);
+        this.imagePanelManager.renderTagFilters();
+      });
+    }
+    if (imageTagFilterOrderBtn) {
+      imageTagFilterOrderBtn.addEventListener('click', () => {
+        const newOrder = this.imagePanelManager.tagFilterSortOrder === 'asc' ? 'desc' : 'asc';
+        this.imagePanelManager.tagFilterSortOrder = newOrder;
+        localStorage.setItem(Constants.LocalStorageKey.IMAGE_TAG_FILTER_SORT_ORDER, newOrder);
+        if (imageTagFilterSortSelect) {
+          imageTagFilterSortSelect.value = `${this.imagePanelManager.tagFilterSortBy}-${newOrder}`;
+        }
+        this.imagePanelManager.renderTagFilters();
+      });
+    }
+
+    // 提示词标签筛选排序
+    const promptTagFilterSortSelect = document.getElementById('promptTagFilterSortSelect') as HTMLSelectElement | null;
+    const promptTagFilterOrderBtn = document.getElementById('promptTagFilterOrderBtn');
+    if (promptTagFilterSortSelect) {
+      promptTagFilterSortSelect.value = `${this.promptPanelManager.tagFilterSortBy}-${this.promptPanelManager.tagFilterSortOrder}`;
+      promptTagFilterSortSelect.addEventListener('change', (e) => {
+        const target = e.target as HTMLSelectElement;
+        const [sortBy, sortOrder] = target.value.split('-');
+        this.promptPanelManager.tagFilterSortBy = sortBy;
+        this.promptPanelManager.tagFilterSortOrder = sortOrder;
+        localStorage.setItem(Constants.LocalStorageKey.PROMPT_TAG_FILTER_SORT_BY, sortBy);
+        localStorage.setItem(Constants.LocalStorageKey.PROMPT_TAG_FILTER_SORT_ORDER, sortOrder);
+        this.promptPanelManager.renderTagFilters();
+      });
+    }
+    if (promptTagFilterOrderBtn) {
+      promptTagFilterOrderBtn.addEventListener('click', () => {
+        const newOrder = this.promptPanelManager.tagFilterSortOrder === 'asc' ? 'desc' : 'asc';
+        this.promptPanelManager.tagFilterSortOrder = newOrder;
+        localStorage.setItem(Constants.LocalStorageKey.PROMPT_TAG_FILTER_SORT_ORDER, newOrder);
+        if (promptTagFilterSortSelect) {
+          promptTagFilterSortSelect.value = `${this.promptPanelManager.tagFilterSortBy}-${newOrder}`;
+        }
+        this.promptPanelManager.renderTagFilters();
+      });
+    }
+
+    // 标签筛选收起/展开
+    document.getElementById('promptTagFilterToggleBtn')?.addEventListener('click', () => this.togglePromptTagFilter());
+    document.getElementById('imageTagFilterToggleBtn')?.addEventListener('click', () => this.toggleImageTagFilter());
+
+    // 恢复标签筛选收起状态
+    if (localStorage.getItem(Constants.LocalStorageKey.PROMPT_TAG_FILTER_COLLAPSED) === 'true') {
+      document.getElementById('promptTagFilterSection')?.classList.add('collapsed');
+    }
+    if (localStorage.getItem(Constants.LocalStorageKey.IMAGE_TAG_FILTER_COLLAPSED) === 'true') {
+      document.getElementById('imageTagFilterSection')?.classList.add('collapsed');
+    }
+  }
+
+  /**
+   * 绑定对话框事件
+   */
+  bindDialogEvents() {
+    // 对话框事件由 ModalManager 处理
+  }
+
+  /**
+   * 绑定设置事件
+   */
+  bindSettingsEvents() {
+    // 设置事件由 SettingsManager 处理
+  }
+
+  /**
+   * 绑定提示词标签管理器事件
+   */
+  bindPromptTagManagerEvents() {
+    document.getElementById('closePromptTagManagerModal')?.addEventListener('click', () => this.modalManager?.closePromptTagManager());
+    document.getElementById('addPromptTagGroupBtn')?.addEventListener('click', () => this.tagGroupModalManager?.openEdit('prompt'));
+    const addPromptTagInManagerBtn = document.getElementById('addPromptTagInManagerBtn');
+    if (addPromptTagInManagerBtn) {
+      addPromptTagInManagerBtn.addEventListener('click', () => {
+        this.promptTagRegistry.addTagInManager();
+      });
+    } else {
+      window.electronAPI.logWarn('App', 'addPromptTagInManagerBtn not found');
+    }
+
+    // 批量管理按钮
+    const batchManagePromptTagsBtn = document.getElementById('batchManagePromptTagsBtn');
+    if (batchManagePromptTagsBtn) {
+      batchManagePromptTagsBtn.addEventListener('click', () => {
+        this.promptTagRegistry.toggleBatchMode();
+      });
+    }
+
+    // 同步标签按钮（双向同步）
+    const syncPromptTagsBtn = document.getElementById('syncPromptTagsBtn');
+    if (syncPromptTagsBtn) {
+      syncPromptTagsBtn.addEventListener('click', async () => {
+        try {
+          const result = await window.electronAPI.syncTagsBidirectional();
+          // 清除标签缓存并刷新页面
+          if (result.promptToImage.tags && result.promptToImage.tags.length > 0) {
+            this.imageTagRegistry.service._clearCache(this.imageTagRegistry.service.cacheKey);
+            this.imageTagRegistry.service._clearCache(this.imageTagRegistry.service.cacheKeyGroups);
+          }
+          if (result.imageToPrompt.tags && result.imageToPrompt.tags.length > 0) {
+            this.promptTagRegistry.service._clearCache(this.promptTagRegistry.service.cacheKey);
+            this.promptTagRegistry.service._clearCache(this.promptTagRegistry.service.cacheKeyGroups);
+          }
+          await Promise.all([this.promptTagRegistry.refresh(), this.imageTagRegistry.refresh()]);
+          // 显示同步结果对话框
+          DialogService.showConfirmDialogByConfig(DialogConfig.SYNC_TAGS_BIDIRECTIONAL, result);
+        } catch (error) {
+          window.electronAPI.logError('App', 'Failed to sync tags bidirectional', error);
+          this.showToast('同步标签失败: ' + (error as Error).message, 'error');
+        }
+      });
+    }
+
+    // 搜索
+    const searchInput = document.getElementById('promptTagManagerSearchInput') as HTMLInputElement | null;
+    const clearBtn = document.getElementById('clearPromptTagManagerSearchBtn');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const target = e.target as HTMLInputElement;
+        this.promptTagRegistry.render(target.value);
+        if (clearBtn) clearBtn.style.display = target.value ? 'flex' : 'none';
+      });
+    }
+    if (clearBtn && searchInput) {
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        this.promptTagRegistry.render('');
+        clearBtn.style.display = 'none';
+        searchInput.focus();
+      });
+    }
+
+    // 排序
+    const sortSelect = document.getElementById('promptTagManagerSortSelect') as HTMLSelectElement | null;
+    const orderBtn = document.getElementById('promptTagManagerOrderBtn');
+    if (sortSelect) {
+      sortSelect.value = `${this.promptTagRegistry.sortBy}-${this.promptTagRegistry.sortOrder}`;
+      sortSelect.addEventListener('change', (e) => {
+        const target = e.target as HTMLSelectElement;
+        const [sortBy, sortOrder] = target.value.split('-');
+        this.promptTagRegistry.sortBy = sortBy;
+        this.promptTagRegistry.sortOrder = sortOrder as 'asc' | 'desc';
+        localStorage.setItem(`promptTagSortBy`, sortBy);
+        localStorage.setItem(`promptTagSortOrder`, sortOrder);
+        this.promptTagRegistry.render(searchInput?.value || '');
+      });
+    }
+    if (orderBtn && sortSelect) {
+      orderBtn.addEventListener('click', () => {
+        const newOrder = this.promptTagRegistry.sortOrder === 'asc' ? 'desc' : 'asc';
+        this.promptTagRegistry.sortOrder = newOrder;
+        localStorage.setItem(`promptTagSortOrder`, newOrder);
+        sortSelect.value = `${this.promptTagRegistry.sortBy}-${newOrder}`;
+        this.promptTagRegistry.render(searchInput?.value || '');
+      });
+    }
+  }
+
+  /**
+   * 绑定图像标签管理器事件
+   */
+  bindImageTagManagerEvents() {
+    document.getElementById('closeImageTagManagerModal')?.addEventListener('click', () => this.modalManager.closeImageTagManager());
+    document.getElementById('addImageTagGroupBtn')?.addEventListener('click', () => this.tagGroupModalManager.openEdit('image'));
+    const addImageTagInManagerBtn = document.getElementById('addImageTagInManagerBtn');
+    if (addImageTagInManagerBtn) {
+      addImageTagInManagerBtn.addEventListener('click', () => {
+        this.imageTagRegistry.addTagInManager();
+      });
+    } else {
+      window.electronAPI.logWarn('App', 'addImageTagInManagerBtn not found');
+    }
+
+    // 批量管理按钮
+    const batchManageImageTagsBtn = document.getElementById('batchManageImageTagsBtn');
+    if (batchManageImageTagsBtn) {
+      batchManageImageTagsBtn.addEventListener('click', () => {
+        this.imageTagRegistry.toggleBatchMode();
+      });
+    }
+
+    // 同步标签按钮（双向同步）
+    const syncImageTagsBtn = document.getElementById('syncImageTagsBtn');
+    if (syncImageTagsBtn) {
+      syncImageTagsBtn.addEventListener('click', async () => {
+        try {
+          const result = await window.electronAPI.syncTagsBidirectional();
+          // 清除标签缓存并刷新页面
+          if (result.promptToImage.tags && result.promptToImage.tags.length > 0) {
+            this.imageTagRegistry.service._clearCache(this.imageTagRegistry.service.cacheKey);
+            this.imageTagRegistry.service._clearCache(this.imageTagRegistry.service.cacheKeyGroups);
+          }
+          if (result.imageToPrompt.tags && result.imageToPrompt.tags.length > 0) {
+            this.promptTagRegistry.service._clearCache(this.promptTagRegistry.service.cacheKey);
+            this.promptTagRegistry.service._clearCache(this.promptTagRegistry.service.cacheKeyGroups);
+          }
+          await Promise.all([this.promptTagRegistry.refresh(), this.imageTagRegistry.refresh()]);
+          // 显示同步结果对话框
+          DialogService.showConfirmDialogByConfig(DialogConfig.SYNC_TAGS_BIDIRECTIONAL, result);
+        } catch (error) {
+          window.electronAPI.logError('App', 'Failed to sync tags bidirectional', error);
+          this.showToast('同步标签失败: ' + (error as Error).message, 'error');
+        }
+      });
+    }
+
+    // 搜索
+    const searchInput = document.getElementById('imageTagManagerSearchInput') as HTMLInputElement | null;
+    const clearBtn = document.getElementById('clearImageTagManagerSearchBtn');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const target = e.target as HTMLInputElement;
+        this.imageTagRegistry.render(target.value);
+        if (clearBtn) clearBtn.style.display = target.value ? 'flex' : 'none';
+      });
+    }
+    if (clearBtn && searchInput) {
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        this.imageTagRegistry.render('');
+        clearBtn.style.display = 'none';
+        searchInput.focus();
+      });
+    }
+
+    // 排序
+    const sortSelect = document.getElementById('imageTagManagerSortSelect') as HTMLSelectElement | null;
+    const orderBtn = document.getElementById('imageTagManagerOrderBtn');
+    if (sortSelect) {
+      sortSelect.value = `${this.imageTagRegistry.sortBy}-${this.imageTagRegistry.sortOrder}`;
+      sortSelect.addEventListener('change', (e) => {
+        const target = e.target as HTMLSelectElement;
+        const [sortBy, sortOrder] = target.value.split('-');
+        this.imageTagRegistry.sortBy = sortBy;
+        this.imageTagRegistry.sortOrder = sortOrder as 'asc' | 'desc';
+        localStorage.setItem(`imageTagSortBy`, sortBy);
+        localStorage.setItem(`imageTagSortOrder`, sortOrder);
+        this.imageTagRegistry.render(searchInput?.value || '');
+      });
+    }
+    if (orderBtn && sortSelect) {
+      orderBtn.addEventListener('click', () => {
+        const newOrder = this.imageTagRegistry.sortOrder === 'asc' ? 'desc' : 'asc';
+        this.imageTagRegistry.sortOrder = newOrder;
+        localStorage.setItem(`imageTagSortOrder`, newOrder);
+        sortSelect.value = `${this.imageTagRegistry.sortBy}-${newOrder}`;
+        this.imageTagRegistry.render(searchInput?.value || '');
+      });
+    }
+  }
+
+  /**
+   * 绑定详情模态框事件
+   */
+  bindDetailModalEvents() {
+    // 提示词详情关闭
+    const closePromptDetailBtn = document.getElementById('promptDetailCloseBtn');
+    if (closePromptDetailBtn) {
+      closePromptDetailBtn.onclick = () => this.promptDetailManager.close();
+    }
+
+    // 图像详情关闭
+    document.getElementById('imageDetailCloseBtn')?.addEventListener('click', () => this.imageDetailManager.close());
+
+    // 收藏按钮（由 DetailManager 自动处理）
+    // PromptDetailManager 和 ImageDetailManager 在 initSaveManager 中绑定事件
+  }
+
+  /**
+   * 切换视图模式（safe/nsfw）
+   */
+  async toggleViewMode() {
+    this.viewMode = this.viewMode === 'safe' ? 'nsfw' : 'safe';
+
+    // 重新渲染
+    await this.promptPanelManager.renderView();
+    await this.promptPanelManager.renderTagFilters();
+    await this.imagePanelManager.renderView();
+    await this.imagePanelManager.renderTagFilters();
+
+    // 刷新统计
+    await this.renderStatistics();
+
+    this.showToast(`已切换到${this.viewMode === 'safe' ? '安全' : 'NSFW'}模式`, 'success');
+  }
+
+  /**
+   * 刷新数据
+   */
+  async refreshData() {
+    try {
+      // 加载数据
+      await this.promptPanelManager.loadData?.();
+      await this.imagePanelManager.loadData?.();
+
+      // 刷新提示词和图像主界面
+      await this.promptPanelManager.renderView();
+      await this.imagePanelManager.renderView();
+
+      // 刷新标签筛选
+      await this.promptPanelManager.renderTagFilters();
+      await this.imagePanelManager.renderTagFilters();
+
+      // 刷新统计
+      await this.renderStatistics();
+
+      this.showToast('数据已刷新', 'success');
+    } catch (error) {
+      window.electronAPI.logError('App', 'Failed to refresh data:', error);
+      this.showToast('刷新失败', 'error');
+    }
+  }
+
+  /**
+   * 重启应用
+   * @param oldDataDir - 旧的数据库目录路径（可选）
+   */
+  async relaunchApp(oldDataDir?: string) {
+    try {
+      if (oldDataDir) {
+        await window.electronAPI.relaunchApp(oldDataDir);
+      } else {
+        const confirmed = await DialogService.showConfirmDialogByConfig(DialogConfig.RELAUNCH_APP);
+        if (!confirmed) return;
+        await window.electronAPI.relaunchApp();
+      }
+    } catch (error) {
+      window.electronAPI.logError('App', 'Failed to relaunch app:', error);
+      this.showToast('重启失败', 'error');
+    }
+  }
+
+  /**
+   * 显示提示消息
+   * @param message - 消息内容
+   * @param type - 类型 (success, error, info, warning)
+   */
+  showToast(message: string, type = 'info') {
+    this.toastManager.show(message, type);
+  }
+
+  /**
+   * 打开编辑提示词模态框
+   * @param prompt - 提示词对象
+   * @param options - 选项
+   */
+  async openEditPromptModal(prompt: IPrompt, options = {}) {
+    await this.promptDetailManager.open(prompt as { id: string; title: string; content: string; [key: string]: unknown }, options);
+  }
+
+  /**
+   * 生成唯一的时间戳标题
+   * @returns 唯一的时间戳字符串
+   */
+  generateUniqueTimestamp() {
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2);
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hour = String(now.getHours()).padStart(2, '0');
+    const minute = String(now.getMinutes()).padStart(2, '0');
+    const second = String(now.getSeconds()).padStart(2, '0');
+    const ms = String(now.getMilliseconds()).padStart(3, '0');
+    return `${year}${month}${day}_${hour}${minute}${second}_${ms}`;
+  }
+
+  /**
+   * 加载提示词列表
+   */
+  async loadPrompts() {
+    try {
+      const prompts = await window.electronAPI.getPrompts(this.promptTagSortBy, this.promptTagSortOrder);
+      cacheManager.cachePrompts(prompts);
+      // 同步到面板管理器
+      if (this.promptPanelManager) {
+        await this.promptPanelManager.renderView();
+        await this.promptPanelManager.renderTagFilters();
+      }
+    } catch (error) {
+      window.electronAPI.logError('App', 'Failed to load prompts:', error);
+      cacheManager.getPromptCache().clear();
+      if (this.promptPanelManager) {
+        await this.promptPanelManager.renderView();
+        await this.promptPanelManager.renderTagFilters();
+      }
+    }
+  }
+
+  /**
+   * 更新提示词编辑界面收藏按钮的 UI 状态
+   * @param isFavorite - 是否收藏
+   */
+  updatePromptFavoriteBtnUI(isFavorite: boolean) {
+    const btn = document.getElementById('promptDetailFavoriteBtn');
+    if (!btn) return;
+
+    if (isFavorite) {
+      btn.classList.add('active');
+      btn.title = '取消收藏';
+      btn.innerHTML = Constants.ICONS.favorite.filled;
+    } else {
+      btn.classList.remove('active');
+      btn.title = '收藏';
+      btn.innerHTML = Constants.ICONS.favorite.outline;
+    }
+  }
+
+  /**
+   * 打开图像详情模态框
+   * @param image - 图像对象
+   */
+  async openImageDetailModal(image: IImage, options = {}) {
+    await this.imageDetailManager.open(image as { id: string; fileName: string; relativePath: string; [key: string]: unknown }, options);
+  }
+
+  /**
+   * 更新图像详情界面收藏按钮的 UI 状态
+   * @param isFavorite - 是否收藏
+   */
+  updateImageDetailFavoriteBtnUI(isFavorite: boolean) {
+    const btn = document.getElementById('imageDetailFavoriteBtn');
+    if (!btn) return;
+
+    if (isFavorite) {
+      btn.classList.add('active');
+      btn.title = '取消收藏';
+      btn.innerHTML = Constants.ICONS.favorite.filled;
+    } else {
+      btn.classList.remove('active');
+      btn.title = '收藏';
+      btn.innerHTML = Constants.ICONS.favorite.outline;
+    }
+  }
+
+  /**
+   * 渲染图像详情信息
+   * @param image - 图像对象
+   */
+  async renderImageDetailInfo(image: { id: string; updatedAt?: string; createdAt?: string; width?: number; height?: number; fileSize?: number; relativePath?: string; fileName?: string }) {
+    // 更新时间
+    const updatedAtEl = document.getElementById('imageDetailUpdatedAt');
+    if (updatedAtEl) {
+      updatedAtEl.textContent = image.updatedAt || '-';
+    }
+
+    // 上传时间
+    const createdAtEl = document.getElementById('imageDetailCreatedAt');
+    if (createdAtEl) {
+      createdAtEl.textContent = image.createdAt || '-';
+    }
+
+    // 图像尺寸
+    const dimensionsEl = document.getElementById('imageDetailDimensions');
+    if (dimensionsEl) {
+      dimensionsEl.textContent = image.width && image.height ? `${image.width} × ${image.height}` : '-';
+    }
+
+    // 文件大小
+    const fileSizeEl = document.getElementById('imageDetailFileSize');
+    if (fileSizeEl) {
+      fileSizeEl.textContent = image.fileSize ? HtmlUtils.formatFileSize(image.fileSize) : '-';
+    }
+
+    // 设置图像 - 异步获取完整路径
+    // 使用 relativePath（原图路径），与重构前一致
+    const imgEl = document.getElementById('imageDetailImg') as HTMLImageElement | null;
+    const imagePath = image.relativePath;
+    if (imgEl && imagePath) {
+      try {
+        const fullPath = await window.electronAPI.getImagePath(imagePath);
+        imgEl.src = `file://${fullPath.replace(/"/g, '&quot;')}`;
+        imgEl.alt = image.fileName || '图像';
+
+        // 绑定双击事件 - 打开全屏查看器
+        imgEl.ondblclick = () => {
+          // 使用当前快照中的图像列表
+          const itemsSnapshot = this.imageDetailManager.getItemsSnapshot();
+          if (itemsSnapshot && itemsSnapshot.length > 0) {
+            // 找到当前图像在列表中的索引
+            const currentIndex = itemsSnapshot.findIndex(i => isSameId((i as { id: string }).id, image.id));
+            this.imageFullscreenManager.open(itemsSnapshot, currentIndex >= 0 ? currentIndex : 0);
+          } else {
+            // 如果没有快照，只显示当前图像
+            const singleImage = [{
+              id: image.id,
+              relativePath: image.relativePath,
+              fileName: image.fileName
+            }];
+            this.imageFullscreenManager.open(singleImage, 0);
+          }
+        };
+      } catch (error) {
+        window.electronAPI.logError('App', 'Failed to load image:', error);
+        imgEl.alt = '加载图像失败';
+      }
+    }
+  }
+
+  /**
+   * 根据 ID 查找图像
+   * 优先从缓存获取，时间复杂度 O(1)；缓存未命中时从 allImages 查找
+   * @param id - 图像 ID
+   * @param allImages - 图像列表（可选，缓存未命中时使用）
+   * @returns 图像对象
+   */
+  findImageById(id: string, allImages: Array<{ id: string }> | null = null) {
+    const cached = cacheManager.getCachedImage(id);
+    if (cached) return cached;
+    if (allImages) {
+      return allImages.find(img => isSameId(img.id, id)) || null;
+    }
+    return null;
+  }
+
+  /**
+   * 订阅事件
+   * @param event - 事件名称
+   * @param callback - 回调函数
+   */
+  on(event: string, callback: (...args: unknown[]) => void) {
+    this.eventBus.on(event, callback);
+  }
+
+  /**
+   * 取消订阅事件
+   * @param event - 事件名称
+   * @param callback - 回调函数
+   */
+  off(event: string, callback: (...args: unknown[]) => void) {
+    this.eventBus.off(event, callback);
+  }
+
+  /**
+   * 触发事件
+   * @param event - 事件名称
+   * @param data - 事件数据
+   */
+  emit(event: string, data?: unknown) {
+    this.eventBus.emit(event, data);
+  }
+
+  /**
+   * 自动调整 textarea 高度
+   * @param element - HTML元素（通常是textarea）
+   */
+  autoResizeTextarea(element: HTMLElement | null) {
+    if (!element) return;
+    const textarea = element as HTMLTextAreaElement;
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  }
+
+  /**
+   * 根据 ID 查找提示词
+   * 优先使用索引缓存，时间复杂度 O(1)
+   * @param id - 提示词 ID
+   * @returns 提示词对象
+   */
+  findPromptById(id: string) {
+    return cacheManager.getCachedPrompt(id) || null;
+  }
+
+  /**
+   * 切换到提示词管理器
+   */
+  switchToPromptManager() {
+    this.navigationManager?.switchToPromptManager();
+  }
+
+  /**
+   * 切换到图像管理器
+   */
+  switchToImageManager() {
+    this.navigationManager?.switchToImageManager();
+  }
+
+  /**
+   * 打开统计模态框
+   */
+  async openStatisticsModal() {
+    await this.renderStatistics();
+    const modal = document.getElementById('statisticsModal');
+    if (modal) {
+      modal.classList.add('active');
+    }
+  }
+
+  /**
+   * 关闭统计模态框
+   */
+  closeStatisticsModal() {
+    const modal = document.getElementById('statisticsModal');
+    if (modal) {
+      modal.classList.remove('active');
+    }
+  }
+
+  /**
+   * 渲染统计数据
+   */
+  async renderStatistics() {
+    try {
+      // 获取所有数据（包括已删除的）
+      const prompts = await window.electronAPI.getPrompts('', '');
+      const allImages = await window.electronAPI.getAllImagesForStats();
+      const promptTagGroups = await window.electronAPI.getPromptTagGroups();
+      const imageTagGroups = await window.electronAPI.getImageTagGroups();
+
+      // 根据当前视图模式过滤数据（safe 模式只显示 isSafe=1 的项目）
+      const isSafeMode = this.viewMode === 'safe';
+      const filteredPrompts = isSafeMode ? prompts.filter(p => p.isSafe !== 0) : prompts;
+      const filteredImages = isSafeMode ? allImages.filter(i => i.isSafe !== 0) : allImages;
+
+      // 提示词统计（基于过滤后的数据）
+      const totalPrompts = filteredPrompts.length;
+      const deletedPrompts = filteredPrompts.filter(p => p.isDeleted).length;
+      const favoritePrompts = filteredPrompts.filter(p => p.isFavorite && !p.isDeleted).length;
+      const promptsWithImages = filteredPrompts.filter(p => p.images && p.images.length > 0 && !p.isDeleted).length;
+      const totalPromptTags = promptTagGroups.reduce((sum, group) => sum + (group.tags ? group.tags.length : 0), 0);
+
+      // 图像统计（基于过滤后的数据）
+      const totalImages = filteredImages.length;
+      const deletedImages = filteredImages.filter(i => i.isDeleted).length;
+      const favoriteImages = filteredImages.filter(i => i.isFavorite && !i.isDeleted).length;
+      const referencedImages = filteredImages.filter(i => i.promptRefs && i.promptRefs.length > 0 && !i.isDeleted).length;
+      const totalImageTags = imageTagGroups.reduce((sum, group) => sum + (group.tags ? group.tags.length : 0), 0);
+
+      // 更新 DOM
+      this.updateStatElement('statPromptsTotal', totalPrompts);
+      this.updateStatElement('statPromptsDeleted', deletedPrompts);
+      this.updateStatElement('statPromptsFavorite', favoritePrompts);
+      this.updateStatElement('statPromptsWithImages', promptsWithImages);
+      this.updateStatElement('statPromptTagGroups', promptTagGroups.length);
+      this.updateStatElement('statPromptTagsTotal', totalPromptTags);
+
+      this.updateStatElement('statImagesTotal', totalImages);
+      this.updateStatElement('statImagesDeleted', deletedImages);
+      this.updateStatElement('statImagesFavorite', favoriteImages);
+      this.updateStatElement('statImagesReferenced', referencedImages);
+      this.updateStatElement('statImageTagGroups', imageTagGroups.length);
+      this.updateStatElement('statImageTagsTotal', totalImageTags);
+    } catch (error) {
+      window.electronAPI.logError('App', 'Failed to render statistics:', error);
+    }
+  }
+
+  /**
+   * 更新统计数字
+   */
+  updateStatElement(id: string, value: string | number) {
+    const element = document.getElementById(id);
+    if (element) {
+      element.textContent = String(value);
+    }
+  }
+
+  /**
+   * 打开设置模态框
+   */
+  async openSettingsModal() {
+    // 获取当前数据路径
+    try {
+      const dataPath = await window.electronAPI.getDataPath();
+      const el = document.getElementById('currentDataPath');
+      if (el) el.textContent = dataPath;
+    } catch (error) {
+      window.electronAPI.logError('App', 'Failed to get data path:', error);
+      const el = document.getElementById('currentDataPath');
+      if (el) el.textContent = '获取失败';
+    }
+
+    this.modalManager?.openSettings();
+  }
+
+  /**
+   * 关闭设置模态框
+   */
+  closeSettingsModal() {
+    this.modalManager?.closeSettings();
+  }
+
+  /**
+   * 添加图像到当前提示词
+   * @param selectedImage - 选择的图像
+   */
+  async addImageToCurrentPrompt(selectedImage: { id: string; path: string }) {
+    // 检查是否已存在
+    const existing = this.currentImagesCache.get(String(selectedImage.id));
+    if (!existing) {
+      this.currentImagesCache.set(String(selectedImage.id), {
+        id: selectedImage.id,
+        path: selectedImage.path,
+        isExisting: true
+      });
+      this.renderImagePreviews();
+      this.showToast('Image added');
+
+      // 立即保存到数据库
+      const promptIdEl = document.getElementById('promptDetailId') as HTMLInputElement | null;
+      const promptId = promptIdEl?.value;
+      if (promptId) {
+        const updatedImages = Array.from(this.currentImagesCache.values());
+        await this.savePromptField('images', updatedImages);
+      }
+    } else {
+      this.showToast('Image already exists', 'info');
+    }
+  }
+
+  /**
+   * 渲染图像预览
+   */
+  async renderImagePreviews() {
+    const container = document.getElementById('imagePreviewList');
+    if (!container) return;
+
+    // 从 CacheManager 获取当前图像列表
+    const cachedImages = Array.from(this.currentImagesCache.values());
+    const validImages = cachedImages.filter(img => img.id);
+
+    // 提取有效图像 ID
+    const validImageIds = validImages.map(img => img.id);
+
+    // 检查缓存是否已填充：尝试获取第一个图像
+    let imageCacheReady = validImageIds.length > 0 && cacheManager.getCachedImage(validImageIds[0]);
+
+    // 获取图像完整信息：缓存已填充则直接使用，否则按 ID 批量获取
+    const allImages = imageCacheReady
+      ? null
+      : await window.electronAPI.getImagesByIds(validImageIds);
+
+    // 记录警告日志：发现无效图像
+    if (cachedImages.length !== validImages.length) {
+      const invalidCount = cachedImages.length - validImages.length;
+      const promptId = (document.getElementById('promptDetailId') as HTMLInputElement | null)?.value || 'unknown';
+      const invalidImages = cachedImages.filter(img => !img.id);
+
+      window.electronAPI.logWarn('PromptManager', `Found ${invalidCount} images without ID in prompt ${promptId}`, {
+        totalImages: cachedImages.length,
+        validImages: validImages.length,
+        invalidImages: invalidCount,
+        invalidImageDetails: invalidImages.map((img: unknown, idx: number) => ({
+          index: idx,
+          data: img
+        }))
+      });
+    }
+
+    // 保存到实例属性，供其他方法使用
+    this.displayedImages = validImages;
+
+    // 获取所有图像的完整路径并渲染
+    const previews = await Promise.all(
+      validImages.map(async (imgRef, index) => {
+        const img = this.findImageById(imgRef.id, allImages) as { relativePath?: string; thumbnailPath?: string; tags?: string[]; fileName?: string; id: string } | null;
+        if (!img) return '';
+        const imagePath = await window.electronAPI.getImagePath(img.relativePath || img.thumbnailPath || '');
+        const isFromDetailJump = this.isFromDetailJump;
+
+        // 生成标签 HTML（使用展示标签样式）
+        const tagsHtml = this.generateTagsHtml(img.tags, 'tag-display', 'tag-display-empty');
+
+        return `
+          <div class="image-preview-item" data-index="${index}">
+            <img src="file://${imagePath}" alt="${img.fileName}">
+            <div class="image-preview-tags">
+              ${tagsHtml}
+            </div>
+            <button type="button" class="view-image ${isFromDetailJump ? 'disabled-secondary' : ''}" data-index="${index}" data-image-id="${img.id}" title="${isFromDetailJump ? '已从详情界面跳转，禁止再次跳转' : '查看'}" ${isFromDetailJump ? 'disabled' : ''}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+            <button type="button" class="remove-image" data-index="${index}" title="删除">×</button>
+          </div>
+        `;
+      })
+    );
+
+    container.innerHTML = previews.filter(p => p).join('');
+
+    // 绑定删除事件
+    container.querySelectorAll('.remove-image').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const index = parseInt((btn as HTMLElement).dataset.index || '0');
+
+        // 从当前列表获取图像
+        const imgRef = this.displayedImages?.[index];
+
+        // 显示确认对话框
+        const confirmed = await DialogService.showConfirmDialogByConfig(DialogConfig.REMOVE_IMAGE_FROM_PROMPT);
+        if (!confirmed) return;
+
+        // 只从当前列表中移除引用，不删除实际文件
+        if (imgRef && (imgRef as { id?: string }).id) {
+          this.currentImagesCache.delete(String((imgRef as { id: string }).id));
+        }
+        this.renderImagePreviews();
+
+        // 立即保存到数据库
+        const promptIdEl = document.getElementById('promptDetailId') as HTMLInputElement | null;
+        const promptId = promptIdEl?.value;
+        if (promptId) {
+          const updatedImages = Array.from(this.currentImagesCache.values());
+          await this.savePromptField('images', updatedImages);
+        }
+      });
+    });
+
+    // 绑定查看事件
+    container.querySelectorAll('.view-image').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.isFromDetailJump) return;
+        const imageId = (btn as HTMLElement).dataset.imageId;
+        // 打开图像详情
+        if (!imageId) return;
+        const image = cacheManager.getCachedImage(imageId);
+        if (image) {
+          this.isFromDetailJump = true;
+          this.openImageDetailModal(image);
+        }
+      });
+    });
+
+    // 绑定右键菜单事件（设为首图）
+    container.querySelectorAll('.image-preview-item').forEach(item => {
+      item.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const index = parseInt((item as HTMLElement).dataset.index || '0');
+        if (index === 0) return; // 已经是首图
+
+        // 获取图像对象
+        const imageId = (item as HTMLElement).dataset.imageId;
+        if (!imageId) return;
+        const image = cacheManager.getCachedImage(imageId);
+        if (!image) return;
+
+        // 创建右键菜单
+        this.imageContextMenuManager?.show({
+          x: (e as MouseEvent).clientX,
+          y: (e as MouseEvent).clientY,
+          image: image as IImage
+        });
+      });
+    });
+
+    // 绑定双击事件（全屏查看）
+    container.querySelectorAll('.image-preview-item img').forEach(img => {
+      img.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        const item = img.closest('.image-preview-item');
+        const index = parseInt((item as HTMLElement).dataset.index || '0');
+        this.imageFullscreenManager.open(this.displayedImages || [], index);
+      });
+    });
+  }
+
+  /**
+   * 生成标签 HTML
+   * @param tags - 标签列表
+   * @param className - 标签样式类名
+   * @param emptyClassName - 空标签样式类名
+   * @returns HTML 字符串
+   */
+  generateTagsHtml(tags: string[] | undefined, className: string, emptyClassName: string) {
+    if (!tags || tags.length === 0) {
+      return `<span class="${emptyClassName}">无标签</span>`;
+    }
+    return tags.map(tag => `<span class="${className}">${tag}</span>`).join('');
+  }
+
+  /**
+   * 保存提示词字段
+   * @param field - 字段名
+   * @param value - 字段值
+   */
+  async savePromptField(field: string, value: unknown) {
+    const promptIdEl = document.getElementById('promptDetailId') as HTMLInputElement | null;
+    const promptId = promptIdEl ? promptIdEl.value : null;
+
+    if (!promptId) {
+      window.electronAPI.logError('App', '[savePromptField] Prompt ID not found');
+      return;
+    }
+
+    const lockKey = `savePromptField_${promptId}_${field}`;
+    if (this._saveLocks?.has(lockKey)) {
+      return;
+    }
+    if (!this._saveLocks) this._saveLocks = new Set();
+    this._saveLocks.add(lockKey);
+
+    try {
+      const updateData: Record<string, unknown> = {};
+      if (field === 'images') {
+        updateData[field] = value ? (value as Array<Record<string, unknown>>).map(img => ({ ...img })) : [];
+      } else {
+        updateData[field] = value;
+      }
+
+      await window.electronAPI.updatePrompt(promptId, updateData);
+
+      const cachedPrompt = cacheManager.getCachedPrompt(promptId);
+      if (cachedPrompt) {
+        Object.assign(cachedPrompt, updateData);
+      }
+
+      if (field === 'images' && value) {
+        (value as Array<{ id?: string }>).forEach(img => {
+          if (img.id) {
+            const cachedImage = cacheManager.getCachedImage(img.id);
+            if (cachedImage) {
+              (cachedImage as { promptRefs?: unknown[] }).promptRefs = (cachedPrompt as { images?: Array<{ id: string }> })?.images?.filter(
+                i => i.id === (cachedImage as { id: string }).id
+              ) || [];
+            }
+          }
+        });
+      }
+
+      // 通过事件通知刷新，避免直接调用导致的重复刷新
+      this.eventBus.emit('promptsChanged');
+      this.eventBus.emit('imagesChanged');
+    } finally {
+      this._saveLocks?.delete(lockKey);
+    }
+  }
+
+  /**
+   * 打开提示词标签管理器模态框
+   */
+  async openPromptTagManagerModal() {
+    this.modalManager?.openPromptTagManager();
+    await this.promptTagRegistry.render();
+  }
+
+  /**
+   * 关闭提示词标签管理器模态框
+   */
+  closePromptTagManagerModal() {
+    this.modalManager?.closePromptTagManager();
+  }
+
+
+
+  /**
+   * 打开图像标签管理器模态框
+   */
+  openImageTagManagerModal() {
+    this.modalManager?.openImageTagManager();
+    this.imageTagRegistry.render();
+  }
+
+  /**
+   * 关闭图像标签管理器模态框
+   */
+  closeImageTagManagerModal() {
+    this.modalManager.closeImageTagManager();
+  }
+
+  /**
+   * 更新提示词视图按钮状态
+   * @param mode - 视图模式 (grid, list, list-compact)
+   */
+  updatePromptViewButtons(mode: string) {
+    const gridBtn = document.getElementById('promptGridViewBtn');
+    const listBtn = document.getElementById('promptListViewBtn');
+    const compactBtn = document.getElementById('promptCompactViewBtn');
+    const promptGrid = document.getElementById('promptGrid');
+    const promptList = document.getElementById('promptList');
+    const cardSizeSlider = document.getElementById('promptCardSizeSlider');
+    const cardSizeSliderContainer = cardSizeSlider?.closest('.thumbnail-size-slider') as HTMLElement | null;
+
+    // 更新按钮状态
+    if (gridBtn) gridBtn.classList.toggle('active', mode === 'grid');
+    if (listBtn) listBtn.classList.toggle('active', mode === 'list');
+    if (compactBtn) compactBtn.classList.toggle('active', mode === 'list-compact');
+
+    // 更新容器显示状态
+    if (mode === 'grid') {
+      if (promptGrid) promptGrid.style.display = 'grid';
+      if (promptList) promptList.style.display = 'none';
+      // 显示卡片尺寸滑杆
+      if (cardSizeSliderContainer) {
+        cardSizeSliderContainer.style.display = 'flex';
+      }
+    } else {
+      if (promptGrid) promptGrid.style.display = 'none';
+      if (promptList) promptList.style.display = 'flex';
+      // 隐藏卡片尺寸滑杆（列表视图不需要）
+      if (cardSizeSliderContainer) {
+        cardSizeSliderContainer.style.display = 'none';
+      }
+    }
+  }
+
+  /**
+   * 更新图像视图按钮状态
+   * @param mode - 视图模式 (grid, list, list-compact)
+   */
+  updateImageViewButtons(mode: string) {
+    const gridBtn = document.getElementById('imageGridViewBtn');
+    const listBtn = document.getElementById('imageListViewBtn');
+    const compactBtn = document.getElementById('imageCompactViewBtn');
+    const imageGrid = document.getElementById('imageGrid');
+    const imageList = document.getElementById('imageList');
+    const imageCardSizeSlider = document.getElementById('imageCardSizeSlider');
+    const imageCardSizeSliderContainer = imageCardSizeSlider?.closest('.thumbnail-size-slider') as HTMLElement | null;
+
+    // 更新按钮状态
+    if (gridBtn) gridBtn.classList.toggle('active', mode === 'grid');
+    if (listBtn) listBtn.classList.toggle('active', mode === 'list');
+    if (compactBtn) compactBtn.classList.toggle('active', mode === 'list-compact');
+
+    // 更新容器显示状态
+    if (mode === 'grid') {
+      if (imageGrid) imageGrid.style.display = 'grid';
+      if (imageList) imageList.style.display = 'none';
+      // 显示缩略图尺寸滑杆
+      if (imageCardSizeSliderContainer) {
+        imageCardSizeSliderContainer.style.display = 'flex';
+      }
+    } else {
+      if (imageGrid) imageGrid.style.display = 'none';
+      if (imageList) imageList.style.display = 'flex';
+      // 隐藏缩略图尺寸滑杆（列表视图不需要）
+      if (imageCardSizeSliderContainer) {
+        imageCardSizeSliderContainer.style.display = 'none';
+      }
+    }
+  }
+
+  /**
+   * 切换标签筛选收起/展开（通用）
+   * @param sectionId - 标签筛选区域ID
+   * @param storageKey - localStorage存储键
+   */
+  toggleTagFilter(sectionId: string, storageKey: string) {
+    const tagFilterSection = document.getElementById(sectionId);
+    if (tagFilterSection) {
+      tagFilterSection.classList.toggle('collapsed');
+      const collapsed = tagFilterSection.classList.contains('collapsed');
+      localStorage.setItem(storageKey, String(collapsed));
+      // 只通过图标和CSS类表示状态，不显示文字
+    }
+  }
+
+  /**
+   * 切换提示词标签筛选收起/展开
+   */
+  async togglePromptTagFilter() {
+    this.toggleTagFilter('promptTagFilterSection', 'promptTagFilterCollapsed');
+    // 刷新标签筛选器以确保计数最新
+    if (this.promptPanelManager) {
+      await this.promptPanelManager.renderTagFilters();
+    }
+  }
+
+  /**
+   * 切换图像标签筛选收起/展开
+   */
+  async toggleImageTagFilter() {
+    this.toggleTagFilter('imageTagFilterSection', 'imageTagFilterCollapsed');
+    // 刷新标签筛选器以确保计数最新
+    if (this.imagePanelManager) {
+      await this.imagePanelManager.renderTagFilters();
+    }
+  }
+
+  /**
+   * 关闭确认对话框
+   */
+  closeConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+    if (this.confirmResolve) {
+      this.confirmResolve(false);
+      this.confirmResolve = null;
+    }
+  }
+
+  /**
+   * 显示输入对话框
+   * @param title - 对话框标题
+   * @param label - 输入标签文本
+   * @param defaultValue - 默认值
+   * @param options - 选项
+   * @returns 用户输入的内容，取消返回 null
+   */
+  showInputDialog(title: string, label: string, defaultValue = '', options = {}): Promise<string | null> {
+    return this.modalManager.showInput(title, label, defaultValue, options) as Promise<string | null>;
+  }
+
+  /**
+   * 关闭输入对话框
+   */
+  closeInputModal() {
+    this.modalManager.closeInput();
+  }
+
+  /**
+   * 关闭选择对话框
+   */
+  closeSelectModal() {
+    this.modalManager.closeSelect();
+  }
+
+  handlePromptItemSelection(promptId: string, index: number, e: MouseEvent) {
+    if (!this.promptPanelManager) return;
+
+    const { selectedIds } = this.promptPanelManager;
+
+    if (e.shiftKey && this.promptPanelManager.lastSelectedIndex !== -1) {
+      // Shift 点击：选择范围
+      const start = Math.min(this.promptPanelManager.lastSelectedIndex, index);
+      const end = Math.max(this.promptPanelManager.lastSelectedIndex, index);
+
+      const filtered = (this.promptPanelManager as PromptPanelManager).getFilteredPrompts();
+      for (let i = start; i <= end; i++) {
+        const item = filtered[i];
+        if (item) {
+          selectedIds.add(item.id);
+        }
+      }
+    } else if (e.ctrlKey || e.metaKey) {
+      // Ctrl/Cmd 点击：切换单个
+      if (selectedIds.has(promptId)) {
+        selectedIds.delete(promptId);
+      } else {
+        selectedIds.add(promptId);
+      }
+    } else {
+      // 普通点击：单选
+      selectedIds.clear();
+      selectedIds.add(promptId);
+    }
+
+    this.promptPanelManager.lastSelectedIndex = index;
+    this.promptPanelManager.renderView();
+    this.promptPanelManager.updateToolbarUI();
+  }
+}
+
+// 初始化应用
+const app = new PromptManager();
+window.app = app;
+
+// 暴露 DialogService 供 main 进程调用
+window.dialogService = DialogService;
+
+// 全局错误处理 - 未捕获的 Promise 错误
+window.addEventListener('unhandledrejection', (event) => {
+  const error = event.reason;
+  const message = error?.message || error?.toString() || 'Unknown unhandled rejection';
+  window.electronAPI?.logError('Renderer', `Unhandled Promise Rejection: ${message}`, error);
+});
+
+// 全局错误处理 - 未捕获的同步错误
+window.onerror = (message, source, lineno, colno, error) => {
+  const errorMsg = error?.message || message;
+  window.electronAPI?.logError('Renderer', `Uncaught Error: ${errorMsg}`, error);
+  return false;
+};
+
+// DOM 加载完成后初始化
+async function initApp() {
+  await app.init();
+  const oldDataDir = await window.electronAPI.getOldDataDir();
+  if (oldDataDir) {
+    DialogService.showConfirmDialogByConfig(
+      DialogConfig.DATA_RESET,
+      { oldDataDir }
+    );
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => initApp());
+} else {
+  initApp();
+}
+
+export default PromptManager;

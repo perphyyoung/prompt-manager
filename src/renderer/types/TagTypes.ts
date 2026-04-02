@@ -45,6 +45,7 @@ export interface HeaderTagItem {
   className: string;
   isSpecial: boolean;
   isTopGroup: boolean;
+  isSingleSelect?: boolean;
 }
 
 /**

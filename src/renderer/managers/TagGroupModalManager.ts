@@ -2,8 +2,8 @@
  * 标签组模态框管理器
  * 专门负责标签组编辑模态框的显示、隐藏和交互
  */
-import { DialogService, DialogConfig } from '../services/index.js';
-import { focusInput } from '../renderer_utils/index.js';
+import { DialogService, DialogConfig } from '../services/index.ts';
+import { focusInput } from '../renderer_utils/index.ts';
 
 export class TagGroupModalManager {
   private app: any;

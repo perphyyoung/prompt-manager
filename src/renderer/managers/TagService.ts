@@ -1,7 +1,7 @@
-import { Constants } from '../../constants.js';
-import { cacheManager } from '../../utils/CacheManager.js';
-import { ElectronTagApi } from '../services/ElectronTagApi.js';
-import { TagInfo, TagGroupInfo } from '../types/TagTypes';
+import { Constants } from '../../constants.ts';
+import { cacheManager } from '../../utils/CacheManager.ts';
+import { ElectronTagApi } from '../services/ElectronTagApi.ts';
+import { TagInfo, TagGroupInfo } from '../types/TagTypes.ts';
 
 /**
  * TagApi 接口定义
@@ -56,8 +56,8 @@ export class TagService {
   private type: string;
   private isPrompt: boolean;
   private api: TagApi;
-  private cacheKey: string;
-  private cacheKeyGroups: string;
+  cacheKey: string;
+  cacheKeyGroups: string;
 
   /**
    * 获取单例实例
@@ -68,7 +68,7 @@ export class TagService {
   static getInstance(type: string, api: TagApi | null = null): TagService {
     if (!this.instances.has(type)) {
       // 如果没有传入 api，使用默认的 Electron 实现
-      const defaultApi = api || new ElectronTagApi();
+      const defaultApi = (api || new ElectronTagApi()) as TagApi;
       this.instances.set(type, new TagService(type, defaultApi));
     }
     return this.instances.get(type)!;
@@ -99,7 +99,7 @@ export class TagService {
     cache.set('data', { data, time: Date.now() });
   }
 
-  private _clearCache(key: string): void {
+  _clearCache(key: string): void {
     cacheManager.deleteCache(key);
   }
 

@@ -152,5 +152,5 @@ export function isConstraintError(error: unknown): boolean {
   if (!isDatabaseError(error)) return false;
   // 检查错误码或错误类型
   return error.code === DatabaseErrorCode.CONSTRAINT_VIOLATION ||
-         error instanceof ConstraintViolationError;
+         error.name === 'ConstraintViolationError';
 }

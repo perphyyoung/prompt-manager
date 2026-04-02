@@ -16,7 +16,7 @@ import {
   EntityNotFoundError,
   ConstraintViolationError,
   isConstraintError
-} from './database-errors.js';
+} from './database-errors.ts';
 import type {
   PromptRow, ImageRow, PromptTagGroupRow, ImageTagGroupRow,
   Prompt, Image, ImageRef, PromptRef, PromptImage,
@@ -297,9 +297,14 @@ let transactionDepth = 0;
  * 支持嵌套调用（如果已经在事务中，直接执行函数而不开始新事务）
  * @param asyncFn - 异步函数
  * @returns 函数返回值
+ *
+ * 注意：嵌套事务采用扁平化策略
+ * - 当 transactionDepth > 0 时，内部操作不开启新事务，直接执行
+ * - 内部操作失败会抛出错误，由最外层事务统一回滚
+ * - 这确保了事务的原子性，但要求调用方理解：内部操作失败会导致整个事务回滚
  */
 async function runInTransaction<T>(asyncFn: () => Promise<T>): Promise<T> {
-  // 如果已经在事务中，直接执行函数
+  // 如果已经在事务中，直接执行函数（扁平化事务策略）
   if (transactionDepth > 0) {
     return await asyncFn();
   }
@@ -591,6 +596,12 @@ async function getPromptTagGroups(): Promise<PromptTagGroup[]> {
   }));
 }
 
+// 有效的提示词标签组字段白名单
+const VALID_PROMPT_TAG_GROUP_FIELDS: Record<string, string> = {
+  name: 'name = ?',
+  sortOrder: 'sort_order = ?'
+};
+
 /**
  * 更新提示词标签组
  * @param id - 标签组 ID
@@ -611,11 +622,11 @@ async function updatePromptTagGroup(id: number, updates: UpdateTagGroupParams): 
   const values: any[] = [];
 
   if (name !== undefined) {
-    fields.push('name = ?');
+    fields.push(VALID_PROMPT_TAG_GROUP_FIELDS.name);
     values.push(name);
   }
   if (sortOrder !== undefined) {
-    fields.push('sort_order = ?');
+    fields.push(VALID_PROMPT_TAG_GROUP_FIELDS.sortOrder);
     values.push(sortOrder);
   }
 
@@ -703,6 +714,12 @@ async function getImageTagGroups(): Promise<ImageTagGroup[]> {
   }));
 }
 
+// 有效的图像标签组字段白名单
+const VALID_IMAGE_TAG_GROUP_FIELDS: Record<string, string> = {
+  name: 'name = ?',
+  sortOrder: 'sort_order = ?'
+};
+
 /**
  * 更新图像标签组
  * @param id - 标签组 ID
@@ -715,7 +732,7 @@ async function updateImageTagGroup(id: number, updates: UpdateTagGroupParams): P
   if (name !== undefined) {
     const existing = await checkTagGroupNameDuplicate('image', name, id);
     if (existing) {
-      throw new Error('DUPLICATE_NAME');
+      throw new DuplicateNameError('图像标签组', name);
     }
   }
 
@@ -723,11 +740,11 @@ async function updateImageTagGroup(id: number, updates: UpdateTagGroupParams): P
   const values: any[] = [];
 
   if (name !== undefined) {
-    fields.push('name = ?');
+    fields.push(VALID_IMAGE_TAG_GROUP_FIELDS.name);
     values.push(name);
   }
   if (sortOrder !== undefined) {
-    fields.push('sort_order = ?');
+    fields.push(VALID_IMAGE_TAG_GROUP_FIELDS.sortOrder);
     values.push(sortOrder);
   }
 
@@ -782,7 +799,7 @@ function mapRowToPrompt(row: PromptRow, options: MapPromptOptions = {}): Prompt 
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     isFavorite: row.is_favorite === 1,
-    isSafe: row.is_safe === 1 ? 1 : 0,
+    isSafe: row.is_safe === 1 ? 1 : 0,  // 严格限制为 0 或 1，其他值视为 0
     isDeleted: row.is_deleted === 1,
     note: row.note,
     tags: row.tags ? row.tags.split(',').filter(t => t) : []
@@ -926,6 +943,7 @@ async function getPromptById(id: string): Promise<Prompt | null> {
 /**
  * 搜索提示词
  * 在数据库层面进行搜索，支持标题、内容、翻译、标签和备注搜索
+ * 使用 JOIN 替代子查询优化性能
  * @param query - 搜索关键词
  * @returns 匹配的提示词列表
  */
@@ -933,24 +951,21 @@ async function searchPrompts(query: string): Promise<Prompt[]> {
   const lowerQuery = `%${query.toLowerCase()}%`;
 
   // 搜索提示词（标题、内容、翻译、标签、备注匹配）
+  // 使用 LEFT JOIN 替代子查询，提升查询性能
   const sql = `
-    SELECT DISTINCT p.*, GROUP_CONCAT(pt.name) as tags
+    SELECT DISTINCT p.*, GROUP_CONCAT(DISTINCT pt.name) as tags
     FROM prompts p
     LEFT JOIN prompt_tag_relations ptr ON p.id = ptr.prompt_id
     LEFT JOIN prompt_tags pt ON ptr.tag_id = pt.id
+    LEFT JOIN prompt_tag_relations ptr2 ON p.id = ptr2.prompt_id
+    LEFT JOIN prompt_tags pt2 ON ptr2.tag_id = pt2.id
     WHERE p.is_deleted = 0
     AND (
       LOWER(p.title) LIKE ?
       OR LOWER(p.content) LIKE ?
       OR LOWER(p.content_translate) LIKE ?
       OR LOWER(p.note) LIKE ?
-      OR p.id IN (
-        SELECT DISTINCT p2.id
-        FROM prompts p2
-        JOIN prompt_tag_relations ptr2 ON p2.id = ptr2.prompt_id
-        JOIN prompt_tags pt2 ON ptr2.tag_id = pt2.id
-        WHERE LOWER(pt2.name) LIKE ?
-      )
+      OR LOWER(pt2.name) LIKE ?
     )
     GROUP BY p.id
     ORDER BY p.updated_at DESC
@@ -1151,23 +1166,6 @@ async function restoreAllPrompts(): Promise<boolean> {
 }
 
 /**
- * 获取收藏的提示词
- */
-async function getFavoritePrompts(): Promise<Prompt[]> {
-  const sql = `
-    SELECT p.*, GROUP_CONCAT(pt.name) as tags
-    FROM prompts p
-    LEFT JOIN prompt_tag_relations ptr ON p.id = ptr.prompt_id
-    LEFT JOIN prompt_tags pt ON ptr.tag_id = pt.id
-    WHERE p.is_deleted = 0 AND p.is_favorite = 1
-    GROUP BY p.id
-    ORDER BY p.updated_at DESC
-  `;
-  const rows = await all<PromptRow>(sql);
-  return getPromptsWithImages(rows);
-}
-
-/**
  * 获取回收站中的提示词
  */
 async function getDeletedPrompts(): Promise<Prompt[]> {
@@ -1198,31 +1196,49 @@ async function getPromptTags(): Promise<string[]> {
  * 添加提示词标签
  * @param name - 标签名称
  * @param groupId - 标签组ID（可选）
+ * @returns 标签ID
  */
 async function addPromptTag(name: string, groupId: number | null = null): Promise<number | null> {
   const now = localTime();
+
+  // 1. 先查询标签是否已存在
+  const existingRow = await get<{ id: number; group_id: number | null }>(
+    'SELECT id, group_id FROM prompt_tags WHERE name = ?',
+    [name]
+  );
+
+  if (existingRow) {
+    // 标签已存在，如果需要更新组ID
+    if (groupId !== null && existingRow.group_id !== groupId) {
+      await run(
+        'UPDATE prompt_tags SET group_id = ?, updated_at = ? WHERE name = ?',
+        [groupId, now, name]
+      );
+    }
+    return existingRow.id;
+  }
+
+  // 2. 创建新标签
   try {
-    await run(
+    const result = await run(
       'INSERT INTO prompt_tags (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)',
       [name, groupId, now, now]
     );
+    return result.id;
   } catch (err: any) {
-    // 标签已存在，更新组ID（如果提供了）
-    if (err.message.includes('UNIQUE constraint failed')) {
-      if (groupId !== null) {
+    // 可能是并发导致，尝试查询获取ID
+    if (isConstraintError(err)) {
+      const row = await get<{ id: number }>('SELECT id FROM prompt_tags WHERE name = ?', [name]);
+      if (row && groupId !== null) {
         await run(
           'UPDATE prompt_tags SET group_id = ?, updated_at = ? WHERE name = ?',
           [groupId, now, name]
         );
       }
-    } else {
-      throw err;
+      return row ? row.id : null;
     }
+    throw err;
   }
-
-  // 获取标签 ID
-  const row = await get<{ id: number }>('SELECT id FROM prompt_tags WHERE name = ?', [name]);
-  return row ? row.id : null;
 }
 
 /**
@@ -1259,6 +1275,69 @@ const TagConfig: TagConfigMap = {
     groupTable: 'image_tag_groups'
   }
 };
+
+/**
+ * 批量获取或创建标签组
+ * 用于 syncTagsBidirectional 优化 N+1 查询问题
+ * @param type - 标签类型: 'prompt' | 'image'
+ * @param groupNames - 标签组名称数组
+ * @param now - 当前时间字符串
+ * @returns 标签组名称到 ID 的映射
+ */
+async function getOrCreateTagGroups(
+  type: keyof TagConfigMap,
+  groupNames: string[],
+  now: string
+): Promise<Map<string, number>> {
+  const config = TagConfig[type];
+  if (!config) {
+    throw new Error(`Unknown tag type: ${type}`);
+  }
+
+  const groupIdMap = new Map<string, number>();
+  if (groupNames.length === 0) {
+    return groupIdMap;
+  }
+
+  const { groupTable } = config;
+
+  // 1. 查询已存在的标签组
+  const placeholders = groupNames.map(() => '?').join(',');
+  const existingRows = await all<{ id: number; name: string }>(
+    `SELECT id, name FROM ${groupTable} WHERE name IN (${placeholders})`,
+    groupNames
+  );
+
+  for (const row of existingRows) {
+    groupIdMap.set(row.name, row.id);
+  }
+
+  // 2. 找出需要创建的标签组
+  const newGroupNames = groupNames.filter(name => !groupIdMap.has(name));
+
+  // 3. 批量创建新标签组
+  for (const name of newGroupNames) {
+    try {
+      const result = await run(
+        `INSERT INTO ${groupTable} (name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?)`,
+        [name, 0, now, now]
+      );
+      groupIdMap.set(name, result.id);
+    } catch (err: any) {
+      // 可能是并发导致，尝试查询获取 ID
+      if (isConstraintError(err)) {
+        const row = await get<{ id: number }>(`SELECT id FROM ${groupTable} WHERE name = ?`, [name]);
+        if (row) {
+          groupIdMap.set(name, row.id);
+        }
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  return groupIdMap;
+}
 
 /**
  * 检查标签组名称是否重复（配置驱动）
@@ -1336,11 +1415,115 @@ async function renameTag(type: keyof TagConfigMap, oldTag: string, newTag: strin
 }
 
 /**
+ * 有效的标签表名
+ */
+const VALID_TAG_TABLES = ['prompt_tags', 'image_tags'] as const;
+type ValidTagTable = typeof VALID_TAG_TABLES[number];
+
+/**
+ * 批量获取或创建标签
+ * 先查询已存在的标签，只创建不存在的标签，避免不必要的 SQL 错误
+ * 使用事务和预处理语句优化性能
+ * @param tagTable - 标签表名
+ * @param tagNames - 标签名称数组
+ * @returns 标签名称到 ID 的映射
+ */
+async function getOrCreateTags(tagTable: string, tagNames: string[]): Promise<Map<string, number>> {
+  // 验证表名，防止 SQL 注入
+  if (!VALID_TAG_TABLES.includes(tagTable as ValidTagTable)) {
+    throw new Error(`无效的表名: ${tagTable}`);
+  }
+
+  if (tagNames.length === 0) {
+    return new Map();
+  }
+
+  const now = localTime();
+  const tagIdMap = new Map<string, number>();
+
+  // 1. 查询已存在的标签
+  const placeholders = tagNames.map(() => '?').join(',');
+  const existingRows = await all<{ id: number; name: string }>(
+    `SELECT id, name FROM ${tagTable} WHERE name IN (${placeholders})`,
+    tagNames
+  );
+
+  // 记录已存在的标签
+  for (const row of existingRows) {
+    tagIdMap.set(row.name, row.id);
+  }
+
+  // 2. 找出需要创建的标签
+  const newTagNames = tagNames.filter(name => !tagIdMap.has(name));
+
+  if (newTagNames.length === 0) {
+    return tagIdMap;
+  }
+
+  // 3. 使用事务批量创建新标签
+  if (!db) {
+    throw new Error('数据库未初始化');
+  }
+
+  await runInTransaction(async () => {
+    const insertStmt = db!.prepare(
+      `INSERT INTO ${tagTable} (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)`
+    );
+
+    try {
+      for (const name of newTagNames) {
+        try {
+          const result = await new Promise<{ lastID: number }>((resolve, reject) => {
+            insertStmt.run([name, null, now, now], function(this: { lastID: number }, err: Error | null) {
+              if (err) reject(err);
+              else resolve({ lastID: this.lastID });
+            });
+          });
+          tagIdMap.set(name, result.lastID);
+        } catch (err: any) {
+          // 如果创建失败（可能是并发导致），记录下来稍后查询
+          if (!isConstraintError(err)) {
+            throw err;
+          }
+        }
+      }
+    } finally {
+      // 确保预处理语句被释放（使用 Promise 包装以正确处理异步）
+      await new Promise<void>((resolve, reject) => {
+        insertStmt.finalize((err: Error | null) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    }
+  });
+
+  // 4. 查询那些因并发冲突而未能插入的标签 ID
+  const missingTagNames = newTagNames.filter(name => !tagIdMap.has(name));
+  if (missingTagNames.length > 0) {
+    const missingPlaceholders = missingTagNames.map(() => '?').join(',');
+    const missingRows = await all<{ id: number; name: string }>(
+      `SELECT id, name FROM ${tagTable} WHERE name IN (${missingPlaceholders})`,
+      missingTagNames
+    );
+    for (const row of missingRows) {
+      tagIdMap.set(row.name, row.id);
+    }
+  }
+
+  return tagIdMap;
+}
+
+/**
  * 为提示词添加标签
  */
 async function addPromptTags(promptId: string, tagNames: string[]): Promise<void> {
+  // 批量获取或创建标签
+  const tagIdMap = await getOrCreateTags('prompt_tags', tagNames);
+
+  // 批量添加关联
   for (const tagName of tagNames) {
-    const tagId = await addPromptTag(tagName);
+    const tagId = tagIdMap.get(tagName);
     if (tagId) {
       try {
         await run(
@@ -1349,7 +1532,7 @@ async function addPromptTags(promptId: string, tagNames: string[]): Promise<void
         );
       } catch (err: any) {
         // 关联已存在，忽略错误
-        if (!err.message.includes('UNIQUE constraint failed')) {
+        if (!isConstraintError(err)) {
           throw err;
         }
       }
@@ -1379,7 +1562,7 @@ function mapRowToImage(row: ImageRow, promptRows: Array<{ id: string; title: str
     height: row.height,
     fileSize: row.file_size || 0,
     isFavorite: row.is_favorite === 1,
-    isSafe: row.is_safe === 1 ? 1 : 0,
+    isSafe: row.is_safe === 1 ? 1 : 0,  // 严格限制为 0 或 1，其他值视为 0
     isDeleted: row.is_deleted === 1,
     note: row.note,
     createdAt: row.created_at,
@@ -1700,26 +1883,15 @@ async function updateImagesBatch(updates: UpdateThumbnailParams[]): Promise<void
         });
       }
     } finally {
-      stmt.finalize();
+      // 确保预处理语句被释放（使用 Promise 包装以正确处理异步）
+      await new Promise<void>((resolve, reject) => {
+        stmt.finalize((err: Error | null) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
     }
   });
-}
-
-/**
- * 获取收藏的图像
- */
-async function getFavoriteImages(): Promise<Image[]> {
-  const imageSql = `
-    SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name)
-            FROM image_tag_relations itr
-            JOIN image_tags it ON itr.tag_id = it.id
-            WHERE itr.image_id = i.id) as image_tags
-    FROM images i
-    WHERE i.is_deleted = 0 AND i.is_favorite = 1
-    ORDER BY i.created_at DESC
-  `;
-  return await getImagesCore(imageSql, []);
 }
 
 /**
@@ -1901,42 +2073,135 @@ async function emptyImageTrash(dataDir: string): Promise<boolean> {
 }
 
 /**
+ * 关联类型配置
+ */
+interface RelationConfig {
+  /** 关联表名 */
+  relationTable: string;
+  /** 第一列名（如 prompt_id） */
+  firstIdColumn: string;
+  /** 第二列名（如 image_id） */
+  secondIdColumn: string;
+  /** 第一列对应的更新表（如 prompts） */
+  firstUpdateTable: string;
+  /** 第二列对应的更新表（如 images） */
+  secondUpdateTable: string;
+  /** 第一列ID的日志标签 */
+  firstIdLabel: string;
+  /** 第二列ID的日志标签 */
+  secondIdLabel: string;
+}
+
+/**
+ * 通用关联添加函数
+ * 抽象 addPromptImages 和 addImagePrompts 的公共逻辑
+ * @param firstId - 第一列ID（如 promptId 或 imageId）
+ * @param secondIds - 第二列ID数组（如 imageIds 或 promptIds）
+ * @param config - 关联配置
+ * @param preserveOrder - 是否保留数组顺序
+ */
+async function addRelationsBatch(
+  firstId: string,
+  secondIds: string[],
+  config: RelationConfig,
+  preserveOrder = true
+): Promise<void> {
+  if (secondIds.length === 0) return;
+
+  const now = localTime();
+
+  await runInTransaction(async () => {
+    if (!db) {
+      throw new Error('数据库未初始化');
+    }
+
+    // 使用预处理语句批量插入
+    const insertStmt = db.prepare(
+      `INSERT INTO ${config.relationTable} (${config.firstIdColumn}, ${config.secondIdColumn}, sort_order) VALUES (?, ?, ?)`
+    );
+
+    try {
+      for (let i = 0; i < secondIds.length; i++) {
+        const secondId = secondIds[i];
+        const sortOrder = preserveOrder ? i : 0;
+
+        try {
+          await new Promise<void>((resolve, reject) => {
+            insertStmt.run([firstId, secondId, sortOrder], (err: Error | null) => {
+              if (err) reject(err);
+              else resolve();
+            });
+          });
+        } catch (err: any) {
+          if (isConstraintError(err)) {
+            // 约束违反时跳过，继续处理其他记录
+            logDebug('Database', `跳过关联添加: ${err.message}`, {
+              [config.firstIdLabel]: firstId,
+              [config.secondIdLabel]: secondId
+            });
+            continue;
+          }
+          throw err;
+        }
+      }
+    } finally {
+      // 确保预处理语句被释放（使用 Promise 包装以正确处理异步）
+      await new Promise<void>((resolve, reject) => {
+        insertStmt.finalize((err: Error | null) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    }
+
+    // 批量更新第二列对应表的 updated_at
+    if (secondIds.length > 0) {
+      const placeholders = secondIds.map(() => '?').join(',');
+      await run(
+        `UPDATE ${config.secondUpdateTable} SET updated_at = ? WHERE id IN (${placeholders})`,
+        [now, ...secondIds]
+      );
+    }
+
+    // 更新第一列对应表的 updated_at
+    await run(`UPDATE ${config.firstUpdateTable} SET updated_at = ? WHERE id = ?`, [now, firstId]);
+  });
+}
+
+// 提示词-图像关联配置
+const PROMPT_IMAGE_RELATION_CONFIG: RelationConfig = {
+  relationTable: 'prompt_image_relations',
+  firstIdColumn: 'prompt_id',
+  secondIdColumn: 'image_id',
+  firstUpdateTable: 'prompts',
+  secondUpdateTable: 'images',
+  firstIdLabel: 'promptId',
+  secondIdLabel: 'imageId'
+};
+
+// 图像-提示词关联配置
+const IMAGE_PROMPT_RELATION_CONFIG: RelationConfig = {
+  relationTable: 'prompt_image_relations',
+  firstIdColumn: 'image_id',
+  secondIdColumn: 'prompt_id',
+  firstUpdateTable: 'images',
+  secondUpdateTable: 'prompts',
+  firstIdLabel: 'imageId',
+  secondIdLabel: 'promptId'
+};
+
+/**
  * 为提示词添加图像关联
  * @param promptId - 提示词ID
  * @param imageIds - 图像ID数组
  * @param preserveOrder - 是否保留数组顺序（默认true）
  *
- * 注意：使用逐行更新而非批量更新，以支持细粒度的错误处理。
+ * 使用预处理语句批量插入，提升性能。
  * 当某个关联已存在（UNIQUE约束）或图像不存在（外键约束）时，
  * 可以跳过该记录而继续处理其他记录，而不是让整个批量操作失败。
  */
 async function addPromptImages(promptId: string, imageIds: string[], preserveOrder = true): Promise<void> {
-  const now = localTime();
-
-  for (let i = 0; i < imageIds.length; i++) {
-    const imageId = imageIds[i];
-    const sortOrder = preserveOrder ? i : 0;
-
-    try {
-      await run(
-        'INSERT INTO prompt_image_relations (prompt_id, image_id, sort_order) VALUES (?, ?, ?)',
-        [promptId, imageId, sortOrder]
-      );
-
-      // 更新图像的 updated_at
-      await run('UPDATE images SET updated_at = ? WHERE id = ?', [now, imageId]);
-
-      // 更新提示词的 updated_at（关联关系改变，双方都需要更新）
-      await run('UPDATE prompts SET updated_at = ? WHERE id = ?', [now, promptId]);
-    } catch (error) {
-      if (error instanceof ConstraintViolationError) {
-        // 约束违反时跳过，继续处理其他记录
-        logDebug('Database', `跳过关联添加: ${error.message}`, { promptId, imageId });
-        continue;
-      }
-      throw error;
-    }
-  }
+  return addRelationsBatch(promptId, imageIds, PROMPT_IMAGE_RELATION_CONFIG, preserveOrder);
 }
 
 /**
@@ -1945,37 +2210,12 @@ async function addPromptImages(promptId: string, imageIds: string[], preserveOrd
  * @param promptIds - 提示词ID数组
  * @param preserveOrder - 是否保留数组顺序（默认true）
  *
- * 注意：使用逐行更新而非批量更新，以支持细粒度的错误处理。
+ * 使用预处理语句批量插入，提升性能。
  * 当某个关联已存在（UNIQUE约束）或提示词不存在（外键约束）时，
  * 可以跳过该记录而继续处理其他记录，而不是让整个批量操作失败。
  */
 async function addImagePrompts(imageId: string, promptIds: string[], preserveOrder = true): Promise<void> {
-  const now = localTime();
-
-  for (let i = 0; i < promptIds.length; i++) {
-    const promptId = promptIds[i];
-    const sortOrder = preserveOrder ? i : 0;
-
-    try {
-      await run(
-        'INSERT INTO prompt_image_relations (prompt_id, image_id, sort_order) VALUES (?, ?, ?)',
-        [promptId, imageId, sortOrder]
-      );
-
-      // 更新提示词的 updated_at
-      await run('UPDATE prompts SET updated_at = ? WHERE id = ?', [now, promptId]);
-
-      // 更新图像的 updated_at（关联关系改变，双方都需要更新）
-      await run('UPDATE images SET updated_at = ? WHERE id = ?', [now, imageId]);
-    } catch (error) {
-      if (error instanceof ConstraintViolationError) {
-        // 约束违反时跳过，继续处理其他记录
-        logDebug('Database', `跳过关联添加: ${error.message}`, { imageId, promptId });
-        continue;
-      }
-      throw error;
-    }
-  }
+  return addRelationsBatch(imageId, promptIds, IMAGE_PROMPT_RELATION_CONFIG, preserveOrder);
 }
 
 /**
@@ -2002,7 +2242,7 @@ async function getPromptImages(promptId: string): Promise<PromptImage[]> {
     thumbnailPath: row.thumbnail_path,
     width: row.width,
     height: row.height,
-    isSafe: row.is_safe === 1 ? 1 : 0,
+    isSafe: row.is_safe === 1 ? 1 : 0,  // 严格限制为 0 或 1，其他值视为 0
     note: row.note,
     isDeleted: row.is_deleted === 1,
     deletedAt: row.deleted_at,
@@ -2031,7 +2271,7 @@ async function getUnreferencedImages(): Promise<UnreferencedImage[]> {
     thumbnailPath: row.thumbnail_path,
     width: row.width,
     height: row.height,
-    isSafe: row.is_safe === 1 ? 1 : 0,
+    isSafe: row.is_safe === 1 ? 1 : 0,  // 严格限制为 0 或 1，其他值视为 0
     note: row.note,
     isDeleted: row.is_deleted === 1,
     deletedAt: row.deleted_at,
@@ -2058,14 +2298,33 @@ async function getImageTags(): Promise<string[]> {
  */
 async function addImageTag(name: string, groupId: number | null = null): Promise<void> {
   const now = localTime();
+
+  // 1. 先查询标签是否已存在
+  const existingRow = await get<{ id: number; group_id: number | null }>(
+    'SELECT id, group_id FROM image_tags WHERE name = ?',
+    [name]
+  );
+
+  if (existingRow) {
+    // 标签已存在，如果需要更新组ID
+    if (groupId !== null && existingRow.group_id !== groupId) {
+      await run(
+        'UPDATE image_tags SET group_id = ?, updated_at = ? WHERE name = ?',
+        [groupId, now, name]
+      );
+    }
+    return;
+  }
+
+  // 2. 创建新标签
   try {
     await run(
       'INSERT INTO image_tags (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)',
       [name, groupId, now, now]
     );
   } catch (err: any) {
-    // 标签已存在，更新组ID（如果提供了）
-    if (err.message.includes('UNIQUE constraint failed')) {
+    // 可能是并发导致，尝试更新组ID
+    if (isConstraintError(err)) {
       if (groupId !== null) {
         await run(
           'UPDATE image_tags SET group_id = ?, updated_at = ? WHERE name = ?',
@@ -2082,17 +2341,18 @@ async function addImageTag(name: string, groupId: number | null = null): Promise
  * 为图像添加多个标签
  */
 async function addImageTags(imageId: string, tagNames: string[]): Promise<void> {
-  for (const tagName of tagNames) {
-    // 先确保标签存在
-    await addImageTag(tagName);
+  // 批量获取或创建标签
+  const tagIdMap = await getOrCreateTags('image_tags', tagNames);
 
-    // 获取标签ID
-    const tagRow = await get<{ id: number }>('SELECT id FROM image_tags WHERE name = ?', [tagName]);
-    if (tagRow) {
+  // 批量添加关联
+  for (const tagName of tagNames) {
+    const tagId = tagIdMap.get(tagName);
+    if (tagId) {
       try {
-        await run('INSERT INTO image_tag_relations (image_id, tag_id) VALUES (?, ?)', [imageId, tagRow.id]);
+        await run('INSERT INTO image_tag_relations (image_id, tag_id) VALUES (?, ?)', [imageId, tagId]);
       } catch (err: any) {
-        if (!err.message.includes('UNIQUE constraint failed')) {
+        // 关联已存在，忽略错误
+        if (!isConstraintError(err)) {
           throw err;
         }
       }
@@ -2184,21 +2444,19 @@ async function syncTagsBidirectional(): Promise<TagSyncResult> {
       const tagGroupsMap = new Map<string, string[]>();
       const existingImageTags = new Set((await all<{ name: string }>('SELECT name FROM image_tags')).map(t => t.name));
 
+      // 批量获取需要创建的图像标签组，避免 N+1 查询
+      const imageGroupNames = [...new Set(toImageTags.filter(t => t.group_name).map(t => t.group_name!))];
+      const imageGroupIdMap = await getOrCreateTagGroups('image', imageGroupNames, now);
+
       for (const tag of toImageTags) {
         if (existingImageTags.has(tag.name)) {
           result.promptToImage.skipped++;
           continue;
         }
 
-        let targetGroupId: number | null = null;
+        const targetGroupId = tag.group_name ? imageGroupIdMap.get(tag.group_name) ?? null : null;
+
         if (tag.group_name) {
-          let targetGroup = await get<{ id: number }>('SELECT id FROM image_tag_groups WHERE name = ?', [tag.group_name]);
-          if (!targetGroup) {
-            const res = await run('INSERT INTO image_tag_groups (name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?)', [tag.group_name, 0, now, now]);
-            targetGroupId = res.id;
-          } else {
-            targetGroupId = targetGroup.id;
-          }
           if (!tagGroupsMap.has(tag.group_name)) {
             tagGroupsMap.set(tag.group_name, []);
           }
@@ -2222,21 +2480,19 @@ async function syncTagsBidirectional(): Promise<TagSyncResult> {
       const tagGroupsMap = new Map<string, string[]>();
       const existingPromptTags = new Set((await all<{ name: string }>('SELECT name FROM prompt_tags')).map(t => t.name));
 
+      // 批量获取需要创建的提示词标签组，避免 N+1 查询
+      const promptGroupNames = [...new Set(toPromptTags.filter(t => t.group_name).map(t => t.group_name!))];
+      const promptGroupIdMap = await getOrCreateTagGroups('prompt', promptGroupNames, now);
+
       for (const tag of toPromptTags) {
         if (existingPromptTags.has(tag.name)) {
           result.imageToPrompt.skipped++;
           continue;
         }
 
-        let targetGroupId: number | null = null;
+        const targetGroupId = tag.group_name ? promptGroupIdMap.get(tag.group_name) ?? null : null;
+
         if (tag.group_name) {
-          let targetGroup = await get<{ id: number }>('SELECT id FROM prompt_tag_groups WHERE name = ?', [tag.group_name]);
-          if (!targetGroup) {
-            const res = await run('INSERT INTO prompt_tag_groups (name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?)', [tag.group_name, 0, now, now]);
-            targetGroupId = res.id;
-          } else {
-            targetGroupId = targetGroup.id;
-          }
           if (!tagGroupsMap.has(tag.group_name)) {
             tagGroupsMap.set(tag.group_name, []);
           }
@@ -2299,6 +2555,7 @@ async function getStatistics(): Promise<Statistics> {
     `);
 
     // 图像统计
+    // 使用 LEFT JOIN 关联 prompt_image_relations 表统计引用情况，提升性能
     const imageStats = await get<{
       total: number;
       referenced: number;
@@ -2307,14 +2564,11 @@ async function getStatistics(): Promise<Statistics> {
     }>(`
       SELECT
         COUNT(*) as total,
-        SUM(CASE WHEN is_deleted = 0 AND EXISTS (
-          SELECT 1 FROM prompt_image_relations pir WHERE pir.image_id = images.id
-        ) THEN 1 ELSE 0 END) as referenced,
-        SUM(CASE WHEN is_deleted = 0 AND NOT EXISTS (
-          SELECT 1 FROM prompt_image_relations pir WHERE pir.image_id = images.id
-        ) THEN 1 ELSE 0 END) as unreferenced,
-        SUM(CASE WHEN is_deleted = 1 THEN 1 ELSE 0 END) as deleted
-      FROM images
+        COUNT(CASE WHEN i.is_deleted = 0 AND pir.image_id IS NOT NULL THEN 1 END) as referenced,
+        COUNT(CASE WHEN i.is_deleted = 0 AND pir.image_id IS NULL THEN 1 END) as unreferenced,
+        COUNT(CASE WHEN i.is_deleted = 1 THEN 1 END) as deleted
+      FROM images i
+      LEFT JOIN (SELECT DISTINCT image_id FROM prompt_image_relations) pir ON i.id = pir.image_id
     `);
 
     // 标签统计
@@ -2432,7 +2686,6 @@ export {
   restoreAllPrompts,
   permanentDeletePrompt,
   getDeletedPrompts,
-  getFavoritePrompts,
   // 提示词标签组操作
   createPromptTagGroup,
   getPromptTagGroups,
@@ -2466,7 +2719,6 @@ export {
   getUnreferencedImages,
   updateImage,
   updateImagesBatch,
-  getFavoriteImages,
   // 图像标签组操作
   createImageTagGroup,
   getImageTagGroups,

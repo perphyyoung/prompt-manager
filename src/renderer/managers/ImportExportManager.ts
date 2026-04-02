@@ -4,21 +4,7 @@
  */
 
 import type PromptManager from '../app';
-import type { BackupStats, BackupManifest } from '../../types/electron-api';
-
-interface ExportOrphanFilesResult {
-  successCount: number;
-  failedCount: number;
-  exportPath: string;
-}
-
-interface ScanOrphanFilesResult {
-  totalCount: number;
-  files: Array<{
-    fullPath: string;
-    relativePath: string;
-  }>;
-}
+import type { IScanOrphanFilesResult, IExportOrphanFilesResult } from '../../types/entities.ts';
 
 interface ImportExportManagerOptions {
   app: PromptManager;
@@ -54,7 +40,7 @@ export class ImportExportManager {
     try {
       // 先扫描孤儿文件
       this.app.showToast?.('正在扫描孤儿文件...', 'info');
-      const scanResult: ScanOrphanFilesResult = await window.electronAPI.scanOrphanFiles();
+      const scanResult: IScanOrphanFilesResult = await window.electronAPI.scanOrphanFiles();
 
       if (scanResult.totalCount === 0) {
         this.app.showToast?.('没有发现孤儿文件', 'info');
@@ -69,7 +55,7 @@ export class ImportExportManager {
 
       this.app.showToast?.(`发现 ${scanResult.totalCount} 个孤儿文件，正在导出...`, 'info');
 
-      const result: ExportOrphanFilesResult = await window.electronAPI.exportOrphanFiles(exportDir);
+      const result: IExportOrphanFilesResult = await window.electronAPI.exportOrphanFiles(exportDir);
 
       if (result.successCount > 0) {
         this.app.showToast?.(`成功导出 ${result.successCount} 个孤儿文件`, 'success');

@@ -1,0 +1,154 @@
+/**
+ * 工具栏管理器
+ * 负责处理工具栏按钮事件和操作
+ */
+import { DialogService, DialogConfig } from '../services/index.ts';
+
+/**
+ * App 类型定义
+ */
+interface IApp {
+  promptPanelManager: {
+    loadData: () => Promise<unknown[]>;
+    renderView: () => Promise<void>;
+    clearTagFilter: () => void;
+  } | null;
+  imagePanelManager: {
+    loadData: () => Promise<unknown[]>;
+    renderView: () => Promise<void>;
+    clearTagFilter: () => void;
+  } | null;
+  openNewPromptPage?: () => void;
+  openUploadImageModal?: () => void;
+  openPromptTagManagerModal?: () => void;
+  openImageTagManagerModal?: () => void;
+  openStatisticsModal?: () => void;
+  showToast?: (message: string, type: string) => void;
+  relaunchApp?: () => Promise<void>;
+}
+
+/**
+ * ToolbarManager 构造选项
+ */
+interface IToolbarManagerOptions {
+  app: IApp;
+}
+
+export class ToolbarManager {
+  private app: IApp;
+
+  constructor(options: IToolbarManagerOptions = { app: {} as IApp }) {
+    this.app = options.app;
+  }
+
+  /**
+   * 初始化
+   */
+  init(): void {
+    this.bindEvents();
+  }
+
+  /**
+   * 绑定事件
+   * @private
+   */
+  private bindEvents(): void {
+    this.bindRefreshEvents();
+    this.bindPromptToolbarEvents();
+    this.bindImageToolbarEvents();
+    this.bindTagFilterEvents();
+    this.bindTagManagerEvents();
+    this.bindModalEvents();
+  }
+
+  /**
+   * 绑定刷新事件
+   * @private
+   */
+  private bindRefreshEvents(): void {
+    document.getElementById('reloadBtn')?.addEventListener('click', () => this.refreshData());
+    document.getElementById('refreshBtn')?.addEventListener('click', () => this.relaunchApp());
+  }
+
+  /**
+   * 绑定提示词工具栏事件
+   * @private
+   */
+  private bindPromptToolbarEvents(): void {
+    document.getElementById('promptAddBtn')?.addEventListener('click', () => this.app.openNewPromptPage?.());
+  }
+
+  /**
+   * 绑定图像工具栏事件
+   * @private
+   */
+  private bindImageToolbarEvents(): void {
+    document.getElementById('imageAddBtn')?.addEventListener('click', () => this.app.openUploadImageModal?.());
+  }
+
+  /**
+   * 绑定标签筛选事件
+   * @private
+   */
+  private bindTagFilterEvents(): void {
+    document.getElementById('clearPromptTagFilter')?.addEventListener('click', () => this.app.promptPanelManager?.clearTagFilter());
+    document.getElementById('clearImageTagFilter')?.addEventListener('click', () => this.app.imagePanelManager?.clearTagFilter());
+  }
+
+  /**
+   * 绑定标签管理器事件
+   * @private
+   */
+  private bindTagManagerEvents(): void {
+    document.getElementById('promptTagManagerBtn')?.addEventListener('click', () => this.app.openPromptTagManagerModal?.());
+    document.getElementById('imageTagManagerBtn')?.addEventListener('click', () => this.app.openImageTagManagerModal?.());
+  }
+
+  /**
+   * 绑定模态框事件
+   * @private
+   */
+  private bindModalEvents(): void {
+    // 统计按钮
+    document.getElementById('statisticsBtn')?.addEventListener('click', () => {
+      this.app.openStatisticsModal?.();
+    });
+  }
+
+  /**
+   * 刷新数据
+   */
+  async refreshData(): Promise<void> {
+    try {
+      if (this.app.promptPanelManager) {
+        await this.app.promptPanelManager.loadData();
+        await this.app.promptPanelManager.renderView();
+      }
+      if (this.app.imagePanelManager) {
+        await this.app.imagePanelManager.loadData();
+        await this.app.imagePanelManager.renderView();
+      }
+
+      this.app.showToast?.('数据已刷新', 'success');
+    } catch (error) {
+      window.electronAPI.logError('ToolbarManager', 'Failed to refresh data', { error: error instanceof Error ? error.message : String(error) });
+      this.app.showToast?.('刷新失败', 'error');
+    }
+  }
+
+  /**
+   * 重启应用
+   */
+  async relaunchApp(): Promise<void> {
+    const confirmed = await DialogService.showConfirmDialogByConfig?.(DialogConfig.RELAUNCH_APP);
+    if (!confirmed) return;
+
+    try {
+      this.app.showToast?.('正在重启应用...', 'info');
+      await window.electronAPI.relaunchApp();
+    } catch (error) {
+      window.electronAPI.logError('ToolbarManager.ts', 'Failed to relaunch app:', error);
+      this.app.showToast?.('重启失败', 'error');
+    }
+  }
+}

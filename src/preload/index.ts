@@ -5,24 +5,9 @@
  */
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import type { IPrompt, IImage, IOrphanFile, IScanOrphanFilesResult, IExportOrphanFilesResult } from '../types/entities.js';
 
 // ==================== 类型定义 ====================
-
-/** Prompt 数据 */
-interface IPrompt {
-  id: string;
-  title: string;
-  content: string;
-}
-
-/** 图像数据 */
-interface IImageData {
-  id: string;
-  fileName: string;
-  relativePath: string;
-  isSafe?: number;
-  isFavorite?: number;
-}
 
 /** 标签组 */
 interface ITagGroup {
@@ -38,25 +23,6 @@ interface IBackupProgress {
   percent: number;
   status: string;
   detail?: string;
-}
-
-/** 孤儿文件 */
-interface IOrphanFile {
-  fullPath: string;
-  relativePath: string;
-  size: number;
-}
-
-/** 扫描孤儿文件结果 */
-interface IScanOrphanFilesResult {
-  orphanImages: IOrphanFile[];
-  orphanThumbnails: IOrphanFile[];
-  orphanImageCount: number;
-  orphanThumbnailCount: number;
-  orphanImageSize: string;
-  orphanThumbnailSize: string;
-  totalCount: number;
-  totalSize: string;
 }
 
 /** 日志级别 */
@@ -118,18 +84,18 @@ interface IElectronAPI {
   getDataPath: () => Promise<string>;
   selectDataPath: () => Promise<string | null>;
   selectDirectory: () => Promise<string | null>;
-  selectAndInstallFont: () => Promise<{ success: boolean; fontName?: string; error?: string }>;
-  getInstalledFonts: () => Promise<string[]>;
+  selectAndInstallFont: () => Promise<{ success: boolean; fontName?: string; filePath?: string; error?: string }>;
+  getInstalledFonts: () => Promise<{ fontName: string; fileName: string; filePath: string }[]>;
 
   // 图像文件操作
-  saveImageFile: (sourcePath: string, fileName: string) => Promise<{ success: boolean; error?: string }>;
+  saveImageFile: (sourcePath: string, fileName: string) => Promise<{ id: string; fileName: string; isDuplicate: boolean; duplicateMessage?: string; relativePath?: string; thumbnailPath?: string; width?: number; height?: number; size?: number }>;
   getImagePath: (relativePath: string) => Promise<string>;
   openImageFiles: () => Promise<string[]>;
-  clearAllData: () => Promise<boolean>;
-  getImages: (sortBy: string, sortOrder: string) => Promise<IImageData[]>;
-  getImagesByIds: (ids: string[]) => Promise<IImageData[]>;
-  getAllImagesForStats: () => Promise<IImageData[]>;
-  getImageById: (imageId: string) => Promise<IImageData | null>;
+  clearAllData: () => Promise<string>;
+  getImages: (sortBy: string, sortOrder: string) => Promise<IImage[]>;
+  getImagesByIds: (ids: string[]) => Promise<IImage[]>;
+  getAllImagesForStats: () => Promise<IImage[]>;
+  getImageById: (imageId: string) => Promise<IImage | null>;
 
   // 提示词回收站
   getPromptTrash: () => Promise<Array<IPrompt & { deletedAt: string; type: string }>>;
@@ -166,27 +132,42 @@ interface IElectronAPI {
   getImageTags: () => Promise<string[]>;
   addImageTag: (tag: string) => Promise<void>;
   addImageTags: (imageId: string, tagNames: string[]) => Promise<void>;
-  updateImage: (id: string, updates: Partial<IImageData>) => Promise<void>;
+  updateImage: (id: string, updates: Partial<IImage>) => Promise<void>;
   renameImageTag: (oldTag: string, newTag: string) => Promise<void>;
   deleteImageTag: (tag: string) => Promise<void>;
 
   // 图像回收站
-  getImageTrash: () => Promise<Array<IImageData & { deletedAt: string }>>;
+  getImageTrash: () => Promise<Array<IImage & { deletedAt: string; type: string }>>;
   softDeleteImage: (id: string) => Promise<void>;
   restoreImageFromTrash: (id: string) => Promise<void>;
   restoreAllImages: () => Promise<void>;
-  permanentDeleteImage: (id: string) => Promise<void>;
+  permanentDeleteImage: (id: string) => Promise<boolean>;
   emptyImageTrash: () => Promise<void>;
 
   // 导出孤儿文件
   scanOrphanFiles: () => Promise<IScanOrphanFilesResult>;
-  exportOrphanFiles: (exportDir: string) => Promise<{ successCount: number; failedCount: number; exportPath: string }>;
+  exportOrphanFiles: (exportDir: string) => Promise<IExportOrphanFilesResult>;
 
   // 共享标签
   getAllTags: () => Promise<string[]>;
 
   // 标签同步
-  syncTagsBidirectional: () => Promise<void>;
+  syncTagsBidirectional: () => Promise<{
+    promptToImage: {
+      imported: number;
+      skipped: number;
+      tags: string[];
+      tagGroups: Array<{ groupName: string; tags: string[] }>;
+      ungroupedTags: string[];
+    };
+    imageToPrompt: {
+      imported: number;
+      skipped: number;
+      tags: string[];
+      tagGroups: Array<{ groupName: string; tags: string[] }>;
+      ungroupedTags: string[];
+    };
+  }>;
 
   // 统计
   getStatistics: () => Promise<{
@@ -296,7 +277,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getImageTags: () => ipcRenderer.invoke('get-image-tags'),
   addImageTag: (tag: string) => ipcRenderer.invoke('add-image-tag', tag),
   addImageTags: (imageId: string, tagNames: string[]) => ipcRenderer.invoke('add-image-tags', imageId, tagNames),
-  updateImage: (id: string, updates: Partial<IImageData>) => ipcRenderer.invoke('update-image', id, updates),
+  updateImage: (id: string, updates: Partial<IImage>) => ipcRenderer.invoke('update-image', id, updates),
   renameImageTag: (oldTag: string, newTag: string) => ipcRenderer.invoke('rename-image-tag', oldTag, newTag),
   deleteImageTag: (tag: string) => ipcRenderer.invoke('delete-image-tag', tag),
 
@@ -362,7 +343,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 } as IElectronAPI);
 
 // 导出类型供渲染进程使用
-export type { IElectronAPI, IPrompt, IImageData, ITagGroup, IBackupProgress, IOrphanFile, IScanOrphanFilesResult, LogLevel, BackupProgressCallback, IBackupStats, IBackupManifest };
+export type { IElectronAPI, IPrompt, IImage, ITagGroup, IBackupProgress, IOrphanFile, IScanOrphanFilesResult, LogLevel, BackupProgressCallback, IBackupStats, IBackupManifest };
 
 // 全局声明
 declare global {

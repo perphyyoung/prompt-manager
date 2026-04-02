@@ -4,20 +4,29 @@
  */
 
 import { app, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage, clipboard, session } from 'electron';
+
+// 扩展 Electron.App 类型
+declare global {
+  namespace Electron {
+    interface App {
+      isQuiting?: boolean;
+    }
+  }
+}
 import path from 'path';
 import { promises as fs } from 'fs';
 import os from 'os';
 import sharp from 'sharp';
 import crypto from 'crypto';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import * as db from './database.js';
 import { generatePromptId, generateImageId } from '../utils/idGenerator.js';
 import { getFormattedLocalTimeToSecond, getFormattedYearMonth, localTime } from '../utils/index.js';
 import { logInfo, logDebug, logError, logWarn, initLogger } from './logger.js';
-import { Constants } from '../constants.js';
+import { Constants } from '../constants.ts';
 import { copyDirectory, copyDirectoryWithProgress, calculateDirectorySize } from '../utils/FileUtils.js';
-import { ConfigManager } from './ConfigManager.js';
+import { ConfigManager, AppConfig } from './ConfigManager.js';
 
 const execAsync = promisify(exec);
 
@@ -46,13 +55,13 @@ const DEFAULT_DATA_DIR = isProduction
 // 初始化配置管理器
 const configManager = new ConfigManager(CONFIG_FILE, isProduction ? path.dirname(app.getPath('exe')) : ROOT_DIR);
 
-let mainWindow;
+let mainWindow: BrowserWindow | null = null;
 let tray = null;
 let currentDataDir = DEFAULT_DATA_DIR;
-let pendingOldDataDir = null;
+let pendingOldDataDir: string | null = null;
 
 // 标签缓存（用于自动完成功能）
-let allTagsCache = null;
+let allTagsCache: string[] | null = null;
 
 // 检测是否为测试模式
 const isTestMode = process.env.PLAYWRIGHT_TEST === 'true' || process.env.NODE_ENV === 'test';
@@ -86,7 +95,7 @@ async function loadConfig() {
  * @param {Object} config - 配置对象
  * @param {boolean} merge - 是否合并现有配置
  */
-async function saveConfig(config, merge = false) {
+async function saveConfig(config: Partial<AppConfig>, merge = false) {
   await configManager.saveConfig(config, merge);
   if (config.dataDir) {
     currentDataDir = config.dataDir;
@@ -99,7 +108,7 @@ async function saveConfig(config, merge = false) {
  * @param {string} newDir - 新数据目录
  * @returns {Promise<boolean>} 是否成功
  */
-async function migrateData(oldDir, newDir) {
+async function migrateData(oldDir: string, newDir: string) {
   try {
     // 检查旧目录是否存在
     try {
@@ -183,7 +192,7 @@ async function ensureThumbnailsDir(subDir = '') {
  * @param {string} filePath - 文件路径
  * @returns {string} MD5 哈希值
  */
-async function calculateFileMD5(filePath) {
+async function calculateFileMD5(filePath: string): Promise<string | null> {
   try {
     const fileBuffer = await fs.readFile(filePath);
     return crypto.createHash('md5').update(fileBuffer).digest('hex');
@@ -207,7 +216,7 @@ async function calculateFileMD5(filePath) {
  * @param {string} subDir - 子目录（如年月：202603）
  * @returns {Object|null} 缩略图信息对象
  */
-async function generateThumbnail(imagePath, storedName, subDir = '') {
+async function generateThumbnail(imagePath: string, storedName: string, subDir = ''): Promise<{ thumbnailName: string; thumbnailPath: string; relativePath: string } | null> {
   try {
     const thumbnailsDir = await ensureThumbnailsDir(subDir);
     const ext = path.extname(storedName) || '.png';
@@ -249,7 +258,7 @@ async function generateThumbnail(imagePath, storedName, subDir = '') {
  * @param {Function} onProgress - 进度回调函数 (current, total, fileName) => void
  * @param {number} concurrency - 并发数，默认 5
  */
-async function regenerateAllThumbnails(onProgress = null, concurrency = 5) {
+async function regenerateAllThumbnails(onProgress: ((current: number, total: number, fileName: string) => void) | null = null, concurrency = 5) {
   try {
     // 获取所有图像
     const images = await db.getAllImages();
@@ -265,10 +274,10 @@ async function regenerateAllThumbnails(onProgress = null, concurrency = 5) {
     let completed = 0;
     let regenerated = 0;
     let failed = 0;
-    const updates = [];
+    const updates: Array<{ id: string; thumbnailPath: string }> = [];
 
     // 处理单个图像的缩略图生成
-    async function processImage(image) {
+    async function processImage(image: { id: string; relativePath: string; storedName: string; fileName: string }): Promise<{ success: boolean; image: { id: string; relativePath: string; storedName: string; fileName: string } }> {
       try {
         // 构建原图路径
         const imagePath = path.join(currentDataDir, image.relativePath);
@@ -347,14 +356,17 @@ async function regenerateAllThumbnails(onProgress = null, concurrency = 5) {
  * @param {string} fileName - 原始文件名
  * @returns {Object} 保存后的图像信息
  */
-async function saveImageFile(sourcePath, fileName) {
+async function saveImageFile(sourcePath: string, fileName: string): Promise<{ id: string; fileName: string; isDuplicate: boolean; duplicateMessage?: string }> {
   // 计算源文件 MD5
   const sourceMD5 = await calculateFileMD5(sourcePath);
+  if (!sourceMD5) {
+    throw new Error('Failed to calculate MD5');
+  }
 
   // 检查是否已存在相同 MD5 的图像
   const existingImage = await db.getImageByMD5(sourceMD5);
   if (existingImage) {
-    console.debug('Found duplicate image by MD5, reusing:', fileName);
+    logWarn('Found duplicate image by MD5, reusing:', fileName);
     return {
       id: existingImage.id,
       fileName: fileName,
@@ -433,7 +445,7 @@ async function initTagsCache() {
  * 更新标签缓存（添加新标签）
  * @param {string} tagName - 标签名称
  */
-function addTagToCache(tagName) {
+function addTagToCache(tagName: string) {
   if (allTagsCache && !allTagsCache.includes(tagName)) {
     allTagsCache.push(tagName);
     allTagsCache.sort();
@@ -444,7 +456,7 @@ function addTagToCache(tagName) {
  * 批量更新标签缓存
  * @param {Array<string>} tagNames - 标签名称数组
  */
-function addTagsToCache(tagNames) {
+function addTagsToCache(tagNames: string[]) {
   if (!allTagsCache) return;
   let updated = false;
   for (const tagName of tagNames) {
@@ -482,6 +494,7 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
+    if (!mainWindow) return;
     mainWindow.show();
     // 隐藏菜单栏
     mainWindow.setMenuBarVisibility(false);
@@ -492,6 +505,7 @@ function createWindow() {
 
   // 注册 F12 快捷键打开/关闭开发者工具
   mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (!mainWindow) return;
     if (input.key === 'F12' && !input.alt && !input.control && !input.meta && !input.shift) {
       if (mainWindow.webContents.isDevToolsOpened()) {
         mainWindow.webContents.closeDevTools();
@@ -504,6 +518,7 @@ function createWindow() {
 
   // 拦截关闭事件，最小化到托盘（测试模式下直接关闭）
   mainWindow.on('close', (event) => {
+    if (!mainWindow) return;
     if (!app.isQuiting && !isTestMode) {
       event.preventDefault();
       mainWindow.hide();
@@ -521,12 +536,63 @@ function createWindow() {
 }
 
 /**
+ * 执行构建命令
+ * @returns Promise<boolean> 构建是否成功
+ */
+async function runBuild(): Promise<boolean> {
+  return new Promise((resolve) => {
+
+    // 使用 npm run build 进行构建
+    const buildProcess = spawn('npm', ['run', 'build'], {
+      cwd: ROOT_DIR,
+      shell: true,
+      stdio: 'pipe'
+    });
+
+    let output = '';
+    let errorOutput = '';
+
+    buildProcess.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+
+    buildProcess.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+
+    buildProcess.on('close', (code) => {
+      if (code === 0) {
+        resolve(true);
+      } else {
+        logError('Main', `构建失败，退出码: ${code}`, { error: errorOutput });
+        resolve(false);
+      }
+    });
+
+    buildProcess.on('error', (err) => {
+      logError('Main', '构建进程启动失败', err);
+      resolve(false);
+    });
+  });
+}
+
+/**
  * 重启应用
  * 统一的重启逻辑，供托盘菜单和IPC调用
  * @param {string} oldDataDir - 旧的数据库目录路径（可选）
+ * @param {boolean} skipBuild - 是否跳过构建（可选，默认false）
  */
-function relaunchApp(oldDataDir) {
+async function relaunchApp(oldDataDir?: string, skipBuild = false) {
   app.isQuiting = true;
+
+  // 如果不是生产环境且未指定跳过构建，则先执行构建
+  if (!isProduction && !skipBuild) {
+    const buildSuccess = await runBuild();
+    if (!buildSuccess) {
+      logWarn('Main', '构建失败，但仍将继续重启');
+    }
+  }
+
   const args = process.argv.slice(1)
     .filter(arg => !arg.startsWith('--relaunch') && !arg.startsWith('--old-data-dir'))
     .concat(['--relaunch']);
@@ -557,8 +623,8 @@ function createTray() {
     },
     {
       label: '重启',
-      click: () => {
-        relaunchApp();
+      click: async () => {
+        await relaunchApp();
       }
     },
     {
@@ -765,19 +831,7 @@ ipcMain.handle('soft-delete-image', async (event, id) => {
 
 // 重启应用
 ipcMain.handle('relaunch-app', async (event, oldDataDir) => {
-  relaunchApp(oldDataDir);
-});
-
-// ==================== 收藏功能 ====================
-
-// 获取收藏的提示词
-ipcMain.handle('get-favorite-prompts', async () => {
-  return await db.getFavoritePrompts();
-});
-
-// 获取收藏的图像
-ipcMain.handle('get-favorite-images', async () => {
-  return await db.getFavoriteImages();
+  await relaunchApp(oldDataDir);
 });
 
 // 获取所有提示词标签
@@ -898,6 +952,7 @@ ipcMain.handle('search-prompts', async (event, query) => {
 
 // 导出 Prompts
 ipcMain.handle('export-prompts', async (event, prompts) => {
+  if (!mainWindow) throw new Error('Main window is not available');
   const { filePath } = await dialog.showSaveDialog(mainWindow, {
     title: '导出 Prompts',
     defaultPath: 'prompts-backup.json',
@@ -986,6 +1041,8 @@ ipcMain.handle('select-data-path', async () => {
     if (newPath !== currentDataDir) {
       const oldPath = currentDataDir;
 
+      if (!mainWindow) throw new Error('Main window is not available');
+
       // 显示迁移对话框
       const migrateAction = await mainWindow.webContents.executeJavaScript(
         `window.dialogService?.showMigrateDialog(${JSON.stringify(oldPath)}, ${JSON.stringify(newPath)})`
@@ -1012,7 +1069,7 @@ ipcMain.handle('select-data-path', async () => {
       }
 
       // 无论选择复制还是直接使用新目录，都重启应用
-      relaunchApp();
+      await relaunchApp();
     }
   }
 
@@ -1388,7 +1445,7 @@ async function getBackupStats() {
  * 递归删除目录
  * @param {string} dir - 要删除的目录
  */
-async function removeDirectory(dir) {
+async function removeDirectory(dir: string) {
   try {
     await fs.access(dir);
   } catch {
@@ -1414,7 +1471,7 @@ async function removeDirectory(dir) {
  * @param {string} sourceDir - 源目录
  * @param {string} zipPath - ZIP 文件路径
  */
-async function createZipArchive(sourceDir, zipPath) {
+async function createZipArchive(sourceDir: string, zipPath: string) {
   const { exec } = require('child_process');
   const { promisify } = require('util');
   const execAsync = promisify(exec);
@@ -1440,7 +1497,7 @@ async function createZipArchive(sourceDir, zipPath) {
  * @param {string} zipPath - ZIP 文件路径
  * @param {string} targetDir - 目标目录
  */
-async function extractZipArchive(zipPath, targetDir) {
+async function extractZipArchive(zipPath: string, targetDir: string) {
   const { exec } = require('child_process');
   const { promisify } = require('util');
   const execAsync = promisify(exec);
@@ -1462,14 +1519,14 @@ async function extractZipArchive(zipPath, targetDir) {
  * @param {string} baseDir - 基础目录（用于计算相对路径）
  * @returns {Array} 文件列表（包含相对路径和绝对路径）
  */
-async function getAllFiles(dir, baseDir) {
-  const files = [];
+async function getAllFiles(dir: string, baseDir: string): Promise<Array<{ relativePath: string; fullPath: string; size: number }>> {
+  const files: Array<{ relativePath: string; fullPath: string; size: number }> = [];
   const items = await fs.readdir(dir, { withFileTypes: true });
-  
+
   for (const item of items) {
     const fullPath = path.join(dir, item.name);
     const relativePath = path.relative(baseDir, fullPath);
-    
+
     if (item.isDirectory()) {
       const subFiles = await getAllFiles(fullPath, baseDir);
       files.push(...subFiles);
@@ -1482,55 +1539,63 @@ async function getAllFiles(dir, baseDir) {
       });
     }
   }
-  
+
   return files;
+}
+
+/**
+ * 扫描孤儿文件（内部函数）
+ * @returns {Promise<Object>} 扫描结果
+ */
+async function scanOrphanFilesInternal() {
+  const imagesDir = getImagesDir();
+  const thumbnailsDir = getThumbnailsDir();
+
+  // 获取数据库中所有图像的路径
+  const allImages = await db.getAllImages({ forCleanup: true });
+  const dbImagePaths = new Set(allImages.map(img => img.relative_path).filter(Boolean));
+  const dbThumbnailPaths = new Set(allImages.map(img => img.thumbnail_path).filter(Boolean));
+
+  // 扫描实际文件
+  let actualImageFiles: Array<{ relativePath: string; fullPath: string; size: number }> = [];
+  let actualThumbnailFiles: Array<{ relativePath: string; fullPath: string; size: number }> = [];
+
+  try {
+    actualImageFiles = await getAllFiles(imagesDir, currentDataDir);
+  } catch (error) {
+    // 目录可能不存在
+  }
+
+  try {
+    actualThumbnailFiles = await getAllFiles(thumbnailsDir, currentDataDir);
+  } catch (error) {
+    // 目录可能不存在
+  }
+
+  // 找出孤儿文件
+  const orphanImages = actualImageFiles.filter(file => !dbImagePaths.has(file.relativePath));
+  const orphanThumbnails = actualThumbnailFiles.filter(file => !dbThumbnailPaths.has(file.relativePath));
+
+  // 计算总大小
+  const orphanImageSize = orphanImages.reduce((sum, f) => sum + f.size, 0);
+  const orphanThumbnailSize = orphanThumbnails.reduce((sum, f) => sum + f.size, 0);
+
+  return {
+    orphanImages,
+    orphanThumbnails,
+    orphanImageCount: orphanImages.length,
+    orphanThumbnailCount: orphanThumbnails.length,
+    orphanImageSize: (orphanImageSize / 1024 / 1024).toFixed(2),
+    orphanThumbnailSize: (orphanThumbnailSize / 1024 / 1024).toFixed(2),
+    totalCount: orphanImages.length + orphanThumbnails.length,
+    totalSize: ((orphanImageSize + orphanThumbnailSize) / 1024 / 1024).toFixed(2)
+  };
 }
 
 // 扫描孤儿文件
 ipcMain.handle('scan-orphan-files', async () => {
   try {
-    const imagesDir = getImagesDir();
-    const thumbnailsDir = getThumbnailsDir();
-    
-    // 获取数据库中所有图像的路径
-    const allImages = await db.getAllImages({ forCleanup: true });
-    const dbImagePaths = new Set(allImages.map(img => img.relative_path).filter(Boolean));
-    const dbThumbnailPaths = new Set(allImages.map(img => img.thumbnail_path).filter(Boolean));
-    
-    // 扫描实际文件
-    let actualImageFiles = [];
-    let actualThumbnailFiles = [];
-    
-    try {
-      actualImageFiles = await getAllFiles(imagesDir, currentDataDir);
-    } catch (error) {
-      // 目录可能不存在
-    }
-    
-    try {
-      actualThumbnailFiles = await getAllFiles(thumbnailsDir, currentDataDir);
-    } catch (error) {
-      // 目录可能不存在
-    }
-    
-    // 找出孤儿文件
-    const orphanImages = actualImageFiles.filter(file => !dbImagePaths.has(file.relativePath));
-    const orphanThumbnails = actualThumbnailFiles.filter(file => !dbThumbnailPaths.has(file.relativePath));
-    
-    // 计算总大小
-    const orphanImageSize = orphanImages.reduce((sum, f) => sum + f.size, 0);
-    const orphanThumbnailSize = orphanThumbnails.reduce((sum, f) => sum + f.size, 0);
-    
-    return {
-      orphanImages,
-      orphanThumbnails,
-      orphanImageCount: orphanImages.length,
-      orphanThumbnailCount: orphanThumbnails.length,
-      orphanImageSize: (orphanImageSize / 1024 / 1024).toFixed(2),
-      orphanThumbnailSize: (orphanThumbnailSize / 1024 / 1024).toFixed(2),
-      totalCount: orphanImages.length + orphanThumbnails.length,
-      totalSize: ((orphanImageSize + orphanThumbnailSize) / 1024 / 1024).toFixed(2)
-    };
+    return await scanOrphanFilesInternal();
   } catch (error) {
     logError('Main', 'Scan orphan files error:', error);
     throw error;
@@ -1604,12 +1669,16 @@ ipcMain.handle('get-installed-fonts', async () => {
   }
 });
 
-// 导出并删除孤儿文件
-ipcMain.handle('export-and-delete-orphan-files', async (event, orphanFiles, exportDir) => {
+
+// 导出孤儿文件（不删除）
+ipcMain.handle('export-orphan-files', async (event, exportDir) => {
   try {
-    let exportedCount = 0;
-    let deletedCount = 0;
-    let failedCount = 0;
+    // 先扫描孤儿文件
+    const scanResult = await scanOrphanFilesInternal();
+    
+    if (scanResult.totalCount === 0) {
+      return { successCount: 0, failedCount: 0, exportPath: '' };
+    }
     
     // 创建导出目录
     const orphanExportDir = path.join(exportDir, `orphan_files_${Date.now()}`);
@@ -1621,7 +1690,13 @@ ipcMain.handle('export-and-delete-orphan-files', async (event, orphanFiles, expo
     await fs.mkdir(imagesExportDir, { recursive: true });
     await fs.mkdir(thumbnailsExportDir, { recursive: true });
     
-    for (const file of orphanFiles) {
+    let successCount = 0;
+    let failedCount = 0;
+    
+    // 导出所有孤儿文件
+    const allOrphanFiles = [...scanResult.orphanImages, ...scanResult.orphanThumbnails];
+    
+    for (const file of allOrphanFiles) {
       try {
         // 确定导出子目录
         const isThumbnail = file.relativePath.includes('thumbnails/');
@@ -1631,31 +1706,26 @@ ipcMain.handle('export-and-delete-orphan-files', async (event, orphanFiles, expo
         const fileName = path.basename(file.fullPath);
         const targetPath = path.join(targetDir, fileName);
         await fs.copyFile(file.fullPath, targetPath);
-        exportedCount++;
-        
-        // 删除原文件
-        await fs.unlink(file.fullPath);
-        deletedCount++;
+        successCount++;
       } catch (error) {
-        logError('Main', 'Failed to export/delete file:', { fullPath: file.fullPath, error });
+        logError('Main', 'Failed to export orphan file:', { fullPath: file.fullPath, error });
         failedCount++;
       }
     }
     
     return { 
-      exportedCount, 
-      deletedCount, 
+      successCount, 
       failedCount, 
       exportPath: orphanExportDir 
     };
   } catch (error) {
-    logError('Main', 'Export and delete orphan files error:', error);
+    logError('Main', 'Export orphan files error:', error);
     throw error;
   }
 });
 
 // 发送备份进度到渲染进程
-function sendBackupProgress(progress) {
+function sendBackupProgress(progress: { stage: string; percent: number; status: string; detail?: string }) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('backup-progress', progress);
   }
@@ -1664,6 +1734,8 @@ function sendBackupProgress(progress) {
 // 完整备份导出
 ipcMain.handle('export-full-backup', async () => {
   try {
+    if (!mainWindow) throw new Error('Main window is not available');
+
     // 选择保存目录（先让用户选择目录）
     const { filePaths } = await dialog.showOpenDialog(mainWindow, {
       title: '选择备份保存位置',
@@ -1785,7 +1857,7 @@ ipcMain.handle('export-full-backup', async () => {
       stage: 'error',
       percent: 0,
       status: '备份失败',
-      detail: error.message
+      detail: error instanceof Error ? error.message : String(error)
     });
     throw error;
   }
@@ -1794,6 +1866,8 @@ ipcMain.handle('export-full-backup', async () => {
 // 完整备份导入
 ipcMain.handle('import-full-backup', async () => {
   try {
+    if (!mainWindow) throw new Error('Main window is not available');
+
     // 选择备份文件
     const { filePaths } = await dialog.showOpenDialog(mainWindow, {
       title: '导入完整备份',
@@ -1968,7 +2042,7 @@ ipcMain.handle('import-full-backup', async () => {
       stage: 'error',
       percent: 0,
       status: '导入失败',
-      detail: error.message
+      detail: error instanceof Error ? error.message : String(error)
     });
     throw error;
   }
