@@ -2,6 +2,8 @@
 py-data*/
 *.diff
 *.db
+tmp.md
+test-results/*
 renderer/styles-*
 testing-playwright/*
 重构/*

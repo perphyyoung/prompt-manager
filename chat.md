@@ -1,5 +1,9 @@
 # 开发对话记录
 
+## 设计模式
+
+模板方法模式: 回收站
+
 ## todo
 
 快捷键管理
@@ -25,12 +29,20 @@ composes 是 CSS Modules 语法, 当前项目怎样引入
 调试解决, 写入 pm.log, 不是 控制台
 全面分析当前项目, 有没有什么常见的隐患, 给出优化方案
 排查上步所有可能的问题, 给出修改方案
-根据实际 js/ts 文件结构, 更新 项目文件树.md, 不需要添加最近修改章节
-根据 chat.md 的第 12 行以及 git-diff.log, 更新 readme.md 和 change.md, 并总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
+根据实际 ts 文件结构, 更新 项目文件树.md, 不需要添加最近修改章节
+根据 chat.md 的第 12 行以及 git-diff.log, 更新 readme.md, 并总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 标签系统 -> 依赖注入; IPC 服务类
+按照真实逻辑测试, 如果测试失败, 仔细分析原因, 是测试代码问题, 还是真实逻辑问题; 测试的目的是找出真实逻辑的问题, 不是为了测试通过; 重新测试; 如果测试失败, 中断测试, 分析原因, 和我商量修改
+应用已关闭, 使用实际数据 e2e 测试
 cnpm run dist:win:nsis -> exe
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
+
+## 20260401
+
+按照终极方案修复
+使用 模板方法模式 简化回收站设计
+当前项目的两个回收站, 都实现了哪些功能? 除了配置模式和策略模式, 还有什么设计模式可选? 结合 refator skill 给出方案的比较
 
 ## 20260330
 
@@ -167,7 +179,6 @@ electron dialog.showOpenDialog 打开的界面, 如果直接点取消, 要点好
 - 修复双向禁止二级跳转功能, 设置二级跳转时按钮禁用样式
 - 修复 addImagePrompts/addPromptImages 函数 FOREIGN KEY constraint 错误处理
 - 修复 ImageDetailManager.unlinkFromPrompt 使用 p.id 而非 p.promptId 的 bug
-- 数据模型.md 补充 promptRefs 完整字段说明 和 prompt.images 完整字段说明
 - 修复事件绑定中 HTML 不存在的 ID
 - 统一提示词详情界面 ID 命名为 promptDetailXXX 格式, 统一图像详情界面 ID 命名为 imageDetailXXX 格式
 - 实施优化（EventBus.once、错误处理、操作锁、缓存同步）
@@ -203,7 +214,6 @@ ImagePanelManager.subscribeToEvents 现在监听了哪些事件, 监听到后会
 
 ## 20260320-1
 
-- 统一新建提示词的 images 参数格式为对象数组
 - 修复上传图像创建提示词后图像详情面板不显示提示词信息的问题
 当前事件驱动模式, 是否同时保持了与缓存的一致
 反过来呢, 如果 图像方面改变, 提示词界面可能也需要刷新, 能否复用 事件驱动
