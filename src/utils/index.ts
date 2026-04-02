@@ -41,3 +41,12 @@ export { generatePromptId, generateImageId } from './idGenerator.ts';
 
 // ========== ID 比较工具 ==========
 export { isSameId } from './isSameId.ts';
+
+// ========== 防重复提交工具 ==========
+export {
+  withDuplicatePrevention,
+  wrapWithDuplicatePrevention,
+  createDuplicatePreventionExecutor,
+  DuplicatePreventionMixin,
+  type IDuplicatePrevention
+} from './DuplicatePrevention.ts';

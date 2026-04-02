@@ -89,3 +89,61 @@
 - **来源**: 对话
 - **相关文件**: `src/main/index.ts`, `src/types/electron-api.d.ts`, `src/main/database.js`
 - **参见**: ERR-20260328-001
+
+---
+
+## [LRN-20260402-001] best_practice
+
+**记录时间**: 2026-04-02T14:30:00+08:00
+**优先级**: high
+**状态**: applied
+**领域**: tests
+
+### 摘要
+E2E 测试防重复提交功能的最佳实践
+
+### 详情
+本次编写新建提示词防重复提交 E2E 测试，总结出以下经验：
+
+#### 1. Playwright 点击行为特性
+- Playwright 的 `locator.click()` 会等待元素稳定（visible, enabled and stable）
+- 当测试防重复提交功能时，第一次点击后按钮可能被禁用或页面关闭
+- 后续点击会因为元素不稳定而失败或超时
+
+#### 2. 测试防重复提交的正确方法
+- 使用 `page.evaluate()` 在浏览器端直接触发点击事件
+- 这样可以绕过 Playwright 的稳定性检查，模拟真实的快速点击
+- 示例代码：
+  ```typescript
+  await page.evaluate(() => {
+    const btn = document.getElementById('doneBtn');
+    for (let i = 0; i < 5; i++) btn?.click();
+  });
+  ```
+
+#### 3. 验证策略
+- 不要依赖中间状态的截图（因为操作很快）
+- 通过 API 验证最终状态（如数据库记录数）
+- 验证只创建了一条记录，而不是验证点击过程中的提示信息
+
+#### 4. E2E 测试规范要点
+- 每个关键操作后截图（使用 `test-results/` 目录）
+- 使用 `waitForSelector` 和 `waitForFunction` 验证页面状态
+- 不要假设页面状态，必须显式验证
+- 设置合理的超时时间（简单操作 1000ms，保存操作 3000ms）
+
+#### 5. 测试用例设计
+- 正常场景：快速点击多次，验证只创建一条记录
+- 边界场景：空内容提交，验证不创建记录
+- 压力场景：更多次的快速点击，验证系统稳定性
+
+### 建议操作
+- 测试防重复提交/防抖功能时，使用 `page.evaluate()` 触发快速操作
+- 验证最终状态而非中间过程
+- 通过 API 查询数据库状态，而不是仅验证 UI
+- 更新 E2E 测试 SKILL.md，记录这些最佳实践
+
+### 元数据
+- **来源**: 对话
+- **相关文件**: `e2e/new-prompt-duplicate-prevention.spec.ts`, `.trae/skills/py-e2e-testing/SKILL.md`
+- **参见**: 更新了 SKILL.md 中的 Special Cases 章节

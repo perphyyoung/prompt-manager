@@ -13,7 +13,7 @@ export default defineConfig({
   testDir: './e2e',
 
   /* 每个测试的超时时间 */
-  timeout: 30 * 1000,
+  timeout: 10 * 1000,
 
   /* 全局 expect 超时 */
   expect: {

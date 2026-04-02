@@ -34,6 +34,7 @@ composes 是 CSS Modules 语法, 当前项目怎样引入
 标签系统 -> 依赖注入; IPC 服务类
 按照真实逻辑测试, 如果测试失败, 仔细分析原因, 是测试代码问题, 还是真实逻辑问题; 测试的目的是找出真实逻辑的问题, 不是为了测试通过; 重新测试; 如果测试失败, 中断测试, 分析原因, 和我商量修改
 应用已关闭, 使用实际数据 e2e 测试
+cnpm run test:e2e -- e2e/new-prompt-duplicate-prevention.spec.ts --headed 2>&1 | head -60
 cnpm run dist:win:nsis -> exe
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log

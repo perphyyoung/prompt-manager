@@ -1,5 +1,6 @@
 import { DelaySaveStrategy } from '../services/index.ts';
 import { ImagePreviewManager } from './ImagePreviewManager.ts';
+import { DuplicatePreventionMixin } from '../../utils/index.ts';
 
 /**
  * App 类型定义
@@ -41,7 +42,7 @@ interface IImageUploadManagerOptions {
  * 使用延迟保存策略：选择 → 预览 → 确认保存
  * 职责：协调策略、预览管理和 UI 交互
  */
-export class ImageUploadManager {
+export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
   private app: IApp;
   private strategy: DelaySaveStrategy;
   private previewManager: ImagePreviewManager;
@@ -50,6 +51,7 @@ export class ImageUploadManager {
   private isOpeningDialog: boolean;
 
   constructor(options: IImageUploadManagerOptions) {
+    super();
     this.app = options.app;
     this.strategy = new DelaySaveStrategy(this.app as unknown as Record<string, unknown>);
     this.previewManager = new ImagePreviewManager({
@@ -246,17 +248,19 @@ export class ImageUploadManager {
    * @returns Promise<void>
    */
   async createPromptWithImages(content: string, imageIds: string[]): Promise<void> {
-    const prompt = {
-      title: '',  // 留空，让 main.js 使用 ID 作为标题
-      content,
-      tags: [],
-      images: imageIds.map(id => ({ id })),
-      note: '',
-      isSafe: 1
-    };
+    return this.executeWithPrevention('createPromptWithImages', async () => {
+      const prompt = {
+        title: '',  // 留空，让 main.js 使用 ID 作为标题
+        content,
+        tags: [],
+        images: imageIds.map(id => ({ id })),
+        note: '',
+        isSafe: 1
+      };
 
-    await window.electronAPI.addPrompt(prompt);
-    // 注意：不在这里触发事件，由调用方统一处理刷新
+      await window.electronAPI.addPrompt(prompt);
+      // 注意：不在这里触发事件，由调用方统一处理刷新
+    }, { errorMessage: '正在创建提示词中...' }) as Promise<void>;
   }
 
   /**

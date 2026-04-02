@@ -1,6 +1,7 @@
 import { Constants } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
 import { ElectronDataClearApi } from '../services/ElectronDataClearApi.ts';
+import { DuplicatePreventionMixin } from '../../utils/index.ts';
 
 /**
  * 数据清空 API 接口
@@ -44,7 +45,7 @@ interface ISettingsManagerOptions {
  * 设置管理器
  * 负责处理应用设置相关操作
  */
-export class SettingsManager {
+export class SettingsManager extends DuplicatePreventionMixin(Object) {
   private app: IApp;
   private dataClearApi: IDataClearApi;
 
@@ -52,6 +53,7 @@ export class SettingsManager {
   private currentTheme: string;
 
   constructor(options: ISettingsManagerOptions) {
+    super();
     this.app = options.app;
     this.dataClearApi = options.dataClearApi || new ElectronDataClearApi();
 
@@ -325,10 +327,10 @@ export class SettingsManager {
    * 清空所有数据
    */
   async clearAllData(): Promise<void> {
-    try {
+    const result = await this.executeWithPrevention('clearAllData', async () => {
       const confirmed = await DialogService.showConfirmDialogByConfig(DialogConfig.CLEAR_ALL_DATA);
 
-      if (!confirmed) return;
+      if (!confirmed) return { success: false };
 
       const renamedPath = await this.dataClearApi.clearAllData();
 
@@ -337,9 +339,17 @@ export class SettingsManager {
       setTimeout(() => {
         this.app.relaunchApp?.(renamedPath);
       }, 1000);
-    } catch (error) {
-      window.electronAPI.logError('SettingsManager.ts', 'Failed to clear all data:', error);
-      this.app.showToast?.('清空失败：' + (error instanceof Error ? error.message : String(error)), 'error');
+      return { success: true };
+    }, { errorMessage: '正在清空数据中...' });
+
+    if (result === undefined) {
+      // 操作正在进行中
+      return;
+    }
+
+    if (!result?.success) {
+      // 用户取消或操作失败
+      return;
     }
   }
 
