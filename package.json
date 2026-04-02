@@ -16,15 +16,12 @@
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "build:ts": "tsc --noEmit || true",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
     "test:run": "vitest run",
+    "test:e2e": "playwright test",
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win",
-    "dist:win:nsis": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build && electron-builder --win nsis",
     "postinstall": "electron-builder install-app-deps"
   },
   "keywords": [
@@ -65,12 +62,14 @@
     "sqlite3": "^5.1.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/node": "^25.5.0",
     "@vitest/ui": "^4.1.0",
     "electron": "^28.0.0",
     "electron-builder": "^26.8.1",
     "electron-vite": "^5.0.0",
     "happy-dom": "^20.8.4",
+    "playwright": "^1.58.2",
     "typescript": "^6.0.2",
     "vite": "^8.0.2",
     "vitest": "^4.1.0"
