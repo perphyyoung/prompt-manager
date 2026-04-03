@@ -1940,41 +1940,6 @@ class PromptManager implements IApp {
   closeSelectModal() {
     this.modalManager.closeSelect();
   }
-
-  handlePromptItemSelection(promptId: string, index: number, e: MouseEvent) {
-    if (!this.promptPanelManager) return;
-
-    const { selectedIds } = this.promptPanelManager;
-
-    if (e.shiftKey && this.promptPanelManager.lastSelectedIndex !== -1) {
-      // Shift 点击：选择范围
-      const start = Math.min(this.promptPanelManager.lastSelectedIndex, index);
-      const end = Math.max(this.promptPanelManager.lastSelectedIndex, index);
-
-      const filtered = (this.promptPanelManager as PromptPanelManager).getFilteredPrompts();
-      for (let i = start; i <= end; i++) {
-        const item = filtered[i];
-        if (item) {
-          selectedIds.add(item.id);
-        }
-      }
-    } else if (e.ctrlKey || e.metaKey) {
-      // Ctrl/Cmd 点击：切换单个
-      if (selectedIds.has(promptId)) {
-        selectedIds.delete(promptId);
-      } else {
-        selectedIds.add(promptId);
-      }
-    } else {
-      // 普通点击：单选
-      selectedIds.clear();
-      selectedIds.add(promptId);
-    }
-
-    this.promptPanelManager.lastSelectedIndex = index;
-    this.promptPanelManager.renderView();
-    this.promptPanelManager.updateToolbarUI();
-  }
 }
 
 // 初始化应用

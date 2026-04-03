@@ -10,7 +10,6 @@
 gen_params 默认值: model: 空字符串, 应该怎样写? 将默认值写为常量
 提示词批量添加时, 插入 prompt_tags 和 其他关联表 可以分开; prompt_tags 可以使用一次 sql 插入
 提示词主界面和图像主界面, 是否也可以使用配置驱动模式, 与当前实现有何优劣
-从图像管理选择, 支持多选
 图像引用计数 定期清理; 设计图像引用计数方案, 参考 database.js 中的建表语句, 结合 sqlite-optimization skills 分析
 警告的toast使用橙色, 单选组冲突, 显示时间, toast管理
 创建提示词时, toast 不是中文; 参考 DialogService, 实现统一管理的 toast
@@ -38,6 +37,18 @@ cnpm run test:e2e -- e2e/new-prompt-duplicate-prevention.spec.ts --headed 2>&1 |
 cnpm run dist:win:nsis -> exe
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
+
+## 20260403
+
+紧凑视图和列表视图的样式有什么差异, 给出简化的统一方案
+列表选中后的背景色没有显示出来, 排查
+图像和提示词的列表的样式有哪些? 给出简化的统一方案
+
+## 20260402
+
+卡片视图和列表视图, 多选模式下, 快捷键有什么区别? 卡片模式也需要 Shift/Ctrl 范围选择功能; 给出方案
+以图像主界面的卡片视图为例, e2e 测试卡片视图的多选逻辑, 需要测试多选工具栏的每个按钮 `py-e2e-testing`
+两个主界面的卡片视图添加全选功能, 简化与列表视图的相互切换逻辑; 卡片的复选框放在卡片左上方, 即收藏的左侧, 也是hover时才出现, 复选框选中后进入选择模式; 图像和提示词都要添加, 注意复用; 给出修改方案
 
 ## 20260401
 

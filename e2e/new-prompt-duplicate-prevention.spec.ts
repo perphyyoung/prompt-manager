@@ -13,6 +13,12 @@ declare global {
  *
  * 测试前提：应用已有至少一个图像数据
  * 测试场景：用户快速点击"完成"按钮多次，应该只创建一个提示词
+ *
+ * 进入目标界面步骤：
+ * 1. 点击 #imageManagerBtn 切换到图像面板
+ * 2. 点击 #imageGridViewBtn 确保处于网格视图
+ * 3. 等待 .image-card 元素可见
+ * 4. 点击第一个图像打开详情
  */
 test.describe('新建提示词防重复提交', () => {
   const electronTest = createElectronTest();
@@ -25,70 +31,89 @@ test.describe('新建提示词防重复提交', () => {
     await electronTest.close();
   });
 
+  /**
+   * 进入图像网格视图并返回第一个图像卡片的辅助函数
+   */
+  async function enterImageGridView(page: any) {
+    // 1. 切换到图像面板
+    await page.click('#imageManagerBtn');
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: 'test-results/01-image-panel.png' });
+
+    // 2. 确保处于网格视图（点击网格视图按钮）
+    const gridViewBtn = page.locator('#imageGridViewBtn');
+    await gridViewBtn.click();
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: 'test-results/02-grid-view.png' });
+
+    // 3. 等待图像卡片加载
+    const firstImage = page.locator('.image-card').first();
+    await expect(firstImage).toBeVisible({ timeout: 5000 });
+    await page.screenshot({ path: 'test-results/03-cards-loaded.png' });
+
+    return firstImage;
+  }
+
   test('快速点击完成按钮应该只创建一个提示词', async () => {
     const page = electronTest.getPage();
 
-    // 1. 切换到图像面板
-    await page.click('#imageManagerBtn');
-    await page.waitForTimeout(300);
-    await page.screenshot({ path: 'test-results/01-image-panel.png' });
+    // 进入图像网格视图并获取第一个图像
+    const firstImage = await enterImageGridView(page);
 
-    // 2. 点击第一个图像打开详情
-    const firstImage = page.locator('.image-card').first();
-    await expect(firstImage).toBeVisible();
+    // 点击第一个图像打开详情
     await firstImage.click();
-    await page.screenshot({ path: 'test-results/02-image-clicked.png' });
+    await page.screenshot({ path: 'test-results/04-image-clicked.png' });
 
-    // 3. 等待图像详情页面加载
+    // 等待图像详情页面加载
     await page.waitForSelector('#imageDetailModal.active', { timeout: 1000 });
-    await page.screenshot({ path: 'test-results/03-image-detail-open.png' });
+    await page.screenshot({ path: 'test-results/05-image-detail-open.png' });
 
-    // 4. 检查按钮状态，如有"编辑"则先解除关联
+    // 检查按钮状态，如有"编辑"则先解除关联
     const editPromptBtn = page.locator('#editPromptFromImageBtn');
     await editPromptBtn.waitFor({ state: 'visible', timeout: 1000 });
 
     const btnText = await editPromptBtn.textContent();
-    await page.screenshot({ path: 'test-results/04-check-button-state.png' });
+    await page.screenshot({ path: 'test-results/06-check-button-state.png' });
 
     if (btnText?.includes('编辑')) {
       const unlinkBtn = page.locator('.prompt-ref-unlink').first();
       await expect(unlinkBtn).toBeVisible();
       await unlinkBtn.click();
-      await page.screenshot({ path: 'test-results/05-unlink-clicked.png' });
+      await page.screenshot({ path: 'test-results/07-unlink-clicked.png' });
 
       await page.waitForSelector('#confirmModal[style*="flex"]', { timeout: 1000 });
-      await page.screenshot({ path: 'test-results/06-confirm-modal.png' });
+      await page.screenshot({ path: 'test-results/08-confirm-modal.png' });
       await page.click('#confirmOkBtn');
 
       await page.waitForFunction(() => {
         const text = document.getElementById('editPromptBtnText')?.textContent;
         return text === '添加提示词';
       }, { timeout: 2000 });
-      await page.screenshot({ path: 'test-results/07-unlinked.png' });
+      await page.screenshot({ path: 'test-results/09-unlinked.png' });
     }
 
-    // 5. 点击"添加提示词"按钮
+    // 点击"添加提示词"按钮
     await editPromptBtn.click();
-    await page.screenshot({ path: 'test-results/08-add-prompt-clicked.png' });
+    await page.screenshot({ path: 'test-results/10-add-prompt-clicked.png' });
 
-    // 6. 等待新建提示词页面加载
+    // 等待新建提示词页面加载
     await page.waitForSelector('#newPromptPage.active', { timeout: 1000 });
-    await page.screenshot({ path: 'test-results/09-new-prompt-page-open.png' });
+    await page.screenshot({ path: 'test-results/11-new-prompt-page-open.png' });
 
-    // 7. 输入提示词内容
+    // 输入提示词内容
     const testContent = `测试提示词 ${Date.now()}`;
     await page.fill('#newPromptContent', testContent);
-    await page.screenshot({ path: 'test-results/10-content-filled.png' });
+    await page.screenshot({ path: 'test-results/12-content-filled.png' });
 
-    // 8. 获取当前提示词数量
+    // 获取当前提示词数量
     const initialPromptCount = await page.evaluate(async () => {
       const prompts = await window.electronAPI.getPrompts('createdAt', 'desc');
       return prompts.length;
     });
 
-    // 9. 使用 page.evaluate 在浏览器端快速点击完成按钮多次
+    // 使用 page.evaluate 在浏览器端快速点击完成按钮多次
     // 这样可以在防重复提交机制生效前连续触发多次点击
-    await page.screenshot({ path: 'test-results/11-before-fast-click.png' });
+    await page.screenshot({ path: 'test-results/13-before-fast-click.png' });
 
     await page.evaluate(() => {
       const doneBtn = document.getElementById('newPromptDoneBtn');
@@ -100,16 +125,16 @@ test.describe('新建提示词防重复提交', () => {
       }
     });
 
-    await page.screenshot({ path: 'test-results/12-after-fast-click.png' });
+    await page.screenshot({ path: 'test-results/14-after-fast-click.png' });
 
-    // 10. 等待操作完成 - 页面应该关闭
+    // 等待操作完成 - 页面应该关闭
     await page.waitForFunction(() => {
       const page = document.getElementById('newPromptPage');
       return !page?.classList.contains('active');
     }, { timeout: 3000 });
-    await page.screenshot({ path: 'test-results/13-page-closed.png' });
+    await page.screenshot({ path: 'test-results/15-page-closed.png' });
 
-    // 11. 验证只创建了一个提示词
+    // 验证只创建了一个提示词
     const finalPromptCount = await page.evaluate(async () => {
       const prompts = await window.electronAPI.getPrompts('createdAt', 'desc');
       return prompts.length;
@@ -117,7 +142,7 @@ test.describe('新建提示词防重复提交', () => {
 
     expect(finalPromptCount).toBe(initialPromptCount + 1);
 
-    // 12. 验证创建的提示词内容正确
+    // 验证创建的提示词内容正确
     const createdPrompt = await page.evaluate(async (content): Promise<IPrompt | undefined> => {
       const prompts = await window.electronAPI.getPrompts('createdAt', 'desc');
       return prompts.find((p: IPrompt) => p.content === content);
@@ -130,19 +155,16 @@ test.describe('新建提示词防重复提交', () => {
   test('重复点击完成按钮时应该只执行一次保存', async () => {
     const page = electronTest.getPage();
 
-    // 1. 切换到图像面板
-    await page.click('#imageManagerBtn');
-    await page.waitForTimeout(300);
+    // 进入图像网格视图并获取第一个图像
+    const firstImage = await enterImageGridView(page);
 
-    // 2. 点击第一个图像打开详情
-    const firstImage = page.locator('.image-card').first();
-    await expect(firstImage).toBeVisible();
+    // 点击第一个图像打开详情
     await firstImage.click();
 
-    // 3. 等待图像详情页面加载
+    // 等待图像详情页面加载
     await page.waitForSelector('#imageDetailModal.active', { timeout: 1000 });
 
-    // 4. 检查按钮状态，如有"编辑"则先解除关联
+    // 检查按钮状态，如有"编辑"则先解除关联
     const editPromptBtn = page.locator('#editPromptFromImageBtn');
     await editPromptBtn.waitFor({ state: 'visible', timeout: 1000 });
 
@@ -162,23 +184,23 @@ test.describe('新建提示词防重复提交', () => {
       }, { timeout: 2000 });
     }
 
-    // 5. 点击"添加提示词"按钮
+    // 点击"添加提示词"按钮
     await editPromptBtn.click();
 
-    // 6. 等待新建提示词页面加载
+    // 等待新建提示词页面加载
     await page.waitForSelector('#newPromptPage.active', { timeout: 1000 });
 
-    // 7. 输入提示词内容
+    // 输入提示词内容
     const testContent = `测试防重复提示 ${Date.now()}`;
     await page.fill('#newPromptContent', testContent);
 
-    // 8. 获取当前提示词数量
+    // 获取当前提示词数量
     const initialPromptCount = await page.evaluate(async () => {
       const prompts = await window.electronAPI.getPrompts('createdAt', 'desc');
       return prompts.length;
     });
 
-    // 9. 在浏览器端快速点击完成按钮多次
+    // 在浏览器端快速点击完成按钮多次
     await page.evaluate(() => {
       const doneBtn = document.getElementById('newPromptDoneBtn');
       if (doneBtn) {
@@ -189,16 +211,16 @@ test.describe('新建提示词防重复提交', () => {
       }
     });
 
-    // 10. 等待页面关闭
+    // 等待页面关闭
     await page.waitForFunction(() => {
       const page = document.getElementById('newPromptPage');
       return !page?.classList.contains('active');
     }, { timeout: 3000 });
 
-    // 11. 等待一段时间确保所有操作完成
+    // 等待一段时间确保所有操作完成
     await page.waitForTimeout(500);
 
-    // 12. 验证只创建了一个提示词
+    // 验证只创建了一个提示词
     const finalPromptCount = await page.evaluate(async () => {
       const prompts = await window.electronAPI.getPrompts('createdAt', 'desc');
       return prompts.length;
@@ -206,7 +228,7 @@ test.describe('新建提示词防重复提交', () => {
 
     expect(finalPromptCount).toBe(initialPromptCount + 1);
 
-    // 13. 验证只创建了指定内容的提示词
+    // 验证只创建了指定内容的提示词
     const createdPrompts = await page.evaluate(async (content) => {
       const prompts = await window.electronAPI.getPrompts('createdAt', 'desc');
       return prompts.filter((p: IPrompt) => p.content === content);
@@ -218,19 +240,16 @@ test.describe('新建提示词防重复提交', () => {
   test('空内容时不应该创建提示词', async () => {
     const page = electronTest.getPage();
 
-    // 1. 切换到图像面板
-    await page.click('#imageManagerBtn');
-    await page.waitForTimeout(300);
+    // 进入图像网格视图并获取第一个图像
+    const firstImage = await enterImageGridView(page);
 
-    // 2. 点击第一个图像打开详情
-    const firstImage = page.locator('.image-card').first();
-    await expect(firstImage).toBeVisible();
+    // 点击第一个图像打开详情
     await firstImage.click();
 
-    // 3. 等待图像详情页面加载
+    // 等待图像详情页面加载
     await page.waitForSelector('#imageDetailModal.active', { timeout: 1000 });
 
-    // 4. 检查按钮状态，如有"编辑"则先解除关联
+    // 检查按钮状态，如有"编辑"则先解除关联
     const editPromptBtn = page.locator('#editPromptFromImageBtn');
     await editPromptBtn.waitFor({ state: 'visible', timeout: 1000 });
 
@@ -250,30 +269,30 @@ test.describe('新建提示词防重复提交', () => {
       }, { timeout: 2000 });
     }
 
-    // 5. 点击"添加提示词"按钮
+    // 点击"添加提示词"按钮
     await editPromptBtn.click();
 
-    // 6. 等待新建提示词页面加载
+    // 等待新建提示词页面加载
     await page.waitForSelector('#newPromptPage.active', { timeout: 1000 });
     await page.screenshot({ path: 'test-results/empty-01-page-open.png' });
 
-    // 7. 获取当前提示词数量
+    // 获取当前提示词数量
     const initialPromptCount = await page.evaluate(async () => {
       const prompts = await window.electronAPI.getPrompts('createdAt', 'desc');
       return prompts.length;
     });
 
-    // 8. 不输入内容，直接点击完成按钮
+    // 不输入内容，直接点击完成按钮
     const doneButton = page.locator('#newPromptDoneBtn');
     await doneButton.waitFor({ state: 'visible', timeout: 1000 });
     await doneButton.click();
     await page.screenshot({ path: 'test-results/empty-02-clicked.png' });
 
-    // 9. 等待错误提示
+    // 等待错误提示
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'test-results/empty-03-after-click.png' });
 
-    // 10. 验证页面没有关闭（因为内容为空）
+    // 验证页面没有关闭（因为内容为空）
     const isPageActive = await page.evaluate(() => {
       const page = document.getElementById('newPromptPage');
       return page?.classList.contains('active');
@@ -281,7 +300,7 @@ test.describe('新建提示词防重复提交', () => {
 
     expect(isPageActive).toBe(true);
 
-    // 11. 验证提示词数量没有变化
+    // 验证提示词数量没有变化
     const finalPromptCount = await page.evaluate(async () => {
       const prompts = await window.electronAPI.getPrompts('createdAt', 'desc');
       return prompts.length;
@@ -289,7 +308,7 @@ test.describe('新建提示词防重复提交', () => {
 
     expect(finalPromptCount).toBe(initialPromptCount);
 
-    // 12. 取消关闭页面
+    // 取消关闭页面
     await page.click('#newPromptCancelBtn');
     await page.waitForTimeout(300);
   });

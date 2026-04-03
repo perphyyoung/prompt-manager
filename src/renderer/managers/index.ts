@@ -16,9 +16,8 @@ export { SimpleTagManagerFactory } from './SimpleTagManagerFactory.ts';
 
 export { TrashManager } from './TrashManager.ts';
 
-// 批量操作工具栏控制器
-export { BatchToolbarUI } from './BatchToolbarUI.ts';
-export { BatchProcessor } from './BatchProcessor.ts';
+// 批量操作管理器
+export { BatchOperationManager } from './BatchOperationManager.ts';
 
 export { ImageFullscreenManager } from './ImageFullscreenManager.ts';
 export { DetailViewManager } from './DetailViewManager.ts';

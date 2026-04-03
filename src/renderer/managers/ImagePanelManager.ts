@@ -6,6 +6,9 @@ import { DialogService, DialogConfig } from '../services/index.ts';
 import { BatchConfig } from '../config/index.ts';
 import { IImage } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
+import { CardEventStrategy } from './Strategies/CardEventStrategy.ts';
+import { ListEventStrategy } from './Strategies/ListEventStrategy.ts';
+import { IEventStrategy, EventContext, ItemType } from './Strategies/IEventStrategy.ts';
 
 interface ImagePanelManagerOptions {
   app: {
@@ -172,7 +175,8 @@ export class ImagePanelManager extends PanelManagerBase {
 
       // 渲染网格视图
       PanelRenderer.renderGrid(filtered, (img) => this.createCard(img as IImage), 'imageGrid');
-      this.bindCardEvents(filtered);
+      this.bindItemEvents(filtered);
+      this.bindCardButtonEvents(filtered);
       this.loadCardBackgrounds();
       this.bindHoverPreview('.image-card');
       this.bindCardDropEvents(container!);
@@ -189,31 +193,26 @@ export class ImagePanelManager extends PanelManagerBase {
   /**
    * 创建图像卡片 HTML（实现基类抽象方法）
    */
-  createCard(img: IImage): string {
+  createCard(img: IImage, index?: number): string {
     return UnifiedCardRenderer.render(ImageMainConfig, img, {
       icons: Constants.ICONS,
       sortBy: this.sortBy,
-      app: this.app
+      app: this.app,
+      selectedIds: this.selectionManager.selectedIds,
+      index
     });
   }
 
   /**
-   * 绑定图像卡片事件（实现基类抽象方法）
+   * 绑定卡片按钮事件（删除、收藏、复制）
    */
-  bindCardEvents(filtered: IImage[]): void {
+  bindCardButtonEvents(filtered: IImage[]): void {
     const container = document.getElementById('imageGrid');
     if (!container) return;
 
     filtered.forEach(img => {
       const card = container.querySelector(`[data-id="${img.id}"]`);
       if (!card) return;
-
-      // 点击卡片
-      card.addEventListener('click', (e) => {
-        if (!(e.target as Element).closest('.action-btn')) {
-          (this.app as ImagePanelManagerOptions['app']).openImageDetailModal(img, { filteredList: filtered });
-        }
-      });
 
       // 删除按钮
       const deleteBtn = card.querySelector('.delete-btn');
@@ -304,7 +303,7 @@ export class ImagePanelManager extends PanelManagerBase {
       UnifiedListRenderer.render(ImageListConfig, img, {
         icons: Constants.ICONS,
         isCompact,
-        isSelected: this.selectedIds.has(String(img.id)),
+        isSelected: this.selectionManager.isSelected(String(img.id)),
         index
       })
     ).join('');
@@ -313,7 +312,8 @@ export class ImagePanelManager extends PanelManagerBase {
     this.loadImageListThumbnails();
 
     // 绑定事件
-    this.bindImageListEvents(filtered);
+    this.bindItemEvents(filtered);
+    this.bindListButtonEvents(filtered);
     this.bindHoverPreview('.list-item--image');
     this.bindCardDropEvents(listContainer);
   }
@@ -343,86 +343,18 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
-   * 绑定图像列表事件
+   * 绑定列表按钮事件（删除、收藏、复制）
    */
-  bindImageListEvents(images: IImage[]): void {
+  bindListButtonEvents(filtered: IImage[]): void {
     const listContainer = document.getElementById('imageList');
     if (!listContainer) return;
-
-    // 列表项点击事件
-    listContainer.querySelectorAll('.list-item--image').forEach(item => {
-      item.addEventListener('click', (e: Event) => {
-        // 如果点击的是复选框或按钮，不处理
-        if ((e.target as Element).closest('.list-item__checkbox') ||
-            (e.target as Element).closest('.favorite-btn') ||
-            (e.target as Element).closest('.delete-btn')) {
-          return;
-        }
-
-        const mouseEvent = e as MouseEvent;
-        const id = (item as HTMLElement).dataset.id;
-        const index = parseInt((item as HTMLElement).dataset.index || '0');
-
-        // 多选逻辑
-        if (mouseEvent.ctrlKey || mouseEvent.metaKey) {
-          if (this.selectedIds.has(String(id))) {
-            this.selectedIds.delete(String(id));
-          } else {
-            this.selectedIds.add(String(id));
-            this.lastSelectedIndex = index;
-          }
-        } else if (mouseEvent.shiftKey && this.lastSelectedIndex !== -1) {
-          // Shift+点击：范围选择
-          const start = Math.min(this.lastSelectedIndex, index);
-          const end = Math.max(this.lastSelectedIndex, index);
-          for (let i = start; i <= end; i++) {
-            this.selectedIds.add(String(images[i].id));
-          }
-        } else {
-          // 普通点击：单选并打开详情
-          this.selectedIds.clear();
-          this.selectedIds.add(String(id));
-          this.lastSelectedIndex = index;
-          const img = images.find(i => String(i.id) === String(id));
-          if (img) {
-            (this.app as ImagePanelManagerOptions['app']).openImageDetailModal(img, { filteredList: images });
-          }
-        }
-
-        this.renderView();
-        this.toolbarController?.updateUI();
-      });
-    });
-
-    // 复选框事件
-    listContainer.querySelectorAll('.list-item__checkbox').forEach(checkbox => {
-      // 设置初始状态
-      const id = (checkbox as HTMLElement).dataset.id;
-      const isSelected = this.selectedIds.has(String(id));
-      (checkbox as HTMLInputElement).checked = isSelected;
-
-      checkbox.addEventListener('change', (e) => {
-        const id = (e.target as HTMLElement).dataset.id;
-        const index = parseInt((e.target as HTMLElement).dataset.index || '0');
-
-        if ((e.target as HTMLInputElement).checked) {
-          this.selectedIds.add(String(id));
-          this.lastSelectedIndex = index;
-        } else {
-          this.selectedIds.delete(String(id));
-        }
-
-        this.renderView();
-        this.toolbarController?.updateUI();
-      });
-    });
 
     // 收藏按钮事件
     listContainer.querySelectorAll('.favorite-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const id = (btn as HTMLElement).dataset.id;
-        const img = this.images.find(i => String(i.id) === String(id));
+        const img = filtered.find(i => String(i.id) === String(id));
         if (img) {
           await this.toggleFavorite(String(id), !img.isFavorite);
         }
@@ -446,7 +378,7 @@ export class ImagePanelManager extends PanelManagerBase {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const id = (btn as HTMLElement).dataset.id;
-        const img = this.images.find(i => String(i.id) === String(id));
+        const img = filtered.find(i => String(i.id) === String(id));
         const imgWithPrompt = img as ImageWithPromptContent | undefined;
         if (imgWithPrompt && imgWithPrompt.promptRefs && imgWithPrompt.promptRefs.length > 0) {
           const promptContent = imgWithPrompt.promptRefs[0].promptContent;
@@ -770,6 +702,62 @@ export class ImagePanelManager extends PanelManagerBase {
       // 设置行高等于列宽，保持1:1方形
       imageGrid.style.gridAutoRows = `${size}px`;
     }
+  }
+
+  /**
+   * 获取当前视图的事件策略
+   */
+  protected getEventStrategy(): IEventStrategy | null {
+    if (this.viewModeType === 'grid') {
+      return new ImageCardEventStrategy(this);
+    } else if (this.viewModeType === 'list' || this.viewModeType === 'list-compact') {
+      return new ImageListEventStrategy(this);
+    }
+    return null;
+  }
+
+  /**
+   * 获取当前视图的容器元素
+   */
+  protected getCurrentContainer(): HTMLElement | null {
+    if (this.viewModeType === 'grid') {
+      return document.getElementById('imageGrid');
+    } else {
+      return document.getElementById('imageList');
+    }
+  }
+
+  /**
+   * 打开图像详情
+   */
+  openImageDetail(img: IImage): void {
+    (this.app as ImagePanelManagerOptions['app']).openImageDetailModal(img, { filteredList: this.getItems() as IImage[] });
+  }
+}
+
+/**
+ * 图像卡片事件策略
+ */
+class ImageCardEventStrategy extends CardEventStrategy {
+  constructor(private manager: ImagePanelManager) {
+    super();
+  }
+
+  protected handleOpenDetail(item: ItemType): void {
+    this.manager.openImageDetail(item as IImage);
+  }
+}
+
+/**
+ * 图像列表事件策略
+ */
+class ImageListEventStrategy extends ListEventStrategy {
+  constructor(private manager: ImagePanelManager) {
+    super();
+  }
+
+  protected handleOpenDetail(item: ItemType): void {
+    this.manager.openImageDetail(item as IImage);
   }
 }
 

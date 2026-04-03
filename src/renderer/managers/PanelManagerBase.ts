@@ -2,11 +2,12 @@ import { HtmlUtils } from '../../utils/index.ts';
 import { cacheManager, CacheManager } from '../../utils/CacheManager.ts';
 import { LRUCache } from '../../utils/LRUCache.ts';
 import { TagUI } from './TagUI.ts';
-import { BatchToolbarUI } from './BatchToolbarUI.ts';
-import { BatchProcessor } from './BatchProcessor.ts';
+import { BatchOperationManager } from './BatchOperationManager.ts';
 import { TagService } from './TagService.ts';
 import { TopGroupManager } from './TopGroupManager.ts';
 import { ITagWithGroup, ITagGroup } from '../../types/entities.ts';
+import { IEventStrategy, EventContext } from './Strategies/IEventStrategy.ts';
+import { SelectionManager } from './SelectionManager.ts';
 
 // 工具栏按钮配置
 interface BatchToolbarButton {
@@ -97,7 +98,7 @@ interface SpecialTagCount {
  * 封装提示词面板和图像面板的通用逻辑
  * 使用模板方法模式，子类实现特定差异
  */
-export class PanelManagerBase {
+export abstract class PanelManagerBase {
   [key: string]: unknown;
   app: unknown;
   protected tagManager?: unknown;
@@ -105,12 +106,16 @@ export class PanelManagerBase {
   protected storagePrefix: string;
   protected defaultCardSize: number;
   protected onSelectionChange?: () => void;
-  toolbarController?: BatchToolbarUI;
-  protected batchExecutor?: BatchProcessor;
+  toolbarController?: BatchOperationManager;
 
   // 通用状态
   protected filteredItems: Item[] = [];
   protected selectedTags: Set<string> = new Set();
+  protected _previousFilterState = {
+    selectedTags: [] as string[],
+    searchQuery: '',
+    viewMode: undefined as string | undefined
+  };
 
   // 视图设置
   viewModeType: string;
@@ -120,9 +125,8 @@ export class PanelManagerBase {
   tagFilterSortBy: string;
   tagFilterSortOrder: string;
 
-  // 选中状态
-  selectedIds: Set<string> = new Set();
-  lastSelectedIndex: number = -1;
+  // 选择管理器
+  selectionManager: SelectionManager;
 
   /**
    * @param options - 配置选项
@@ -150,23 +154,28 @@ export class PanelManagerBase {
     this.tagFilterSortBy = localStorage.getItem(`${this.storagePrefix}TagFilterSortBy`) || 'count';
     this.tagFilterSortOrder = localStorage.getItem(`${this.storagePrefix}TagFilterSortOrder`) || 'desc';
 
-    // 初始化批量操作工具栏控制器
-    if (options.toolbarConfig) {
-      this.toolbarController = new BatchToolbarUI({
-        ...options.toolbarConfig,
-        getSelectedCount: () => this.selectedIds.size,
-        panelManager: this
-      });
-      this.toolbarController.init();
-    }
+    // 初始化选择管理器（先初始化，因为 BatchOperationManager 需要它）
+    this.selectionManager = new SelectionManager(() => {
+      this.renderView();
+      this.toolbarController?.updateUI();
+      this.syncBatchMode();
+    });
 
-    // 初始化批量操作执行器
-    if (options.operationConfig) {
-      this.batchExecutor = new BatchProcessor({
+    // 初始化批量操作管理器（包含UI和操作执行）
+    if (options.toolbarConfig) {
+      this.toolbarController = new BatchOperationManager({
+        toolbarId: options.toolbarConfig.toolbarId,
+        actionsId: options.toolbarConfig.actionsId,
+        countId: options.toolbarConfig.countId,
+        selectAllCheckboxId: options.toolbarConfig.selectAllCheckboxId,
+        label: options.toolbarConfig.label,
+        buttons: options.toolbarConfig.buttons,
+        selectionManager: this.selectionManager,
         panelManager: this,
         operationConfig: options.operationConfig,
         eventBus: this.eventBus
       });
+      this.toolbarController.init();
     }
 
     // 绑定事件
@@ -182,21 +191,23 @@ export class PanelManagerBase {
    */
   protected bindKeyboardEvents(): void {
     document.addEventListener('keydown', (e: KeyboardEvent) => {
-      // Ctrl+A: 全选（仅列表视图和紧凑视图支持）
-      if (e.ctrlKey && e.key.toLowerCase() === 'a') {
-        // 检查当前面板是否活动（可见）
-        if (!this.isActivePanel()) return;
+      // 检查当前面板是否活动（可见）
+      if (!this.isActivePanel()) return;
 
-        // 检查当前视图模式
-        if (this.viewModeType === 'list' || this.viewModeType === 'compact') {
-          // 检查是否有可见项目
-          const visibleItems = this.getItems().filter(
-            (item: Item) => !item.isDeleted && ((this.app as { viewMode?: string }).viewMode !== 'safe' || item.isSafe !== 0)
-          );
-          if (visibleItems.length > 0) {
-            e.preventDefault();
-            this.selectAllVisibleItems();
-          }
+      // Ctrl+A: 全选（所有视图都支持）
+      if (e.ctrlKey && e.key.toLowerCase() === 'a') {
+        // 检查是否有可见项目
+        if (this.getVisibleItemCount() > 0) {
+          e.preventDefault();
+          this.selectAllVisibleItems();
+        }
+      }
+
+      // Esc: 退出批量模式
+      if (e.key === 'Escape') {
+        if (this.toolbarController?.isBatchModeActive) {
+          e.preventDefault();
+          this.toolbarController.exitBatchMode();
         }
       }
     });
@@ -217,22 +228,32 @@ export class PanelManagerBase {
   }
 
   /**
+   * 同步批量模式状态
+   * 根据选择状态自动进入或退出批量模式
+   */
+  protected syncBatchMode(): void {
+    const hasSelection = this.selectionManager.count > 0;
+    const isBatchMode = this.toolbarController?.isBatchModeActive;
+
+    if (hasSelection && !isBatchMode) {
+      this.toolbarController?.enterBatchMode();
+    } else if (!hasSelection && isBatchMode) {
+      this.toolbarController?.exitBatchMode();
+    }
+  }
+
+  /**
    * 全选所有可见项目
    */
   protected selectAllVisibleItems(): void {
-    const visibleItems = this.getItems().filter(
-      (item: Item) => !item.isDeleted && ((this.app as { viewMode?: string }).viewMode !== 'safe' || item.isSafe !== 0)
-    );
+    const visibleItems = this.getVisibleItems();
 
     visibleItems.forEach((item: Item) => {
-      this.selectedIds.add(String(item.id));
+      this.selectionManager.addSelection(String(item.id));
     });
 
-    // 进入批量模式
-    if (this.toolbarController) {
-      this.toolbarController.enterBatchMode();
-    }
-
+    // 批量模式会通过 syncBatchMode 自动同步
+    this.toolbarController?.updateUI();
     this.renderView();
   }
 
@@ -243,6 +264,22 @@ export class PanelManagerBase {
    */
   getItems(): Item[] {
     throw new Error('getItems() must be implemented by subclass');
+  }
+
+  /**
+   * 获取可见项目列表（筛选后）
+   * @returns 筛选后的可见项目列表
+   */
+  getVisibleItems(): Item[] {
+    return this.filteredItems || [];
+  }
+
+  /**
+   * 获取可见项目数量
+   * @returns 可见项目数量
+   */
+  getVisibleItemCount(): number {
+    return this.filteredItems?.length || 0;
   }
 
   /**
@@ -473,6 +510,47 @@ export class PanelManagerBase {
   }
 
   /**
+   * 检查筛选条件是否改变
+   * @returns 筛选条件是否改变
+   */
+  protected checkFilterChanged(): boolean {
+    const currentTags = Array.from(this.selectedTags);
+    const currentSearchQuery = this.getSearchQuery();
+    const currentViewMode = (this.app as { viewMode?: string }).viewMode;
+
+    // 如果是第一次调用，初始化状态
+    if (this._previousFilterState.selectedTags.length === 0 &&
+        this._previousFilterState.searchQuery === '' &&
+        this._previousFilterState.viewMode === undefined) {
+      this._previousFilterState = {
+        selectedTags: currentTags,
+        searchQuery: currentSearchQuery,
+        viewMode: currentViewMode
+      };
+      return false;
+    }
+
+    const tagsChanged = 
+      currentTags.length !== this._previousFilterState.selectedTags.length ||
+      !currentTags.every((tag, i) => tag === this._previousFilterState.selectedTags[i]);
+
+    const changed =
+      tagsChanged ||
+      currentSearchQuery !== this._previousFilterState.searchQuery ||
+      currentViewMode !== this._previousFilterState.viewMode;
+
+    if (changed) {
+      this._previousFilterState = {
+        selectedTags: currentTags,
+        searchQuery: currentSearchQuery,
+        viewMode: currentViewMode
+      };
+    }
+
+    return changed;
+  }
+
+  /**
    * 渲染主列表（模板方法）
    */
   async renderView(): Promise<void> {
@@ -486,7 +564,8 @@ export class PanelManagerBase {
       filtered = filtered.filter((item: Item) => !item.isDeleted);
 
       // 根据 viewMode 过滤
-      if ((this.app as { viewMode?: string }).viewMode === 'safe') {
+      const currentViewMode = (this.app as { viewMode?: string }).viewMode;
+      if (currentViewMode === 'safe') {
         filtered = filtered.filter((item: Item) => item.isSafe !== 0);
       }
 
@@ -510,9 +589,9 @@ export class PanelManagerBase {
       }
 
       // 搜索过滤
-      const searchQuery = this.getSearchQuery();
-      if (searchQuery) {
-        const lowerQuery = searchQuery.toLowerCase();
+      const currentSearchQuery = this.getSearchQuery();
+      if (currentSearchQuery) {
+        const lowerQuery = currentSearchQuery.toLowerCase();
         filtered = filtered.filter((item: Item) => this.matchesSearch(item, lowerQuery));
       }
 
@@ -522,8 +601,20 @@ export class PanelManagerBase {
       // 保存筛选后的列表
       this.filteredItems = filtered;
 
+      // 检查筛选条件是否改变
+      const filterChanged = this.checkFilterChanged();
+      if (filterChanged) {
+        this.selectionManager.clear();
+        this.toolbarController?.exitBatchMode();
+        // 筛选条件改变时才重置 lastSelectedIndex，因为索引对应关系已改变
+        this.selectionManager.resetLastSelectedIndex();
+      }
+
       // 子类实现具体的渲染逻辑
       await this.renderContainer(filtered);
+
+      // 更新选择模式类
+      this.updateSelectionModeClass();
     } catch (error) {
       (window as { electronAPI?: { logError?: (context: string, message: string, data?: unknown) => void } }).electronAPI?.logError?.('PanelManagerBase.ts', `Failed to render ${this.getItemType()} list:`, error);
       (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(`加载${this.getItemType()}失败`, 'error');
@@ -872,11 +963,12 @@ export class PanelManagerBase {
   /**
    * 设置视图模式
    * @param mode - 视图模式
+   * @param preserveSelection - 是否保留选择状态（默认 true）
    */
-  setViewMode(mode: string): void {
-    // 切换视图模式时清除选择状态
-    if (this.selectedIds) {
-      this.selectedIds.clear();
+  setViewMode(mode: string, preserveSelection: boolean = true): void {
+    // 切换视图模式时可选保留选择状态
+    if (!preserveSelection) {
+      this.selectionManager.clear();
     }
 
     this.viewModeType = mode;
@@ -924,36 +1016,6 @@ export class PanelManagerBase {
   }
 
   /**
-   * 处理项目选择
-   * @param id - 项目 ID
-   * @param index - 项目索引
-   * @param event - 鼠标事件
-   */
-  handleItemSelection(id: string, index: number, event: MouseEvent): void {
-    if (event.ctrlKey || event.metaKey) {
-      // Ctrl/Cmd + 点击：切换选择
-      if (this.selectedIds.has(id)) {
-        this.selectedIds.delete(id);
-      } else {
-        this.selectedIds.add(id);
-        this.lastSelectedIndex = index;
-      }
-    } else if (event.shiftKey && this.lastSelectedIndex !== -1) {
-      // Shift + 点击：范围选择
-      const start = Math.min(this.lastSelectedIndex, index);
-      const end = Math.max(this.lastSelectedIndex, index);
-      const items = this.filteredItems;
-      for (let i = start; i <= end; i++) {
-        if (items[i]) {
-          this.selectedIds.add(items[i].id);
-        }
-      }
-    }
-
-    this.renderView();
-  }
-
-  /**
    * 数据更新后的统一刷新
    * 加载最新数据、重新渲染界面、更新标签筛选区
    */
@@ -972,48 +1034,100 @@ export class PanelManagerBase {
     await this.renderView();
   }
 
-  // ==================== 批量操作方法（配置驱动） ====================
+  /**
+   * 更新选择模式类
+   * 根据是否有选中项在容器上添加/移除 selection-mode 类
+   */
+  protected updateSelectionModeClass(): void {
+    const containerIds = ['imageGrid', 'promptGrid', 'imageList', 'promptList'];
+
+    containerIds.forEach(id => {
+      const container = document.getElementById(id);
+      if (container) {
+        if (this.selectionManager.count > 0) {
+          container.classList.add('selection-mode');
+        } else {
+          container.classList.remove('selection-mode');
+        }
+      }
+    });
+  }
+
+  /**
+   * 获取当前视图的事件策略
+   * 子类实现以提供对应视图的策略
+   */
+  protected abstract getEventStrategy(): IEventStrategy | null;
+
+  /**
+   * 获取当前视图的容器元素
+   */
+  protected abstract getCurrentContainer(): HTMLElement | null;
+
+  /**
+   * 模板方法：绑定项目事件
+   * 使用策略模式处理不同视图的事件绑定
+   */
+  protected bindItemEvents(items: Item[]): void {
+    const strategy = this.getEventStrategy();
+    if (!strategy) return;
+
+    const container = this.getCurrentContainer();
+    if (!container) return;
+
+    // 构建事件上下文
+    const eventContext: EventContext = {
+      selectionManager: this.selectionManager,
+      toolbarController: this.toolbarController,
+      renderView: () => this.renderView(),
+      items: items
+    };
+
+    strategy.bindEvents(container, items, eventContext);
+  }
+
+  // ==================== 批量操作方法（委托给 BatchOperationManager） ====================
 
   /**
    * 批量删除
    */
   async batchDelete(): Promise<void> {
-    await this.batchExecutor?.executeDelete('delete');
+    await this.toolbarController?.batchDelete();
   }
 
   /**
    * 批量添加标签
    */
   async batchAddTag(): Promise<void> {
-    await this.batchExecutor?.executeAddTag('addTag');
+    await this.toolbarController?.batchAddTag();
   }
 
   /**
    * 批量收藏
    */
   async batchFavorite(): Promise<void> {
-    await this.batchExecutor?.executeFavorite('favorite');
+    await this.toolbarController?.batchFavorite();
   }
 
   /**
    * 取消选择
    */
   batchCancel(): void {
-    this.batchExecutor?.executeCancel();
+    this.toolbarController?.batchCancel();
   }
 
   /**
    * 反选
    */
   batchInvert(): void {
-    this.batchExecutor?.executeInvert();
+    this.toolbarController?.batchInvert();
   }
 
   /**
    * 全选
    */
   batchSelectAll(): void {
-    this.batchExecutor?.executeSelectAll();
+    this.toolbarController?.batchSelectAll();
   }
 
   // ==================== 标签拖拽操作 ====================

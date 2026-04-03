@@ -17,7 +17,10 @@ export type CardTypeValue = typeof CardType[keyof typeof CardType];
  * 主卡片按钮配置
  */
 const CARD_MAIN_BUTTONS = {
-  left: [ButtonFactory.createFavoriteButton()],
+  left: [
+    ButtonFactory.createCheckboxButton(),
+    ButtonFactory.createFavoriteButton()
+  ],
   right: [
     ButtonFactory.createCopyButton(),
     ButtonFactory.createDeleteButton()

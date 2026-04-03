@@ -80,6 +80,19 @@ export class ButtonFactory {
       className: 'btn-danger'
     };
   }
+
+  /**
+   * 创建复选框按钮
+   * @returns 按钮配置
+   */
+  static createCheckboxButton(): ButtonConfig {
+    return {
+      type: 'checkbox',
+      action: 'toggleSelect',
+      title: '选择',
+      className: 'checkbox-btn'
+    };
+  }
 }
 
 export interface Icons {

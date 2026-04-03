@@ -6,6 +6,9 @@ import { DialogService, DialogConfig } from '../services/index.ts';
 import { BatchConfig } from '../config/index.ts';
 import { IPrompt } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
+import { CardEventStrategy } from './Strategies/CardEventStrategy.ts';
+import { ListEventStrategy } from './Strategies/ListEventStrategy.ts';
+import { IEventStrategy, EventContext, ItemType } from './Strategies/IEventStrategy.ts';
 
 interface PromptPanelManagerOptions {
   app: {
@@ -26,7 +29,6 @@ interface PromptPanelManagerOptions {
       }) => void;
     };
     findImageById: (imageId: string, allImages?: Array<{ id: string }> | null) => { id: string } | null;
-    handlePromptItemSelection: (promptId: string, index: number, event: MouseEvent) => void;
   };
   tagManager?: unknown;
   saveManager?: unknown;
@@ -186,7 +188,8 @@ export class PromptPanelManager extends PanelManagerBase {
 
       // 渲染网格视图
       PanelRenderer.renderGrid(filtered, (prompt) => this.createCard(prompt as IPrompt), 'promptGrid');
-      this.bindCardEvents(filtered);
+      this.bindItemEvents(filtered);
+      this.bindCardButtonEvents(filtered);
       this.loadCardBackgrounds();
       this.bindHoverPreview('.prompt-card');
       this.bindCardDropEvents(container!);
@@ -203,31 +206,26 @@ export class PromptPanelManager extends PanelManagerBase {
   /**
    * 创建提示词卡片 HTML（实现基类抽象方法）
    */
-  createCard(prompt: IPrompt): string {
+  createCard(prompt: IPrompt, index?: number): string {
     return UnifiedCardRenderer.render(PromptMainConfig, prompt, {
       icons: Constants.ICONS,
       sortBy: this.sortBy,
-      app: this.app
+      app: this.app,
+      selectedIds: this.selectionManager.selectedIds,
+      index
     });
   }
 
   /**
-   * 绑定提示词卡片事件（实现基类抽象方法）
+   * 绑定卡片按钮事件（复制、删除、收藏）
    */
-  bindCardEvents(filtered: IPrompt[]): void {
+  bindCardButtonEvents(filtered: IPrompt[]): void {
     const container = document.getElementById('promptGrid');
     if (!container) return;
 
     filtered.forEach(prompt => {
       const card = container.querySelector(`[data-id="${prompt.id}"]`);
       if (!card) return;
-
-      // 点击卡片
-      card.addEventListener('click', (e) => {
-        if (!(e.target as Element).closest('.action-btn')) {
-          (this.app as PromptPanelManagerOptions['app']).openEditPromptModal(prompt, { filteredList: filtered });
-        }
-      });
 
       // 复制按钮
       const copyBtn = card.querySelector('.copy-btn');
@@ -315,7 +313,7 @@ export class PromptPanelManager extends PanelManagerBase {
       UnifiedListRenderer.render(PromptListConfig, prompt, {
         icons: Constants.ICONS,
         isCompact,
-        isSelected: this.selectedIds.has(String(prompt.id)),
+        isSelected: this.selectionManager.isSelected(String(prompt.id)),
         index
       })
     );
@@ -326,7 +324,8 @@ export class PromptPanelManager extends PanelManagerBase {
     await this.loadPromptListThumbnails(filtered);
 
     // 绑定事件
-    this.bindPromptListItemEvents(listContainer, filtered);
+    this.bindItemEvents(filtered);
+    this.bindListButtonEvents(filtered);
     this.bindHoverPreview('.list-item--prompt');
     this.bindCardDropEvents(listContainer);
     this.toolbarController?.updateUI();
@@ -367,51 +366,16 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 绑定提示词列表项事件
+   * 绑定列表按钮事件（复制、收藏、删除）
    */
-  bindPromptListItemEvents(listContainer: HTMLElement, filtered: IPrompt[]): void {
+  bindListButtonEvents(filtered: IPrompt[]): void {
+    const listContainer = document.getElementById('promptList');
+    if (!listContainer) return;
+
     listContainer.querySelectorAll('.list-item--prompt').forEach(item => {
       const promptId = (item as HTMLElement).dataset.id;
-      const index = parseInt((item as HTMLElement).dataset.index || '0');
       const prompt = filtered.find(p => String(p.id) === String(promptId));
       if (!prompt) return;
-
-      // 复选框
-      const checkbox = item.querySelector('.list-item__checkbox') as HTMLInputElement | null;
-      if (checkbox) {
-        // 设置初始状态
-        const idStr = String(promptId);
-        checkbox.checked = this.selectedIds.has(idStr);
-
-        checkbox.addEventListener('change', (e) => {
-          e.stopPropagation();
-          const idStr = String(promptId);
-          if ((e.target as HTMLInputElement).checked) {
-            this.selectedIds.add(idStr);
-          } else {
-            this.selectedIds.delete(idStr);
-          }
-          this.lastSelectedIndex = index;
-          this.renderView();
-          this.toolbarController?.updateUI();
-        });
-      }
-
-      // 点击整行
-      item.addEventListener('click', (e: Event) => {
-        if ((e.target as Element).closest('.list-item__checkbox') || (e.target as Element).closest('.list-item__actions')) {
-          return;
-        }
-
-        const mouseEvent = e as MouseEvent;
-        // Ctrl/Shift 点击：多选
-        if (mouseEvent.ctrlKey || mouseEvent.metaKey || mouseEvent.shiftKey) {
-          (this.app as PromptPanelManagerOptions['app']).handlePromptItemSelection(String(promptId), index, mouseEvent);
-        } else {
-          // 普通点击：打开编辑
-          (this.app as PromptPanelManagerOptions['app']).openEditPromptModal(prompt, { filteredList: filtered });
-        }
-      });
 
       // 复制按钮
       const copyBtn = item.querySelector('.copy-btn');
@@ -744,6 +708,62 @@ export class PromptPanelManager extends PanelManagerBase {
       // 设置行高等于列宽，保持1:1方形
       promptGrid.style.gridAutoRows = `${size}px`;
     }
+  }
+
+  /**
+   * 获取当前视图的事件策略
+   */
+  protected getEventStrategy(): IEventStrategy | null {
+    if (this.viewModeType === 'grid') {
+      return new PromptCardEventStrategy(this);
+    } else if (this.viewModeType === 'list' || this.viewModeType === 'list-compact') {
+      return new PromptListEventStrategy(this);
+    }
+    return null;
+  }
+
+  /**
+   * 获取当前视图的容器元素
+   */
+  protected getCurrentContainer(): HTMLElement | null {
+    if (this.viewModeType === 'grid') {
+      return document.getElementById('promptGrid');
+    } else {
+      return document.getElementById('promptList');
+    }
+  }
+
+  /**
+   * 打开提示词编辑
+   */
+  openPromptDetail(prompt: IPrompt): void {
+    (this.app as PromptPanelManagerOptions['app']).openEditPromptModal(prompt, { filteredList: this.getItems() as IPrompt[] });
+  }
+}
+
+/**
+ * 提示词卡片事件策略
+ */
+class PromptCardEventStrategy extends CardEventStrategy {
+  constructor(private manager: PromptPanelManager) {
+    super();
+  }
+
+  protected handleOpenDetail(item: ItemType): void {
+    this.manager.openPromptDetail(item as IPrompt);
+  }
+}
+
+/**
+ * 提示词列表事件策略
+ */
+class PromptListEventStrategy extends ListEventStrategy {
+  constructor(private manager: PromptPanelManager) {
+    super();
+  }
+
+  protected handleOpenDetail(item: ItemType): void {
+    this.manager.openPromptDetail(item as IPrompt);
   }
 }
 

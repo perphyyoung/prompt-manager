@@ -7,6 +7,8 @@ export interface CardRenderContext {
   icons: Icons;
   sortBy: string;
   app: unknown;
+  selectedIds?: Set<string>;
+  index?: number;
 }
 
 interface CardData {
@@ -31,7 +33,7 @@ export class UnifiedCardRenderer {
    * @returns HTML字符串
    */
   static render(config: CardConfig, item: Record<string, unknown>, context: CardRenderContext): string {
-    const { icons, sortBy } = context;
+    const { icons, sortBy, selectedIds, index } = context;
     const prefix = config.cssPrefix;
 
     const footerInfo = config.getFooterInfo(item, sortBy);
@@ -45,10 +47,18 @@ export class UnifiedCardRenderer {
       thumbnail: config.getValue(item, 'thumbnail')
     };
 
-    const leftButtonsHtml = this.generateButtons(config.buttons.left, data, icons);
-    const rightButtonsHtml = this.generateButtons(config.buttons.right, data, icons);
+    const isSelected = selectedIds?.has(String(data.id)) || false;
 
-    const className = data.isFavorite ? `${prefix} is-favorite` : prefix;
+    const leftButtonsHtml = this.generateButtons(config.buttons.left, data, icons, isSelected);
+    const rightButtonsHtml = this.generateButtons(config.buttons.right, data, icons, isSelected);
+
+    let className = data.isFavorite
+      ? `${prefix} is-favorite`
+      : prefix;
+    
+    if (isSelected) {
+      className += ' is-selected';
+    }
     // 回收站卡片不在这里设置背景图，由 loadCardBackgroundsForContainer 异步加载
     const bgStyle = '';
 
@@ -58,9 +68,10 @@ export class UnifiedCardRenderer {
       ? (typeof itemWithImages.images[0] === 'object' ? (itemWithImages.images[0] as { id?: string }).id : itemWithImages.images[0])
       : '';
     const firstImageAttr = firstImageId ? ` data-first-image="${firstImageId}"` : '';
+    const indexAttr = index !== undefined ? ` data-index="${index}"` : '';
 
     return `
-      <div class="${className}" data-id="${data.id}" data-type="${config.dataType}"${firstImageAttr}>
+      <div class="${className}" data-id="${data.id}" data-type="${config.dataType}" data-index="${index}"${firstImageAttr}${indexAttr}>
         <div class="${prefix}-bg card__bg" ${bgStyle}></div>
         <div class="${prefix}-overlay card__overlay">
           <div class="${prefix}-row1 card-row">
@@ -77,8 +88,25 @@ export class UnifiedCardRenderer {
     `;
   }
 
-  static generateButtons(buttonConfigs: Array<{ type: string; action: string; title: string; className?: string }>, data: CardData, icons: Icons): string {
+  static generateButtons(
+    buttonConfigs: Array<{ type: string; action: string; title: string; className?: string }>,
+    data: CardData,
+    icons: Icons,
+    isSelected?: boolean
+  ): string {
     return buttonConfigs.map(btn => {
+      // 复选框特殊处理
+      if (btn.type === 'checkbox') {
+        return `
+          <input type="checkbox"
+                 class="card-checkbox"
+                 data-action="${btn.action}"
+                 data-id="${data.id}"
+                 title="${btn.title}"
+                 ${isSelected ? 'checked' : ''}>
+        `;
+      }
+
       const isActive = btn.type === 'favorite' && !!data.isFavorite;
       const iconSvg = this.getIconSvg(btn.type, icons, isActive);
 

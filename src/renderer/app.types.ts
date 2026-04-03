@@ -1,6 +1,7 @@
 import type { LRUCache } from '../utils/LRUCache.ts';
 import type { ITagRegistry, ITagService, IPrompt, IImage } from '../types/entities.ts';
 import type { DialogService } from './services/DialogService.ts';
+import type { SelectionManager } from './managers/SelectionManager.ts';
 
 // 重新导出类型
 export type { ITagRegistry, ITagService, IPrompt, IImage };
@@ -26,8 +27,7 @@ export interface IPanelManager {
   setViewMode(mode: string): void;
   setCardSize(size: number): void;
   handleFilterAction(): void;
-  selectedIds: Set<string>;
-  lastSelectedIndex: number;
+  selectionManager: SelectionManager;
   refreshAfterUpdate(): Promise<void>;
   updateToolbarUI(): void;
   exitBatchMode(): void;
@@ -306,7 +306,6 @@ export interface IApp {
   showInputDialog(title: string, label: string, defaultValue?: string, options?: unknown): Promise<string | null>;
   closeInputModal(): void;
   closeSelectModal(): void;
-  handlePromptItemSelection(promptId: string, index: number, e: MouseEvent): void;
   displayedImages?: unknown[];
 }
 
