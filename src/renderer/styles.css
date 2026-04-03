@@ -2,6 +2,7 @@
   --primary-color: #6366f1;
   --primary-hover: #4f46e5;
   --primary-light: #e0e7ff;
+  --selection-overlay: rgba(0, 140, 255, 0.3);
   --secondary-color: #64748b;
   --bg-color: #f8fafc;
   --sidebar-bg: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
@@ -1117,19 +1118,19 @@ body * {
   font-style: italic;
 }
 
-.prompt-list {
+/* ==================== 视图容器（统一） ==================== */
+
+.grid-view {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 260px);
-  grid-auto-rows: 260px;
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, 200px);
+  grid-auto-rows: 200px;
+  gap: 16px;
   overflow-y: auto;
   flex: 1;
   padding-right: 8px;
 }
 
-/* ==================== 提示词列表视图 ==================== */
-
-.prompt-list-view {
+.list-view {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1165,8 +1166,10 @@ body * {
   background: var(--bg-color);
 }
 
-.list-item--selected {
-  background: rgba(99, 102, 241, 0.1);
+/* 列表项选中样式 - 统一使用背景色 */
+.list-item--selected,
+.list-item--selected:hover {
+  background: var(--selection-overlay);
 }
 
 .list-item--favorite {
@@ -1177,32 +1180,15 @@ body * {
   border-left: 3px solid var(--text-secondary);
 }
 
-/* 提示词列表项特有样式 */
-.list-item--prompt:hover {
-  background: var(--bg-color);
-}
 
-.list-item--prompt.list-item--selected {
-  background: rgba(99, 102, 241, 0.1);
-}
 
-/* 图像列表项特有样式 */
-.list-item--image:hover {
-  background: rgba(99, 102, 241, 0.05);
-  box-shadow: none;
-}
-
-.list-item--image.list-item--selected {
-  background: rgba(99, 102, 241, 0.08);
-  border-bottom-color: var(--primary-color);
-}
-
-/* 复选框 */
+/* 列表复选框 */
 .list-item__checkbox {
-  width: 16px;
-  height: 16px;
   cursor: pointer;
   flex-shrink: 0;
+  accent-color: var(--primary-color);
+  width: 16px;
+  height: 16px;
 }
 
 /* 缩略图 */
@@ -1320,7 +1306,8 @@ body * {
 
 /* 紧凑模式 */
 .list-item--compact {
-  padding: 8px 16px;
+  padding: 4px 8px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -1350,35 +1337,19 @@ body * {
   border-radius: 4px;
 }
 
-/* 图像列表紧凑模式特有 */
-.list-item--image.list-item--compact {
-  padding: 4px 8px;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--border-color);
-  border-radius: 0;
-  gap: 8px;
-}
-
-.list-item--image.list-item--compact.list-item--selected {
-  background: transparent;
-  border-color: var(--border-color);
-  border-bottom-color: var(--primary-color);
-}
-
-.list-item--image.list-item--compact .list-item__title {
+.list-item--compact .list-item__title {
   font-size: var(--font-size-sm);
 }
 
-.list-item--image.list-item--compact .list-item__tags {
+.list-item--compact .list-item__tags {
   gap: 2px;
 }
 
-.list-item--image.list-item--compact .list-item__actions button {
+.list-item--compact .list-item__actions button {
   padding: 2px;
 }
 
-.list-item--image.list-item--compact .list-item__actions .favorite-btn svg {
+.list-item--compact .list-item__actions .favorite-btn svg {
   width: 14px;
   height: 14px;
 }
@@ -1460,30 +1431,6 @@ body * {
   color: var(--text-secondary);
   margin-top: 6px;
 }
-
-/* 图像网格 */
-.image-grid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fill, 180px);
-  grid-auto-rows: 180px;
-  overflow-y: auto;
-  flex: 1;
-  padding-right: 8px;
-}
-
-/* ==================== 图像列表视图 ==================== */
-
-.image-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  overflow-y: auto;
-  flex: 1;
-  padding-right: 8px;
-}
-
-
 
 /* 视图切换按钮 */
 .view-toggle {
@@ -1831,40 +1778,35 @@ body * {
    卡片特殊状态样式
    ============================================ */
 
-/* 未引用图像卡片样式 */
-.image-card.is-unreferenced {
+/* 空状态卡片样式 - 统一 */
+.image-card.is-empty,
+.prompt-card.is-empty {
   border-color: #9ca3af;
   border-style: dashed;
 }
 
-.image-card.is-unreferenced .image-card-thumbnail {
+.image-card.is-empty .image-card-thumbnail {
   opacity: 0.7;
 }
 
-/* 无图像提示词卡片样式 */
-.prompt-card.no-images {
-  border-color: #9ca3af;
-  border-style: dashed;
-}
-
-.prompt-card.no-images .prompt-card-overlay {
+.prompt-card.is-empty .prompt-card-overlay {
   background: linear-gradient(135deg, var(--card-bg) 0%, var(--bg-color) 100%);
 }
 
-.prompt-card.no-images .prompt-card-content {
+.prompt-card.is-empty .prompt-card-content {
   color: var(--text-secondary);
   text-shadow: none;
 }
 
-.prompt-card.no-images .tag {
+.prompt-card.is-empty .tag {
   color: var(--text-secondary);
   background: var(--bg-color);
   backdrop-filter: none;
 }
 
-/* 未引用/无图像徽章 */
-.image-card-unreferenced-badge,
-.prompt-card-no-image-badge {
+/* 空状态徽章 */
+.image-card-empty-badge,
+.prompt-card-empty-badge {
   position: absolute;
   bottom: 8px;
   right: 8px;
@@ -1878,7 +1820,7 @@ body * {
   pointer-events: none;
 }
 
-.prompt-card-no-image-badge {
+.prompt-card-empty-badge {
   font-size: 10px;
   padding: 3px 8px;
   border-radius: 10px;
@@ -2020,6 +1962,58 @@ body * {
 .image-prompt-tooltip.no-image,
 .prompt-preview-tooltip.no-image {
   max-width: 300px;
+}
+
+/* ============================================
+   卡片复选框样式
+   ============================================ */
+
+.card-checkbox {
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: var(--primary-color);
+  width: 18px;
+  height: 18px;
+  margin: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* 默认：hover 时显示复选框 */
+.image-card:hover .card-checkbox,
+.prompt-card:hover .card-checkbox,
+.trash-card:hover .card-checkbox {
+  opacity: 1;
+}
+
+/* 多选模式下：一直显示复选框和按钮组 */
+.selection-mode .card-checkbox,
+.selection-mode [class*="card-actions-"] {
+  opacity: 1;
+}
+
+.selection-mode [class*="card-actions-"] {
+  pointer-events: auto;
+}
+
+/* 选中的卡片样式 - 半透明遮罩层 */
+.image-card.is-selected,
+.prompt-card.is-selected,
+.trash-card.is-selected {
+  position: relative;
+}
+
+.image-card.is-selected::after,
+.prompt-card.is-selected::after,
+.trash-card.is-selected::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--selection-overlay);
+  border: 2px solid var(--primary-color);
+  border-radius: var(--radius-lg);
+  z-index: 2;
+  pointer-events: none;
 }
 
 /* 空状态 */
@@ -2709,7 +2703,15 @@ body * {
 
 .image-selector-item.selected {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.image-selector-item.selected::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--selection-overlay);
+  z-index: 1;
+  pointer-events: none;
 }
 
 .image-selector-item img {
@@ -4936,16 +4938,17 @@ body * {
 
 /* 批量选择复选框 */
 .tag-batch-checkbox {
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: var(--primary-color);
   width: 18px;
   height: 18px;
-  cursor: pointer;
-  accent-color: var(--primary-color);
   margin-right: 4px;
 }
 
 /* 选中的标签项 */
 .tag-manager-item.tag-selected {
-  background: var(--primary-light);
+  background: var(--selection-overlay);
   border-color: var(--primary-color);
 }
 
@@ -5310,6 +5313,6 @@ body * {
 }
 
 .tag-batch-mode.selected {
-  background: rgba(59, 130, 246, 0.1);
+  background: var(--selection-overlay);
   border-color: var(--primary-color);
 }
