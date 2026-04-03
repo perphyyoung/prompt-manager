@@ -38,12 +38,63 @@ Before writing any test code, you must:
    - Use waitForSelector to verify key elements
    - Set reasonable timeouts (1000ms)
 
-3. **Execute step by step**
+3. **Navigate to target interface according to actual logic**
+   - Do not assume the test starts at the target interface
+   - Explicitly write steps to enter the target interface in test comments
+   - Use helper functions to encapsulate navigation logic
+   - Example:
+     ```typescript
+     /**
+      * Enter image grid view helper function
+      * Steps to enter target interface:
+      * 1. Click #imageManagerBtn to switch to image panel
+      * 2. Click #imageGridViewBtn to ensure grid view
+      * 3. Wait for .image-card elements to be visible
+      */
+     async function enterImageGridView(page: any) {
+       await page.click('#imageManagerBtn');
+       await page.waitForTimeout(500);
+       await page.click('#imageGridViewBtn');
+       await page.waitForTimeout(500);
+       const firstCard = page.locator('.image-card').first();
+       await expect(firstCard).toBeVisible({ timeout: 5000 });
+       return firstCard;
+     }
+     ```
+
+4. **Execute step by step**
    - One operation at a time
    - Verify success before next step
    - Check screenshots to locate issues on failure
 
-### Phase 3: Debug
+### Phase 3: Automated Test Verification
+
+After writing E2E tests, you must run automated verification:
+
+1. **Run all tests**
+   ```bash
+   npx playwright test e2e/<test-file>.spec.ts --reporter=list
+   ```
+
+2. **Verify all tests pass**
+   - All tests should show "✓" (passed)
+   - No "✘" (failed) or "−" (skipped) without reason
+   - Check test duration is reasonable (< 30s per test)
+
+3. **Handle test failures**
+   - Review error messages
+   - Check screenshots in `test-results/` directory
+   - Fix issues in code or test, not workarounds
+   - Re-run until all pass
+
+4. **Document test results**
+   - Report total passed/failed count
+   - List any skipped tests with reasons
+   - Note any fixes made during verification
+
+### Phase 4: Debug (When Tests Fail)
+
+When automated verification reveals failures:
 
 1. **Review all screenshots**
    - Not just the last one
@@ -53,6 +104,11 @@ Before writing any test code, you must:
    - What page does the screenshot show?
    - Does the expected element exist?
    - Does the state match expectations?
+
+3. **Fix and re-verify**
+   - Fix the root cause in code or test
+   - Return to Phase 3 to re-run verification
+   - Do not proceed until all tests pass
 
 ## Special Cases
 
@@ -102,3 +158,4 @@ expect(count).toBe(expectedCount);
 - Do not assert without screenshots
 - Do not only look at the last screenshot
 - Do not assume page state without verification
+- Do not skip automated test verification
