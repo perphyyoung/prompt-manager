@@ -206,14 +206,6 @@ Run: `pytest tests/path/test.py::test_name -v`
 Expected: PASS
 预期：通过
 
-- [ ] **Step 5: Commit** / **步骤 5：提交**
-
-```bash
-git add tests/path/test.py src/path/file.py
-git commit -m "feat: add specific feature"
-```
-````
-
 ## No Placeholders / 禁止占位符
 
 Every step must contain the actual content an engineer needs. These are **plan failures** — never write them:
