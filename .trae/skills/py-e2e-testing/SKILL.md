@@ -67,27 +67,79 @@ Before writing any test code, you must:
    - Verify success before next step
    - Check screenshots to locate issues on failure
 
+5. **Use Electron log API for test logging**
+   - Use `window.electronAPI.logInfo()` to record test logs to `pm.log`
+   - Example:
+     ```typescript
+     await page.evaluate((params) => {
+       window.electronAPI.logInfo('E2E-Test', 'Test operation', {
+         param1: params.value1,
+         param2: params.value2
+       });
+       // ... test logic
+     }, testData);
+     ```
+   - Logs will be written to `./pm.log`
+   - Use logs for debugging instead of `console.log` in production tests
+
+6. **Add explicit type annotations**
+   - All `.evaluate()` callbacks must have explicit parameter types
+   - Example:
+     ```typescript
+     // ❌ Wrong: implicit 'any' type
+     await element.evaluate(el => el.classList.contains('active'));
+     
+     // ✅ Correct: explicit HTMLElement type
+     await element.evaluate((el: HTMLElement) => el.classList.contains('active'));
+     ```
+
+7. **Run type checking before testing**
+   - Verify test file passes TypeScript type checking BEFORE running tests:
+     ```bash
+     npx tsc --noEmit e2e/<test-file>.spec.ts
+     ```
+   - Fix all type errors first
+   - This ensures test script correctness before execution
+
+8. **Type check after every modification**
+   - After making ANY changes to test code:
+     1. Run `npx tsc --noEmit` to verify type correctness
+     2. Only run tests after type checking passes
+   - Workflow:
+     ```
+     Modify code → Type check → Fix errors (if any) → Run tests
+     ```
+   - This prevents wasting time running tests with type errors
+
 ### Phase 3: Automated Test Verification
 
 After writing E2E tests, you must run automated verification:
 
-1. **Run all tests**
+1. **Run failed tests first** (when debugging)
+   - Use `--grep` to run only the failed test:
+     ```bash
+     npx playwright test e2e/<test-file>.spec.ts --grep "Test Name" --reporter=list
+     ```
+   - Fix the issue and verify it passes
+   - Then run all tests to ensure no regressions
+
+2. **Run all tests** (after fixes or initial write)
    ```bash
    npx playwright test e2e/<test-file>.spec.ts --reporter=list
    ```
 
-2. **Verify all tests pass**
+3. **Verify all tests pass**
    - All tests should show "✓" (passed)
    - No "✘" (failed) or "−" (skipped) without reason
    - Check test duration is reasonable (< 30s per test)
 
-3. **Handle test failures**
+4. **Handle test failures**
    - Review error messages
    - Check screenshots in `test-results/` directory
    - Fix issues in code or test, not workarounds
    - Re-run until all pass
 
-4. **Document test results**
+5. **Document test results**
    - Report total passed/failed count
    - List any skipped tests with reasons
    - Note any fixes made during verification
@@ -121,43 +173,28 @@ When automated verification reveals failures:
 
 ### Testing Duplicate Submission Prevention / Debounce
 
-When testing duplicate submission prevention or debounce functionality:
+When testing duplicate submission prevention or debounce functionality, use `page.evaluate` for rapid operations and verify through API.
 
-1. **Use page.evaluate for rapid operations**
-   ```typescript
-   // Wrong: Playwright waits for element stability, may miss timing
-   await doneButton.click();
-   await doneButton.click();
-
-   // Correct: Trigger multiple clicks rapidly in browser
-   await page.evaluate(() => {
-     const btn = document.getElementById('doneBtn');
-     for (let i = 0; i < 5; i++) btn?.click();
-   });
-   ```
-
-2. **Verification strategy**
-   - Verify final state (e.g., database record count)
-   - Do not rely on intermediate state screenshots
-   - Verify through API that only one record was created
+**See detailed guide:** [Duplicate Submission Prevention](refs.md#duplicate-submission-prevention)
 
 ### Setting Test Timeouts
 
-Set reasonable timeouts based on operation complexity:
-- Simple UI operations: 1000ms
-- Save operations: 3000ms
-- File operations: 5000ms
+Set reasonable timeouts based on operation complexity.
 
-### Database State Verification
+**See detailed guide:** [Test Timeouts](refs.md#test-timeouts)
 
-E2E tests should verify database state through API, not just UI:
-```typescript
-const count = await page.evaluate(async () => {
-  const records = await window.electronAPI.getRecords();
-  return records.length;
-});
-expect(count).toBe(expectedCount);
-```
+---
+
+## Testing Techniques Reference
+
+For specific testing techniques and best practices, see **[Testing Techniques Reference](refs.md)**:
+
+- **[Drag and Drop Operations](refs.md#drag-and-drop-operations)** - Step-by-step mouse operations for reliable drag and drop
+- **[Duplicate Submission Prevention](refs.md#duplicate-submission-prevention)** - Testing debounce and duplicate prevention
+- **[Database State Verification](refs.md#database-state-verification)** - Verifying data through API
+- **[Test Timeouts](refs.md#test-timeouts)** - Guidelines for setting appropriate timeouts
+
+---
 
 ## Prohibited Behaviors
 
@@ -166,3 +203,33 @@ expect(count).toBe(expectedCount);
 - Do not only look at the last screenshot
 - Do not assume page state without verification
 - Do not skip automated test verification
+
+## Test Cleanup (After All Tests Pass)
+
+After all tests pass, clean up debugging code:
+
+1. **Remove all debug logging**
+   - Delete all `console.log()` statements
+   - Delete all `window.electronAPI.logInfo()` calls used for debugging
+   - Keep only production logging if absolutely necessary
+   - Example:
+     ```typescript
+     // ❌ Before cleanup
+     console.log(`Debug: ${value}`);
+     window.electronAPI.logInfo('E2E-Test', 'Test step', data);
+     
+     // ✅ After cleanup
+     // (no logging for simple test assertions)
+     ```
+
+2. **Remove unnecessary test logic**
+   - Simplify complex workarounds that were only for debugging
+   - Keep only the essential test assertions
+
+3. **Re-run full test suite**
+   - Ensure cleanup didn't break any tests
+   - Verify all tests still pass after cleanup
+
+4. **Final type checking verification**
+   - Run `npx tsc --noEmit` on the entire project
+   - Ensure no type errors remain
