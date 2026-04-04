@@ -33,7 +33,7 @@ type MessageFunction = (data: DialogConfigData) => string;
 /**
  * 对话框配置项接口
  */
-interface DialogConfigItem {
+export interface DialogConfigItem {
   type?: string;
   title: string | MessageFunction;
   message: string | MessageFunction;

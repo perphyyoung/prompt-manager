@@ -1,12 +1,10 @@
 // 定义本地类型以避免循环依赖
-export interface ItemBase {
+export interface IEventStrategyItem {
   id: string;
   isDeleted?: boolean;
   isSafe?: number;
   [key: string]: unknown;
 }
-
-export type ItemType = ItemBase;
 
 // 导入 SelectionManager 类型
 import type { SelectionManager } from '../SelectionManager.ts';
@@ -19,7 +17,7 @@ export interface EventContext {
     updateUI: () => void;
   };
   renderView: () => void | Promise<void>;
-  items: ItemType[];
+  items: IEventStrategyItem[];
 }
 
 export interface IEventStrategy {
@@ -29,7 +27,7 @@ export interface IEventStrategy {
    * @param items - 项目列表
    * @param context - 事件上下文
    */
-  bindEvents(container: HTMLElement, items: ItemType[], context: EventContext): void;
+  bindEvents(container: HTMLElement, items: IEventStrategyItem[], context: EventContext): void;
 
   /**
    * 获取复选框选择器

@@ -8,6 +8,8 @@ import { TopGroupManager } from './TopGroupManager.ts';
 import { ITagWithGroup, ITagGroup } from '../../types/entities.ts';
 import { IEventStrategy, EventContext } from './Strategies/IEventStrategy.ts';
 import { SelectionManager } from './SelectionManager.ts';
+import { DialogService, DialogConfigItem } from '../services/index.ts';
+import { Constants } from '../../constants.ts';
 
 // 工具栏按钮配置
 interface BatchToolbarButton {
@@ -76,12 +78,13 @@ interface PanelManagerBaseOptions {
   operationConfig?: OperationConfig;
 }
 
-// 项目接口（基础）
-interface Item {
+// 面板项目接口（基础）
+export interface IPanelItem {
   id: string;
   isDeleted?: boolean;
   isSafe?: number;
   tags?: string[];
+  isFavorite?: boolean | number;
   [key: string]: unknown;
 }
 
@@ -91,7 +94,45 @@ interface SpecialTagCount {
   count: number;
 }
 
+// 删除确认配置接口
+interface IDeleteConfirmConfig {
+  config: unknown;
+  name?: string;
+}
 
+// 复制内容结果接口
+interface ICopyContentResult {
+  content: string;
+  hasContent: boolean;
+}
+
+// UI 配置接口 - 用于抽取重复的 UI 更新逻辑
+interface IUIConfig {
+  // 选择器
+  cardSelector: string;
+  listItemSelector: string;
+  cardBgSelector: string;
+
+  // 容器 ID
+  gridContainerId: string;
+  listContainerId: string;
+
+  // 拖拽相关
+  dragSource: string;
+  getCardDropSelector(): string;
+
+  // 获取元素 ID（从 dataset 中提取）
+  getElementId(element: HTMLElement): string | undefined;
+
+  // 获取复制内容
+  getCopyContent(item: IPanelItem): ICopyContentResult;
+
+  // 获取删除确认配置
+  getDeleteConfirmConfig(item: IPanelItem): IDeleteConfirmConfig;
+
+  // 获取卡片背景图片路径
+  getCardImagePath(item: IPanelItem): string | null;
+}
 
 /**
  * 面板管理器基类
@@ -109,7 +150,7 @@ export abstract class PanelManagerBase {
   toolbarController?: BatchOperationManager;
 
   // 通用状态
-  protected filteredItems: Item[] = [];
+  protected filteredItems: IPanelItem[] = [];
   protected selectedTags: Set<string> = new Set();
   protected _previousFilterState = {
     selectedTags: [] as string[],
@@ -127,6 +168,10 @@ export abstract class PanelManagerBase {
 
   // 选择管理器
   selectionManager: SelectionManager;
+
+  // UI 配置（子类实现）
+  protected abstract getUIConfig(): IUIConfig;
+  protected abstract getUpdateAPI(): (id: string, data: unknown) => Promise<void>;
 
   /**
    * @param options - 配置选项
@@ -248,7 +293,7 @@ export abstract class PanelManagerBase {
   protected selectAllVisibleItems(): void {
     const visibleItems = this.getVisibleItems();
 
-    visibleItems.forEach((item: Item) => {
+    visibleItems.forEach((item: IPanelItem) => {
       this.selectionManager.addSelection(String(item.id));
     });
 
@@ -262,7 +307,7 @@ export abstract class PanelManagerBase {
    * @abstract
    * @returns 项目列表
    */
-  getItems(): Item[] {
+  getItems(): IPanelItem[] {
     throw new Error('getItems() must be implemented by subclass');
   }
 
@@ -270,7 +315,7 @@ export abstract class PanelManagerBase {
    * 获取可见项目列表（筛选后）
    * @returns 筛选后的可见项目列表
    */
-  getVisibleItems(): Item[] {
+  getVisibleItems(): IPanelItem[] {
     return this.filteredItems || [];
   }
 
@@ -298,7 +343,7 @@ export abstract class PanelManagerBase {
    * @param lowerQuery - 小写的搜索查询
    * @returns 是否匹配
    */
-  matchesSearch(item: Item, lowerQuery: string): boolean {
+  matchesSearch(item: IPanelItem, lowerQuery: string): boolean {
     return true; // 默认全部匹配
   }
 
@@ -307,7 +352,7 @@ export abstract class PanelManagerBase {
    * @abstract
    * @returns 特殊标签检查函数 Map
    */
-  getSpecialTagChecks(): Map<string, (item: Item) => boolean> {
+  getSpecialTagChecks(): Map<string, (item: IPanelItem) => boolean> {
     throw new Error('getSpecialTagChecks() must be implemented by subclass');
   }
 
@@ -325,7 +370,7 @@ export abstract class PanelManagerBase {
    * @abstract
    * @returns 项目列表
    */
-  async loadData(): Promise<Item[]> {
+  async loadData(): Promise<IPanelItem[]> {
     throw new Error('loadData() must be implemented by subclass');
   }
 
@@ -335,7 +380,7 @@ export abstract class PanelManagerBase {
    * @param item - 项目对象
    * @returns HTML 字符串
    */
-  createCard(item: Item): string {
+  createCard(item: IPanelItem): string {
     throw new Error('createCard() must be implemented by subclass');
   }
 
@@ -344,16 +389,152 @@ export abstract class PanelManagerBase {
    * @abstract
    * @param filtered - 筛选后的项目列表
    */
-  bindCardEvents(filtered: Item[]): void {
+  bindCardEvents(filtered: IPanelItem[]): void {
     throw new Error('bindCardEvents() must be implemented by subclass');
   }
 
   /**
-   * 加载卡片背景（子类实现）
-   * @abstract
+   * 绑定卡片按钮事件（通用实现）
+   * @param filtered - 筛选后的项目列表
+   */
+  bindCardButtonEvents(filtered: IPanelItem[]): void {
+    const config = this.getUIConfig();
+    const container = document.getElementById(config.gridContainerId);
+    if (!container) return;
+
+    filtered.forEach(item => {
+      const card = container.querySelector(`[data-id="${item.id}"]`);
+      if (!card) return;
+
+      // 删除按钮
+      const deleteBtn = card.querySelector('.delete-btn');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const { config: dialogConfig, name } = config.getDeleteConfirmConfig(item);
+          const confirmed = await DialogService.showConfirmDialogByConfig(dialogConfig as DialogConfigItem, name ? { name } : undefined);
+          if (confirmed) {
+            await this.deleteItem(String(item.id));
+          }
+        });
+      }
+
+      // 收藏按钮
+      const favoriteBtn = card.querySelector('.favorite-btn');
+      if (favoriteBtn) {
+        favoriteBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await this.toggleFavorite(String(item.id), !item.isFavorite);
+        });
+      }
+
+      // 复制按钮
+      const copyBtn = card.querySelector('.copy-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const { content, hasContent } = config.getCopyContent(item);
+          if (!hasContent) {
+            (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('没有可复制的内容', 'warning');
+            return;
+          }
+          try {
+            await window.electronAPI.copyToClipboard(content);
+            (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('已复制到剪贴板', 'success');
+          } catch (error) {
+            (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('复制失败', 'error');
+          }
+        });
+      }
+    });
+  }
+
+  /**
+   * 绑定列表按钮事件（通用实现）
+   * @param filtered - 筛选后的项目列表
+   */
+  bindListButtonEvents(filtered: IPanelItem[]): void {
+    const config = this.getUIConfig();
+    const listContainer = document.getElementById(config.listContainerId);
+    if (!listContainer) return;
+
+    listContainer.querySelectorAll(config.listItemSelector).forEach(item => {
+      const id = (item as HTMLElement).dataset.id;
+      const itemData = filtered.find(i => String(i.id) === String(id));
+      if (!itemData) return;
+
+      // 收藏按钮
+      const favoriteBtn = item.querySelector('.favorite-btn');
+      if (favoriteBtn) {
+        favoriteBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await this.toggleFavorite(String(id), !itemData.isFavorite);
+        });
+      }
+
+      // 删除按钮
+      const deleteBtn = item.querySelector('.delete-btn');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const { config: dialogConfig, name } = config.getDeleteConfirmConfig(itemData);
+          const confirmed = await DialogService.showConfirmDialogByConfig(dialogConfig as DialogConfigItem, name ? { name } : undefined);
+          if (confirmed) {
+            await this.deleteItem(String(id));
+          }
+        });
+      }
+
+      // 复制按钮
+      const copyBtn = item.querySelector('.copy-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const { content, hasContent } = config.getCopyContent(itemData);
+          if (!hasContent) {
+            (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('没有可复制的内容', 'warning');
+            return;
+          }
+          try {
+            await window.electronAPI.copyToClipboard(content);
+            (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('已复制到剪贴板', 'success');
+          } catch (error) {
+            (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('复制失败', 'error');
+          }
+        });
+      }
+    });
+  }
+
+  /**
+   * 异步加载卡片背景图（通用实现）
    */
   async loadCardBackgrounds(): Promise<void> {
-    throw new Error('loadCardBackgrounds() must be implemented by subclass');
+    const config = this.getUIConfig();
+    const container = document.getElementById(config.gridContainerId);
+    if (!container) return;
+
+    const cards = container.querySelectorAll(config.cardSelector);
+    const items = this.getItems();
+
+    for (const card of cards) {
+      const id = (card as HTMLElement).dataset.id;
+      const item = items.find(i => String(i.id) === String(id));
+      if (!item) continue;
+
+      const imagePath = config.getCardImagePath(item);
+      if (!imagePath) continue;
+
+      try {
+        const fullPath = await window.electronAPI.getImagePath(imagePath);
+        const bgElement = card.querySelector(config.cardBgSelector);
+        if (bgElement) {
+          (bgElement as HTMLElement).style.backgroundImage = `url('file://${fullPath.replace(/\\/g, '/')}')`;
+        }
+      } catch (error) {
+        window.electronAPI.logError('PanelManagerBase.ts', 'Failed to load card background:', error);
+      }
+    }
   }
 
   /**
@@ -366,12 +547,43 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 绑定卡片拖拽事件（子类实现）
-   * @abstract
+   * 绑定卡片拖拽事件（通用实现）
    * @param container - 容器元素
    */
   bindCardDropEvents(container: HTMLElement): void {
-    throw new Error('bindCardDropEvents() must be implemented by subclass');
+    const config = this.getUIConfig();
+
+    // 避免重复绑定
+    if (container.dataset.dropEventsBound === 'true') {
+      return;
+    }
+    container.dataset.dropEventsBound = 'true';
+
+    container.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      (e as DragEvent).dataTransfer!.dropEffect = 'copy';
+    });
+
+    container.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      const dragSource = (e as DragEvent).dataTransfer!.getData('drag-source');
+      const tagName = (e as DragEvent).dataTransfer!.getData('text/plain');
+
+      if (dragSource === config.dragSource && tagName) {
+        const card = (e.target as Element).closest(config.getCardDropSelector());
+        if (card) {
+          const id = config.getElementId(card as HTMLElement);
+          if (id) {
+            try {
+              await this.handleTagDrop(id, tagName, this.getUpdateAPI());
+              (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('标签已添加', 'success');
+            } catch (error) {
+              (this.app as { showToast?: (message: string, type: string) => void }).showToast?.((error as Error).message, 'error');
+            }
+          }
+        }
+      }
+    });
   }
 
   /**
@@ -379,7 +591,7 @@ export abstract class PanelManagerBase {
    * @abstract
    * @param filtered - 筛选后的项目列表
    */
-  async renderListView(filtered: Item[]): Promise<void> {
+  async renderListView(filtered: IPanelItem[]): Promise<void> {
     throw new Error('renderListView() must be implemented by subclass');
   }
 
@@ -442,7 +654,7 @@ export abstract class PanelManagerBase {
    * @param visibleItems - 可见项目列表
    * @returns 特殊标签计数列表
    */
-  calculateSpecialTagCounts(visibleItems: Item[]): SpecialTagCount[] {
+  calculateSpecialTagCounts(visibleItems: IPanelItem[]): SpecialTagCount[] {
     throw new Error('calculateSpecialTagCounts() must be implemented by subclass');
   }
 
@@ -466,13 +678,41 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 更新收藏 UI（子类实现）
-   * @abstract
+   * 更新收藏按钮 UI（通用实现）
    * @param id - 项目 ID
    * @param isFavorite - 是否收藏
    */
   updateFavoriteUI(id: string, isFavorite: boolean): void {
-    throw new Error('updateFavoriteUI() must be implemented by subclass');
+    const config = this.getUIConfig();
+
+    const updateBtn = (btn: Element | null) => {
+      if (!btn) return;
+      if (isFavorite) {
+        btn.classList.add('active');
+        (btn as HTMLElement).title = '取消收藏';
+        btn.innerHTML = Constants.ICONS.favorite.filled;
+      } else {
+        btn.classList.remove('active');
+        (btn as HTMLElement).title = '收藏';
+        btn.innerHTML = Constants.ICONS.favorite.outline;
+      }
+    };
+
+    // 更新卡片视图
+    const card = document.querySelector(`${config.cardSelector}[data-id="${id}"]`);
+    if (card) {
+      const btn = card.querySelector('.favorite-btn');
+      updateBtn(btn);
+      card.classList.toggle('is-favorite', isFavorite);
+    }
+
+    // 更新列表视图
+    const listItem = document.querySelector(`${config.listItemSelector}[data-id="${id}"]`);
+    if (listItem) {
+      const btn = listItem.querySelector('.favorite-btn');
+      updateBtn(btn);
+      listItem.classList.toggle('list-item--favorite', isFavorite);
+    }
   }
 
   /**
@@ -483,7 +723,7 @@ export abstract class PanelManagerBase {
    * @param sortOrder - 排序顺序
    * @returns 排序后的列表
    */
-  sortItems(items: Item[], sortBy: string, sortOrder: string): Item[] {
+  sortItems(items: IPanelItem[], sortBy: string, sortOrder: string): IPanelItem[] {
     throw new Error('sortItems() must be implemented by subclass');
   }
 
@@ -561,18 +801,18 @@ export abstract class PanelManagerBase {
       let filtered = items;
 
       // 过滤已删除的项目
-      filtered = filtered.filter((item: Item) => !item.isDeleted);
+      filtered = filtered.filter((item: IPanelItem) => !item.isDeleted);
 
       // 根据 viewMode 过滤
       const currentViewMode = (this.app as { viewMode?: string }).viewMode;
       if (currentViewMode === 'safe') {
-        filtered = filtered.filter((item: Item) => item.isSafe !== 0);
+        filtered = filtered.filter((item: IPanelItem) => item.isSafe !== 0);
       }
 
       // 标签筛选（多选时同时符合）
       if (this.selectedTags.size > 0) {
         const specialTagChecks = this.getSpecialTagChecks();
-        filtered = filtered.filter((item: Item) => {
+        filtered = filtered.filter((item: IPanelItem) => {
           return Array.from(this.selectedTags).every(tag => {
             const checkFn = specialTagChecks.get(tag);
             if (checkFn) {
@@ -592,7 +832,7 @@ export abstract class PanelManagerBase {
       const currentSearchQuery = this.getSearchQuery();
       if (currentSearchQuery) {
         const lowerQuery = currentSearchQuery.toLowerCase();
-        filtered = filtered.filter((item: Item) => this.matchesSearch(item, lowerQuery));
+        filtered = filtered.filter((item: IPanelItem) => this.matchesSearch(item, lowerQuery));
       }
 
       // 排序
@@ -626,7 +866,7 @@ export abstract class PanelManagerBase {
    * @abstract
    * @param filtered - 筛选后的项目列表
    */
-  async renderContainer(filtered: Item[]): Promise<void> {
+  async renderContainer(filtered: IPanelItem[]): Promise<void> {
     throw new Error('renderContainer() must be implemented by subclass');
   }
 
@@ -655,7 +895,7 @@ export abstract class PanelManagerBase {
       const tagCounts = this.calculateTagCounts(tags);
 
       // 获取可见项目
-      const visibleItems = this.getItems().filter((item: Item) => !item.isDeleted && ((this.app as { viewMode?: string }).viewMode !== 'safe' || item.isSafe !== 0));
+      const visibleItems = this.getItems().filter((item: IPanelItem) => !item.isDeleted && ((this.app as { viewMode?: string }).viewMode !== 'safe' || item.isSafe !== 0));
 
       // 计算特殊标签计数
       const specialTags = this.calculateSpecialTagCounts(visibleItems);
@@ -690,10 +930,10 @@ export abstract class PanelManagerBase {
    * @returns 标签计数对象
    */
   calculateTagCounts(tags: string[]): Record<string, number> {
-    const visibleItems = this.getItems().filter((item: Item) => !item.isDeleted && ((this.app as { viewMode?: string }).viewMode !== 'safe' || item.isSafe !== 0));
+    const visibleItems = this.getItems().filter((item: IPanelItem) => !item.isDeleted && ((this.app as { viewMode?: string }).viewMode !== 'safe' || item.isSafe !== 0));
 
     const tagCounts: Record<string, number> = {};
-    visibleItems.forEach((item: Item) => {
+    visibleItems.forEach((item: IPanelItem) => {
       if (item.tags && item.tags.length > 0) {
         item.tags.forEach((tag: string) => {
           tagCounts[tag] = (tagCounts[tag] || 0) + 1;
@@ -1068,7 +1308,7 @@ export abstract class PanelManagerBase {
    * 模板方法：绑定项目事件
    * 使用策略模式处理不同视图的事件绑定
    */
-  protected bindItemEvents(items: Item[]): void {
+  protected bindItemEvents(items: IPanelItem[]): void {
     const strategy = this.getEventStrategy();
     if (!strategy) return;
 
@@ -1136,12 +1376,12 @@ export abstract class PanelManagerBase {
    * 处理标签拖拽到卡片
    * @param itemId - 项目 ID
    * @param tagName - 标签名称
-   * @param cache - 缓存对象
    * @param updateApi - 更新 API 函数
    * @returns 是否成功
    */
-  async handleTagDrop(itemId: string, tagName: string, cache: { get(key: string): Item | undefined }, updateApi: (id: string, data: { tags: string[] }) => Promise<void>): Promise<boolean> {
-    const item = cache.get(String(itemId));
+  async handleTagDrop(itemId: string, tagName: string, updateApi: (id: string, data: { tags: string[] }) => Promise<void>): Promise<boolean> {
+    // 从当前项目列表中查找
+    const item = this.getItems().find((i: IPanelItem) => String(i.id) === String(itemId));
     if (!item) {
       throw new Error('项目不存在');
     }

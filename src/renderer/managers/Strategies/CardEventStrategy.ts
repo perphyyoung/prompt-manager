@@ -1,4 +1,4 @@
-import { IEventStrategy, EventContext, ItemType } from './IEventStrategy';
+import { IEventStrategy, EventContext, IEventStrategyItem } from './IEventStrategy';
 
 export class CardEventStrategy implements IEventStrategy {
   getCheckboxSelector(): string {
@@ -13,7 +13,7 @@ export class CardEventStrategy implements IEventStrategy {
     return ['.action-btn', '.card-checkbox'];
   }
 
-  bindEvents(container: HTMLElement, items: ItemType[], context: EventContext): void {
+  bindEvents(container: HTMLElement, items: IEventStrategyItem[], context: EventContext): void {
     items.forEach((item, index) => {
       const card = container.querySelector(`[data-id="${item.id}"]`);
       if (!card) return;
@@ -26,7 +26,7 @@ export class CardEventStrategy implements IEventStrategy {
   /**
    * 绑定复选框事件
    */
-  private bindCheckboxEvent(card: Element, item: ItemType, index: number, context: EventContext): void {
+  private bindCheckboxEvent(card: Element, item: IEventStrategyItem, index: number, context: EventContext): void {
     const checkbox = card.querySelector(this.getCheckboxSelector()) as HTMLInputElement | null;
     if (!checkbox) return;
 
@@ -51,7 +51,7 @@ export class CardEventStrategy implements IEventStrategy {
   /**
    * 绑定卡片点击事件
    */
-  private bindCardClickEvent(card: Element, item: ItemType, index: number, context: EventContext): void {
+  private bindCardClickEvent(card: Element, item: IEventStrategyItem, index: number, context: EventContext): void {
     card.addEventListener('click', (e) => {
       const target = e.target as Element;
       const excludeSelectors = this.getExcludeSelectors();
@@ -68,7 +68,7 @@ export class CardEventStrategy implements IEventStrategy {
   /**
    * 处理卡片点击 - 支持 Ctrl/Shift 多选
    */
-  protected handleCardClick(item: ItemType, index: number, event: MouseEvent, context: EventContext): void {
+  protected handleCardClick(item: IEventStrategyItem, index: number, event: MouseEvent, context: EventContext): void {
     const idStr = String(item.id);
 
     if (event.ctrlKey || event.metaKey) {
@@ -86,7 +86,7 @@ export class CardEventStrategy implements IEventStrategy {
   /**
    * 处理打开详情 - 子类必须覆盖
    */
-  protected handleOpenDetail(item: ItemType): void {
+  protected handleOpenDetail(item: IEventStrategyItem): void {
     // 子类必须实现
     throw new Error('handleOpenDetail must be implemented by subclass');
   }

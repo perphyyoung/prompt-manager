@@ -1,14 +1,14 @@
-import { HtmlUtils, cacheManager } from '../../utils/index.ts';
-import { PanelManagerBase } from './PanelManagerBase.ts';
+import { cacheManager } from '../../utils/index.ts';
+import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
 import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig, UnifiedListRenderer, PromptListConfig } from './SharedComponents/index.ts';
 import { Constants } from '../../constants.ts';
-import { DialogService, DialogConfig } from '../services/index.ts';
+import { DialogConfig } from '../services/index.ts';
 import { BatchConfig } from '../config/index.ts';
 import { IPrompt } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
 import { CardEventStrategy } from './Strategies/CardEventStrategy.ts';
 import { ListEventStrategy } from './Strategies/ListEventStrategy.ts';
-import { IEventStrategy, EventContext, ItemType } from './Strategies/IEventStrategy.ts';
+import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
 
 interface PromptPanelManagerOptions {
   app: {
@@ -84,6 +84,55 @@ export class PromptPanelManager extends PanelManagerBase {
     });
     this.saveManager = options.saveManager;
     this.filteredPrompts = [];
+  }
+
+  /**
+   * 获取 UI 配置
+   */
+  protected getUIConfig() {
+    return {
+      cardSelector: '.prompt-card',
+      listItemSelector: '.list-item--prompt',
+      cardBgSelector: '.prompt-card-bg, .card__bg',
+      gridContainerId: 'promptGrid',
+      listContainerId: 'promptList',
+      dragSource: 'prompt-tag',
+      getCardDropSelector: () => '.prompt-card, .list-item--prompt',
+
+      getElementId: (element: HTMLElement): string | undefined => {
+        return element.dataset.id || element.dataset.promptId || undefined;
+      },
+
+      getCopyContent: (item: IPanelItem) => {
+        const prompt = item as IPrompt;
+        return {
+          content: prompt.content || '',
+          hasContent: !!prompt.content
+        };
+      },
+
+      getDeleteConfirmConfig: (item: IPanelItem) => {
+        const prompt = item as IPrompt;
+        return {
+          config: DialogConfig.DELETE_PROMPT,
+          name: prompt.title || '未命名'
+        };
+      },
+
+      getCardImagePath: (item: IPanelItem) => {
+        const prompt = item as IPrompt;
+        if (!prompt.images || prompt.images.length === 0) return null;
+        const firstImage = prompt.images[0] as ImageInfo;
+        return firstImage.thumbnailPath || firstImage.relativePath || null;
+      }
+    };
+  }
+
+  /**
+   * 获取更新 API
+   */
+  protected getUpdateAPI(): (id: string, data: unknown) => Promise<void> {
+    return window.electronAPI.updatePrompt as (id: string, data: unknown) => Promise<void>;
   }
 
   /**
@@ -217,89 +266,6 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 绑定卡片按钮事件（复制、删除、收藏）
-   */
-  bindCardButtonEvents(filtered: IPrompt[]): void {
-    const container = document.getElementById('promptGrid');
-    if (!container) return;
-
-    filtered.forEach(prompt => {
-      const card = container.querySelector(`[data-id="${prompt.id}"]`);
-      if (!card) return;
-
-      // 复制按钮
-      const copyBtn = card.querySelector('.copy-btn');
-      if (copyBtn) {
-        copyBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          try {
-            await window.electronAPI.copyToClipboard(prompt.content);
-            (this.app as PromptPanelManagerOptions['app']).showToast('已复制到剪贴板', 'success');
-          } catch (error) {
-            (this.app as PromptPanelManagerOptions['app']).showToast('复制失败', 'error');
-          }
-        });
-      }
-
-      // 删除按钮
-      const deleteBtn = card.querySelector('.delete-btn');
-      if (deleteBtn) {
-        deleteBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const confirmed = await DialogService.showConfirmDialogByConfig(
-            DialogConfig.DELETE_PROMPT,
-            { name: prompt.title || '未命名' }
-          );
-          if (confirmed) {
-            await this.deleteItem(String(prompt.id));
-          }
-        });
-      }
-
-      // 收藏按钮
-      const favoriteBtn = card.querySelector('.favorite-btn');
-      if (favoriteBtn) {
-        favoriteBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          await this.toggleFavorite(String(prompt.id), !prompt.isFavorite);
-        });
-      }
-    });
-  }
-
-  /**
-   * 异步加载卡片背景图（实现基类抽象方法）
-   */
-  async loadCardBackgrounds(): Promise<void> {
-    const container = document.getElementById('promptGrid');
-    if (!container) return;
-
-    const cards = container.querySelectorAll('.prompt-card');
-
-    for (const card of cards) {
-      const promptId = (card as HTMLElement).dataset.id;
-      const prompt = this.prompts.find(p => String(p.id) === String(promptId));
-
-      if (!prompt || !prompt.images || prompt.images.length === 0) continue;
-
-      const firstImage = prompt.images[0] as ImageInfo;
-      const imagePath = firstImage.thumbnailPath || firstImage.relativePath;
-
-      if (!imagePath) continue;
-
-      try {
-        const fullPath = await window.electronAPI.getImagePath(imagePath);
-        const bgElement = card.querySelector('.prompt-card-bg, .card__bg');
-        if (bgElement) {
-          (bgElement as HTMLElement).style.backgroundImage = `url('file://${fullPath.replace(/\\/g, '/')}')`;
-        }
-      } catch (error) {
-        window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load card background:', error);
-      }
-    }
-  }
-
-  /**
    * 渲染提示词列表视图（实现基类抽象方法）
    */
   async renderListView(filtered: IPrompt[]): Promise<void> {
@@ -366,58 +332,6 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 绑定列表按钮事件（复制、收藏、删除）
-   */
-  bindListButtonEvents(filtered: IPrompt[]): void {
-    const listContainer = document.getElementById('promptList');
-    if (!listContainer) return;
-
-    listContainer.querySelectorAll('.list-item--prompt').forEach(item => {
-      const promptId = (item as HTMLElement).dataset.id;
-      const prompt = filtered.find(p => String(p.id) === String(promptId));
-      if (!prompt) return;
-
-      // 复制按钮
-      const copyBtn = item.querySelector('.copy-btn');
-      if (copyBtn) {
-        copyBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          try {
-            await window.electronAPI.copyToClipboard(prompt.content);
-            (this.app as PromptPanelManagerOptions['app']).showToast('已复制到剪贴板', 'success');
-          } catch (error) {
-            (this.app as PromptPanelManagerOptions['app']).showToast('复制失败', 'error');
-          }
-        });
-      }
-
-      // 收藏按钮
-      const favoriteBtn = item.querySelector('.favorite-btn');
-      if (favoriteBtn) {
-        favoriteBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          await this.toggleFavorite(String(prompt.id), !prompt.isFavorite);
-        });
-      }
-
-      // 删除按钮
-      const deleteBtn = item.querySelector('.delete-btn');
-      if (deleteBtn) {
-        deleteBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const confirmed = await DialogService.showConfirmDialogByConfig(
-            DialogConfig.DELETE_PROMPT,
-            { name: prompt.title || '未命名' }
-          );
-          if (confirmed) {
-            await this.deleteItem(String(prompt.id));
-          }
-        });
-      }
-    });
-  }
-
-  /**
    * 绑定 hover 预览事件（实现基类抽象方法）
    */
   bindHoverPreview(selector: string): void {
@@ -435,50 +349,6 @@ export class PromptPanelManager extends PanelManagerBase {
         return firstImage || null;
       },
       delay: 500
-    });
-  }
-
-  /**
-   * 绑定卡片拖拽事件（实现基类抽象方法）
-   */
-  bindCardDropEvents(container: HTMLElement): void {
-    // 避免重复绑定
-    if (container.dataset.dropEventsBound === 'true') {
-      return;
-    }
-    container.dataset.dropEventsBound = 'true';
-
-    // 实现拖拽接收逻辑
-    container.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      (e as DragEvent).dataTransfer!.dropEffect = 'copy';
-    });
-
-    container.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      const dragSource = (e as DragEvent).dataTransfer!.getData('drag-source');
-      const tagName = (e as DragEvent).dataTransfer!.getData('text/plain');
-
-      if (dragSource === 'prompt-tag' && tagName) {
-        // 处理标签拖拽到卡片
-        const card = (e.target as Element).closest('.prompt-card, .list-item--prompt');
-        if (card) {
-          const promptId = (card as HTMLElement).dataset.id || (card as HTMLElement).dataset.promptId;
-          if (promptId) {
-            try {
-              await this.handleTagDrop(
-                promptId,
-                tagName,
-                (this.app as PromptPanelManagerOptions['app']).promptCache,
-                window.electronAPI.updatePrompt
-              );
-              (this.app as PromptPanelManagerOptions['app']).showToast('标签已添加', 'success');
-            } catch (error) {
-              (this.app as PromptPanelManagerOptions['app']).showToast((error as Error).message, 'error');
-            }
-          }
-        }
-      }
     });
   }
 
@@ -616,40 +486,6 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 更新收藏按钮 UI（实现基类抽象方法）
-   */
-  updateFavoriteUI(id: string, isFavorite: boolean): void {
-    const updateBtn = (btn: Element | null) => {
-      if (!btn) return;
-      if (isFavorite) {
-        btn.classList.add('active');
-        (btn as HTMLElement).title = '取消收藏';
-        btn.innerHTML = Constants.ICONS.favorite.filled;
-      } else {
-        btn.classList.remove('active');
-        (btn as HTMLElement).title = '收藏';
-        btn.innerHTML = Constants.ICONS.favorite.outline;
-      }
-    };
-
-    // 更新卡片视图
-    const card = document.querySelector(`.prompt-card[data-id="${id}"]`);
-    if (card) {
-      const btn = card.querySelector('.favorite-btn');
-      updateBtn(btn);
-      card.classList.toggle('is-favorite', isFavorite);
-    }
-
-    // 更新列表视图
-    const listItem = document.querySelector(`.list-item--prompt[data-id="${id}"]`);
-    if (listItem) {
-      const btn = listItem.querySelector('.favorite-btn');
-      updateBtn(btn);
-      listItem.classList.toggle('list-item--favorite', isFavorite);
-    }
-  }
-
-  /**
    * 排序提示词列表（实现基类抽象方法）
    */
   sortItems(items: IPrompt[], sortBy: string, sortOrder: string): IPrompt[] {
@@ -696,21 +532,6 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 设置卡片大小（重写基类方法）
-   * @param size - 卡片宽度/高度（像素），保持1:1方形
-   */
-  setCardSize(size: number): void {
-    super.setCardSize(size);
-    const promptGrid = document.getElementById('promptGrid');
-    if (promptGrid) {
-      // 使用固定列宽，每列大小等于滑杆值
-      promptGrid.style.gridTemplateColumns = `repeat(auto-fill, ${size}px)`;
-      // 设置行高等于列宽，保持1:1方形
-      promptGrid.style.gridAutoRows = `${size}px`;
-    }
-  }
-
-  /**
    * 获取当前视图的事件策略
    */
   protected getEventStrategy(): IEventStrategy | null {
@@ -749,7 +570,7 @@ class PromptCardEventStrategy extends CardEventStrategy {
     super();
   }
 
-  protected handleOpenDetail(item: ItemType): void {
+  protected handleOpenDetail(item: IEventStrategyItem): void {
     this.manager.openPromptDetail(item as IPrompt);
   }
 }
@@ -762,7 +583,7 @@ class PromptListEventStrategy extends ListEventStrategy {
     super();
   }
 
-  protected handleOpenDetail(item: ItemType): void {
+  protected handleOpenDetail(item: IEventStrategyItem): void {
     this.manager.openPromptDetail(item as IPrompt);
   }
 }

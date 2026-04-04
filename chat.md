@@ -35,8 +35,14 @@ composes 是 CSS Modules 语法, 当前项目怎样引入
 应用已关闭, 使用实际数据 e2e 测试
 cnpm run test:e2e -- e2e/new-prompt-duplicate-prevention.spec.ts --headed 2>&1 | head -60
 cnpm run dist:win:nsis -> exe
-我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 用于 git commit 信息, 需要输出详细版本和简洁版本
+我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 需要输出可复制的详细版本和简洁版本的 git commit 信息
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
+
+## 20260404
+
+将 不允许跳过测试 写入 , 注意执行顺序
+将 1 测试清理过程, 需要删除所有的日志生成逻辑; 2 测试脚本需要通过类型检查 写入
+将 使用 Electron 的日志 API 来记录测试日志 写入
 
 ## 20260403
 

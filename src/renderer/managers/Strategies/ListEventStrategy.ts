@@ -1,4 +1,4 @@
-import { IEventStrategy, EventContext, ItemType } from './IEventStrategy';
+import { IEventStrategy, EventContext, IEventStrategyItem } from './IEventStrategy';
 
 export class ListEventStrategy implements IEventStrategy {
   getCheckboxSelector(): string {
@@ -13,7 +13,7 @@ export class ListEventStrategy implements IEventStrategy {
     return ['.list-item__checkbox', '.list-item__actions'];
   }
 
-  bindEvents(container: HTMLElement, items: ItemType[], context: EventContext): void {
+  bindEvents(container: HTMLElement, items: IEventStrategyItem[], context: EventContext): void {
     // 列表视图使用事件委托更高效
     this.bindCheckboxEvents(container, items, context);
     this.bindRowClickEvents(container, items, context);
@@ -22,7 +22,7 @@ export class ListEventStrategy implements IEventStrategy {
   /**
    * 绑定复选框事件
    */
-  private bindCheckboxEvents(container: HTMLElement, items: ItemType[], context: EventContext): void {
+  private bindCheckboxEvents(container: HTMLElement, items: IEventStrategyItem[], context: EventContext): void {
     container.querySelectorAll(this.getCheckboxSelector()).forEach((checkbox, index) => {
       const item = items[index];
       if (!item) return;
@@ -52,7 +52,7 @@ export class ListEventStrategy implements IEventStrategy {
   /**
    * 绑定行点击事件
    */
-  private bindRowClickEvents(container: HTMLElement, items: ItemType[], context: EventContext): void {
+  private bindRowClickEvents(container: HTMLElement, items: IEventStrategyItem[], context: EventContext): void {
     container.querySelectorAll(this.getItemSelector()).forEach((row, index) => {
       const item = items[index];
       if (!item) return;
@@ -72,7 +72,7 @@ export class ListEventStrategy implements IEventStrategy {
   /**
    * 处理行点击 - 支持 Ctrl/Shift 多选
    */
-  protected handleRowClick(item: ItemType, index: number, event: MouseEvent, context: EventContext): void {
+  protected handleRowClick(item: IEventStrategyItem, index: number, event: MouseEvent, context: EventContext): void {
     const idStr = String(item.id);
 
     if (event.ctrlKey || event.metaKey) {
@@ -90,7 +90,7 @@ export class ListEventStrategy implements IEventStrategy {
   /**
    * 处理打开详情 - 子类必须覆盖
    */
-  protected handleOpenDetail(item: ItemType): void {
+  protected handleOpenDetail(item: IEventStrategyItem): void {
     // 子类必须实现
     throw new Error('handleOpenDetail must be implemented by subclass');
   }

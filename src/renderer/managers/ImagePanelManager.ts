@@ -1,14 +1,14 @@
 import { cacheManager } from '../../utils/index.ts';
-import { PanelManagerBase } from './PanelManagerBase.ts';
+import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
 import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig, UnifiedListRenderer, ImageListConfig } from './SharedComponents/index.ts';
 import { Constants } from '../../constants.ts';
-import { DialogService, DialogConfig } from '../services/index.ts';
+import { DialogConfig } from '../services/index.ts';
 import { BatchConfig } from '../config/index.ts';
 import { IImage } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
 import { CardEventStrategy } from './Strategies/CardEventStrategy.ts';
 import { ListEventStrategy } from './Strategies/ListEventStrategy.ts';
-import { IEventStrategy, EventContext, ItemType } from './Strategies/IEventStrategy.ts';
+import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
 
 interface ImagePanelManagerOptions {
   app: {
@@ -83,6 +83,55 @@ export class ImagePanelManager extends PanelManagerBase {
       operationConfig: BatchConfig.image.operations
     });
     this.filteredImages = [];
+  }
+
+  /**
+   * 获取 UI 配置
+   */
+  protected getUIConfig() {
+    return {
+      cardSelector: '.image-card',
+      listItemSelector: '.list-item--image',
+      cardBgSelector: '.image-card-bg, .card__bg',
+      gridContainerId: 'imageGrid',
+      listContainerId: 'imageList',
+      dragSource: 'image-tag',
+      getCardDropSelector: () => '.image-card',
+
+      getElementId: (element: HTMLElement): string | undefined => {
+        return element.dataset.id || element.dataset.imageId || undefined;
+      },
+
+      getCopyContent: (item: IPanelItem) => {
+        const img = item as IImage;
+        const imgWithPrompt = img as ImageWithPromptContent;
+        if (imgWithPrompt.promptRefs && imgWithPrompt.promptRefs.length > 0) {
+          return {
+            content: imgWithPrompt.promptRefs[0].promptContent || '',
+            hasContent: !!imgWithPrompt.promptRefs[0].promptContent
+          };
+        }
+        return { content: '', hasContent: false };
+      },
+
+      getDeleteConfirmConfig: () => ({
+        config: DialogConfig.DELETE_IMAGE_TO_TRASH
+      }),
+
+      getCardImagePath: (item: IPanelItem): string | null => {
+        const img = item as IImage;
+        const thumbnailPath = typeof img.thumbnailPath === 'string' ? img.thumbnailPath : undefined;
+        const relativePath = typeof img.relativePath === 'string' ? img.relativePath : undefined;
+        return thumbnailPath || relativePath || null;
+      }
+    };
+  }
+
+  /**
+   * 获取更新 API
+   */
+  protected getUpdateAPI(): (id: string, data: unknown) => Promise<void> {
+    return window.electronAPI.updateImage as (id: string, data: unknown) => Promise<void>;
   }
 
   /**
@@ -204,64 +253,6 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
-   * 绑定卡片按钮事件（删除、收藏、复制）
-   */
-  bindCardButtonEvents(filtered: IImage[]): void {
-    const container = document.getElementById('imageGrid');
-    if (!container) return;
-
-    filtered.forEach(img => {
-      const card = container.querySelector(`[data-id="${img.id}"]`);
-      if (!card) return;
-
-      // 删除按钮
-      const deleteBtn = card.querySelector('.delete-btn');
-      if (deleteBtn) {
-        deleteBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const confirmed = await DialogService.showConfirmDialogByConfig(DialogConfig.DELETE_IMAGE_TO_TRASH);
-          if (confirmed) {
-            await this.deleteItem(String(img.id));
-          }
-        });
-      }
-
-      // 收藏按钮
-      const favoriteBtn = card.querySelector('.favorite-btn');
-      if (favoriteBtn) {
-        favoriteBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          await this.toggleFavorite(String(img.id), !img.isFavorite);
-        });
-      }
-
-      // 复制按钮
-      const copyBtn = card.querySelector('.copy-btn');
-      if (copyBtn) {
-        copyBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const imgWithPrompt = img as ImageWithPromptContent;
-          if (imgWithPrompt.promptRefs && imgWithPrompt.promptRefs.length > 0) {
-            const promptContent = imgWithPrompt.promptRefs[0].promptContent;
-            if (promptContent) {
-              try {
-                await window.electronAPI.copyToClipboard(promptContent);
-                (this.app as ImagePanelManagerOptions['app']).showToast('已复制到剪贴板', 'success');
-              } catch (error) {
-                (this.app as ImagePanelManagerOptions['app']).showToast('复制失败', 'error');
-              }
-            } else {
-              (this.app as ImagePanelManagerOptions['app']).showToast('没有可复制的提示词内容', 'warning');
-            }
-          } else {
-            (this.app as ImagePanelManagerOptions['app']).showToast('没有关联的提示词', 'warning');
-          }
-        });
-      }
-    });
-  }
-
-  /**
    * 异步加载卡片背景图（实现基类抽象方法）
    */
   async loadCardBackgrounds(): Promise<void> {
@@ -343,63 +334,6 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
-   * 绑定列表按钮事件（删除、收藏、复制）
-   */
-  bindListButtonEvents(filtered: IImage[]): void {
-    const listContainer = document.getElementById('imageList');
-    if (!listContainer) return;
-
-    // 收藏按钮事件
-    listContainer.querySelectorAll('.favorite-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const id = (btn as HTMLElement).dataset.id;
-        const img = filtered.find(i => String(i.id) === String(id));
-        if (img) {
-          await this.toggleFavorite(String(id), !img.isFavorite);
-        }
-      });
-    });
-
-    // 删除按钮事件
-    listContainer.querySelectorAll('.delete-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const id = (btn as HTMLElement).dataset.id;
-        const confirmed = await DialogService.showConfirmDialogByConfig(DialogConfig.DELETE_IMAGE_TO_TRASH);
-        if (confirmed) {
-          await this.deleteItem(String(id));
-        }
-      });
-    });
-
-    // 复制按钮事件
-    listContainer.querySelectorAll('.copy-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const id = (btn as HTMLElement).dataset.id;
-        const img = filtered.find(i => String(i.id) === String(id));
-        const imgWithPrompt = img as ImageWithPromptContent | undefined;
-        if (imgWithPrompt && imgWithPrompt.promptRefs && imgWithPrompt.promptRefs.length > 0) {
-          const promptContent = imgWithPrompt.promptRefs[0].promptContent;
-          if (promptContent) {
-            try {
-              await window.electronAPI.copyToClipboard(promptContent);
-              (this.app as ImagePanelManagerOptions['app']).showToast('已复制到剪贴板', 'success');
-            } catch (error) {
-              (this.app as ImagePanelManagerOptions['app']).showToast('复制失败', 'error');
-            }
-          } else {
-            (this.app as ImagePanelManagerOptions['app']).showToast('没有可复制的提示词内容', 'warning');
-          }
-        } else {
-          (this.app as ImagePanelManagerOptions['app']).showToast('没有关联的提示词', 'warning');
-        }
-      });
-    });
-  }
-
-  /**
    * 绑定 hover 预览事件（实现基类抽象方法）
    */
   bindHoverPreview(selector: string): void {
@@ -421,48 +355,6 @@ export class ImagePanelManager extends PanelManagerBase {
         return imageId || null;
       },
       delay: 500
-    });
-  }
-
-  /**
-   * 绑定卡片拖拽事件（实现基类抽象方法）
-   */
-  bindCardDropEvents(container: HTMLElement): void {
-    // 避免重复绑定
-    if (container.dataset.dropEventsBound === 'true') {
-      return;
-    }
-    container.dataset.dropEventsBound = 'true';
-
-    container.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      (e as DragEvent).dataTransfer!.dropEffect = 'copy';
-    });
-
-    container.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      const dragSource = (e as DragEvent).dataTransfer!.getData('drag-source');
-      const tagName = (e as DragEvent).dataTransfer!.getData('text/plain');
-
-      if (dragSource === 'image-tag' && tagName) {
-        const card = (e.target as Element).closest('.image-card');
-        if (card) {
-          const imageId = (card as HTMLElement).dataset.id || (card as HTMLElement).dataset.imageId;
-          if (imageId) {
-            try {
-              await this.handleTagDrop(
-                imageId,
-                tagName,
-                (this.app as ImagePanelManagerOptions['app']).imageCache,
-                window.electronAPI.updateImage
-              );
-              (this.app as ImagePanelManagerOptions['app']).showToast('标签已添加', 'success');
-            } catch (error) {
-              (this.app as ImagePanelManagerOptions['app']).showToast((error as Error).message, 'error');
-            }
-          }
-        }
-      }
     });
   }
 
@@ -599,39 +491,6 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
-   * 更新收藏按钮 UI（实现基类抽象方法）
-   */
-  updateFavoriteUI(id: string, isFavorite: boolean): void {
-    const updateBtn = (btn: Element | null) => {
-      if (!btn) return;
-      if (isFavorite) {
-        btn.classList.add('active');
-        (btn as HTMLElement).title = '取消收藏';
-        btn.innerHTML = Constants.ICONS.favorite.filled;
-      } else {
-        btn.classList.remove('active');
-        (btn as HTMLElement).title = '收藏';
-        btn.innerHTML = Constants.ICONS.favorite.outline;
-      }
-    };
-
-    const card = document.querySelector(`.image-card[data-id="${id}"]`);
-    if (card) {
-      const btn = card.querySelector('.favorite-btn');
-      updateBtn(btn);
-      card.classList.toggle('is-favorite', isFavorite);
-    }
-
-    // 更新列表视图
-    const listItem = document.querySelector(`.list-item--image[data-id="${id}"]`);
-    if (listItem) {
-      const btn = listItem.querySelector('.favorite-btn');
-      updateBtn(btn);
-      listItem.classList.toggle('list-item--favorite', isFavorite);
-    }
-  }
-
-  /**
    * 排序图像列表（实现基类抽象方法）
    */
   sortItems(items: IImage[], sortBy: string, sortOrder: string): IImage[] {
@@ -690,21 +549,6 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
-   * 设置卡片大小（重写基类方法）
-   * @param size - 卡片宽度/高度（像素），保持1:1方形
-   */
-  setCardSize(size: number): void {
-    super.setCardSize(size);
-    const imageGrid = document.getElementById('imageGrid');
-    if (imageGrid) {
-      // 使用固定列宽，每列大小等于滑杆值
-      imageGrid.style.gridTemplateColumns = `repeat(auto-fill, ${size}px)`;
-      // 设置行高等于列宽，保持1:1方形
-      imageGrid.style.gridAutoRows = `${size}px`;
-    }
-  }
-
-  /**
    * 获取当前视图的事件策略
    */
   protected getEventStrategy(): IEventStrategy | null {
@@ -743,7 +587,7 @@ class ImageCardEventStrategy extends CardEventStrategy {
     super();
   }
 
-  protected handleOpenDetail(item: ItemType): void {
+  protected handleOpenDetail(item: IEventStrategyItem): void {
     this.manager.openImageDetail(item as IImage);
   }
 }
@@ -756,7 +600,7 @@ class ImageListEventStrategy extends ListEventStrategy {
     super();
   }
 
-  protected handleOpenDetail(item: ItemType): void {
+  protected handleOpenDetail(item: IEventStrategyItem): void {
     this.manager.openImageDetail(item as IImage);
   }
 }
