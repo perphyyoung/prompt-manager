@@ -29,7 +29,7 @@ export interface IImage {
   isSafe?: number;
   isFavorite?: number;
   isDeleted?: boolean;
-  size?: number;
+  fileSize?: number;
   width?: number;
   height?: number;
   note?: string;

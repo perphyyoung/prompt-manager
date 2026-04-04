@@ -663,8 +663,8 @@ export class ImagePanelManager extends PanelManagerBase {
           valueB = b.height || 0;
           break;
         case 'fileSize':
-          valueA = a.size || 0;
-          valueB = b.size || 0;
+          valueA = a.fileSize || 0;
+          valueB = b.fileSize || 0;
           break;
         default:
           valueA = a.updatedAt || 0;

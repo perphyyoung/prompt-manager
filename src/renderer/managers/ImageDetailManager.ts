@@ -228,7 +228,7 @@ export class ImageDetailManager extends DetailViewManager {
     // 文件大小
     const fileSizeEl = document.getElementById('imageDetailFileSize');
     if (fileSizeEl) {
-      fileSizeEl.textContent = image.size ? HtmlUtils.formatFileSize(image.size) : '-';
+      fileSizeEl.textContent = image.fileSize ? HtmlUtils.formatFileSize(image.fileSize) : '-';
     }
 
     // 设置图像 - 异步获取完整路径

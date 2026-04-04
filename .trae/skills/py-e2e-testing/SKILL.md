@@ -105,7 +105,14 @@ When automated verification reveals failures:
    - Does the expected element exist?
    - Does the state match expectations?
 
-3. **Fix and re-verify**
+3. **Re-examine the code - DO NOT GUESS**
+   - When tests fail, you MUST re-examine the relevant source code
+   - Do not assume "it might be X" and apply workarounds
+   - Go back to Phase 1: read the actual implementation code
+   - Verify DOM structure, field names, data flow
+   - Only fix after understanding the real cause
+
+4. **Fix and re-verify**
    - Fix the root cause in code or test
    - Return to Phase 3 to re-run verification
    - Do not proceed until all tests pass

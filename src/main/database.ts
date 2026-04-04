@@ -1571,7 +1571,9 @@ function mapRowToImage(row: ImageRow, promptRows: Array<{ id: string; title: str
     promptRefs: promptRows.map(p => ({
       promptId: p.id,
       promptTitle: p.title,
-      promptContent: p.content
+      promptContent: p.content,
+      promptContentTranslate: (p as any).content_translate,
+      promptNote: (p as any).note
     }))
   };
 
@@ -1587,11 +1589,11 @@ function mapRowToImage(row: ImageRow, promptRows: Array<{ id: string; title: str
  * @param imageIds - 图像 ID 数组
  * @returns 提示词引用列表
  */
-async function getPromptRefsForImages(imageIds: string[]): Promise<Array<{ image_id: string; id: string; title: string; content: string }>> {
+async function getPromptRefsForImages(imageIds: string[]): Promise<Array<{ image_id: string; id: string; title: string; content: string; content_translate: string; note: string }>> {
   if (imageIds.length === 0) return [];
   const placeholders = imageIds.map(() => '?').join(',');
   const sql = `
-    SELECT pir.image_id, p.id, p.title, p.content
+    SELECT pir.image_id, p.id, p.title, p.content, p.content_translate, p.note
     FROM prompt_image_relations pir
     JOIN prompts p ON pir.prompt_id = p.id
     WHERE pir.image_id IN (${placeholders}) AND p.is_deleted = 0
@@ -1612,10 +1614,16 @@ async function getImagesCore(baseSql: string, params: any[]): Promise<Image[]> {
   const imageIds = rows.map(r => r.id);
   const promptRefs = await getPromptRefsForImages(imageIds);
 
-  const refsByImageId: Record<string, Array<{ id: string; title: string; content: string }>> = {};
+  const refsByImageId: Record<string, Array<{ id: string; title: string; content: string; content_translate: string; note: string }>> = {};
   for (const ref of promptRefs) {
     if (!refsByImageId[ref.image_id]) refsByImageId[ref.image_id] = [];
-    refsByImageId[ref.image_id].push({ id: ref.id, title: ref.title, content: ref.content });
+    refsByImageId[ref.image_id].push({
+      id: ref.id,
+      title: ref.title,
+      content: ref.content,
+      content_translate: ref.content_translate,
+      note: ref.note
+    });
   }
 
   return rows.map(row => mapRowToImage(row, refsByImageId[row.id] || []));
@@ -1731,12 +1739,12 @@ async function getImageById(id: string): Promise<Image | null> {
 
   // 单独获取关联的提示词信息
   const promptSql = `
-    SELECT p.id, p.title, p.content
+    SELECT p.id, p.title, p.content, p.content_translate, p.note
     FROM prompts p
     JOIN prompt_image_relations pir ON p.id = pir.prompt_id
     WHERE pir.image_id = ? AND p.is_deleted = 0
   `;
-  const promptRows = await all<{ id: string; title: string; content: string }>(promptSql, [id]);
+  const promptRows = await all<{ id: string; title: string; content: string; content_translate: string; note: string }>(promptSql, [id]);
 
   return mapRowToImage(row, promptRows);
 }
