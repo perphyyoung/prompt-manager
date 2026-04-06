@@ -2,80 +2,28 @@ import { HtmlUtils } from '../../utils/index.ts';
 import { cacheManager, CacheManager } from '../../utils/CacheManager.ts';
 import { LRUCache } from '../../utils/LRUCache.ts';
 import { TagUI } from './TagUI.ts';
-import { BatchOperationManager } from './BatchOperationManager.ts';
 import { TagService } from './TagService.ts';
 import { TopGroupManager } from './TopGroupManager.ts';
 import { ITagWithGroup, ITagGroup } from '../../types/entities.ts';
 import { IEventStrategy, EventContext } from './Strategies/IEventStrategy.ts';
-import { SelectionManager } from './SelectionManager.ts';
+import { MultiSelectManager, IToolbarConfig, IBatchOperationHandler } from './MultiSelectManager.ts';
+import { MultiSelectConfig, IBatchOperationConfig } from '../config/MultiSelectConfig.ts';
 import { DialogService, DialogConfigItem } from '../services/index.ts';
 import { Constants } from '../../constants.ts';
 
-// 工具栏按钮配置
-interface BatchToolbarButton {
-  id: string;
-  text: string;
-  className: string;
-  title?: string;
-  action: string;
-}
 
-// 工具栏配置接口
-interface ToolbarConfig {
-  toolbarId: string;
-  actionsId: string;
-  countId: string;
-  selectAllCheckboxId: string;
-  label: string;
-  buttons: BatchToolbarButton[];
-  onDelete?: () => void;
-  onAddTag?: () => void;
-  onSetSafe?: () => void;
-  onSetUnsafe?: () => void;
-  onCancel?: () => void;
-}
 
-// 操作配置接口
-interface OperationConfig {
-  delete: {
-    api: string;
-    cacheDelete: (cacheManager: CacheManager) => LRUCache<unknown>;
-    event: string;
-    confirm: boolean;
-    clearSelection: boolean;
-    reloadData: boolean;
-    successMsg: (count: number) => string;
-    errorMsg: string;
-  };
-  addTag: {
-    api: string;
-    event: string;
-    needInput: boolean;
-    inputTitle: string;
-    inputPlaceholder: string;
-    processItems: (ids: string[], tagInput: string) => Promise<void>;
-    successMsg: (count: number) => string;
-    errorMsg: string;
-  };
-  favorite: {
-    api: string;
-    event: string;
-    processItems: (ids: string[], input: null, api: string) => Promise<void>;
-    successMsg: (count: number) => string;
-    errorMsg: string;
-  };
-}
+// 从 app.types.ts 导入 IEventBus
+import type { IEventBus } from '../app.types.ts';
 
 // 面板管理器基类选项接口
 interface PanelManagerBaseOptions {
   app: unknown;
   tagManager?: unknown;
-  eventBus?: { emit: (event: string, data?: unknown) => void; on: (event: string, callback: () => void) => void };
+  eventBus?: IEventBus;
   storagePrefix: string;
   defaultCardSize?: number;
   onSelectionChange?: () => void;
-  toolbarConfig?: ToolbarConfig;
-  operationConfig?: OperationConfig;
 }
 
 // 面板项目接口（基础）
@@ -143,11 +91,10 @@ export abstract class PanelManagerBase {
   [key: string]: unknown;
   app: unknown;
   protected tagManager?: unknown;
-  protected eventBus?: { emit: (event: string, data?: unknown) => void; on: (event: string, callback: () => void) => void };
+  protected eventBus?: IEventBus;
   protected storagePrefix: string;
   protected defaultCardSize: number;
   protected onSelectionChange?: () => void;
-  toolbarController?: BatchOperationManager;
 
   // 通用状态
   protected filteredItems: IPanelItem[] = [];
@@ -166,8 +113,8 @@ export abstract class PanelManagerBase {
   tagFilterSortBy: string;
   tagFilterSortOrder: string;
 
-  // 选择管理器
-  selectionManager: SelectionManager;
+  // 多选管理器（合并了 SelectionManager 和 BatchOperationManager）
+  multiSelectManager: MultiSelectManager;
 
   // UI 配置（子类实现）
   protected abstract getUIConfig(): IUIConfig;
@@ -199,29 +146,36 @@ export abstract class PanelManagerBase {
     this.tagFilterSortBy = localStorage.getItem(`${this.storagePrefix}TagFilterSortBy`) || 'count';
     this.tagFilterSortOrder = localStorage.getItem(`${this.storagePrefix}TagFilterSortOrder`) || 'desc';
 
-    // 初始化选择管理器（先初始化，因为 BatchOperationManager 需要它）
-    this.selectionManager = new SelectionManager(() => {
-      this.renderView();
-      this.toolbarController?.updateUI();
-      this.syncBatchMode();
+    // 获取配置
+    const configKey = this.storagePrefix as 'image' | 'prompt';
+    const multiSelectConfig = MultiSelectConfig[configKey];
+
+    // 创建批量操作处理器 - 使用直接回调替代全局事件
+    const batchHandler: IBatchOperationHandler = {
+      onSelectAll: () => this.selectAllVisibleItems(),
+      onInvert: () => this.handleBatchInvert(),
+      onAddTag: () => this.handleBatchAddTag(),
+      onFavorite: () => this.handleBatchFavorite(),
+      onDelete: () => this.handleBatchDelete(),
+      onCancel: () => this.handleBatchCancel()
+    };
+
+    // 初始化 MultiSelectManager
+    this.multiSelectManager = new MultiSelectManager({
+      onChange: async () => {
+        await this.renderView();
+        this.multiSelectManager.updateToolbarUI();
+      },
+      toolbarConfig: multiSelectConfig ? {
+        label: multiSelectConfig.label,
+        buttons: multiSelectConfig.buttons
+      } : undefined,
+      handler: batchHandler,
+      eventBus: this.eventBus
     });
 
-    // 初始化批量操作管理器（包含UI和操作执行）
-    if (options.toolbarConfig) {
-      this.toolbarController = new BatchOperationManager({
-        toolbarId: options.toolbarConfig.toolbarId,
-        actionsId: options.toolbarConfig.actionsId,
-        countId: options.toolbarConfig.countId,
-        selectAllCheckboxId: options.toolbarConfig.selectAllCheckboxId,
-        label: options.toolbarConfig.label,
-        buttons: options.toolbarConfig.buttons,
-        selectionManager: this.selectionManager,
-        panelManager: this,
-        operationConfig: options.operationConfig,
-        eventBus: this.eventBus
-      });
-      this.toolbarController.init();
-    }
+    // 初始化工具栏
+    this.multiSelectManager.initToolbar();
 
     // 绑定事件
     this.subscribeToEvents();
@@ -233,29 +187,44 @@ export abstract class PanelManagerBase {
   /**
    * 绑定键盘事件
    * 支持批量操作的快捷键
+   * @deprecated 键盘事件处理已移至 ShortcutManager，由 ContextStackManager 管理上下文
    */
   protected bindKeyboardEvents(): void {
-    document.addEventListener('keydown', (e: KeyboardEvent) => {
-      // 检查当前面板是否活动（可见）
-      if (!this.isActivePanel()) return;
+    // Ctrl+A 和 Esc 处理已移至 ShortcutManager
+    // 保留此方法以便子类扩展
+  }
 
-      // Ctrl+A: 全选（所有视图都支持）
-      if (e.ctrlKey && e.key.toLowerCase() === 'a') {
-        // 检查是否有可见项目
-        if (this.getVisibleItemCount() > 0) {
-          e.preventDefault();
-          this.selectAllVisibleItems();
-        }
-      }
+  /**
+   * 检查是否有模态框打开
+   * @returns 是否有模态框打开
+   */
+  private isModalOpen(): boolean {
+    const modals = [
+      'imageDetailModal',
+      'promptDetailModal',
+      'imageTrashModal',
+      'promptTrashModal',
+      'settingsModal',
+      'statisticsModal',
+      'imageTagManagerModal',
+      'promptTagManagerModal'
+    ];
+    return modals.some(id => document.getElementById(id)?.classList.contains('active'));
+  }
 
-      // Esc: 退出批量模式
-      if (e.key === 'Escape') {
-        if (this.toolbarController?.isBatchModeActive) {
-          e.preventDefault();
-          this.toolbarController.exitBatchMode();
-        }
-      }
-    });
+  /**
+   * 检查元素是否是文本输入元素
+   * @param element - 要检查的元素
+   * @returns 是否是文本输入元素
+   */
+  private isTextInputElement(element: HTMLElement): boolean {
+    const tagName = element.tagName;
+    if (tagName === 'TEXTAREA') return true;
+    if (tagName === 'INPUT') {
+      const inputType = (element as HTMLInputElement).type;
+      return ['text', 'search', 'url', 'email', 'password', 'number'].includes(inputType);
+    }
+    return element.isContentEditable;
   }
 
   /**
@@ -273,33 +242,12 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 同步批量模式状态
-   * 根据选择状态自动进入或退出批量模式
-   */
-  protected syncBatchMode(): void {
-    const hasSelection = this.selectionManager.count > 0;
-    const isBatchMode = this.toolbarController?.isBatchModeActive;
-
-    if (hasSelection && !isBatchMode) {
-      this.toolbarController?.enterBatchMode();
-    } else if (!hasSelection && isBatchMode) {
-      this.toolbarController?.exitBatchMode();
-    }
-  }
-
-  /**
    * 全选所有可见项目
    */
-  protected selectAllVisibleItems(): void {
+  selectAllVisibleItems(): void {
     const visibleItems = this.getVisibleItems();
-
-    visibleItems.forEach((item: IPanelItem) => {
-      this.selectionManager.addSelection(String(item.id));
-    });
-
-    // 批量模式会通过 syncBatchMode 自动同步
-    this.toolbarController?.updateUI();
-    this.renderView();
+    const ids = visibleItems.map((item: IPanelItem) => String(item.id));
+    this.multiSelectManager.selectAll(ids);
   }
 
   /**
@@ -844,10 +792,10 @@ export abstract class PanelManagerBase {
       // 检查筛选条件是否改变
       const filterChanged = this.checkFilterChanged();
       if (filterChanged) {
-        this.selectionManager.clear();
-        this.toolbarController?.exitBatchMode();
+        this.multiSelectManager.clear();
+        this.multiSelectManager.hideToolbar();
         // 筛选条件改变时才重置 lastSelectedIndex，因为索引对应关系已改变
-        this.selectionManager.resetLastSelectedIndex();
+        this.multiSelectManager.resetLastSelectedIndex();
       }
 
       // 子类实现具体的渲染逻辑
@@ -1208,7 +1156,7 @@ export abstract class PanelManagerBase {
   setViewMode(mode: string, preserveSelection: boolean = true): void {
     // 切换视图模式时可选保留选择状态
     if (!preserveSelection) {
-      this.selectionManager.clear();
+      this.multiSelectManager.clear();
     }
 
     this.viewModeType = mode;
@@ -1216,7 +1164,7 @@ export abstract class PanelManagerBase {
     this.renderView();
 
     // 更新工具栏
-    this.toolbarController?.updateUI();
+    this.multiSelectManager.updateToolbarUI();
   }
 
   /**
@@ -1245,14 +1193,15 @@ export abstract class PanelManagerBase {
    * 更新工具栏 UI
    */
   updateToolbarUI(): void {
-    this.toolbarController?.updateUI();
+    this.multiSelectManager.updateToolbarUI();
   }
 
   /**
    * 退出批量模式
    */
   exitBatchMode(): void {
-    this.toolbarController?.exitBatchMode();
+    this.multiSelectManager.clear();
+    this.multiSelectManager.hideToolbar();
   }
 
   /**
@@ -1284,11 +1233,7 @@ export abstract class PanelManagerBase {
     containerIds.forEach(id => {
       const container = document.getElementById(id);
       if (container) {
-        if (this.selectionManager.count > 0) {
-          container.classList.add('selection-mode');
-        } else {
-          container.classList.remove('selection-mode');
-        }
+        container.classList.toggle('selection-mode', this.multiSelectManager.hasSelection);
       }
     });
   }
@@ -1317,8 +1262,7 @@ export abstract class PanelManagerBase {
 
     // 构建事件上下文
     const eventContext: EventContext = {
-      selectionManager: this.selectionManager,
-      toolbarController: this.toolbarController,
+      multiSelectManager: this.multiSelectManager,
       renderView: () => this.renderView(),
       items: items
     };
@@ -1326,48 +1270,174 @@ export abstract class PanelManagerBase {
     strategy.bindEvents(container, items, eventContext);
   }
 
-  // ==================== 批量操作方法（委托给 BatchOperationManager） ====================
+  // ==================== 批量操作处理方法 ====================
 
   /**
-   * 批量删除
+   * 处理批量删除
    */
-  async batchDelete(): Promise<void> {
-    await this.toolbarController?.batchDelete();
+  protected async handleBatchDelete(): Promise<void> {
+    const configKey = this.storagePrefix as 'image' | 'prompt';
+    const config = MultiSelectConfig[configKey]?.operations.delete;
+    if (!config) return;
+
+    const selectedIds = Array.from(this.multiSelectManager.selectedIds);
+    if (selectedIds.length === 0) return;
+
+    // 确认对话框
+    if (config.confirm) {
+      const confirmed = await DialogService.showConfirmDialogByConfig(
+        { title: '确认删除', message: `确定要删除选中的 ${selectedIds.length} 个项目吗？` }
+      );
+      if (!confirmed) return;
+    }
+
+    try {
+      for (const id of selectedIds) {
+        const apiFn = window.electronAPI[config.api as keyof typeof window.electronAPI] as (id: string) => Promise<void>;
+        await apiFn(id);
+      }
+
+      // 清除缓存
+      if (config.cacheDelete) {
+        config.cacheDelete(cacheManager).clear();
+      }
+
+      // 清除选择
+      if (config.clearSelection) {
+        this.multiSelectManager.clear();
+      }
+
+      // 重新加载数据
+      if (config.reloadData) {
+        await this.refreshAfterUpdate();
+      }
+
+      // 发送事件
+      if (config.event && this.eventBus) {
+        this.eventBus.emit(config.event, selectedIds);
+      }
+
+      // 通知对方面板刷新（关联关系已解除）
+      if (configKey === 'image') {
+        this.eventBus?.emit('promptsChanged');
+      } else {
+        this.eventBus?.emit('imagesChanged');
+      }
+
+      (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(
+        config.successMsg(selectedIds.length),
+        'success'
+      );
+    } catch (error) {
+      (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(
+        config.errorMsg,
+        'error'
+      );
+    }
   }
 
   /**
-   * 批量添加标签
+   * 处理批量添加标签
    */
-  async batchAddTag(): Promise<void> {
-    await this.toolbarController?.batchAddTag();
+  protected async handleBatchAddTag(): Promise<void> {
+    const configKey = this.storagePrefix as 'image' | 'prompt';
+    const config = MultiSelectConfig[configKey]?.operations.addTag;
+    if (!config) return;
+
+    const selectedIds = Array.from(this.multiSelectManager.selectedIds);
+    if (selectedIds.length === 0) return;
+
+    // 输入对话框
+    const tagInputResult = await DialogService.showInputDialog({
+      title: config.inputTitle,
+      placeholder: config.inputPlaceholder
+    });
+
+    if (!tagInputResult) return;
+
+    const tagInput = tagInputResult.value;
+
+    try {
+      if (config.processItems) {
+        await config.processItems(selectedIds, tagInput);
+      }
+
+      // 清除选择
+      this.multiSelectManager.clear();
+
+      // 重新加载数据
+      await this.refreshAfterUpdate();
+
+      // 发送事件
+      if (config.event && this.eventBus) {
+        this.eventBus.emit(config.event, { ids: selectedIds, tags: tagInput });
+      }
+
+      (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(
+        config.successMsg(selectedIds.length),
+        'success'
+      );
+    } catch (error) {
+      (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(
+        config.errorMsg,
+        'error'
+      );
+    }
   }
 
   /**
-   * 批量收藏
+   * 处理批量收藏
    */
-  async batchFavorite(): Promise<void> {
-    await this.toolbarController?.batchFavorite();
+  protected async handleBatchFavorite(): Promise<void> {
+    const configKey = this.storagePrefix as 'image' | 'prompt';
+    const config = MultiSelectConfig[configKey]?.operations.favorite;
+    if (!config) return;
+
+    const selectedIds = Array.from(this.multiSelectManager.selectedIds);
+    if (selectedIds.length === 0) return;
+
+    try {
+      if (config.processItems) {
+        await config.processItems(selectedIds, null, config.api);
+      }
+
+      // 清除选择
+      this.multiSelectManager.clear();
+
+      // 重新加载数据
+      await this.refreshAfterUpdate();
+
+      // 发送事件
+      if (config.event && this.eventBus) {
+        this.eventBus.emit(config.event, selectedIds);
+      }
+
+      (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(
+        config.successMsg(selectedIds.length),
+        'success'
+      );
+    } catch (error) {
+      (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(
+        config.errorMsg,
+        'error'
+      );
+    }
   }
 
   /**
-   * 取消选择
+   * 处理反选
    */
-  batchCancel(): void {
-    this.toolbarController?.batchCancel();
+  protected handleBatchInvert(): void {
+    const visibleItems = this.getVisibleItems();
+    const allIds = visibleItems.map((item: IPanelItem) => String(item.id));
+    this.multiSelectManager.invertSelection(allIds);
   }
 
   /**
-   * 反选
+   * 处理取消选择
    */
-  batchInvert(): void {
-    this.toolbarController?.batchInvert();
-  }
-
-  /**
-   * 全选
-   */
-  batchSelectAll(): void {
-    this.toolbarController?.batchSelectAll();
+  protected handleBatchCancel(): void {
+    this.multiSelectManager.clear();
   }
 
   // ==================== 标签拖拽操作 ====================

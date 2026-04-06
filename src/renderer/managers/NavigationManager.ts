@@ -3,6 +3,10 @@
  * 负责处理面板切换和导航逻辑
  */
 
+import { contextStack } from './ContextStackManager.ts';
+import { Constants } from '../../constants.ts';
+import { logInfo } from '@/main/logger.ts';
+
 // 面板配置接口
 interface IPanelConfig {
   id?: string;
@@ -12,24 +16,29 @@ interface IPanelConfig {
   [key: string]: unknown;
 }
 
-// 批量工具栏配置
-interface IBatchToolbarConfig {
-  prompt?: IPanelConfig;
-  image?: IPanelConfig;
-}
-
 // App 类型定义
 interface IApp {
   promptPanelManager: {
     viewModeType: string;
     ensureRendered: () => Promise<void>;
+    exitBatchMode?: () => void;
   } | null;
   imagePanelManager: {
     viewModeType: string;
     ensureRendered: () => Promise<void>;
+    exitBatchMode?: () => void;
+  } | null;
+  promptTagManager?: {
+    hideBatchToolbar: () => void;
+  } | null;
+  imageTagManager?: {
+    hideBatchToolbar: () => void;
   } | null;
   updatePromptViewButtons: (viewMode: string) => void;
   updateImageViewButtons: (viewMode: string) => void;
+  eventBus?: {
+    emit: (event: string, data?: unknown) => void;
+  };
 }
 
 // NavigationManager 构造选项
@@ -37,24 +46,22 @@ interface INavigationManagerOptions {
   app: IApp;
   storageKey?: string;
   defaultPanel?: string;
-  batchToolbarConfig?: IBatchToolbarConfig;
 }
 
 export class NavigationManager {
   private app: IApp;
   private storageKey: string;
   private defaultPanel: string;
-  private batchToolbarConfig: IBatchToolbarConfig;
 
   private currentPanel: string;
   private panels: Map<string, IPanelConfig>;
   private onPanelChange: ((panelName: string, panelConfig: IPanelConfig) => void) | null;
+  private isInitialized = false;
 
   constructor(options: INavigationManagerOptions = { app: {} as IApp }) {
     this.app = options.app;
     this.storageKey = options.storageKey || 'currentPanel';
     this.defaultPanel = options.defaultPanel || 'prompt';
-    this.batchToolbarConfig = options.batchToolbarConfig || {};
 
     this.currentPanel = this.defaultPanel;
     this.panels = new Map<string, IPanelConfig>();
@@ -65,8 +72,12 @@ export class NavigationManager {
    * 初始化
    */
   init(): void {
+    if (this.isInitialized) {
+      return;
+    }
     this.registerPanels();
     this.bindEvents();
+    this.isInitialized = true;
     // 注意：数据刷新由 PanelManager 处理，不需要在这里订阅
     // PromptPanelManager 和 ImagePanelManager 已经订阅了相应的事件
   }
@@ -76,13 +87,9 @@ export class NavigationManager {
    * @private
    */
   private registerPanels(): void {
-    const promptConfig = this.batchToolbarConfig.prompt || {};
-    const imageConfig = this.batchToolbarConfig.image || {};
-
     this.panels.set('prompt', {
-      ...promptConfig,
-      id: promptConfig.id || 'promptPanel',
-      buttonId: promptConfig.buttonId || 'promptManagerBtn',
+      id: 'promptPanel',
+      buttonId: 'promptManagerBtn',
       name: 'prompt',
       onShow: async () => {
         if (this.app.promptPanelManager) {
@@ -93,9 +100,8 @@ export class NavigationManager {
     });
 
     this.panels.set('image', {
-      ...imageConfig,
-      id: imageConfig.id || 'imagePanel',
-      buttonId: imageConfig.buttonId || 'imageManagerBtn',
+      id: 'imagePanel',
+      buttonId: 'imageManagerBtn',
       name: 'image',
       onShow: async () => {
         if (this.app.imagePanelManager) {
@@ -114,17 +120,52 @@ export class NavigationManager {
     // 导航按钮事件
     document.getElementById('promptManagerBtn')?.addEventListener('click', () => this.switchTo('prompt'));
     document.getElementById('imageManagerBtn')?.addEventListener('click', () => this.switchTo('image'));
+
+    // 侧边栏事件
+    this.bindSidebarEvents();
+  }
+
+  /**
+   * 绑定侧边栏事件
+   * @private
+   */
+  private bindSidebarEvents(): void {
+    const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+    const sidebar = document.getElementById('sidebar');
+    if (!toggleSidebarBtn || !sidebar) return;
+
+    toggleSidebarBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      const isCollapsed = sidebar.classList.contains('collapsed');
+      toggleSidebarBtn.title = isCollapsed ? '展开侧边栏' : '收起侧边栏';
+      localStorage.setItem(Constants.LocalStorageKey.SIDEBAR_COLLAPSED, String(isCollapsed));
+    });
+
+    // 恢复侧边栏状态
+    if (localStorage.getItem(Constants.LocalStorageKey.SIDEBAR_COLLAPSED) === 'true') {
+      sidebar.classList.add('collapsed');
+      toggleSidebarBtn.title = '展开侧边栏';
+    }
   }
 
   /**
    * 切换到指定面板
    * @param panelName - 面板名称 (prompt/image)
+   * @param force - 是否强制刷新，即使已经在目标面板也执行回调
    */
-  switchTo(panelName: string): void {
+  switchTo(panelName: string, force = false): void {
     if (!this.panels.has(panelName)) {
       console.warn(`Unknown panel: ${panelName}`);
       return;
     }
+
+    // 如果已经在目标面板且不强制刷新，直接返回
+    if (!force && this.currentPanel === panelName) {
+      return;
+    }
+
+    // 发布视图变化事件，通知所有组件清理多选工具栏
+    this.app.eventBus?.emit('viewChanged', { view: 'panel', panel: panelName });
 
     // 隐藏所有面板
     this.panels.forEach((panel) => {
@@ -160,6 +201,14 @@ export class NavigationManager {
 
     // 更新当前面板
     this.currentPanel = panelName;
+
+    // 更新上下文堆栈
+    contextStack.reset();
+    if (panelName === 'prompt') {
+      contextStack.push(Constants.Ids.PROMPT_PANEL);
+    } else if (panelName === 'image') {
+      contextStack.push(Constants.Ids.IMAGE_PANEL);
+    }
 
     // 保存状态
     this.savePanelState();
@@ -206,7 +255,7 @@ export class NavigationManager {
    */
   restorePanelState(): void {
     const savedPanel = localStorage.getItem(this.storageKey) || this.defaultPanel;
-    this.switchTo(savedPanel);
+    this.switchTo(savedPanel, true);
   }
 
   /**

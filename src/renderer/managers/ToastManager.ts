@@ -22,6 +22,7 @@ export class ToastManager {
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
   private messageQueue: QueuedMessage[] = [];
   private isShowing = false;
+  private isInitialized = false;
 
   constructor(options: ToastOptions = {}) {
     this.duration = options.duration ?? 3000;
@@ -33,7 +34,11 @@ export class ToastManager {
    * 初始化
    */
   init(): void {
+    if (this.isInitialized) {
+      return;
+    }
     this.ensureElements();
+    this.isInitialized = true;
   }
 
   /**

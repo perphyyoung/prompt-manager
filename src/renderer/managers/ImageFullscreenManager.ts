@@ -1,5 +1,6 @@
 import { Constants } from '../../constants.ts';
 import { ListNavigator } from '../../utils/index.ts';
+import { contextStack } from './ContextStackManager.ts';
 
 interface ImageFullscreenManagerOptions {
   app: unknown;
@@ -85,6 +86,12 @@ export class ImageFullscreenManager {
 
     // 显示查看器
     viewer.classList.add('active');
+
+    // 压栈：进入全屏查看器上下文
+    contextStack.push(Constants.Ids.IMAGE_FULLSCREEN_VIEWER);
+
+    // 添加 close 方法供 ShortcutManager 调用
+    (viewer as HTMLElement & { close: () => void }).close = () => this.close();
 
     // 聚焦以接收键盘事件
     viewer.focus();
@@ -320,6 +327,9 @@ export class ImageFullscreenManager {
     if (viewer) {
       viewer.classList.remove('active');
     }
+
+    // 出栈：退出全屏查看器上下文
+    contextStack.pop(Constants.Ids.IMAGE_FULLSCREEN_VIEWER);
 
     this.viewerImages = [];
     this.viewerCurrentIndex = 0;

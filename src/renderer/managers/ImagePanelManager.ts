@@ -1,9 +1,10 @@
 import { cacheManager } from '../../utils/index.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
+import type { IEventBus } from '../app.types.ts';
 import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig, UnifiedListRenderer, ImageListConfig } from './SharedComponents/index.ts';
 import { Constants } from '../../constants.ts';
 import { DialogConfig } from '../services/index.ts';
-import { BatchConfig } from '../config/index.ts';
+
 import { IImage } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
 import { CardEventStrategy } from './Strategies/CardEventStrategy.ts';
@@ -13,13 +14,13 @@ import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.
 interface ImagePanelManagerOptions {
   app: {
     imageCache: LRUCache<IImage>;
-    searchSortManager?: { getImageSearchQuery: () => string };
+    searchSortManager?: { getImageSearchQuery: () => string } | null;
     openImageDetailModal: (image: IImage, options: { filteredList: IImage[] }) => void;
     showToast: (message: string, type: string) => void;
     emit: (event: string, data?: unknown) => void;
     currentPanel: string;
     viewMode: string;
-    trashManager?: { loadTrash: () => Promise<void> };
+    trashManager?: { loadTrash: () => Promise<void> } | null;
     renderStatistics?: () => Promise<void>;
     promptHoverTooltip?: {
       bind: (selector: string, options: {
@@ -27,23 +28,10 @@ interface ImagePanelManagerOptions {
         getImageId: (element: Element) => string | null;
         delay: number;
       }) => void;
-    };
+    } | null;
   };
   tagManager?: unknown;
-  eventBus?: { emit: (event: string, data?: unknown) => void; on: (event: string, callback: () => void) => void };
-  toolbarConfig?: {
-    toolbarId: string;
-    actionsId: string;
-    countId: string;
-    selectAllCheckboxId: string;
-    label: string;
-    buttons: Array<{ id: string; text: string; className: string; title?: string; action: string }>;
-    onDelete?: () => void;
-    onAddTag?: () => void;
-    onSetSafe?: () => void;
-    onSetUnsafe?: () => void;
-    onCancel?: () => void;
-  };
+  eventBus?: IEventBus;
 }
 
 interface PromptRef {
@@ -61,6 +49,7 @@ interface ImageWithPromptContent extends IImage {
  */
 export class ImagePanelManager extends PanelManagerBase {
   private filteredImages: IImage[] = [];
+  private isInitialized = false;
 
   // 图像特殊标签检查函数 Map
   static IMAGE_TAG_CHECKS = new Map<string, (img: IImage) => boolean>([
@@ -78,11 +67,18 @@ export class ImagePanelManager extends PanelManagerBase {
       tagManager: options.tagManager,
       eventBus: options.eventBus,
       storagePrefix: 'image',
-      defaultCardSize: 180,
-      toolbarConfig: options.toolbarConfig,
-      operationConfig: BatchConfig.image.operations
+      defaultCardSize: 180
     });
     this.filteredImages = [];
+    this.bindTagFilterActionEvent();
+  }
+
+  /**
+   * 绑定标签筛选动作按钮事件
+   * @private
+   */
+  private bindTagFilterActionEvent(): void {
+    document.getElementById('imageTagFilterActionBtn')?.addEventListener('click', () => this.handleFilterAction());
   }
 
   /**
@@ -197,7 +193,11 @@ export class ImagePanelManager extends PanelManagerBase {
    * 初始化
    */
   async init(): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
     await this.loadData();
+    this.isInitialized = true;
   }
 
   /**
@@ -247,7 +247,7 @@ export class ImagePanelManager extends PanelManagerBase {
       icons: Constants.ICONS,
       sortBy: this.sortBy,
       app: this.app,
-      selectedIds: this.selectionManager.selectedIds,
+      selectedIds: this.multiSelectManager.selectedIds,
       index
     });
   }
@@ -294,7 +294,7 @@ export class ImagePanelManager extends PanelManagerBase {
       UnifiedListRenderer.render(ImageListConfig, img, {
         icons: Constants.ICONS,
         isCompact,
-        isSelected: this.selectionManager.isSelected(String(img.id)),
+        isSelected: this.multiSelectManager.isSelected(String(img.id)),
         index
       })
     ).join('');
@@ -451,6 +451,9 @@ export class ImagePanelManager extends PanelManagerBase {
       }
       await this.renderView();
       (this.app as ImagePanelManagerOptions['app']).emit('imagesChanged', { images: this.images });
+
+      // 通知提示词面板刷新（关联的提示词已移除该图像）
+      (this.app as ImagePanelManagerOptions['app']).emit('promptsChanged');
 
       // 刷新回收站
       if ((this.app as ImagePanelManagerOptions['app']).trashManager) {

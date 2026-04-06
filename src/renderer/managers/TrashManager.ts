@@ -1,10 +1,25 @@
 import { DialogService, DialogConfig, DialogConfigData } from '../services/index.ts';
 import { UnifiedCardRenderer, PromptTrashConfig, ImageTrashConfig } from './SharedComponents/index.ts';
-import { Constants } from '../../constants.ts';
+import { Constants, ElementId } from '../../constants.ts';
 import { PromptTrashHandler, ImageTrashHandler } from './handlers/index.ts';
 import { localTime } from '../../utils/index.ts';
+import { contextStack } from './ContextStackManager.ts';
 import type { TrashHandler, TrashItem } from './handlers/TrashHandler.ts';
 import type { IApp, IEventBus, IPanelManager } from '../app.types.ts';
+
+/**
+ * 回收站类型
+ */
+export type TrashType = typeof Constants.TrashType.PROMPT | typeof Constants.TrashType.IMAGE;
+
+/**
+ * 回收站模态框配置
+ */
+interface ITrashModalConfig {
+  modalId: string;
+  name: string;
+  elementId: ElementId;
+}
 
 /**
  * TrashManager 配置选项
@@ -16,13 +31,28 @@ interface TrashManagerOptions {
 
 /**
  * 回收站管理器
- * 使用模板方法模式管理已删除的提示词和图像
+ * 使用模板方法模式管理已删除的提示词和图像，同时负责回收站模态框的显示/隐藏
  */
 export class TrashManager {
   private readonly app: IApp;
   private readonly eventBus: IEventBus;
   private trashItems: TrashItem[] = [];
   private currentHandler: TrashHandler | null = null;
+  private activeModals: Set<TrashType> = new Set();
+  private isInitialized = false;
+
+  private static readonly MODAL_CONFIG: Record<TrashType, ITrashModalConfig> = {
+    [Constants.TrashType.PROMPT]: {
+      modalId: 'promptTrashModal',
+      name: 'promptTrashModal',
+      elementId: Constants.Ids.PROMPT_TRASH_MODAL
+    },
+    [Constants.TrashType.IMAGE]: {
+      modalId: 'imageTrashModal',
+      name: 'imageTrashModal',
+      elementId: Constants.Ids.IMAGE_TRASH_MODAL
+    }
+  };
 
   readonly promptHandler: PromptTrashHandler;
   readonly imageHandler: ImageTrashHandler;
@@ -44,7 +74,11 @@ export class TrashManager {
    * 初始化回收站
    */
   async init(): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
     this.bindEvents();
+    this.isInitialized = true;
   }
 
   /**
@@ -412,13 +446,50 @@ export class TrashManager {
   }
 
   /**
+   * 打开回收站模态框
+   * @param type - 回收站类型
+   */
+  private openModal(type: TrashType): void {
+    const config = TrashManager.MODAL_CONFIG[type];
+    if (!config) return;
+
+    const modal = document.getElementById(config.modalId);
+    if (modal) {
+      contextStack.push(config.elementId);
+      modal.style.display = 'flex';
+      // 添加 close 方法供 ShortcutManager 调用
+      (modal as HTMLElement & { close: () => void }).close = () => this.close();
+      this.activeModals.add(type);
+    }
+  }
+
+  /**
+   * 关闭回收站模态框
+   * @param type - 回收站类型
+   */
+  private closeModal(type: TrashType): void {
+    const config = TrashManager.MODAL_CONFIG[type];
+    if (!config) return;
+
+    const modal = document.getElementById(config.modalId);
+    if (modal) {
+      modal.style.display = 'none';
+    }
+    contextStack.pop(config.elementId);
+    this.activeModals.delete(type);
+  }
+
+  /**
    * 打开回收站
    * @param handler - 回收站处理器
    */
   async open(handler: TrashHandler): Promise<void> {
     this.currentHandler = handler;
     await this.loadTrash();
-    this.app.modalManager?.openTrashModal(handler.type);
+    // 压栈：进入回收站视图上下文
+    const type = handler.type as TrashType;
+    contextStack.push(TrashManager.MODAL_CONFIG[type].elementId);
+    this.openModal(type);
   }
 
   /**
@@ -426,7 +497,26 @@ export class TrashManager {
    */
   close(): void {
     if (!this.currentHandler) return;
-    this.app.modalManager?.closeTrashModal(this.currentHandler.type);
+    const type = this.currentHandler.type as TrashType;
+    this.closeModal(type);
+  }
+
+  /**
+   * 检查指定类型的回收站模态框是否处于活动状态
+   * @param type - 回收站类型，不传则检查是否有任何回收站模态框处于活动状态
+   */
+  isModalActive(type?: TrashType): boolean {
+    if (type) {
+      return this.activeModals.has(type);
+    }
+    return this.activeModals.size > 0;
+  }
+
+  /**
+   * 关闭所有回收站模态框
+   */
+  closeAllModals(): void {
+    this.activeModals.forEach(type => this.closeModal(type));
   }
 }
 

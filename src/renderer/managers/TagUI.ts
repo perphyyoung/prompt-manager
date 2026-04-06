@@ -51,18 +51,12 @@ export class TagUI {
     groups: ITagGroup[],
     groupedTags: Record<number, string[]>,
     ungroupedTags: string[],
-    specialTags: string[],
     tagCounts: Record<string, number>,
     searchTerm: string,
     isBatchMode = false,
     selectedTags: Set<string> = new Set()
   ): string {
     let html = '';
-
-    // 特殊标签卡片
-    if (specialTags.length > 0) {
-      html += this.generateSpecialTagCard(specialTags, tagCounts, isBatchMode, selectedTags);
-    }
 
     // 未分组标签卡片
     if (ungroupedTags.length > 0) {
@@ -83,82 +77,106 @@ export class TagUI {
   }
 
   /**
-   * 生成标签项 HTML
+   * 生成标签项 HTML - 极简卡片式设计
    */
   generateTagItemHtml(
     tag: string,
     count: number,
     groupId: number | null = null,
-    isSpecial = false,
     isBatchMode = false,
     isSelected = false
   ): string {
-    if (isSpecial) {
-      return `
-        <div class="tag-manager-item special-tag-in-card" data-tag="${HtmlUtils.escapeHtml(tag)}">
-          <div class="tag-manager-badges">
-            <span class="tag-badge-count">${count}</span>
-          </div>
-          <div class="tag-manager-item-name">${HtmlUtils.escapeHtml(tag)}</div>
-        </div>
-      `;
-    }
+    const selectedClass = isSelected ? 'tag-selected' : '';
+    const batchClass = isBatchMode ? 'batch-mode' : '';
+    const escapedTag = HtmlUtils.escapeHtml(tag);
 
-    // 批量模式
-    if (isBatchMode) {
-      return `
-        <div class="tag-manager-item tag-in-card ${isSelected ? 'tag-selected' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-group-id="${groupId || ''}">
-          <div class="tag-manager-badges">
-            <input type="checkbox" class="tag-batch-checkbox" data-tag="${HtmlUtils.escapeHtml(tag)}" ${isSelected ? 'checked' : ''}>
-            <span class="tag-badge-count">${count}</span>
-          </div>
-          <div class="tag-manager-item-name">${HtmlUtils.escapeHtml(tag)}</div>
-        </div>
-      `;
-    }
-
-    return `
-      <div class="tag-manager-item tag-in-card" data-tag="${HtmlUtils.escapeHtml(tag)}" data-group-id="${groupId || ''}" draggable="true">
-        <div class="tag-manager-badges">
-          <button class="tag-badge-btn tag-badge-delete" data-tag="${HtmlUtils.escapeHtml(tag)}" title="删除">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-          </button>
-          <button class="tag-badge-btn tag-badge-edit" data-tag="${HtmlUtils.escapeHtml(tag)}" title="编辑">
+    const actions = isBatchMode
+      ? `<div class="tag-checkbox-wrapper"><input type="checkbox" class="tag-batch-checkbox" data-tag="${escapedTag}" ${isSelected ? 'checked' : ''}></div>`
+      : `<div class="tag-manager-item-actions">
+          <button class="tag-badge-btn tag-badge-edit" data-tag="${escapedTag}" title="编辑">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
           </button>
-          <span class="tag-badge-count">${count}</span>
+          <button class="tag-badge-btn tag-badge-delete" data-tag="${escapedTag}" title="删除">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>`;
+
+    const draggableAttr = isBatchMode ? '' : 'draggable="true"';
+
+    return `
+      <div class="tag-manager-item tag-in-card ${batchClass} ${selectedClass}" data-tag="${escapedTag}" data-group-id="${groupId ?? ''}" ${draggableAttr}>
+        ${actions}
+        <div class="tag-manager-item-content">
+          <div class="tag-manager-item-name" title="${escapedTag}">${escapedTag}</div>
+          <div class="tag-manager-item-count">${count}</div>
         </div>
-        <div class="tag-manager-item-name">${HtmlUtils.escapeHtml(tag)}</div>
       </div>
     `;
   }
 
   /**
-   * 生成特殊标签卡片 HTML
+   * 生成标签组卡片 HTML
    */
-  generateSpecialTagCard(
-    specialTags: string[],
+  private generateTagGroupCardHtml(
+    groupId: number | null,
+    groupName: string,
+    tags: string[],
     tagCounts: Record<string, number>,
+    isFirst = false,
     isBatchMode = false,
-    selectedTags: Set<string> = new Set()
+    selectedTags: Set<string> = new Set(),
+    isUngrouped = false,
+    sortOrder = 0
   ): string {
-    const specialTagsHtml = specialTags.map(tag => {
-      return this.generateTagItemHtml(tag, tagCounts[tag] || 0, null, true, isBatchMode, selectedTags.has(tag));
-    }).join('');
+    const tagsHtml = tags.map(tag =>
+      this.generateTagItemHtml(tag, tagCounts[tag] ?? 0, groupId, isBatchMode, selectedTags.has(tag))
+    ).join('');
+
+    if (isUngrouped) {
+      return `
+        <div class="tag-group-card ungrouped-card" data-group-id="" data-drop-target="true">
+          <div class="tag-group-card-header">
+            <span class="tag-group-card-name">${groupName}</span>
+          </div>
+          <div class="tag-group-card-content">
+            ${tagsHtml || '<span class="tag-group-card-empty">暂无未分组标签</span>'}
+          </div>
+        </div>
+      `;
+    }
+
+    const firstBadge = isFirst ? '<span class="tag-group-card-first">首位组</span>' : '';
+    const sortBadge = `<span class="tag-group-card-sort">${sortOrder}</span>`;
 
     return `
-      <div class="tag-group-card special-tag-card">
+      <div class="tag-group-card" data-group-id="${groupId}" data-drop-target="true">
         <div class="tag-group-card-header">
-          <span class="tag-group-card-name">特殊标签</span>
+          <span class="tag-group-card-name">${HtmlUtils.escapeHtml(groupName)}</span>
+          ${sortBadge}
+          ${firstBadge}
+          <div class="tag-group-card-actions">
+            <button class="tag-group-btn edit" data-id="${groupId}" title="编辑">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+            <button class="tag-group-btn delete" data-id="${groupId}" title="删除">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="tag-group-card-content">
-          ${specialTagsHtml || '<span class="tag-group-card-empty">暂无特殊标签</span>'}
+          ${tagsHtml || '<span class="tag-group-card-empty">暂无标签</span>'}
         </div>
       </div>
     `;
@@ -173,20 +191,7 @@ export class TagUI {
     isBatchMode = false,
     selectedTags: Set<string> = new Set()
   ): string {
-    const ungroupedTagsHtml = tags.map(tag => {
-      return this.generateTagItemHtml(tag, tagCounts[tag] || 0, null, false, isBatchMode, selectedTags.has(tag));
-    }).join('');
-
-    return `
-      <div class="tag-group-card ungrouped-card" data-group-id="" data-drop-target="true">
-        <div class="tag-group-card-header">
-          <span class="tag-group-card-name">未分组</span>
-        </div>
-        <div class="tag-group-card-content">
-          ${ungroupedTagsHtml || '<span class="tag-group-card-empty">暂无未分组标签</span>'}
-        </div>
-      </div>
-    `;
+    return this.generateTagGroupCardHtml(null, '未分组', tags, tagCounts, false, isBatchMode, selectedTags, true, 0);
   }
 
   /**
@@ -200,39 +205,7 @@ export class TagUI {
     isBatchMode = false,
     selectedTags: Set<string> = new Set()
   ): string {
-    const firstBadge = isFirst ? '<span class="tag-group-card-first">首位组</span>' : '';
-    const sortBadge = `<span class="tag-group-card-sort">${group.sortOrder || 0}</span>`;
-
-    const groupTagsHtml = tags.map(tag => {
-      return this.generateTagItemHtml(tag, tagCounts[tag] || 0, group.id, false, isBatchMode, selectedTags.has(tag));
-    }).join('');
-
-    return `
-      <div class="tag-group-card" data-group-id="${group.id}" data-drop-target="true">
-        <div class="tag-group-card-header">
-          <span class="tag-group-card-name">${HtmlUtils.escapeHtml(group.name)}</span>
-          ${sortBadge}
-          ${firstBadge}
-          <div class="tag-group-card-actions">
-            <button class="tag-group-btn edit" data-id="${group.id}" title="编辑">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-            </button>
-            <button class="tag-group-btn delete" data-id="${group.id}" title="删除">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div class="tag-group-card-content">
-          ${groupTagsHtml || '<span class="tag-group-card-empty">暂无标签</span>'}
-        </div>
-      </div>
-    `;
+    return this.generateTagGroupCardHtml(group.id, group.name, tags, tagCounts, isFirst, isBatchMode, selectedTags, false, group.sortOrder ?? 0);
   }
 
   /**

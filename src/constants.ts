@@ -167,4 +167,52 @@ export class Constants {
     PROMPT: 'trash-prompt',
     IMAGE: 'trash-image'
   });
+
+  // DOM 元素 ID 常量
+  static Ids = Object.freeze({
+    // 主面板
+    PROMPT_PANEL: 'promptPanel',
+    IMAGE_PANEL: 'imagePanel',
+
+    // 提示词详情
+    PROMPT_DETAIL_MODAL: 'promptDetailModal',
+    PROMPT_DETAIL_BATCH_TOOLBAR: 'promptDetailBatchToolbar',
+
+    // 图像详情
+    IMAGE_DETAIL_MODAL: 'imageDetailModal',
+    IMAGE_DETAIL_BATCH_TOOLBAR: 'imageDetailBatchToolbar',
+
+    // 标签管理器
+    PROMPT_TAG_MANAGER_MODAL: 'promptTagManagerModal',
+    IMAGE_TAG_MANAGER_MODAL: 'imageTagManagerModal',
+
+    // 回收站
+    PROMPT_TRASH_MODAL: 'promptTrashModal',
+    IMAGE_TRASH_MODAL: 'imageTrashModal',
+
+    // 设置和统计
+    SETTINGS_MODAL: 'settingsModal',
+    STATISTICS_MODAL: 'statisticsModal',
+
+    // 全屏查看器
+    IMAGE_FULLSCREEN_VIEWER: 'imageFullscreenViewer',
+
+    // 主面板批量模式工具栏
+    MAIN_BATCH_TOOLBAR: 'mainBatchToolbar',
+
+    // 标签管理器批量工具栏
+    PROMPT_TAG_BATCH_TOOLBAR: 'promptTagBatchToolbar',
+    IMAGE_TAG_BATCH_TOOLBAR: 'imageTagBatchToolbar',
+
+    // 下拉菜单和对话框（用于 ESC 处理）
+    DROPDOWN: 'dropdown',
+    DIALOG: 'confirmModal',
+
+    // 标签自动完成下拉框
+    PROMPT_DETAIL_TAG_AUTOCOMPLETE: 'promptDetailTagAutocomplete',
+    IMAGE_DETAIL_TAG_AUTOCOMPLETE: 'imageDetailTagAutocomplete'
+  } as const);
 }
+
+// 类型导出
+export type ElementId = typeof Constants.Ids[keyof typeof Constants.Ids];

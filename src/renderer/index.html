@@ -208,18 +208,6 @@
           </div>
         </div>
 
-        <!-- 提示词批量操作工具栏 -->
-        <div id="promptBatchToolbar" class="batch-operation-toolbar" style="display: none;">
-          <div class="batch-toolbar-left">
-            <input type="checkbox" id="promptBatchSelectAllCheckbox" class="batch-select-all-checkbox">
-            <span class="batch-select-all-text">全选</span>
-            <span id="promptBatchSelectedCount" class="batch-selected-count"></span>
-          </div>
-          <div class="batch-toolbar-right" id="promptBatchToolbarActions">
-            <!-- 批量操作按钮将在这里动态生成 -->
-          </div>
-        </div>
-
         <div id="promptGrid" class="grid-view">
           <!-- Prompt 卡片将在这里动态生成 -->
         </div>
@@ -368,18 +356,6 @@
                 <!-- 普通标签将在这里动态生成 -->
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- 批量操作工具栏 -->
-        <div id="imageBatchToolbar" class="batch-operation-toolbar" style="display: none;">
-          <div class="batch-toolbar-left">
-            <input type="checkbox" id="imageBatchSelectAllCheckbox" class="batch-select-all-checkbox">
-            <span class="batch-select-all-text">全选</span>
-            <span id="imageBatchSelectedCount" class="batch-selected-count"></span>
-          </div>
-          <div class="batch-toolbar-right" id="imageBatchToolbarActions">
-            <!-- 批量操作按钮将在这里动态生成 -->
           </div>
         </div>
 
@@ -1359,12 +1335,12 @@
     </div>
   </div>
 
-  <!-- 标签组编辑 Modal -->
-  <div id="tagGroupEditModal" class="modal">
+  <!-- 提示词标签组编辑 Modal -->
+  <div id="promptTagGroupEditModal" class="modal">
     <div class="modal-content-small">
       <div class="modal-header">
-        <h2 id="tagGroupEditTitle">编辑标签组</h2>
-        <button class="close-btn" id="closeTagGroupEditModal">
+        <h2>编辑标签组</h2>
+        <button class="close-btn" id="closePromptTagGroupEditModal">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1372,19 +1348,48 @@
         </button>
       </div>
       <div class="modal-body">
-        <input type="hidden" id="tagGroupEditId">
-        <input type="hidden" id="tagGroupEditType">
+        <input type="hidden" id="promptTagGroupEditId">
         <div class="form-group required">
           <label class="form-label">组名称</label>
-          <input type="text" id="tagGroupEditName" class="form-input" placeholder="输入标签组名称">
+          <input type="text" id="promptTagGroupEditName" class="form-input" placeholder="输入标签组名称">
         </div>
         <div class="form-group">
           <label class="form-label">排序 <span class="form-hint">(数值越小越靠前)</span></label>
-          <input type="number" id="tagGroupEditSortOrder" class="form-input" placeholder="0" value="0">
+          <input type="number" id="promptTagGroupEditSortOrder" class="form-input" placeholder="0" value="0">
         </div>
         <div class="modal-footer confirm-footer">
-          <button type="button" class="btn btn-secondary btn-modal" id="cancelTagGroupEditBtn">取消</button>
-          <button type="button" class="btn btn-primary btn-modal" id="saveTagGroupBtn">保存</button>
+          <button type="button" class="btn btn-secondary btn-modal" id="cancelPromptTagGroupEditBtn">取消</button>
+          <button type="button" class="btn btn-primary btn-modal" id="savePromptTagGroupBtn">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 图像标签组编辑 Modal -->
+  <div id="imageTagGroupEditModal" class="modal">
+    <div class="modal-content-small">
+      <div class="modal-header">
+        <h2>编辑标签组</h2>
+        <button class="close-btn" id="closeImageTagGroupEditModal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="imageTagGroupEditId">
+        <div class="form-group required">
+          <label class="form-label">组名称</label>
+          <input type="text" id="imageTagGroupEditName" class="form-input" placeholder="输入标签组名称">
+        </div>
+        <div class="form-group">
+          <label class="form-label">排序 <span class="form-hint">(数值越小越靠前)</span></label>
+          <input type="number" id="imageTagGroupEditSortOrder" class="form-input" placeholder="0" value="0">
+        </div>
+        <div class="modal-footer confirm-footer">
+          <button type="button" class="btn btn-secondary btn-modal" id="cancelImageTagGroupEditBtn">取消</button>
+          <button type="button" class="btn btn-primary btn-modal" id="saveImageTagGroupBtn">保存</button>
         </div>
       </div>
     </div>

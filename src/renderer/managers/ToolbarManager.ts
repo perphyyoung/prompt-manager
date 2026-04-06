@@ -25,7 +25,14 @@ interface IApp {
   openStatisticsModal?: () => void;
   showToast?: (message: string, type: string) => void;
   relaunchApp?: () => Promise<void>;
+  togglePromptTagFilter?: () => Promise<void>;
+  toggleImageTagFilter?: () => Promise<void>;
 }
+
+/**
+ * 卡片信息本地存储键
+ */
+const CARDS_INFO_VISIBLE_KEY = 'cardsInfoVisible';
 
 /**
  * ToolbarManager 构造选项
@@ -36,6 +43,7 @@ interface IToolbarManagerOptions {
 
 export class ToolbarManager {
   private app: IApp;
+  private isInitialized = false;
 
   constructor(options: IToolbarManagerOptions = { app: {} as IApp }) {
     this.app = options.app;
@@ -45,7 +53,11 @@ export class ToolbarManager {
    * 初始化
    */
   init(): void {
+    if (this.isInitialized) {
+      return;
+    }
     this.bindEvents();
+    this.isInitialized = true;
   }
 
   /**
@@ -59,6 +71,33 @@ export class ToolbarManager {
     this.bindTagFilterEvents();
     this.bindTagManagerEvents();
     this.bindModalEvents();
+    this.bindCardInfoToggleEvent();
+  }
+
+  /**
+   * 绑定卡片信息开关事件
+   * @private
+   */
+  private bindCardInfoToggleEvent(): void {
+    const cardInfoToggleBtn = document.getElementById('cardInfoToggleBtn');
+    if (!cardInfoToggleBtn) return;
+
+    // 从 localStorage 加载状态
+    const isInfoVisible = localStorage.getItem(CARDS_INFO_VISIBLE_KEY) !== 'false';
+    if (!isInfoVisible) {
+      document.body.classList.add('cards-info-hidden');
+      cardInfoToggleBtn.classList.remove('active');
+    }
+
+    cardInfoToggleBtn.addEventListener('click', () => {
+      const isHidden = document.body.classList.toggle('cards-info-hidden');
+      cardInfoToggleBtn.classList.toggle('active');
+      localStorage.setItem(CARDS_INFO_VISIBLE_KEY, String(!isHidden));
+
+      // 更新提示
+      const action = isHidden ? '已隐藏' : '已显示';
+      this.app.showToast?.(`${action}卡片信息`, 'info');
+    });
   }
 
   /**
@@ -93,6 +132,8 @@ export class ToolbarManager {
   private bindTagFilterEvents(): void {
     document.getElementById('clearPromptTagFilter')?.addEventListener('click', () => this.app.promptPanelManager?.clearTagFilter());
     document.getElementById('clearImageTagFilter')?.addEventListener('click', () => this.app.imagePanelManager?.clearTagFilter());
+    document.getElementById('promptTagFilterToggleBtn')?.addEventListener('click', () => this.app.togglePromptTagFilter?.());
+    document.getElementById('imageTagFilterToggleBtn')?.addEventListener('click', () => this.app.toggleImageTagFilter?.());
   }
 
   /**

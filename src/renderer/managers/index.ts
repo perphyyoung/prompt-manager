@@ -7,7 +7,9 @@ export { ImagePanelManager } from './ImagePanelManager.ts';
 
 // 标签系统重构后的导出
 export { TagService } from './TagService.ts';
-export { TagRegistry } from './TagRegistry.ts';
+export { TagManager, type ITagManagerElements } from './TagManager.ts';
+export { PromptTagManager } from './PromptTagManager.ts';
+export { ImageTagManager } from './ImageTagManager.ts';
 export { TagUI } from './TagUI.ts';
 
 // 保留编辑界面专用标签管理器
@@ -16,15 +18,14 @@ export { SimpleTagManagerFactory } from './SimpleTagManagerFactory.ts';
 
 export { TrashManager } from './TrashManager.ts';
 
-// 批量操作管理器
-export { BatchOperationManager } from './BatchOperationManager.ts';
 
 export { ImageFullscreenManager } from './ImageFullscreenManager.ts';
 export { DetailViewManager } from './DetailViewManager.ts';
 export { PromptDetailManager } from './PromptDetailManager.ts';
 export { ImageDetailManager } from './ImageDetailManager.ts';
-export { ModalManager } from './ModalManager.ts';
-export { TagGroupModalManager } from './TagGroupModalManager.ts';
+
+// 从 TrashManager 导出 TrashType
+export { type TrashType } from './TrashManager.ts';
 export { ToastManager } from './ToastManager.ts';
 export { NavigationManager } from './NavigationManager.ts';
 export { SearchSortManager } from './SearchSortManager.ts';
@@ -35,6 +36,7 @@ export { ImageSelectorManager } from './ImageSelectorManager.ts';
 export { NewPromptManager } from './NewPromptManager.ts';
 export { ImageUploadManager } from './ImageUploadManager.ts';
 export { ImageContextMenuManager } from './ImageContextMenuManager.ts';
+export { StatisticsManager } from './StatisticsManager.ts';
 
 // 导出共享组件
 export * from './SharedComponents/index.ts';

@@ -535,68 +535,6 @@ body * {
   color: white;
 }
 
-/* 批量操作工具栏 */
-.batch-operation-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  margin-bottom: 12px;
-  gap: 16px;
-}
-
-.batch-toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.batch-select-all-checkbox {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
-.batch-select-all-text {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  user-select: none;
-}
-
-.batch-selected-count {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.batch-toolbar-right {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.batch-toolbar-right .btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  font-size: var(--font-size-sm);
-  white-space: nowrap;
-  width: auto;
-}
-
-.batch-toolbar-right .btn svg {
-  width: 14px;
-  height: 14px;
-}
-
 /* 排序下拉框 */
 .sort-dropdown {
   display: flex;
@@ -4467,35 +4405,6 @@ body * {
   margin-top: 8px;
 }
 
-/* 特殊标签卡片 */
-.tag-group-card.special-tag-card {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
-  border-color: rgba(99, 102, 241, 0.2);
-}
-
-.tag-group-card.special-tag-card .tag-group-card-header {
-  border-bottom-color: rgba(99, 102, 241, 0.15);
-}
-
-.tag-group-card.special-tag-card .tag-group-card-name {
-  color: var(--primary-color);
-}
-
-/* 特殊标签卡片内的标签 */
-.tag-manager-item.special-tag-in-card {
-  min-width: 80px;
-  padding: 10px 8px 8px;
-  margin-top: 8px;
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.15);
-  cursor: pointer;
-}
-
-.tag-manager-item.special-tag-in-card:hover {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: var(--primary-color);
-}
-
 /* 未分组卡片 */
 .tag-group-card.ungrouped-card {
   background: linear-gradient(135deg, rgba(107, 114, 128, 0.05) 0%, rgba(156, 163, 175, 0.05) 100%);
@@ -4907,35 +4816,6 @@ body * {
 
 /* ========== 批量管理样式 ========== */
 
-/* 批量管理工具栏容器 */
-.batch-toolbar-container {
-  padding: 12px 16px 0;
-}
-
-/* 批量管理工具栏 */
-.batch-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  background: var(--primary-light);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-}
-
-.batch-toolbar .batch-count {
-  font-size: var(--font-size-base);
-  color: var(--text-primary);
-  font-weight: 500;
-  margin-right: auto;
-}
-
-.batch-toolbar .btn {
-  padding: 6px 16px;
-  font-size: var(--font-size-sm);
-  white-space: nowrap;
-}
-
 /* 批量选择复选框 */
 .tag-batch-checkbox {
   cursor: pointer;
@@ -4949,6 +4829,314 @@ body * {
 /* 选中的标签项 */
 .tag-manager-item.tag-selected {
   background: var(--selection-overlay);
+  border-color: var(--primary-color);
+}
+
+/* ==================== 极简卡片式标签管理样式 ==================== */
+
+/* 标签项 - 统一尺寸 */
+.tag-manager-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  min-height: 40px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+/* 批量模式下的标签项 */
+.tag-manager-item.batch-mode {
+  padding-left: 36px;
+}
+
+/* 复选框包装器 */
+.tag-checkbox-wrapper {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+/* 批量选择复选框 - 新样式 */
+.tag-batch-checkbox {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--primary-color);
+  border-radius: 4px;
+  border: 2px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.tag-batch-checkbox:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* 标签项内容区 */
+.tag-manager-item-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* 标签名称 */
+.tag-manager-item-name {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* 标签计数 */
+.tag-manager-item-count {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  background: var(--background-color);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  min-width: 24px;
+  text-align: center;
+}
+
+/* 标签项操作按钮 */
+.tag-manager-item-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.tag-manager-item:hover .tag-manager-item-actions {
+  opacity: 1;
+}
+
+/* 选中状态 */
+.tag-manager-item.tag-selected {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* ==================== 通用批量操作工具栏样式 ==================== */
+
+/* 工具栏容器 - 所有界面共用 */
+.batch-toolbar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  z-index: 1000;
+  background: rgba(30, 30, 40, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 10px 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: all 0.25s ease;
+  pointer-events: none;
+}
+
+.batch-toolbar.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.batch-toolbar-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.batch-toolbar-count {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+}
+
+.batch-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 通用按钮样式 */
+.batch-action-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+.batch-action-btn:hover {
+  opacity: 0.9;
+}
+
+/* 按钮类型 */
+.batch-action-invert {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.batch-action-invert:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.batch-action-addtag {
+  background: var(--primary-color);
+  color: white;
+}
+
+.batch-action-addtag:hover {
+  background: var(--primary-hover);
+}
+
+.batch-action-favorite {
+  background: var(--primary-color);
+  color: white;
+}
+
+.batch-action-favorite:hover {
+  background: var(--primary-hover);
+}
+
+.batch-action-delete {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+}
+
+.batch-action-delete:hover {
+  background: rgba(239, 68, 68, 0.35);
+}
+
+.batch-action-cancel {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.batch-action-cancel:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.batch-action-select-all,
+.batch-action-move {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.batch-action-select-all:hover,
+.batch-action-move:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 标签组卡片优化 */
+.tag-group-card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.tag-group-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tag-group-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--background-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tag-group-card-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tag-group-card-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  padding: 12px;
+}
+
+/* 未分组卡片 */
+.tag-group-card.ungrouped-card {
+  background: var(--background-color);
+}
+
+/* ==================== 详情界面标签批量管理样式 ==================== */
+
+/* 可编辑标签列表 - 批量模式 */
+.tag-editable.tag-batch-selectable {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 6px 28px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.tag-editable.tag-batch-selectable:hover {
+  border-color: var(--primary-color);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.tag-editable.tag-batch-selectable.tag-selected {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: var(--primary-color);
+}
+
+/* 复选框 */
+.tag-editable.tag-batch-selectable .tag-checkbox {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background-color);
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 10px;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.tag-editable.tag-batch-selectable.tag-selected .tag-checkbox {
+  background: var(--primary-color);
   border-color: var(--primary-color);
 }
 

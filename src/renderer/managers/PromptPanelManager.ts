@@ -1,9 +1,10 @@
 import { cacheManager } from '../../utils/index.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
+import type { IEventBus } from '../app.types.ts';
 import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig, UnifiedListRenderer, PromptListConfig } from './SharedComponents/index.ts';
 import { Constants } from '../../constants.ts';
 import { DialogConfig } from '../services/index.ts';
-import { BatchConfig } from '../config/index.ts';
+
 import { IPrompt } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
 import { CardEventStrategy } from './Strategies/CardEventStrategy.ts';
@@ -13,13 +14,13 @@ import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.
 interface PromptPanelManagerOptions {
   app: {
     promptCache: LRUCache<IPrompt>;
-    searchSortManager?: { getPromptSearchQuery: () => string };
+    searchSortManager?: { getPromptSearchQuery: () => string } | null;
     openEditPromptModal: (prompt: IPrompt, options: { filteredList: IPrompt[] }) => void;
     showToast: (message: string, type: string) => void;
     emit: (event: string, data?: unknown) => void;
     currentPanel: string;
     viewMode: string;
-    trashManager?: { loadTrash: () => Promise<void> };
+    trashManager?: { loadTrash: () => Promise<void> } | null;
     renderStatistics?: () => Promise<void>;
     promptHoverTooltip?: {
       bind: (selector: string, options: {
@@ -27,25 +28,12 @@ interface PromptPanelManagerOptions {
         getImageId: (element: Element) => string | null;
         delay: number;
       }) => void;
-    };
+    } | null;
     findImageById: (imageId: string, allImages?: Array<{ id: string }> | null) => { id: string } | null;
   };
   tagManager?: unknown;
   saveManager?: unknown;
-  eventBus?: { emit: (event: string, data?: unknown) => void; on: (event: string, callback: () => void) => void };
-  toolbarConfig?: {
-    toolbarId: string;
-    actionsId: string;
-    countId: string;
-    selectAllCheckboxId: string;
-    label: string;
-    buttons: Array<{ id: string; text: string; className: string; title?: string; action: string }>;
-    onDelete?: () => void;
-    onAddTag?: () => void;
-    onSetSafe?: () => void;
-    onSetUnsafe?: () => void;
-    onCancel?: () => void;
-  };
+  eventBus?: IEventBus;
 }
 
 interface ImageInfo {
@@ -61,6 +49,7 @@ interface ImageInfo {
 export class PromptPanelManager extends PanelManagerBase {
   private saveManager?: unknown;
   filteredPrompts: IPrompt[] = [];
+  private isInitialized = false;
 
   // 提示词特殊标签检查函数 Map
   static PROMPT_TAG_CHECKS = new Map<string, (p: IPrompt) => boolean>([
@@ -78,12 +67,19 @@ export class PromptPanelManager extends PanelManagerBase {
       tagManager: options.tagManager,
       eventBus: options.eventBus,
       storagePrefix: 'prompt',
-      defaultCardSize: 260,
-      toolbarConfig: options.toolbarConfig,
-      operationConfig: BatchConfig.prompt.operations
+      defaultCardSize: 260
     });
     this.saveManager = options.saveManager;
     this.filteredPrompts = [];
+    this.bindTagFilterActionEvent();
+  }
+
+  /**
+   * 绑定标签筛选动作按钮事件
+   * @private
+   */
+  private bindTagFilterActionEvent(): void {
+    document.getElementById('promptTagFilterActionBtn')?.addEventListener('click', () => this.handleFilterAction());
   }
 
   /**
@@ -209,6 +205,9 @@ export class PromptPanelManager extends PanelManagerBase {
    * 初始化
    */
   async init(): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
     await this.loadData();
     this.isInitialized = true;
   }
@@ -260,7 +259,7 @@ export class PromptPanelManager extends PanelManagerBase {
       icons: Constants.ICONS,
       sortBy: this.sortBy,
       app: this.app,
-      selectedIds: this.selectionManager.selectedIds,
+      selectedIds: this.multiSelectManager.selectedIds,
       index
     });
   }
@@ -279,7 +278,7 @@ export class PromptPanelManager extends PanelManagerBase {
       UnifiedListRenderer.render(PromptListConfig, prompt, {
         icons: Constants.ICONS,
         isCompact,
-        isSelected: this.selectionManager.isSelected(String(prompt.id)),
+        isSelected: this.multiSelectManager.isSelected(String(prompt.id)),
         index
       })
     );
@@ -294,7 +293,7 @@ export class PromptPanelManager extends PanelManagerBase {
     this.bindListButtonEvents(filtered);
     this.bindHoverPreview('.list-item--prompt');
     this.bindCardDropEvents(listContainer);
-    this.toolbarController?.updateUI();
+    this.multiSelectManager.updateToolbarUI();
   }
 
   /**
@@ -445,6 +444,9 @@ export class PromptPanelManager extends PanelManagerBase {
       }
       await this.renderView();
       (this.app as PromptPanelManagerOptions['app']).emit('promptsChanged', { prompts: this.prompts });
+
+      // 通知图像面板刷新（关联的图像已移除该提示词）
+      (this.app as PromptPanelManagerOptions['app']).emit('imagesChanged');
 
       // 刷新回收站
       if ((this.app as PromptPanelManagerOptions['app']).trashManager) {

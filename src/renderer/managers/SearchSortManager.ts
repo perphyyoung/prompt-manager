@@ -47,6 +47,9 @@ export class SearchSortManager {
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null;
   private readonly searchDebounceDelay: number;
 
+  // 初始化状态
+  private isInitialized = false;
+
   constructor(options: ISearchSortManagerOptions = { app: {} as ISearchSortManagerDeps }) {
     this.app = options.app;
 
@@ -63,9 +66,13 @@ export class SearchSortManager {
    * 初始化
    */
   init(): void {
+    if (this.isInitialized) {
+      return;
+    }
     this.bindSearchEvents();
     this.bindSortEvents();
     this.bindViewToggleEvents();
+    this.isInitialized = true;
   }
 
   /**

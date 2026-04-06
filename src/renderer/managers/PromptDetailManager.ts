@@ -8,7 +8,7 @@ import { SaveManager, PromptSaveStrategy } from '../renderer_utils/index.ts';
 import { Constants } from '../../constants.ts';
 import { DirectSaveStrategy, TagAutocomplete } from '../services/index.ts';
 import { SimpleTagManagerFactory } from './SimpleTagManagerFactory.ts';
-import { EditableTagList, BatchTagManager } from '../components/index.ts';
+import { ImageContextMenuManager } from './ImageContextMenuManager.ts';
 import { IPrompt, IImage } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
 
@@ -53,7 +53,6 @@ interface IApp {
   } | null;
   showToast: (message: string, type?: string) => void;
   autoResizeTextarea: (element: HTMLElement) => void;
-  renderImagePreviews?: () => Promise<void>;
   imageSelectorManager?: {
     open: (options: { onConfirm: (image: IImage) => void }) => void;
   } | null;
@@ -69,21 +68,19 @@ export class PromptDetailManager extends DetailViewManager {
   private tagManager: unknown;
   private uploadStrategy: DirectSaveStrategy;
   private isOpeningDialog: boolean;
-  private simpleTagManager: ReturnType<typeof SimpleTagManagerFactory.createForPrompt> | null = null;
-  private editableTagList: EditableTagList | null = null;
-  private batchTagManager: BatchTagManager | null = null;
   private tagAutocomplete: TagAutocomplete | null = null;
   private promptSaveManager: SaveManager | null = null;
   private favoriteBtnHandler: (() => void) | null = null;
   private returnToManager: DetailViewManager | null = null;
   private returnToItem: unknown = null;
+  private imageContextMenuManager: ImageContextMenuManager | null = null;
 
   /**
    * @param options - 配置选项
    */
   constructor(options: IPromptDetailManagerOptions) {
     super({
-      app: options.app as unknown as { constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean }; [key: string]: unknown },
+      app: options.app as unknown as { constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean }; showToast: (message: string, type?: string) => void; [key: string]: unknown },
       modalId: 'promptDetailModal',
       closeBtnId: 'promptDetailCloseBtn'
     });
@@ -109,9 +106,10 @@ export class PromptDetailManager extends DetailViewManager {
       return;
     }
 
+    const app = this.app as unknown as IApp;
     this.returnToManager = options.returnToManager || null;
     this.returnToItem = options.returnToItem;
-    (this.app as unknown as IApp).isFromDetailJump = !!options.returnToManager;
+    app.isFromDetailJump = !!options.returnToManager;
 
     try {
       // 从缓存获取最新的提示词数据，确保 isSafe 是最新的
@@ -136,6 +134,9 @@ export class PromptDetailManager extends DetailViewManager {
       this.showModal();
 
       this.bindImageUploadEvents();
+
+      // 设置图像右键菜单回调
+      this.initImageContextMenu();
 
       this.autoResizeAllTextareas();
     } catch (error) {
@@ -211,10 +212,8 @@ export class PromptDetailManager extends DetailViewManager {
       });
     }
 
-    // 调用 app 的方法渲染图像预览
-    if (app.renderImagePreviews) {
-      await app.renderImagePreviews();
-    }
+    // 渲染图像预览
+    await this.renderImagePreviews();
   }
 
   /**
@@ -225,81 +224,29 @@ export class PromptDetailManager extends DetailViewManager {
   private initTagManager(prompt: IPromptExtended): void {
     const app = this.app as unknown as IApp;
 
-    // 清理旧的标签管理器
-    if (this.simpleTagManager) {
-      this.simpleTagManager = null;
-    }
-
-    // 清理旧的可编辑标签列表组件
-    if (this.editableTagList) {
-      this.editableTagList = null;
-    }
-
-    // 清理旧的批量标签管理器
-    if (this.batchTagManager) {
-      this.batchTagManager.destroy();
-      this.batchTagManager = null;
-    }
-
     // 使用工厂创建新的标签管理器
-    this.simpleTagManager = SimpleTagManagerFactory.createForPrompt(
+    const simpleTagManager = SimpleTagManagerFactory.createForPrompt(
       prompt,
       app.promptPanelManager,
       (msg: string, type: string) => app.showToast(msg, type)
     );
 
-    // 设置渲染回调
-    this.simpleTagManager.onRender = () => {
-      if (!this.editableTagList) {
-        this.editableTagList = new EditableTagList({
-          containerId: 'promptDetailTags',
-          tagManager: this.simpleTagManager as { getTags: () => string[] },
-          onRemove: async (tagName: string) => {
-            await this.simpleTagManager?.removeTag(tagName);
-          }
-        });
-      }
-      this.editableTagList.renderWithInit();
-    };
+    // 使用基类的批量标签管理功能
+    this.initBatchTagManager(
+      {
+        toolbarId: 'promptDetailBatchToolbar',
+        containerId: 'promptDetailTags',
+        inputAreaId: 'promptDetailTagInputArea',
+        batchBtnId: 'promptDetailBatchTagBtn'
+      },
+      simpleTagManager as unknown as { getTags: () => string[]; setTags: (tags: string[]) => void; removeTag: (tagName: string) => Promise<void>; onRender?: (() => void) | null }
+    );
 
     // 设置初始标签
-    this.simpleTagManager.setTags(prompt.tags || []);
-
-    // 初始化批量标签管理器
-    this.initBatchTagManager();
+    simpleTagManager.setTags(prompt.tags || []);
 
     // 绑定标签输入事件
     this.bindTagInputEvents();
-  }
-
-  /**
-   * 初始化批量标签管理器
-   * @private
-   */
-  private initBatchTagManager(): void {
-    const app = this.app as unknown as IApp;
-
-    this.batchTagManager = new BatchTagManager({
-      containerId: 'promptDetailTags',
-      batchBtnId: 'promptDetailBatchTagBtn',
-      toolbarId: 'promptDetailBatchTagToolbar',
-      countId: 'promptDetailBatchTagCount',
-      deleteBtnId: 'promptDetailBatchTagDeleteBtn',
-      cancelBtnId: 'promptDetailBatchTagCancelBtn',
-      tagManager: this.simpleTagManager as { getTags: () => string[]; removeTags: (tags: string[]) => Promise<{ deleted: number }> },
-      showToast: (msg: string, type: string) => app.showToast(msg, type),
-      label: 'PromptDetailManager'
-    });
-
-    // 设置退出批量模式回调
-    this.batchTagManager.setOnExitBatchMode(() => {
-      this.editableTagList?.renderWithInit();
-      // 显示输入区域
-      const inputArea = document.getElementById('promptDetailTagInputArea');
-      if (inputArea) inputArea.style.display = '';
-    });
-
-    this.batchTagManager.init();
   }
 
   /**
@@ -317,11 +264,11 @@ export class PromptDetailManager extends DetailViewManager {
     // 创建新的自动完成组件
     this.tagAutocomplete = new TagAutocomplete({
       inputId: 'promptDetailTagsInput',
-      dropdownId: 'promptDetailTagAutocomplete',
+      dropdownId: Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE,
       getTags: () => window.electronAPI.getAllTags(),
       onSelect: async (tagName: string) => {
         try {
-          await this.simpleTagManager?.addTag(tagName);
+          await this.simpleTagManager?.addTag?.(tagName);
           return true;
         } catch (error) {
           window.electronAPI.logError('PromptDetailManager.ts', 'Failed to add tag:', error);
@@ -332,9 +279,9 @@ export class PromptDetailManager extends DetailViewManager {
       onBatchAdd: async (tagNames: string[]) => {
         try {
           if (tagNames.length === 1) {
-            await this.simpleTagManager?.addTag(tagNames[0]);
+            await this.simpleTagManager?.addTag?.(tagNames[0]);
           } else {
-            await this.simpleTagManager?.addTags(tagNames);
+            await this.simpleTagManager?.addTags?.(tagNames);
           }
           return true;
         } catch (error) {
@@ -603,6 +550,61 @@ export class PromptDetailManager extends DetailViewManager {
   }
 
   /**
+   * 初始化图像右键菜单
+   * @private
+   */
+  private initImageContextMenu(): void {
+    const app = this.app as unknown as IApp;
+
+    // 创建右键菜单管理器
+    this.imageContextMenuManager = new ImageContextMenuManager({
+      onSetAsFirst: async (image: IImage) => {
+        // 获取当前图像在列表中的索引
+        const images = Array.from(app.currentImagesCache.values());
+        const index = images.findIndex(img => String(img.id) === String(image.id));
+        if (index <= 0) return; // 已经是首图或找不到
+
+        // 调用 handleSetFirst 实现设为首张
+        await this.handleSetFirst(index);
+      }
+    });
+
+    // 初始化菜单
+    this.imageContextMenuManager.init();
+
+    // 绑定到图像预览容器（事件委托）
+    const imagePreviewContainer = document.getElementById('imagePreviewList');
+    if (imagePreviewContainer) {
+      imagePreviewContainer.addEventListener('contextmenu', (e) => {
+        const target = e.target as HTMLElement;
+        const previewItem = target.closest('.image-preview-item') as HTMLElement | null;
+        if (!previewItem) return;
+
+        // 获取图像ID
+        const imageId = previewItem.dataset.imageId;
+        if (!imageId) return;
+
+        // 获取图像数据
+        const images = Array.from(app.currentImagesCache.values());
+        const image = images.find(img => String(img.id) === String(imageId));
+        if (!image) return;
+
+        // 获取索引，如果是第一张图则不显示菜单
+        const index = images.findIndex(img => String(img.id) === String(imageId));
+        if (index === 0) return;
+
+        // 显示右键菜单
+        e.preventDefault();
+        this.imageContextMenuManager?.show({
+          x: e.clientX,
+          y: e.clientY,
+          image
+        });
+      });
+    }
+  }
+
+  /**
    * 处理选择多图并立即保存
    * @private
    */
@@ -645,9 +647,7 @@ export class PromptDetailManager extends DetailViewManager {
         await this.savePromptField('images', updatedImages);
       }
 
-      if (app.renderImagePreviews) {
-        await app.renderImagePreviews();
-      }
+      await this.renderImagePreviews();
     } finally {
       // 延迟重置标志，确保对话框完全关闭
       setTimeout(() => {
@@ -681,9 +681,7 @@ export class PromptDetailManager extends DetailViewManager {
       }
 
       // 重新渲染
-      if (app.renderImagePreviews) {
-        await app.renderImagePreviews();
-      }
+      await this.renderImagePreviews();
     }
   }
 
@@ -712,10 +710,135 @@ export class PromptDetailManager extends DetailViewManager {
       }
 
       // 重新渲染
-      if (app.renderImagePreviews) {
-        await app.renderImagePreviews();
-      }
+      await this.renderImagePreviews();
     }
+  }
+
+  /**
+   * 渲染图像预览
+   */
+  async renderImagePreviews(): Promise<void> {
+    const container = document.getElementById('imagePreviewList');
+    if (!container) return;
+
+    const app = this.app as unknown as IApp;
+
+    // 从 CacheManager 获取当前图像列表
+    const cachedImages = Array.from(app.currentImagesCache.values());
+    const validImages = cachedImages.filter((img: { id?: string }) => img.id);
+
+    // 提取有效图像 ID
+    const validImageIds = validImages.map((img: { id: string }) => img.id);
+
+    // 检查缓存是否已填充：尝试获取第一个图像
+    const imageCacheReady = validImageIds.length > 0 && cacheManager.getCachedImage(validImageIds[0]);
+
+    // 获取图像完整信息：缓存已填充则直接使用，否则按 ID 批量获取
+    const allImages = imageCacheReady
+      ? null
+      : await window.electronAPI.getImagesByIds(validImageIds);
+
+    // 记录警告日志：发现无效图像
+    if (cachedImages.length !== validImages.length) {
+      const invalidCount = cachedImages.length - validImages.length;
+      const promptId = (document.getElementById('promptDetailId') as HTMLInputElement | null)?.value || 'unknown';
+      const invalidImages = cachedImages.filter((img: { id?: string }) => !img.id);
+
+      window.electronAPI.logWarn('PromptDetailManager', `Found ${invalidCount} images without ID in prompt ${promptId}`, {
+        totalImages: cachedImages.length,
+        validImages: validImages.length,
+        invalidImages: invalidCount,
+        invalidImageDetails: invalidImages.map((img: unknown, idx: number) => ({
+          index: idx,
+          data: img
+        }))
+      });
+    }
+
+    // 获取所有图像的完整路径并渲染
+    const previews = await Promise.all(
+      validImages.map(async (imgRef: { id: string }, index: number) => {
+        const img = cacheManager.getCachedImage(imgRef.id) || (allImages?.find((i: { id?: string }) => i.id === imgRef.id) as { relativePath?: string; thumbnailPath?: string; tags?: string[]; fileName?: string; id: string } | null);
+        if (!img) return '';
+        const imgPath = (img.relativePath || img.thumbnailPath) as string | undefined;
+        if (!imgPath) return '';
+        const imagePath = await window.electronAPI.getImagePath(imgPath);
+        const isFromDetailJump = app.isFromDetailJump;
+
+        // 生成标签 HTML（使用展示标签样式）
+        const tagsHtml = this.generateTagsHtml(img.tags, 'tag-display', 'tag-display-empty');
+
+        return `
+          <div class="image-preview-item" data-index="${index}" data-image-id="${img.id}">
+            <img src="file://${imagePath}" alt="${img.fileName}">
+            <div class="image-preview-tags">
+              ${tagsHtml}
+            </div>
+            <button type="button" class="view-image ${isFromDetailJump ? 'disabled-secondary' : ''}" data-index="${index}" data-image-id="${img.id}" title="${isFromDetailJump ? '已从详情界面跳转，禁止再次跳转' : '查看'}" ${isFromDetailJump ? 'disabled' : ''}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+            <button type="button" class="remove-image" data-index="${index}" title="删除">×</button>
+          </div>
+        `;
+      })
+    );
+
+    container.innerHTML = previews.filter(p => p).join('');
+
+    // 绑定删除事件
+    container.querySelectorAll('.remove-image').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const index = parseInt((btn as HTMLElement).dataset.index || '0');
+        await this.handleRemoveImage(index);
+      });
+    });
+
+    // 绑定查看事件
+    container.querySelectorAll('.view-image').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (app.isFromDetailJump) return;
+        const imageId = (btn as HTMLElement).dataset.imageId;
+        if (!imageId) return;
+        const image = cacheManager.getCachedImage(imageId);
+        if (image) {
+          app.isFromDetailJump = true;
+          // 打开图像详情
+          const event = new CustomEvent('openImageDetail', { detail: { image } });
+          document.dispatchEvent(event);
+        }
+      });
+    });
+
+    // 绑定双击事件（全屏查看）
+    container.querySelectorAll('.image-preview-item img').forEach(img => {
+      img.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        const item = img.closest('.image-preview-item');
+        const index = parseInt((item as HTMLElement).dataset.index || '0');
+        const images = Array.from(app.currentImagesCache.values());
+        const event = new CustomEvent('openFullscreen', { detail: { images, index } });
+        document.dispatchEvent(event);
+      });
+    });
+  }
+
+  /**
+   * 生成标签 HTML
+   * @param tags - 标签列表
+   * @param className - 标签样式类名
+   * @param emptyClassName - 空标签样式类名
+   * @returns HTML 字符串
+   */
+  private generateTagsHtml(tags: string[] | undefined, className: string, emptyClassName: string): string {
+    if (!tags || tags.length === 0) {
+      return `<span class="${emptyClassName}">无标签</span>`;
+    }
+    return tags.map(tag => `<span class="${className}">${tag}</span>`).join('');
   }
 
   /**
@@ -757,7 +880,7 @@ export class PromptDetailManager extends DetailViewManager {
               app.currentImagesCache.set(String(selectedImage.id), selectedImage);
             }
 
-            app.renderImagePreviews?.();
+            this.renderImagePreviews();
 
             const promptIdInput = document.getElementById('promptDetailId') as HTMLInputElement | null;
             const promptId = promptIdInput?.value;

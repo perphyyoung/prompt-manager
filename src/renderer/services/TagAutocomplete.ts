@@ -3,10 +3,14 @@
  * 提供标签输入的自动完成、键盘导航等功能
  */
 
+import { contextStack } from '../managers/ContextStackManager.ts';
+import { Constants } from '../../constants.ts';
+import type { ElementId } from '../../constants.ts';
+
 // 配置选项接口
 interface TagAutocompleteOptions {
   inputId: string;
-  dropdownId: string;
+  dropdownId: ElementId;
   getTags: () => Promise<string[]>;
   onSelect?: (tagName: string) => Promise<boolean> | boolean;
   onBatchAdd?: (tagNames: string[]) => Promise<boolean> | boolean;
@@ -15,7 +19,7 @@ interface TagAutocompleteOptions {
 
 export class TagAutocomplete {
   private inputId: string;
-  private dropdownId: string;
+  private dropdownId: ElementId;
   private getTags: () => Promise<string[]>;
   private onSelect?: (tagName: string) => Promise<boolean> | boolean;
   private onBatchAdd?: (tagNames: string[]) => Promise<boolean> | boolean;
@@ -156,6 +160,12 @@ export class TagAutocomplete {
     ).join('');
     this.dropdown.classList.add('active');
 
+    // 添加 close 方法供 ShortcutManager 调用
+    (this.dropdown as HTMLElement & { close: () => void }).close = () => this.hideDropdown();
+
+    // 压栈：进入下拉菜单上下文
+    contextStack.push(this.dropdownId);
+
     // 绑定点击事件
     this.dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
       item.addEventListener('click', () => {
@@ -172,7 +182,13 @@ export class TagAutocomplete {
    * @private
    */
   private hideDropdown(): void {
-    if (this.dropdown) {
+    if (this.dropdown && this.dropdown.classList.contains('active')) {
+      // 出栈：退出下拉菜单上下文（只有当下拉框真正显示时才出栈）
+      // 使用 isInContext 检查避免重复 pop
+      if (contextStack.isInContext(this.dropdownId)) {
+        contextStack.pop(this.dropdownId);
+      }
+
       this.dropdown.classList.remove('active');
       this.dropdown.innerHTML = '';
     }
@@ -229,9 +245,7 @@ export class TagAutocomplete {
         }
         break;
 
-      case 'Escape':
-        this.hideDropdown();
-        break;
+      // Escape 由 ShortcutManager 统一处理
     }
   }
 

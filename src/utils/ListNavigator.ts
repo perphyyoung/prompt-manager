@@ -145,13 +145,6 @@ export class ListNavigator<T = unknown> {
         e.preventDefault();
         this.navigateTo('last');
         break;
-      case 'Escape':
-        if (this.onClose) {
-          e.preventDefault();
-          e.stopPropagation();
-          this.onClose();
-        }
-        break;
     }
   }
 

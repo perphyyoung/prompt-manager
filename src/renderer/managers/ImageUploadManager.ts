@@ -63,6 +63,9 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
 
     // 防抖标志：防止重复打开文件对话框
     this.isOpeningDialog = false;
+
+    // 绑定图像上传事件
+    this.bindEvents();
   }
 
   /**

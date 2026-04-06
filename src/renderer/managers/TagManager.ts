@@ -1,27 +1,59 @@
 import { TagService } from './TagService.ts';
 import { TagUI } from './TagUI.ts';
-import { Constants } from '../../constants.ts';
+import { Constants, ElementId } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
-import { ITagRegistry, ITagService } from '../../types/entities.ts';
+import { ITagService } from '../../types/entities.ts';
+import { contextStack } from './ContextStackManager.ts';
+import { focusInput } from '../renderer_utils/index.ts';
 
 /**
- * 标签注册表 - 业务逻辑层
+ * 标签管理器元素 ID 配置
+ */
+export interface ITagManagerElements {
+  modalId: ElementId;
+  closeButtonId: string;
+  containerId: string;
+  emptyStateId: string;
+  searchInputId: string;
+  clearSearchBtnId: string;
+  sortSelectId: string;
+  orderBtnId: string;
+  addTagGroupBtnId: string;
+  addTagInManagerBtnId: string;
+  batchManageBtnId: string;
+  batchToolbarId: ElementId;
+  groupEditModalId: string;
+  groupEditCloseBtnId: string;
+  groupEditCancelBtnId: string;
+  groupEditSaveBtnId: string;
+  groupEditTypeInputId: string;
+  groupEditIdInputId: string;
+  groupEditNameInputId: string;
+  groupEditSortOrderInputId: string;
+}
+
+/**
+ * 标签管理器基类
  * 管理标签的注册、分组、排序、CRUD 操作
  */
-export class TagRegistry implements ITagRegistry {
+export abstract class TagManager {
   type: string;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
   service: ITagService;
-  private context: any;
-  private ui: any;
-  private eventBus: any;
-  private selectedTagGroup: any;
-  private containerId: string;
-  private emptyStateId: string;
-  private searchInputId: string;
-  private isBatchMode: boolean;
-  private selectedTags: Set<string>;
+  protected context: any;
+  protected ui: TagUI;
+  protected eventBus: any;
+  protected selectedTagGroup: any;
+  protected containerId: string;
+  protected emptyStateId: string;
+  protected searchInputId: string;
+  protected isBatchMode: boolean;
+  protected selectedTags: Set<string>;
+  protected elements: ITagManagerElements;
+  protected groupEditActive: boolean = false;
+
+  private unsubscribeViewChanged?: () => void;
 
   constructor(type: string, context: any) {
     this.type = type;
@@ -37,15 +69,62 @@ export class TagRegistry implements ITagRegistry {
     this.sortBy = localStorage.getItem(`${type}TagSortBy`) || 'count';
     this.sortOrder = (localStorage.getItem(`${type}TagSortOrder`) || 'desc') as 'asc' | 'desc';
 
-    // DOM 元素 ID
-    this.containerId = type === 'prompt' ? 'promptTagGroupCards' : 'imageTagGroupCards';
-    this.emptyStateId = type === 'prompt' ? 'promptTagManagerEmpty' : 'imageTagManagerEmpty';
-    this.searchInputId = type === 'prompt' ? 'promptTagManagerSearchInput' : 'imageTagManagerSearchInput';
+    // 获取元素配置（由子类提供）
+    this.elements = this.getElementsConfig();
+    this.containerId = this.elements.containerId;
+    this.emptyStateId = this.elements.emptyStateId;
+    this.searchInputId = this.elements.searchInputId;
+
+    // 订阅视图变化事件
+    this.subscribeToViewChanges();
+
+    // 绑定标签管理器事件
+    this.bindManagerEvents();
+
+    // 初始化标签组编辑模态框事件
+    this.initGroupEditModals();
+  }
+
+  /**
+   * 获取元素配置（由子类实现）
+   */
+  protected abstract getElementsConfig(): ITagManagerElements;
+
+  /**
+   * 获取类型标签（用于显示）
+   */
+  protected getTypeLabel(): string {
+    return this.type === 'prompt' ? '提示词' : '图像';
+  }
+
+  /**
+   * 获取面板管理器（由子类实现）
+   */
+  protected abstract getPanelManager(): any;
+
+  /**
+   * 订阅视图变化事件
+   */
+  private subscribeToViewChanges(): void {
+    if (!this.eventBus) return;
+
+    this.unsubscribeViewChanged = this.eventBus.on('viewChanged', () => {
+      this.hideBatchToolbar();
+    });
+  }
+
+  /**
+   * 销毁资源
+   */
+  destroy(): void {
+    if (this.unsubscribeViewChanged) {
+      this.unsubscribeViewChanged();
+      this.unsubscribeViewChanged = undefined;
+    }
   }
 
   /**
    * 渲染标签管理器
-   * @param searchTerm - 搜索词
    */
   async render(searchTerm: string = ''): Promise<void> {
     try {
@@ -56,15 +135,13 @@ export class TagRegistry implements ITagRegistry {
 
       if (!container) return;
 
-      // 计算标签数量
-      const { tagCounts, specialTags } = await this.calculateTagCounts(tags);
+      const tagCounts = this.calculateTagCounts(tags);
 
-      // 根据搜索词过滤
-      const filteredTags = (searchTerm
+      const filteredTags = searchTerm
         ? tags.filter((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-        : tags).filter((tag: string) => !specialTags.includes(tag));
+        : tags;
 
-      if (filteredTags.length === 0 && specialTags.length === 0) {
+      if (filteredTags.length === 0) {
         container.style.display = 'none';
         if (emptyState) {
           emptyState.style.display = 'flex';
@@ -79,40 +156,33 @@ export class TagRegistry implements ITagRegistry {
       container.style.display = 'grid';
       if (emptyState) emptyState.style.display = 'none';
 
-      // 排序和分组
       const sortedTags = this.sortTags(filteredTags, tagCounts);
       const { groupedTags, ungroupedTags } = this.service.groupTagsByGroup(sortedTags, groups);
 
-      // 渲染HTML
-      const html = this.ui.generateRegistryHtml(groups, groupedTags, ungroupedTags, specialTags, tagCounts, searchTerm, this.isBatchMode, this.selectedTags);
+      const html = this.ui.generateRegistryHtml(groups, groupedTags, ungroupedTags, tagCounts, searchTerm, this.isBatchMode, this.selectedTags);
       container.innerHTML = html;
 
-      // 绑定事件
       this.bindEvents(container);
 
-      // 批量模式下绑定复选框事件
       if (this.isBatchMode) {
         this.bindBatchEvents(container);
       }
     } catch (error) {
-      window.electronAPI.logError('TagRegistry.ts', `Failed to render ${this.type} tag registry:`, error);
+      window.electronAPI.logError('TagManager.ts', `Failed to render ${this.type} tag manager:`, error);
       this.context.showToast(`加载${this.getTypeLabel()}标签失败`, 'error');
     }
   }
 
   /**
    * 刷新标签数据
-   * 重新加载并渲染标签列表
    */
   async refresh(): Promise<void> {
-    // 清除缓存并重新渲染
     const searchInput = document.getElementById(this.searchInputId) as HTMLInputElement | null;
     await this.render(searchInput ? searchInput.value : '');
   }
 
   /**
    * 添加标签
-   * @param tag - 标签名称
    */
   async addTag(tag: string): Promise<void> {
     try {
@@ -121,14 +191,13 @@ export class TagRegistry implements ITagRegistry {
       await this.render();
       await this.refreshPanel();
     } catch (error) {
-      window.electronAPI.logError('TagRegistry.ts', 'Failed to add tag:', error);
+      window.electronAPI.logError('TagManager.ts', 'Failed to add tag:', error);
       this.context.showToast('添加标签失败', 'error');
     }
   }
 
   /**
    * 删除标签
-   * @param tag - 标签名称
    */
   async deleteTag(tag: string): Promise<void> {
     const confirmed = await DialogService.showConfirmDialogByConfig(
@@ -143,15 +212,13 @@ export class TagRegistry implements ITagRegistry {
       await this.render();
       await this.refreshPanel();
     } catch (error) {
-      window.electronAPI.logError('TagRegistry.ts', 'Failed to delete tag:', error);
+      window.electronAPI.logError('TagManager.ts', 'Failed to delete tag:', error);
       this.context.showToast('删除失败: ' + (error as Error).message, 'error');
     }
   }
 
   /**
    * 更新标签
-   * @param oldTag - 原标签名称
-   * @param newTag - 新标签名称
    */
   async updateTag(oldTag: string, newTag: string): Promise<void> {
     try {
@@ -160,14 +227,13 @@ export class TagRegistry implements ITagRegistry {
       await this.render();
       await this.refreshPanel();
     } catch (error) {
-      window.electronAPI.logError('TagRegistry.ts', 'Failed to update tag:', error);
+      window.electronAPI.logError('TagManager.ts', 'Failed to update tag:', error);
       this.context.showToast('更新标签失败: ' + (error as Error).message, 'error');
     }
   }
 
   /**
    * 获取所有标签
-   * @returns 标签数组
    */
   async getTags(): Promise<string[]> {
     return await this.service.getTags();
@@ -175,10 +241,8 @@ export class TagRegistry implements ITagRegistry {
 
   /**
    * 绑定事件
-   * @param container - 容器元素
    */
   bindEvents(container: HTMLElement): void {
-    // 编辑标签按钮
     container.querySelectorAll('.tag-badge-edit').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -187,7 +251,6 @@ export class TagRegistry implements ITagRegistry {
       });
     });
 
-    // 删除标签按钮
     container.querySelectorAll('.tag-badge-delete').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -196,16 +259,14 @@ export class TagRegistry implements ITagRegistry {
       });
     });
 
-    // 编辑标签组按钮
     container.querySelectorAll('.tag-group-btn.edit').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const groupId = parseInt((btn as HTMLElement).dataset.id || '0');
-        this.context.tagGroupModalManager?.openEdit(this.type, groupId);
+        this.openGroupEdit(groupId);
       });
     });
 
-    // 删除标签组按钮
     container.querySelectorAll('.tag-group-btn.delete').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -214,16 +275,12 @@ export class TagRegistry implements ITagRegistry {
       });
     });
 
-    // 绑定拖拽事件
     this.bindDragEvents(container);
-
-    // 绑定标签组右键菜单事件
     this.bindGroupContextMenu(container);
   }
 
   /**
    * 绑定批量管理事件
-   * @param container - 容器元素
    */
   private bindBatchEvents(container: HTMLElement): void {
     container.querySelectorAll('.tag-batch-checkbox').forEach(checkbox => {
@@ -232,7 +289,6 @@ export class TagRegistry implements ITagRegistry {
         const tag = target.dataset.tag;
         if (tag) {
           this.toggleTagSelection(tag);
-          // 更新复选框状态
           const item = target.closest('.tag-manager-item');
           if (item) {
             if (target.checked) {
@@ -249,86 +305,43 @@ export class TagRegistry implements ITagRegistry {
   /**
    * 在管理器中添加标签
    */
-  addTagInManager(): void {
-    this.addTagInManagerWithDialog();
-  }
-
-  /**
-   * 获取类型标签（用于显示）
-   * @returns 类型标签
-   */
-  private getTypeLabel(): string {
-    return this.type === 'prompt' ? '提示词' : '图像';
+  async addTagInManager(): Promise<void> {
+    await this.addTagInManagerWithDialog();
   }
 
   /**
    * 计算标签数量
-   * @param tags - 标签数组
-   * @returns 标签计数和特殊标签
    */
-  private async calculateTagCounts(tags: string[]): Promise<{ tagCounts: Record<string, number>; specialTags: string[] }> {
-    const tagCounts: Record<string, number> = {};
-    const specialTagChecks = this.service.getSpecialTagChecks();
-    const specialTags: string[] = [];
+  private calculateTagCounts(tags: string[]): Record<string, number> {
+    const panelManager = this.getPanelManager();
+    const visibleItems = panelManager?.getItems() ?? [];
 
-    // 获取可见项
-    const panelManager = this.type === 'prompt'
-      ? this.context.promptPanelManager
-      : this.context.imagePanelManager;
-    const visibleItems = panelManager ? panelManager.getItems() : [];
-
-    // 计算普通标签数量
-    tags.forEach((tag: string) => {
-      if (!Constants.ALL_SPECIAL_TAGS.includes(tag)) {
-        tagCounts[tag] = visibleItems.filter((item: any) => item.tags && item.tags.includes(tag)).length;
-      }
-    });
-
-    // 计算特殊标签数量
-    specialTagChecks.forEach((checkFn: (item: any) => boolean, tag: string) => {
-      const count = visibleItems.filter(checkFn).length;
-      if (count > 0 || tag === Constants.NO_TAG_TAG) {
-        tagCounts[tag] = count;
-        specialTags.push(tag);
-      }
-    });
-
-    return { tagCounts, specialTags };
+    return tags.reduce((counts, tag) => {
+      counts[tag] = visibleItems.filter((item: any) => item.tags?.includes(tag)).length;
+      return counts;
+    }, {} as Record<string, number>);
   }
 
   /**
    * 排序标签
-   * @param tags - 标签数组
-   * @param tagCounts - 标签计数
-   * @returns 排序后的标签数组
    */
   private sortTags(tags: string[], tagCounts: Record<string, number>): string[] {
     const order = this.sortOrder === 'asc' ? 1 : -1;
 
     return [...tags].sort((a, b) => {
-      const countA = tagCounts[a] || 0;
-      const countB = tagCounts[b] || 0;
-      const nameA = a.toLowerCase();
-      const nameB = b.toLowerCase();
-
       if (this.sortBy === 'count') {
-        if (countA !== countB) {
-          return (countA - countB) * order;
-        }
-        return nameA.localeCompare(nameB);
-      } else {
-        return nameA.localeCompare(nameB) * order;
+        const countDiff = (tagCounts[a] ?? 0) - (tagCounts[b] ?? 0);
+        if (countDiff !== 0) return countDiff * order;
       }
+      return a.toLowerCase().localeCompare(b.toLowerCase()) * order;
     });
   }
 
   /**
    * 绑定标签组右键菜单事件
-   * @param container - 容器元素
    */
   private bindGroupContextMenu(container: HTMLElement): void {
-    // 获取所有标签组卡片（排除特殊标签卡片和未分组卡片）
-    const groupCards = container.querySelectorAll('.tag-group-card[data-group-id]:not(.special-tag-card):not(.ungrouped-card)');
+    const groupCards = container.querySelectorAll('.tag-group-card[data-group-id]:not(.ungrouped-card)');
 
     groupCards.forEach(card => {
       card.addEventListener('contextmenu', (e) => {
@@ -336,7 +349,6 @@ export class TagRegistry implements ITagRegistry {
         const groupId = (card as HTMLElement).dataset.groupId;
         if (!groupId) return;
 
-        // 显示右键菜单
         this.showContextMenu(e, [
           {
             label: '固定到首位',
@@ -349,27 +361,20 @@ export class TagRegistry implements ITagRegistry {
 
   /**
    * 显示右键菜单
-   * @param event - 事件对象
-   * @param items - 菜单项数组
    */
   private showContextMenu(event: Event, items: Array<{ label: string; action: () => void }>): void {
-    // 移除已有的右键菜单
     const existingMenu = document.getElementById('dynamicContextMenu');
     if (existingMenu) {
       existingMenu.remove();
     }
 
-    // 创建右键菜单
     const menu = document.createElement('div');
     menu.id = 'dynamicContextMenu';
     menu.className = 'context-menu';
-
-    // 生成菜单项
     menu.innerHTML = items.map((item, index) =>
       `<div class="context-menu-item" data-index="${index}">${item.label}</div>`
     ).join('');
 
-    // 设置菜单位置
     menu.style.position = 'fixed';
     menu.style.left = (event as MouseEvent).clientX + 'px';
     menu.style.top = (event as MouseEvent).clientY + 'px';
@@ -377,7 +382,6 @@ export class TagRegistry implements ITagRegistry {
 
     document.body.appendChild(menu);
 
-    // 绑定菜单项点击事件
     menu.querySelectorAll('.context-menu-item').forEach((menuItem, index) => {
       menuItem.addEventListener('click', () => {
         items[index].action();
@@ -385,7 +389,6 @@ export class TagRegistry implements ITagRegistry {
       });
     });
 
-    // 点击其他地方关闭菜单
     const closeMenu = (e: Event) => {
       if (!menu.contains(e.target as Node)) {
         menu.remove();
@@ -399,7 +402,6 @@ export class TagRegistry implements ITagRegistry {
 
   /**
    * 绑定拖拽事件
-   * @param container - 容器元素
    */
   private bindDragEvents(container: HTMLElement): void {
     const allTagItems = container.querySelectorAll('.tag-manager-item[draggable="true"]');
@@ -447,13 +449,11 @@ export class TagRegistry implements ITagRegistry {
 
   /**
    * 开始重命名标签
-   * @param oldTag - 旧标签名
    */
   private async startRenameTag(oldTag: string): Promise<void> {
     const groups = await this.service.getTagGroups();
     const allTags = await this.service.getTags();
 
-    // 查找当前标签所在的组
     let currentGroupId: number | null = null;
     for (const group of groups) {
       if (group.tags && group.tags.includes(oldTag)) {
@@ -475,9 +475,7 @@ export class TagRegistry implements ITagRegistry {
 
     if (newTag === oldTag) return;
 
-    // 检查新标签名是否已存在
     if (allTags.includes(newTag)) {
-      // 查找标签当前所属的组
       let currentGroupName = '未分组';
       for (const group of groups) {
         if (group.tags && group.tags.includes(newTag)) {
@@ -486,7 +484,6 @@ export class TagRegistry implements ITagRegistry {
         }
       }
 
-      // 查找目标组名
       let targetGroupName = '未分组';
       if (selectedGroupId) {
         const targetGroup = groups.find((g: any) => String(g.id) === String(selectedGroupId));
@@ -502,7 +499,6 @@ export class TagRegistry implements ITagRegistry {
 
       if (!confirmed) return;
 
-      // 删除旧标签，然后将已存在的标签移动到新组
       try {
         await this.service.deleteTag(oldTag);
         await this.service.assignTagToGroup(newTag, selectedGroupId || null);
@@ -510,45 +506,36 @@ export class TagRegistry implements ITagRegistry {
         await this.render();
         await this.refreshPanel();
       } catch (error) {
-        window.electronAPI.logError('TagRegistry.ts', 'Failed to move tag to group:', error);
+        window.electronAPI.logError('TagManager.ts', 'Failed to move tag to group:', error);
         this.context.showToast('移动标签失败: ' + (error as Error).message, 'error');
       }
       return;
     }
 
-    // 新标签名不存在，正常重命名
-    // 只有当用户选择了不同的组时才传递groupId，否则保持原组不变
     const groupIdToAssign = selectedGroupId !== currentGroupId ? selectedGroupId : undefined;
     await this.renameTag(oldTag, newTag, groupIdToAssign);
   }
 
   /**
    * 重命名标签
-   * @param oldTag - 旧标签名
-   * @param newTag - 新标签名
-   * @param groupId - 目标组ID（可选）
    */
   private async renameTag(oldTag: string, newTag: string, groupId?: number | null): Promise<void> {
     try {
       await this.service.renameTag(oldTag, newTag);
-      // 只有明确指定了组时才移动（groupId有值表示用户选择了特定组，null表示用户选择未分组）
-      // 如果groupId为undefined，表示用户没有选择改变组，保持原组不变
       if (groupId !== undefined) {
         await this.service.assignTagToGroup(newTag, groupId);
       }
       this.context.showToast('标签已重命名', 'success');
-      // 先刷新面板数据（更新提示词/图像中的标签），再渲染标签列表
       await this.refreshPanel();
       await this.render();
     } catch (error) {
-      window.electronAPI.logError('TagRegistry.ts', 'Failed to rename tag:', error);
+      window.electronAPI.logError('TagManager.ts', 'Failed to rename tag:', error);
       this.context.showToast('重命名标签失败: ' + (error as Error).message, 'error');
     }
   }
 
   /**
    * 删除标签组
-   * @param groupId - 标签组ID
    */
   private async deleteGroup(groupId: number): Promise<void> {
     const confirmed = await DialogService.showConfirmDialogByConfig(DialogConfig.DELETE_TAG_GROUP);
@@ -560,15 +547,13 @@ export class TagRegistry implements ITagRegistry {
       const searchInput = document.getElementById(this.searchInputId) as HTMLInputElement | null;
       await this.render(searchInput ? searchInput.value : '');
     } catch (error) {
-      window.electronAPI.logError('TagRegistry.ts', 'Failed to delete tag group:', error);
+      window.electronAPI.logError('TagManager.ts', 'Failed to delete tag group:', error);
       this.context.showToast('删除失败: ' + (error as Error).message, 'error');
     }
   }
 
   /**
    * 分配标签到组
-   * @param tagName - 标签名称
-   * @param groupId - 组ID
    */
   private async assignTagToGroup(tagName: string, groupId: number | null): Promise<void> {
     try {
@@ -578,7 +563,7 @@ export class TagRegistry implements ITagRegistry {
       await this.render(searchInput ? searchInput.value : '');
       await this.refreshPanel();
     } catch (error) {
-      window.electronAPI.logError('TagRegistry.ts', 'Failed to assign tag to group:', error);
+      window.electronAPI.logError('TagManager.ts', 'Failed to assign tag to group:', error);
       this.context.showToast('更新失败: ' + (error as Error).message, 'error');
     }
   }
@@ -587,32 +572,23 @@ export class TagRegistry implements ITagRegistry {
    * 刷新面板
    */
   private async refreshPanel(): Promise<void> {
-    if (this.type === 'prompt') {
-      await this.context.promptPanelManager.loadData();
-      this.context.promptPanelManager.renderTagFilters();
-    } else {
-      await this.context.imagePanelManager.loadData();
-      this.context.imagePanelManager.renderTagFilters();
+    const panelManager = this.getPanelManager();
+    if (panelManager) {
+      await panelManager.loadData();
+      await panelManager.renderTagFilters();
     }
   }
 
   /**
    * 将标签组固定到首位
-   * @param groupId - 标签组ID
    */
   private async pinTagGroupToTop(groupId: number): Promise<void> {
     try {
-      // 获取所有标签组
       const groups = await this.service.getTagGroups();
-
-      // 按 sortOrder 排序，第一个即为当前首位
       const sortedGroups = groups.sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
       const firstSortOrder = sortedGroups[0]?.sortOrder || 0;
-
-      // 将目标组的 sortOrder 设为首位 - 1
       const newSortOrder = firstSortOrder - 1;
 
-      // 更新标签组
       const group = groups.find((g: any) => String(g.id) === String(groupId));
       if (group) {
         await this.service.updateGroup(groupId, {
@@ -625,15 +601,13 @@ export class TagRegistry implements ITagRegistry {
         await this.refreshPanel();
       }
     } catch (error) {
-      window.electronAPI.logError('TagRegistry.ts', 'Failed to pin tag group to top:', error);
+      window.electronAPI.logError('TagManager.ts', 'Failed to pin tag group to top:', error);
       this.context.showToast('固定失败: ' + (error as Error).message, 'error');
     }
   }
 
   /**
    * 在标签管理界面新建标签
-   * @param defaultValue - 默认输入值
-   * @param defaultGroupId - 默认选中的组ID
    */
   private async addTagInManagerWithDialog(defaultValue: string = '', defaultGroupId: number | null = null): Promise<void> {
     const groups = await this.service.getTagGroups();
@@ -648,17 +622,14 @@ export class TagRegistry implements ITagRegistry {
 
     const trimmedTag = result.value.trim();
 
-    // 检查是否为特殊标签
     if (Constants.ALL_SPECIAL_TAGS.includes(trimmedTag)) {
       this.context.showToast(`"${trimmedTag}" 是系统保留标签，不能使用`, 'error');
       await this.addTagInManagerWithDialog(trimmedTag, result.groupId);
       return;
     }
 
-    // 检查标签是否已存在
     const existingTag = allTags.includes(trimmedTag);
     if (existingTag) {
-      // 查找标签当前所属的组
       let currentGroupName = '未分组';
       for (const group of groups) {
         if (group.tags && group.tags.includes(trimmedTag)) {
@@ -680,20 +651,18 @@ export class TagRegistry implements ITagRegistry {
         return;
       }
 
-      // 标签已存在，直接移动到目标组
       try {
         await this.service.assignTagToGroup(trimmedTag, result.groupId || null);
         this.context.showToast('标签已移动到新组', 'success');
         await this.render();
         await this.refreshPanel();
       } catch (error) {
-        window.electronAPI.logError('TagRegistry.ts', 'Failed to move tag:', error);
+        window.electronAPI.logError('TagManager.ts', 'Failed to move tag:', error);
         this.context.showToast('移动标签失败: ' + (error as Error).message, 'error');
       }
       return;
     }
 
-    // 标签不存在，创建新标签
     try {
       await this.service.addTag(trimmedTag);
       await this.service.assignTagToGroup(trimmedTag, result.groupId || null);
@@ -701,14 +670,13 @@ export class TagRegistry implements ITagRegistry {
       await this.render();
       await this.refreshPanel();
     } catch (error) {
-      window.electronAPI.logError('TagRegistry.ts', 'Failed to create tag:', error);
+      window.electronAPI.logError('TagManager.ts', 'Failed to create tag:', error);
       this.context.showToast('创建标签失败: ' + (error as Error).message, 'error');
     }
   }
 
   /**
    * 选择标签组
-   * @param group - 标签组对象
    */
   selectTagGroup(group: any): void {
     this.selectedTagGroup = group;
@@ -718,7 +686,6 @@ export class TagRegistry implements ITagRegistry {
 
   /**
    * 获取选中的标签组
-   * @returns 选中的标签组
    */
   getSelectedTagGroup(): any {
     return this.selectedTagGroup;
@@ -732,6 +699,13 @@ export class TagRegistry implements ITagRegistry {
   toggleBatchMode(): void {
     this.isBatchMode = !this.isBatchMode;
     this.selectedTags.clear();
+
+    if (this.isBatchMode) {
+      contextStack.push(this.elements.batchToolbarId as ElementId);
+    } else {
+      contextStack.pop(this.elements.batchToolbarId as ElementId);
+    }
+
     this.render();
     this.updateBatchToolbar();
   }
@@ -740,59 +714,81 @@ export class TagRegistry implements ITagRegistry {
    * 退出批量管理模式
    */
   exitBatchMode(): void {
-    this.isBatchMode = false;
-    this.selectedTags.clear();
-    this.render();
-    this.updateBatchToolbar();
+    if (this.isBatchMode) {
+      this.isBatchMode = false;
+      this.selectedTags.clear();
+      contextStack.pop(this.elements.batchToolbarId as ElementId);
+      this.render();
+      this.updateBatchToolbar();
+    }
+  }
+
+  /**
+   * 隐藏批量工具栏
+   */
+  hideBatchToolbar(): void {
+    if (this.isBatchMode) {
+      this.exitBatchMode();
+    } else {
+      const floatingToolbar = document.getElementById(this.elements.batchToolbarId);
+      if (floatingToolbar) {
+        floatingToolbar.classList.remove('visible');
+        setTimeout(() => floatingToolbar.remove(), 300);
+      }
+    }
   }
 
   /**
    * 更新批量管理工具栏
    */
   private updateBatchToolbar(): void {
-    const toolbarId = this.type === 'prompt' ? 'promptTagManagerToolbar' : 'imageTagManagerToolbar';
-    const toolbar = document.getElementById(toolbarId);
-    if (!toolbar) return;
+    const toolbarId = this.elements.batchToolbarId;
+    let floatingToolbar = document.getElementById(toolbarId) as HTMLElement | null;
 
-    // 查找或创建批量工具栏容器（放在工具栏下方）
-    let batchContainer = toolbar.parentElement?.querySelector('.batch-toolbar-container') as HTMLElement | null;
-    if (!batchContainer) {
-      batchContainer = document.createElement('div');
-      batchContainer.className = 'batch-toolbar-container';
-      toolbar.parentElement?.insertBefore(batchContainer, toolbar.nextSibling);
-    }
-
-    const batchToolbar = batchContainer.querySelector('.batch-toolbar');
     if (this.isBatchMode) {
-      if (!batchToolbar) {
-        const batchDiv = document.createElement('div');
-        batchDiv.className = 'batch-toolbar';
-        batchDiv.innerHTML = `
-          <span class="batch-count">已选择 ${this.selectedTags.size} 个标签</span>
-          <button class="btn btn-sm btn-danger batch-delete-btn">删除</button>
-          <button class="btn btn-sm btn-secondary batch-move-btn">移动到组</button>
-          <button class="btn btn-sm btn-text batch-cancel-btn">取消</button>
+      if (!floatingToolbar) {
+        floatingToolbar = document.createElement('div');
+        floatingToolbar.id = toolbarId;
+        floatingToolbar.className = 'batch-toolbar';
+        floatingToolbar.innerHTML = `
+          <div class="batch-toolbar-content">
+            <span class="batch-toolbar-count">已选择 0 个标签</span>
+            <div class="batch-toolbar-actions">
+              <button class="batch-action-btn batch-action-select-all">全选</button>
+              <button class="batch-action-btn batch-action-invert">反选</button>
+              <button class="batch-action-btn batch-action-move">移动到组</button>
+              <button class="batch-action-btn batch-action-delete">删除</button>
+              <button class="batch-action-btn batch-action-cancel">取消</button>
+            </div>
+          </div>
         `;
-        batchContainer.appendChild(batchDiv);
+        document.body.appendChild(floatingToolbar);
 
-        // 绑定事件
-        batchDiv.querySelector('.batch-delete-btn')?.addEventListener('click', () => this.batchDeleteTags());
-        batchDiv.querySelector('.batch-move-btn')?.addEventListener('click', () => this.batchMoveToGroup());
-        batchDiv.querySelector('.batch-cancel-btn')?.addEventListener('click', () => this.exitBatchMode());
+        floatingToolbar.querySelector('.batch-action-select-all')?.addEventListener('click', () => this.batchSelectAll());
+        floatingToolbar.querySelector('.batch-action-invert')?.addEventListener('click', () => this.batchInvert());
+        floatingToolbar.querySelector('.batch-action-delete')?.addEventListener('click', () => this.batchDeleteTags());
+        floatingToolbar.querySelector('.batch-action-move')?.addEventListener('click', () => this.batchMoveToGroup());
+        floatingToolbar.querySelector('.batch-action-cancel')?.addEventListener('click', () => this.exitBatchMode());
+
+        (floatingToolbar as any).close = () => this.exitBatchMode();
       } else {
-        const countSpan = batchToolbar.querySelector('.batch-count');
+        const countSpan = floatingToolbar.querySelector('.batch-toolbar-count');
         if (countSpan) {
           countSpan.textContent = `已选择 ${this.selectedTags.size} 个标签`;
         }
       }
+
+      floatingToolbar.classList.add('visible');
     } else {
-      batchContainer.innerHTML = '';
+      if (floatingToolbar) {
+        floatingToolbar.classList.remove('visible');
+        setTimeout(() => floatingToolbar?.remove(), 300);
+      }
     }
   }
 
   /**
    * 切换标签选中状态
-   * @param tag - 标签名称
    */
   toggleTagSelection(tag: string): void {
     if (this.selectedTags.has(tag)) {
@@ -826,7 +822,7 @@ export class TagRegistry implements ITagRegistry {
           await this.service.deleteTag(tag);
           successCount++;
         } catch (error) {
-          window.electronAPI.logError('TagRegistry.ts', `Failed to delete tag ${tag}:`, error);
+          window.electronAPI.logError('TagManager.ts', `Failed to delete tag ${tag}:`, error);
         }
       }
 
@@ -835,7 +831,7 @@ export class TagRegistry implements ITagRegistry {
       await this.render();
       await this.refreshPanel();
     } catch (error) {
-      window.electronAPI.logError('TagRegistry.ts', 'Failed to batch delete tags:', error);
+      window.electronAPI.logError('TagManager.ts', 'Failed to batch delete tags:', error);
       this.context.showToast('批量删除失败', 'error');
     }
   }
@@ -872,7 +868,7 @@ export class TagRegistry implements ITagRegistry {
           await this.service.assignTagToGroup(tag, result.groupId || null);
           successCount++;
         } catch (error) {
-          window.electronAPI.logError('TagRegistry.ts', `Failed to move tag ${tag}:`, error);
+          window.electronAPI.logError('TagManager.ts', `Failed to move tag ${tag}:`, error);
         }
       }
 
@@ -881,10 +877,315 @@ export class TagRegistry implements ITagRegistry {
       await this.render();
       await this.refreshPanel();
     } catch (error) {
-      window.electronAPI.logError('TagRegistry.ts', 'Failed to batch move tags:', error);
+      window.electronAPI.logError('TagManager.ts', 'Failed to batch move tags:', error);
       this.context.showToast('批量移动失败', 'error');
     }
   }
+
+  /**
+   * 全选所有可见标签
+   */
+  private batchSelectAll(): void {
+    const container = document.getElementById(this.containerId);
+    if (!container) return;
+
+    const tagItems = container.querySelectorAll('.tag-manager-item[data-tag]');
+    tagItems.forEach(item => {
+      const tag = (item as HTMLElement).dataset.tag;
+      if (tag) {
+        this.selectedTags.add(tag);
+        const checkbox = item.querySelector('.tag-batch-checkbox') as HTMLInputElement | null;
+        if (checkbox) checkbox.checked = true;
+        item.classList.add('tag-selected');
+      }
+    });
+
+    this.updateBatchToolbar();
+  }
+
+  /**
+   * 反选所有可见标签
+   */
+  private batchInvert(): void {
+    const container = document.getElementById(this.containerId);
+    if (!container) return;
+
+    const tagItems = container.querySelectorAll('.tag-manager-item[data-tag]');
+    tagItems.forEach(item => {
+      const tag = (item as HTMLElement).dataset.tag;
+      if (tag) {
+        if (this.selectedTags.has(tag)) {
+          this.selectedTags.delete(tag);
+        } else {
+          this.selectedTags.add(tag);
+        }
+        const checkbox = item.querySelector('.tag-batch-checkbox') as HTMLInputElement | null;
+        if (checkbox) checkbox.checked = this.selectedTags.has(tag);
+        if (this.selectedTags.has(tag)) {
+          item.classList.add('tag-selected');
+        } else {
+          item.classList.remove('tag-selected');
+        }
+      }
+    });
+
+    this.updateBatchToolbar();
+  }
+
+  // ========== 标签管理器模态框控制 ==========
+
+  /**
+   * 打开标签管理器模态框
+   */
+  openManager(): void {
+    this.eventBus?.emit('viewChanged', { view: 'tagManager', type: this.type });
+
+    const modal = document.getElementById(this.elements.modalId);
+    if (modal) {
+      modal.classList.add('active');
+      (modal as any).close = () => this.closeManager();
+      contextStack.push(this.elements.modalId as ElementId);
+    }
+  }
+
+  /**
+   * 关闭标签管理器模态框
+   */
+  closeManager(): void {
+    this.eventBus?.emit('viewChanged', { view: 'main', from: 'tagManager' });
+
+    const modal = document.getElementById(this.elements.modalId);
+    if (modal) {
+      modal.classList.remove('active');
+    }
+    contextStack.pop(this.elements.modalId as ElementId);
+
+    this.exitBatchMode();
+  }
+
+  /**
+   * 检查标签管理器模态框是否处于活动状态
+   */
+  isManagerActive(): boolean {
+    const modal = document.getElementById(this.elements.modalId);
+    return modal?.classList.contains('active') ?? false;
+  }
+
+  // ========== 标签组编辑模态框控制 ==========
+
+  /**
+   * 打开标签组编辑模态框
+   */
+  async openGroupEdit(groupId: number | null = null): Promise<void> {
+    const modal = document.getElementById(this.elements.groupEditModalId);
+    if (!modal) return;
+
+    const nameInput = document.getElementById(this.elements.groupEditNameInputId) as HTMLInputElement | null;
+    const sortOrderInput = document.getElementById(this.elements.groupEditSortOrderInputId) as HTMLInputElement | null;
+
+    if (nameInput) {
+      nameInput.value = '';
+      focusInput(nameInput);
+    }
+    if (sortOrderInput) sortOrderInput.value = '0';
+
+    if (groupId) {
+      const groups = await this.service.getTagGroups();
+      const group = groups.find((g: any) => String(g.id) === String(groupId));
+      if (group && nameInput && sortOrderInput) {
+        nameInput.value = group.name || '';
+        sortOrderInput.value = String(group.sortOrder || '0');
+      }
+    }
+
+    (modal as any).dataset.groupId = groupId ? String(groupId) : '';
+    modal.classList.add('active');
+    this.groupEditActive = true;
+  }
+
+  /**
+   * 关闭标签组编辑模态框
+   */
+  closeGroupEdit(): void {
+    const modal = document.getElementById(this.elements.groupEditModalId);
+    if (modal) {
+      modal.classList.remove('active');
+    }
+    this.groupEditActive = false;
+  }
+
+  /**
+   * 保存标签组
+   */
+  async saveGroupEdit(): Promise<void> {
+    const modal = document.getElementById(this.elements.groupEditModalId);
+    const nameInput = document.getElementById(this.elements.groupEditNameInputId) as HTMLInputElement | null;
+    const sortOrderInput = document.getElementById(this.elements.groupEditSortOrderInputId) as HTMLInputElement | null;
+
+    const groupIdStr = modal?.dataset.groupId;
+    const name = nameInput?.value.trim() || '';
+    const sortOrder = parseInt(sortOrderInput?.value || '0', 10);
+
+    if (!name) {
+      this.context.showToast('请输入标签组名称', 'error');
+      return;
+    }
+
+    try {
+      if (groupIdStr) {
+        const groupId = parseInt(groupIdStr, 10);
+        await this.service.updateGroup(groupId, { name, sortOrder });
+      } else {
+        await this.service.createGroup(name, sortOrder);
+      }
+      await this.render();
+      await this.refreshPanel();
+
+      this.closeGroupEdit();
+      this.context.showToast(groupIdStr ? '标签组已更新' : '标签组已创建', 'success');
+    } catch (error: any) {
+      window.electronAPI?.logError('TagManager.ts', 'Failed to save tag group:', error);
+      if (error.message?.includes('DUPLICATE_NAME')) {
+        this.closeGroupEdit();
+        await DialogService.showConfirmDialogByConfig(
+          { ...DialogConfig.TAG_GROUP_DUPLICATE_NAME, type: 'info' },
+          { name }
+        );
+      } else {
+        this.context.showToast('保存失败: ' + error.message, 'error');
+      }
+    }
+  }
+
+  /**
+   * 检查标签组编辑模态框是否处于活动状态
+   */
+  checkGroupEditActive(): boolean {
+    return this.groupEditActive;
+  }
+
+  /**
+   * 初始化标签组编辑模态框事件
+   */
+  private initGroupEditModals(): void {
+    document.getElementById(this.elements.groupEditCloseBtnId)?.addEventListener('click', () => this.closeGroupEdit());
+    document.getElementById(this.elements.groupEditCancelBtnId)?.addEventListener('click', () => this.closeGroupEdit());
+    document.getElementById(this.elements.groupEditSaveBtnId)?.addEventListener('click', () => this.saveGroupEdit());
+  }
+
+  /**
+   * 绑定标签管理器事件
+   */
+  private bindManagerEvents(): void {
+    document.getElementById(this.elements.closeButtonId)?.addEventListener('click', () => this.closeManager());
+    document.getElementById(this.elements.addTagGroupBtnId)?.addEventListener('click', () => this.openGroupEdit());
+    document.getElementById(this.elements.addTagInManagerBtnId)?.addEventListener('click', () => this.addTagInManager());
+    document.getElementById(this.elements.batchManageBtnId)?.addEventListener('click', () => this.toggleBatchMode());
+
+    const searchInput = document.getElementById(this.elements.searchInputId) as HTMLInputElement | null;
+    const clearBtn = document.getElementById(this.elements.clearSearchBtnId);
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const target = e.target as HTMLInputElement;
+        this.render(target.value);
+        if (clearBtn) clearBtn.style.display = target.value ? 'flex' : 'none';
+      });
+    }
+    if (clearBtn && searchInput) {
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        this.render('');
+        clearBtn.style.display = 'none';
+        searchInput.focus();
+      });
+    }
+
+    const sortSelect = document.getElementById(this.elements.sortSelectId) as HTMLSelectElement | null;
+    const orderBtn = document.getElementById(this.elements.orderBtnId);
+    if (sortSelect) {
+      sortSelect.value = `${this.sortBy}-${this.sortOrder}`;
+      sortSelect.addEventListener('change', (e) => {
+        const target = e.target as HTMLSelectElement;
+        const [sortBy, sortOrder] = target.value.split('-');
+        this.sortBy = sortBy;
+        this.sortOrder = sortOrder as 'asc' | 'desc';
+        localStorage.setItem(`${this.type}TagSortBy`, sortBy);
+        localStorage.setItem(`${this.type}TagSortOrder`, sortOrder);
+        this.render(searchInput?.value || '');
+      });
+    }
+    if (orderBtn && sortSelect) {
+      orderBtn.addEventListener('click', () => {
+        const newOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+        this.sortOrder = newOrder;
+        localStorage.setItem(`${this.type}TagSortOrder`, newOrder);
+        sortSelect.value = `${this.sortBy}-${newOrder}`;
+        this.render(searchInput?.value || '');
+      });
+    }
+  }
+
+  // ========== 静态工具方法 ==========
+
+  /**
+   * 处理标签同步结果
+   * 清除受影响的缓存并刷新
+   */
+  static async handleSyncResult(
+    result: {
+      promptToImage: {
+        imported: number;
+        skipped: number;
+        tags: string[];
+        tagGroups: Array<{ groupName: string; tags: string[] }>;
+        ungroupedTags: string[];
+      };
+      imageToPrompt: {
+        imported: number;
+        skipped: number;
+        tags: string[];
+        tagGroups: Array<{ groupName: string; tags: string[] }>;
+        ungroupedTags: string[];
+      };
+    },
+    promptManager: TagManager | null,
+    imageManager: TagManager | null
+  ): Promise<void> {
+    // 清除标签缓存并刷新
+    if (result.promptToImage.tags && result.promptToImage.tags.length > 0) {
+      imageManager?.service._clearCache(imageManager.service.cacheKey);
+      imageManager?.service._clearCache(imageManager.service.cacheKeyGroups);
+    }
+    if (result.imageToPrompt.tags && result.imageToPrompt.tags.length > 0) {
+      promptManager?.service._clearCache(promptManager.service.cacheKey);
+      promptManager?.service._clearCache(promptManager.service.cacheKeyGroups);
+    }
+    await Promise.all([promptManager?.refresh(), imageManager?.refresh()]);
+  }
+
+  /**
+   * 绑定同步标签按钮事件
+   */
+  static bindSyncButton(
+    buttonId: string,
+    promptManager: TagManager | null,
+    imageManager: TagManager | null,
+    context: { showToast: (message: string, type?: string) => void }
+  ): void {
+    const button = document.getElementById(buttonId);
+    if (!button) return;
+
+    button.addEventListener('click', async () => {
+      try {
+        const result = await window.electronAPI.syncTagsBidirectional();
+        await TagManager.handleSyncResult(result, promptManager, imageManager);
+        DialogService.showConfirmDialogByConfig(DialogConfig.SYNC_TAGS_BIDIRECTIONAL, result);
+      } catch (error) {
+        window.electronAPI.logError('TagManager.ts', 'Failed to sync tags bidirectional', error);
+        context.showToast('同步标签失败: ' + (error as Error).message, 'error');
+      }
+    });
+  }
 }
 
-export default TagRegistry;
+export default TagManager;

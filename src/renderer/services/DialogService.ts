@@ -1,3 +1,6 @@
+import { contextStack } from '../managers/ContextStackManager.ts';
+import { Constants } from '../../constants.ts';
+
 /**
  * 对话框配置数据接口
  */
@@ -345,7 +348,12 @@ export class DialogService {
 
       _previousFocus = document.activeElement;
 
+      // 压栈：进入对话框上下文
+      contextStack.push(Constants.Ids.DIALOG);
+
       (modal as HTMLElement).style.display = 'flex';
+      // 添加 close 方法供 ShortcutManager 调用
+      (modal as HTMLElement & { close: () => void }).close = () => DialogService._closeConfirm(false);
       _activeModals.add('confirmModal');
 
       setTimeout(() => {
@@ -360,10 +368,18 @@ export class DialogService {
     });
   }
 
+  private static _confirmKeyDownHandler: ((e: KeyboardEvent) => void) | null = null;
+
   private static _bindConfirmKeyboardEvents(): void {
+    // 先移除旧的监听器（如果存在）
+    if (DialogService._confirmKeyDownHandler) {
+      document.removeEventListener('keydown', DialogService._confirmKeyDownHandler);
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!_activeModals.has('confirmModal')) {
         document.removeEventListener('keydown', handleKeyDown);
+        DialogService._confirmKeyDownHandler = null;
         return;
       }
 
@@ -371,13 +387,12 @@ export class DialogService {
         e.preventDefault();
         DialogService._closeConfirm(true);
         document.removeEventListener('keydown', handleKeyDown);
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        DialogService._closeConfirm(false);
-        document.removeEventListener('keydown', handleKeyDown);
+        DialogService._confirmKeyDownHandler = null;
       }
+      // Escape 由 ShortcutManager 统一处理
     };
 
+    DialogService._confirmKeyDownHandler = handleKeyDown;
     document.addEventListener('keydown', handleKeyDown);
   }
 
@@ -399,10 +414,213 @@ export class DialogService {
 
     _activeModals.delete('confirmModal');
 
+    // 出栈：退出对话框上下文
+    contextStack.pop(Constants.Ids.DIALOG);
+
     if (_previousFocus instanceof HTMLElement) {
       _previousFocus.focus();
       _previousFocus = null;
     }
+  }
+
+  /**
+   * 显示输入对话框
+   * @param options - 对话框选项
+   * @returns 用户输入的内容，取消则返回 null
+   */
+  static async showInputDialog(options: {
+    title: string;
+    placeholder?: string;
+    defaultValue?: string;
+    multiline?: boolean;
+    showGroupSelect?: boolean;
+    groups?: Array<{ id: string | number; name: string }>;
+    defaultGroupId?: string | number;
+  }): Promise<{ value: string; groupId?: number | null } | null> {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('inputModal');
+      const titleEl = document.getElementById('inputModalTitle');
+      const labelEl = document.getElementById('inputModalLabel');
+      const inputEl = document.getElementById('inputModalField') as HTMLInputElement | HTMLTextAreaElement | null;
+      const groupSection = document.getElementById('inputModalGroupSection');
+      const groupSelect = document.getElementById('inputModalGroupSelect') as HTMLSelectElement | null;
+      const confirmBtn = document.getElementById('inputOkBtn');
+      const cancelBtn = document.getElementById('inputCancelBtn');
+      const closeBtn = document.getElementById('closeInputModal');
+
+      if (!modal || !inputEl) {
+        const result = prompt(options.title, options.defaultValue || '');
+        resolve(result ? { value: result } : null);
+        return;
+      }
+
+      if (titleEl) titleEl.textContent = options.title;
+      if (labelEl) labelEl.textContent = options.placeholder || '';
+      inputEl.value = options.defaultValue || '';
+
+      // 设置多行
+      if (options.multiline) {
+        (inputEl as HTMLTextAreaElement).rows = 4;
+      } else {
+        (inputEl as HTMLTextAreaElement).rows = 1;
+      }
+
+      // 设置分组选择
+      if (options.showGroupSelect && groupSection && groupSelect) {
+        groupSection.style.display = 'block';
+        groupSelect.innerHTML = '<option value="">未分组</option>';
+        if (options.groups) {
+          options.groups.forEach(group => {
+            const option = document.createElement('option');
+            option.value = String(group.id);
+            option.textContent = group.name;
+            groupSelect.appendChild(option);
+          });
+        }
+        groupSelect.value = options.defaultGroupId ? String(options.defaultGroupId) : '';
+      } else if (groupSection) {
+        groupSection.style.display = 'none';
+      }
+
+      const cleanup = () => {
+        (modal as HTMLElement).style.display = 'none';
+        _activeModals.delete('inputModal');
+        confirmBtn?.removeEventListener('click', handleConfirm);
+        cancelBtn?.removeEventListener('click', handleCancel);
+        closeBtn?.removeEventListener('click', handleCancel);
+        inputEl.removeEventListener('keydown', handleKeyDown);
+      };
+
+      const handleConfirm = () => {
+        const value = inputEl.value.trim();
+        const hasGroupSelect = groupSection && groupSection.style.display !== 'none' && groupSelect;
+        cleanup();
+        contextStack.pop(Constants.Ids.DIALOG);
+        resolve({
+          value,
+          groupId: hasGroupSelect ? (groupSelect.value ? parseInt(groupSelect.value, 10) : null) : undefined
+        });
+      };
+
+      const handleCancel = () => {
+        cleanup();
+        contextStack.pop(Constants.Ids.DIALOG);
+        resolve(null);
+      };
+
+      const handleKeyDown = (e: Event) => {
+        const keyEvent = e as KeyboardEvent;
+        if (keyEvent.key === 'Enter') {
+          e.preventDefault();
+          handleConfirm();
+        }
+        // Escape 由 ShortcutManager 统一处理
+      };
+
+      confirmBtn?.addEventListener('click', handleConfirm);
+      cancelBtn?.addEventListener('click', handleCancel);
+      closeBtn?.addEventListener('click', handleCancel);
+      inputEl.addEventListener('keydown', handleKeyDown);
+
+      // 压栈：进入对话框上下文
+      contextStack.push(Constants.Ids.DIALOG);
+
+      (modal as HTMLElement).style.display = 'flex';
+      _activeModals.add('inputModal');
+      inputEl.focus();
+
+      // 将光标移到末尾
+      setTimeout(() => {
+        inputEl.selectionStart = inputEl.selectionEnd = inputEl.value.length;
+      }, 0);
+    });
+  }
+
+  /**
+   * 显示选择对话框
+   * @param options - 对话框选项
+   * @returns 用户选择的值，取消则返回 null
+   */
+  static async showSelectDialog(options: {
+    title: string;
+    options: Array<{ value: string; label: string }>;
+    defaultValue?: string;
+  }): Promise<string | null> {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('selectModal');
+      const titleEl = document.getElementById('selectModalTitle');
+      const selectEl = document.getElementById('selectModalSelect') as HTMLSelectElement | null;
+      const confirmBtn = document.getElementById('selectOkBtn');
+      const cancelBtn = document.getElementById('selectCancelBtn');
+      const closeBtn = document.getElementById('closeSelectModal');
+
+      if (!modal || !selectEl) {
+        // 回退到原生对话框
+        const optionsList = options.options.map(o => o.label).join('\n');
+        const result = prompt(`${options.title}\n\n${optionsList}\n\n请输入选项值：`, options.defaultValue || '');
+        resolve(result);
+        return;
+      }
+
+      if (titleEl) titleEl.textContent = options.title;
+
+      // 填充选项
+      selectEl.innerHTML = '';
+      options.options.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        if (opt.value === options.defaultValue) {
+          option.selected = true;
+        }
+        selectEl.appendChild(option);
+      });
+
+      const cleanup = () => {
+        (modal as HTMLElement).style.display = 'none';
+        _activeModals.delete('selectModal');
+        confirmBtn?.removeEventListener('click', handleConfirm);
+        cancelBtn?.removeEventListener('click', handleCancel);
+        closeBtn?.removeEventListener('click', handleCancel);
+      };
+
+      const handleConfirm = () => {
+        const value = selectEl.value;
+        cleanup();
+        contextStack.pop(Constants.Ids.DIALOG);
+        resolve(value);
+      };
+
+      const handleCancel = () => {
+        cleanup();
+        contextStack.pop(Constants.Ids.DIALOG);
+        resolve(null);
+      };
+
+      confirmBtn?.addEventListener('click', handleConfirm);
+      cancelBtn?.addEventListener('click', handleCancel);
+      closeBtn?.addEventListener('click', handleCancel);
+
+      // 压栈：进入对话框上下文
+      contextStack.push(Constants.Ids.DIALOG);
+
+      (modal as HTMLElement).style.display = 'flex';
+      _activeModals.add('selectModal');
+    });
+  }
+
+  /**
+   * 清除所有活动对话框
+   */
+  static clearAllDialogs(): void {
+    _activeModals.forEach(modalId => {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        (modal as HTMLElement).style.display = 'none';
+      }
+    });
+    _activeModals.clear();
+    _confirmCallback = null;
   }
 }
 

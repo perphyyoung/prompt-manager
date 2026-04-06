@@ -10,7 +10,7 @@ import path from 'path';
 let logFilePath: string;
 
 // 配置日志级别
-log.transports.file.level = 'info';
+log.transports.file.level = 'debug';
 log.transports.console.level = 'debug';
 
 // 配置日志文件大小限制（超过后自动轮转）

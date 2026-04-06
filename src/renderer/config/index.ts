@@ -1,1 +1,1 @@
-export { BatchConfig } from './BatchConfig.ts';
+export { MultiSelectConfig, type IMultiSelectConfig, type IBatchOperationConfig } from './MultiSelectConfig.ts';

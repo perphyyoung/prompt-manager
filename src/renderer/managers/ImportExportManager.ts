@@ -3,16 +3,17 @@
  * 负责处理数据导出功能
  */
 
-import type PromptManager from '../app';
+import type { IApp } from '../app.types.ts';
 import type { IScanOrphanFilesResult, IExportOrphanFilesResult } from '../../types/entities.ts';
 
 interface ImportExportManagerOptions {
-  app: PromptManager;
+  app: IApp;
 }
 
 export class ImportExportManager {
-  private app: PromptManager;
+  private app: IApp;
   private isExporting: boolean = false;
+  private isInitialized = false;
 
   constructor(options: ImportExportManagerOptions) {
     this.app = options.app;
@@ -22,7 +23,11 @@ export class ImportExportManager {
    * 初始化
    */
   init(): void {
+    if (this.isInitialized) {
+      return;
+    }
     // 初始化时无需特殊操作
+    this.isInitialized = true;
   }
 
   /**

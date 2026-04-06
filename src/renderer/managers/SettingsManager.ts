@@ -1,7 +1,8 @@
-import { Constants } from '../../constants.ts';
+import { Constants, ElementId } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
 import { ElectronDataClearApi } from '../services/ElectronDataClearApi.ts';
 import { DuplicatePreventionMixin } from '../../utils/index.ts';
+import { contextStack } from './ContextStackManager.ts';
 
 /**
  * 数据清空 API 接口
@@ -43,7 +44,7 @@ interface ISettingsManagerOptions {
 
 /**
  * 设置管理器
- * 负责处理应用设置相关操作
+ * 负责处理应用设置相关操作和设置模态框的显示/隐藏
  */
 export class SettingsManager extends DuplicatePreventionMixin(Object) {
   private app: IApp;
@@ -51,6 +52,8 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
 
   // 设置状态
   private currentTheme: string;
+  private isModalActive = false;
+  private isInitialized = false;
 
   constructor(options: ISettingsManagerOptions) {
     super();
@@ -59,14 +62,76 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
 
     // 设置状态
     this.currentTheme = 'light';
+
+    // 绑定模态框事件
+    this.bindModalEvents();
+  }
+
+  /**
+   * 绑定模态框事件
+   */
+  private bindModalEvents(): void {
+    // 关闭按钮
+    document.getElementById('closeSettingsModal')?.addEventListener('click', () => this.closeModal());
+
+    // 设置按钮（打开模态框）
+    document.getElementById('settingsBtn')?.addEventListener('click', () => this.openModal());
+  }
+
+  /**
+   * 打开设置模态框
+   */
+  async openModal(): Promise<void> {
+    // 获取当前数据路径
+    try {
+      const dataPath = await window.electronAPI.getDataPath();
+      const el = document.getElementById('currentDataPath');
+      if (el) el.textContent = dataPath;
+    } catch (error) {
+      window.electronAPI.logError('SettingsManager', 'Failed to get data path:', error);
+      const el = document.getElementById('currentDataPath');
+      if (el) el.textContent = '获取失败';
+    }
+
+    const modal = document.getElementById('settingsModal');
+    if (modal) {
+      contextStack.push(Constants.Ids.SETTINGS_MODAL);
+      modal.classList.add('active');
+      // 添加 close 方法供 ShortcutManager 调用
+      (modal as HTMLElement & { close: () => void }).close = () => this.closeModal();
+      this.isModalActive = true;
+    }
+  }
+
+  /**
+   * 关闭设置模态框
+   */
+  closeModal(): void {
+    const modal = document.getElementById('settingsModal');
+    if (modal) {
+      modal.classList.remove('active');
+    }
+    contextStack.pop(Constants.Ids.SETTINGS_MODAL as ElementId);
+    this.isModalActive = false;
+  }
+
+  /**
+   * 检查模态框是否处于活动状态
+   */
+  isModalOpen(): boolean {
+    return this.isModalActive;
   }
 
   /**
    * 初始化
    */
   async init(): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
     await this.loadSettings();
     this.bindEvents();
+    this.isInitialized = true;
   }
 
   /**

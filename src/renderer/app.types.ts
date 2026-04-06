@@ -1,7 +1,7 @@
 import type { LRUCache } from '../utils/LRUCache.ts';
 import type { ITagRegistry, ITagService, IPrompt, IImage } from '../types/entities.ts';
 import type { DialogService } from './services/DialogService.ts';
-import type { SelectionManager } from './managers/SelectionManager.ts';
+import type { MultiSelectManager } from './managers/MultiSelectManager.ts';
 
 // 重新导出类型
 export type { ITagRegistry, ITagService, IPrompt, IImage };
@@ -27,10 +27,11 @@ export interface IPanelManager {
   setViewMode(mode: string): void;
   setCardSize(size: number): void;
   handleFilterAction(): void;
-  selectionManager: SelectionManager;
+  multiSelectManager: MultiSelectManager;
   refreshAfterUpdate(): Promise<void>;
   updateToolbarUI(): void;
   exitBatchMode(): void;
+  selectAllVisibleItems(): void;
 }
 
 /**
@@ -41,23 +42,7 @@ export interface IInputResult {
   confirmed: boolean;
 }
 
-/**
- * 模态框管理器接口
- */
-export interface IModalManager {
-  openTrashModal(type: string): void;
-  closeTrashModal(type: string): void;
-  openSettings(): void;
-  closeSettings(): void;
-  openPromptTagManager(): void;
-  closePromptTagManager(): void;
-  openImageTagManager(): void;
-  closeImageTagManager(): void;
-  showInput(title: string, label: string, defaultValue?: string, options?: unknown): Promise<string | IInputResult | null>;
-  closeInput(): void;
-  closeSelect(): void;
-  init?(): void;
-}
+
 
 /**
  * 缓存管理器接口
@@ -77,7 +62,7 @@ export interface ICacheManager {
  * 事件总线接口
  */
 export interface IEventBus {
-  on(event: string, callback: (data?: unknown) => void): void;
+  on(event: string, callback: (data?: unknown) => void): () => void;
   off(event: string, callback: (data?: unknown) => void): void;
   emit(event: string, data?: unknown): void;
 }
@@ -157,6 +142,8 @@ export interface IImportExportManager {
  */
 export interface ISettingsManager {
   init(): void;
+  openModal(): Promise<void>;
+  closeModal(): void;
 }
 
 /**
@@ -182,25 +169,10 @@ export interface IImageUploadManager {
 }
 
 /**
- * 图像右键菜单管理器接口
- */
-export interface IImageContextMenuManager {
-  show(options: { x: number; y: number; image: IImage }): void;
-}
-
-/**
  * 快捷键管理器接口
  */
 export interface IShortcutManager {
   bind(): void;
-}
-
-/**
- * 标签组模态框管理器接口
- */
-export interface ITagGroupModalManager {
-  openEdit(type: string): void;
-  init(): void;
 }
 
 /**
@@ -218,32 +190,29 @@ export interface IHoverTooltipManager {
  * 应用主类接口 (PromptManager)
  */
 export interface IApp {
-  // 面板管理器
-  promptPanelManager: IPanelManager;
-  imagePanelManager: IPanelManager;
+  // 面板管理器（在 init 后可用）
+  promptPanelManager: IPanelManager | null;
+  imagePanelManager: IPanelManager | null;
 
-  // 其他管理器
-  modalManager: IModalManager;
+  // 其他管理器（在 init 后可用）
   cacheManager: ICacheManager;
-  trashManager: unknown;
-  toastManager: IToastManager;
-  promptTagRegistry: ITagRegistry;
-  imageTagRegistry: ITagRegistry;
-  promptDetailManager: IDetailManager;
-  imageDetailManager: IDetailManager;
-  imageFullscreenManager: IImageFullscreenManager;
-  navigationManager: INavigationManager;
-  toolbarManager: IToolbarManager;
-  searchSortManager: ISearchSortManager;
-  importExportManager: IImportExportManager;
-  settingsManager: ISettingsManager;
-  imageSelectorManager: IImageSelectorManager;
-  newPromptManager: INewPromptManager;
-  imageUploadManager: IImageUploadManager;
-  imageContextMenuManager?: IImageContextMenuManager;
-  shortcutManager: IShortcutManager;
-  tagGroupModalManager: ITagGroupModalManager;
-  promptHoverTooltip: IHoverTooltipManager;
+  trashManager: { loadTrash: () => Promise<void> } | null;
+  toastManager: IToastManager | null;
+  promptTagManager: any | null;
+  imageTagManager: any | null;
+  promptDetailManager: IDetailManager | null;
+  imageDetailManager: IDetailManager | null;
+  imageFullscreenManager: IImageFullscreenManager | null;
+  navigationManager: INavigationManager | null;
+  toolbarManager: IToolbarManager | null;
+  searchSortManager: ISearchSortManager | null;
+  importExportManager: IImportExportManager | null;
+  settingsManager: ISettingsManager | null;
+  imageSelectorManager: IImageSelectorManager | null;
+  newPromptManager: INewPromptManager | null;
+  imageUploadManager: IImageUploadManager | null;
+  shortcutManager: IShortcutManager | null;
+  promptHoverTooltip: IHoverTooltipManager | null;
 
   // 状态
   currentPanel: string;
@@ -274,39 +243,31 @@ export interface IApp {
   renderStatistics(): Promise<void>;
   refreshData(): Promise<void>;
   toggleViewMode(): Promise<void>;
-  openSettingsModal(): Promise<void>;
-  closeSettingsModal(): void;
   openStatisticsModal(): Promise<void>;
   closeStatisticsModal(): void;
   openEditPromptModal(prompt: IPrompt, options?: unknown): Promise<void>;
   openImageDetailModal(image: IImage, options?: unknown): Promise<void>;
   findPromptById(id: string): unknown | null;
-  findImageById(id: string, allImages?: unknown[] | null): unknown | null;
+  findImageById(id: string, allImages?: Array<{ id: string }> | null): { id: string } | null;
   generateUniqueTimestamp(): string;
   addImageToCurrentPrompt(selectedImage: unknown): Promise<void>;
-  renderImagePreviews(): Promise<void>;
   savePromptField(field: string, value: unknown): Promise<void>;
   updatePromptFavoriteBtnUI(isFavorite: boolean): void;
   updateImageDetailFavoriteBtnUI(isFavorite: boolean): void;
   renderImageDetailInfo(image: unknown): Promise<void>;
   autoResizeTextarea(element: HTMLElement | null): void;
-  generateTagsHtml(tags: string[], className: string, emptyClassName: string): string;
   relaunchApp(oldDataDir?: string): Promise<void>;
   on(event: string, callback: (data?: unknown) => void): void;
   off(event: string, callback: (data?: unknown) => void): void;
   emit(event: string, data?: unknown): void;
-  switchToPromptManager(): void;
-  switchToImageManager(): void;
-  closeImageTagManagerModal(): void;
   updatePromptViewButtons(mode: string): void;
   updateImageViewButtons(mode: string): void;
   togglePromptTagFilter(): Promise<void>;
   toggleImageTagFilter(): Promise<void>;
   closeConfirmModal(): void;
-  showInputDialog(title: string, label: string, defaultValue?: string, options?: unknown): Promise<string | null>;
+  showInputDialog(title: string, label: string, defaultValue?: string, options?: unknown): Promise<{ value: string; groupId?: number | null } | null>;
   closeInputModal(): void;
   closeSelectModal(): void;
-  displayedImages?: unknown[];
 }
 
 /**

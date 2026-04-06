@@ -7,23 +7,22 @@ import { Constants } from '../constants.ts';
 import { DialogService, DialogConfig } from './services/index.ts';
 import {
   PromptPanelManager, ImagePanelManager,
-  TagRegistry, TrashManager, ImageFullscreenManager,
+  PromptTagManager, ImageTagManager, TagManager, TrashManager, ImageFullscreenManager,
   PromptDetailManager, ImageDetailManager,
-  ModalManager, TagGroupModalManager,
   ToastManager, NavigationManager,
   SearchSortManager, ToolbarManager,
   ImportExportManager, SettingsManager,
   ImageSelectorManager, NewPromptManager,
-  ImageUploadManager, ImageContextMenuManager
+  ImageUploadManager,
+  StatisticsManager
 } from './managers/index.ts';
-import { BatchConfig } from './config/index.ts';
+
 import { EventBus, HtmlUtils, isSameId, cacheManager } from '../utils/index.ts';
 import { HoverTooltipManager, ShortcutManager, SaveManager, PromptSaveStrategy } from './renderer_utils/index.ts';
 import type { ITagRegistry, IPrompt, IImage } from '../types/entities.ts';
 import type {
   IApp,
   IPanelManager,
-  IModalManager,
   IToastManager,
   IDetailManager,
   IImageFullscreenManager,
@@ -35,8 +34,6 @@ import type {
   IImageSelectorManager,
   INewPromptManager,
   IImageUploadManager,
-  IImageContextMenuManager,
-  ITagGroupModalManager,
   IHoverTooltipManager,
   IShortcutManager,
   IEventBus,
@@ -72,49 +69,49 @@ class PromptManager implements IApp {
   imageSelectorSortBy: string;
   imageSelectorSortOrder: string;
 
-  // 标签系统
-  promptTagRegistry: ITagRegistry;
-  imageTagRegistry: ITagRegistry;
-  tagUI: unknown | null;
+  // 标签系统（在 initPanelManagers 中初始化）
+  promptTagManager: PromptTagManager | null = null;
+  imageTagManager: ImageTagManager | null = null;
 
   // 事件总线
   eventBus: IEventBus;
 
-  // 面板管理器
-  promptPanelManager: IPanelManager;
-  imagePanelManager: IPanelManager;
-  trashManager: TrashManager;
-  shortcutManager: IShortcutManager;
-  imageFullscreenManager: IImageFullscreenManager;
-  promptDetailManager: PromptDetailManager;
-  imageDetailManager: ImageDetailManager;
-  modalManager: IModalManager;
-  tagGroupModalManager: ITagGroupModalManager;
-  toastManager!: IToastManager;
-  navigationManager: INavigationManager;
-  searchSortManager: ISearchSortManager;
-  toolbarManager: IToolbarManager;
-  importExportManager: IImportExportManager;
-  settingsManager: ISettingsManager;
-  imageSelectorManager: IImageSelectorManager;
-  newPromptManager: INewPromptManager;
-  imageUploadManager: IImageUploadManager;
-  imageContextMenuManager?: IImageContextMenuManager;
+  // 面板管理器（在 initPanelManagers 中初始化）
+  promptPanelManager: IPanelManager | null = null;
+  imagePanelManager: IPanelManager | null = null;
+  trashManager: TrashManager | null = null;
+  shortcutManager: IShortcutManager | null = null;
+  imageFullscreenManager: IImageFullscreenManager | null = null;
+  promptDetailManager: PromptDetailManager | null = null;
+  imageDetailManager: ImageDetailManager | null = null;
+  toastManager: IToastManager | null = null;
+  navigationManager: INavigationManager | null = null;
+  searchSortManager: ISearchSortManager | null = null;
+  toolbarManager: IToolbarManager | null = null;
+  importExportManager: IImportExportManager | null = null;
+  settingsManager: ISettingsManager | null = null;
+  imageSelectorManager: IImageSelectorManager | null = null;
+  newPromptManager: INewPromptManager | null = null;
+  imageUploadManager: IImageUploadManager | null = null;
 
   // 当前面板状态
   currentPanel: string;
 
   // UI 组件
-  hoverTooltip: unknown | null;
-  promptHoverTooltip: IHoverTooltipManager;
+  hoverTooltip: unknown | null = null;
+  promptHoverTooltip: IHoverTooltipManager | null = null;
+
+  // 统计管理器（在 initPanelManagers 中初始化）
+  statisticsManager: StatisticsManager | null = null;
 
   // 其他
   isFromDetailJump: boolean;
-  displayedImages?: Array<{ id: string; path: string; isExisting?: boolean }>;
   private _saveLocks?: Set<string>;
   private confirmResolve?: ((value: boolean) => void) | null;
 
   constructor() {
+    // ========== 基本状态初始化 ==========
+
     // 缓存管理器
     this.cacheManager = cacheManager;
 
@@ -122,6 +119,7 @@ class PromptManager implements IApp {
     this.promptCache = cacheManager.getPromptCache();
     this.imageCache = cacheManager.getImageCache();
     this.currentImagesCache = cacheManager.createCache('currentImages', 100);
+
     // 从 localStorage 加载 viewMode（在创建面板管理器之前）
     this.viewMode = localStorage.getItem(Constants.LocalStorageKey.VIEW_MODE) || 'safe';
     this.searchQuery = '';
@@ -141,125 +139,17 @@ class PromptManager implements IApp {
     // 事件总线
     this.eventBus = new EventBus();
 
-    // 初始化回收站管理器
-    this.trashManager = new TrashManager({
-      app: this,
-      eventBus: this.eventBus
-    });
-
-    // 初始化快捷键管理器
-    this.shortcutManager = new ShortcutManager({
-      app: this
-    });
-
-    // 初始化标签注册表（必须在面板管理器之前）
-    this.promptTagRegistry = new TagRegistry('prompt', this);
-    this.imageTagRegistry = new TagRegistry('image', this);
-
-    // 初始化提示词面板管理器
-    this.promptPanelManager = new PromptPanelManager({
-      app: this,
-      tagManager: this.promptTagRegistry,
-      saveManager: new SaveManager({
-        strategy: new PromptSaveStrategy(this),
-        itemId: '',
-        onAfterSave: () => {
-          this.showToast('保存成功', 'success');
-        }
-      }),
-      eventBus: this.eventBus,
-      toolbarConfig: BatchConfig.prompt
-    });
-
-    // 初始化图像面板管理器
-    this.imagePanelManager = new ImagePanelManager({
-      app: this,
-      tagManager: this.imageTagRegistry,
-      eventBus: this.eventBus,
-      toolbarConfig: BatchConfig.image
-    });
-
-    // 初始化图像全屏查看器管理器
-    this.imageFullscreenManager = new ImageFullscreenManager({
-      app: this
-    });
-
-    // 初始化详情管理器
-    this.promptDetailManager = new PromptDetailManager({
-      app: this,
-      tagRegistry: this.promptTagRegistry
-    });
-
-    this.imageDetailManager = new ImageDetailManager({
-      app: this,
-      tagRegistry: this.imageTagRegistry
-    });
-
-    // 初始化模态框管理器
-    this.modalManager = new ModalManager({
-      app: this
-    });
-
-    // 初始化标签组模态框管理器
-    this.tagGroupModalManager = new TagGroupModalManager({
-      app: this
-    });
-
-    // 初始化导航管理器
-    this.navigationManager = new NavigationManager({
-      app: this,
-      storageKey: 'currentPanel',
-      defaultPanel: 'prompt',
-      batchToolbarConfig: BatchConfig
-    });
-
-    // 初始化搜索排序管理器
-    this.searchSortManager = new SearchSortManager({
-      app: this
-    });
-
-    // 初始化工具栏管理器
-    this.toolbarManager = new ToolbarManager({
-      app: this
-    });
-
-    // 初始化导入导出管理器
-    this.importExportManager = new ImportExportManager({
-      app: this
-    });
-
-    // 初始化设置管理器
-    this.settingsManager = new SettingsManager({
-      app: this,
-      dataClearApi: window.electronAPI
-    });
-
-    // 初始化图像选择器管理器
-    this.imageSelectorManager = new ImageSelectorManager({
-      app: this
-    });
-
-    // 初始化新建提示词管理器
-    this.newPromptManager = new NewPromptManager({
-      app: this
-    });
-
-    // 初始化图像上传管理器
-    this.imageUploadManager = new ImageUploadManager({
-      app: this
-    });
-
     // 当前面板状态 (由 NavigationManager 管理)
     this.currentPanel = 'prompt'; // 默认打开提示词面板
 
     // UI 组件
     this.hoverTooltip = null;
 
-    // 初始化 hover tooltip
-    this.promptHoverTooltip = new HoverTooltipManager('promptPreviewTooltip', 'promptPreviewContent', 'promptPreviewImage');
-
     // 其他状态
     this.isFromDetailJump = false;
+
+    // ========== 管理器初始化（延迟到 initPanelManagers） ==========
+    // 所有管理器在 initPanelManagers() 中统一初始化，避免重复创建
   }
 
   /**
@@ -276,22 +166,19 @@ class PromptManager implements IApp {
       // 初始化面板管理器（只加载数据，不渲染视图）
       await this.initPanelManagers();
 
-      // 绑定工具栏事件
-      this.bindToolbarEvents();
-
       // 绑定全局事件
-      await this.bindGlobalEvents();
+    this.bindGlobalEvents();
 
-      // 加载数据（初始化，不刷新）
-      await this.loadData(false);
+    // 加载数据（初始化，不刷新）
+    await this.loadData(false);
 
-      // 恢复上次打开的面板（会触发当前面板的渲染）
-      this.navigationManager?.restorePanelState();
-    } catch (error) {
-      window.electronAPI.logError('App', 'Failed to initialize application:', error);
-      this.showToast('应用初始化失败', 'error');
-    }
+    // 恢复上次打开的面板（会触发当前面板的渲染）
+    this.navigationManager?.restorePanelState();
+  } catch (error) {
+    window.electronAPI.logError('App', 'Failed to initialize application:', error);
+    this.showToast('应用初始化失败', 'error');
   }
+}
 
   /**
    * 恢复主题
@@ -320,69 +207,12 @@ class PromptManager implements IApp {
 
   /**
    * 初始化面板管理器
+   * 所有管理器的唯一初始化入口，避免重复创建
    */
   async initPanelManagers() {
-    // 初始化回收站管理器
-    this.trashManager = new TrashManager({
-      app: this,
-      eventBus: this.eventBus
-    });
-    await this.trashManager.init();
+    // ========== 1. 基础服务层 ==========
 
-    // 初始化快捷键管理器
-    this.shortcutManager = new ShortcutManager({
-      app: this
-    });
-    this.shortcutManager.bind();
-
-    // 初始化提示词面板管理器
-    this.promptPanelManager = new PromptPanelManager({
-      app: this,
-      eventBus: this.eventBus,
-      toolbarConfig: BatchConfig.prompt
-    });
-
-    // 初始化图像面板管理器
-    this.imagePanelManager = new ImagePanelManager({
-      app: this,
-      eventBus: this.eventBus,
-      toolbarConfig: BatchConfig.image
-    });
-
-    // 初始化标签注册表（重构后，用配置替代继承）
-    this.promptTagRegistry = new TagRegistry('prompt', this);
-    this.imageTagRegistry = new TagRegistry('image', this);
-
-    // 初始化图像全屏查看器管理器
-    this.imageFullscreenManager = new ImageFullscreenManager({
-      app: this
-    });
-    this.imageFullscreenManager.init();
-
-    // 初始化详情管理器
-    this.promptDetailManager = new PromptDetailManager({
-      app: this,
-      tagRegistry: this.promptTagRegistry
-    });
-
-    this.imageDetailManager = new ImageDetailManager({
-      app: this,
-      tagRegistry: this.imageTagRegistry
-    });
-
-    // 初始化模态框管理器
-    this.modalManager = new ModalManager({
-      app: this
-    });
-    this.modalManager.init?.();
-
-    // 初始化标签组模态框管理器
-    this.tagGroupModalManager = new TagGroupModalManager({
-      app: this
-    });
-    this.tagGroupModalManager.init?.();
-
-    // 初始化 Toast 管理器
+    // 初始化 Toast 管理器（最先初始化，以便其他模块使用）
     this.toastManager = new ToastManager({
       duration: 3000,
       containerId: 'toastContainer',
@@ -390,12 +220,67 @@ class PromptManager implements IApp {
     });
     this.toastManager.init();
 
+    // 初始化快捷键管理器
+    this.shortcutManager = new ShortcutManager({ app: this as IApp });
+    this.shortcutManager.bind();
+
+    // ========== 2. 数据层 ==========
+
+    // 初始化标签管理器（必须在面板管理器之前）
+    this.promptTagManager = new PromptTagManager(this as IApp);
+    this.imageTagManager = new ImageTagManager(this as IApp);
+
+    // ========== 3. 面板层 ==========
+
+    // 初始化提示词面板管理器
+    this.promptPanelManager = new PromptPanelManager({
+      app: this as IApp,
+      tagManager: this.promptTagManager,
+      saveManager: new SaveManager({
+        strategy: new PromptSaveStrategy(this as IApp),
+        itemId: '',
+        onAfterSave: () => {
+          this.showToast('保存成功', 'success');
+        }
+      }),
+      eventBus: this.eventBus
+    });
+
+    // 初始化图像面板管理器
+    this.imagePanelManager = new ImagePanelManager({
+      app: this as IApp,
+      tagManager: this.imageTagManager,
+      eventBus: this.eventBus
+    });
+
+    // ========== 4. 功能管理器 ==========
+
+    // 初始化回收站管理器
+    this.trashManager = new TrashManager({
+      app: this as IApp,
+      eventBus: this.eventBus
+    });
+    await this.trashManager.init();
+
+    // 初始化图像全屏查看器管理器
+    this.imageFullscreenManager = new ImageFullscreenManager({ app: this as IApp });
+    this.imageFullscreenManager.init();
+
+    // 初始化详情管理器
+    this.promptDetailManager = new PromptDetailManager({
+      app: this as IApp,
+      tagRegistry: this.promptTagManager
+    });
+    this.imageDetailManager = new ImageDetailManager({
+      app: this as IApp,
+      tagRegistry: this.imageTagManager
+    });
+
     // 初始化导航管理器
     this.navigationManager = new NavigationManager({
-      app: this,
+      app: this as IApp,
       storageKey: 'currentPanel',
-      defaultPanel: 'prompt',
-      batchToolbarConfig: BatchConfig
+      defaultPanel: 'prompt'
     });
     this.navigationManager.init?.();
 
@@ -403,52 +288,40 @@ class PromptManager implements IApp {
     this.syncCurrentPanel();
 
     // 初始化搜索排序管理器
-    this.searchSortManager = new SearchSortManager({
-      app: this
-    });
+    this.searchSortManager = new SearchSortManager({ app: this as IApp });
     this.searchSortManager.init();
 
     // 初始化工具栏管理器
-    this.toolbarManager = new ToolbarManager({
-      app: this
-    });
+    this.toolbarManager = new ToolbarManager({ app: this as IApp });
     this.toolbarManager.init();
 
     // 初始化导入导出管理器
-    this.importExportManager = new ImportExportManager({
-      app: this
-    });
+    this.importExportManager = new ImportExportManager({ app: this as IApp });
     this.importExportManager.init();
 
     // 初始化设置管理器
     this.settingsManager = new SettingsManager({
-      app: this,
+      app: this as IApp,
       dataClearApi: window.electronAPI
     });
     this.settingsManager.init?.();
 
     // 初始化图像选择器管理器
-    this.imageSelectorManager = new ImageSelectorManager({
-      app: this
-    });
+    this.imageSelectorManager = new ImageSelectorManager({ app: this as IApp });
 
     // 初始化新建提示词管理器
-    this.newPromptManager = new NewPromptManager({
-      app: this
-    });
+    this.newPromptManager = new NewPromptManager({ app: this as IApp });
 
     // 初始化图像上传管理器
-    this.imageUploadManager = new ImageUploadManager({
-      app: this
-    });
+    this.imageUploadManager = new ImageUploadManager({ app: this as IApp });
 
-    // 初始化图像右键菜单管理器
-    this.imageContextMenuManager = new ImageContextMenuManager({});
+    // 初始化统计管理器
+    this.statisticsManager = new StatisticsManager(this as IApp);
 
-    // 并行初始化（只加载数据，不渲染）
+    // ========== 5. 并行初始化面板数据 ==========
     await Promise.all([
-      this.promptPanelManager.init?.(),
-      this.imagePanelManager.init?.()
+      this.promptPanelManager?.init?.(),
+      this.imagePanelManager?.init?.()
     ]);
   }
 
@@ -489,18 +362,22 @@ class PromptManager implements IApp {
   /**
    * 绑定全局事件
    */
-  async bindGlobalEvents() {
-    this.bindSidebarEvents();
-    await this.bindNavigationEvents();
-    // 工具栏事件由 ToolbarManager 处理
-    // 搜索、排序、视图切换事件由 SearchSortManager 处理
-    this.bindTagFilterEvents();
-    this.bindDialogEvents();
-    this.bindSettingsEvents();
-    this.bindPromptTagManagerEvents();
-    this.bindImageTagManagerEvents();
-    this.bindDetailModalEvents();
-    // 全屏查看器事件由 ImageFullscreenManager 处理
+  bindGlobalEvents(): void {
+    // 各模块事件绑定：
+    // - 侧边栏事件: NavigationManager.bindSidebarEvents
+    // - 工具栏事件: ToolbarManager
+    // - 搜索/排序/视图: SearchSortManager
+    // - 标签筛选: PanelManager
+    // - 对话框事件: ModalManager
+    // - 设置事件: SettingsManager
+    // - 标签管理器: TagRegistry.bindManagerEvents
+    // - 详情模态框: DetailViewManager.bindCloseEvent
+    // - 全屏查看器: ImageFullscreenManager
+
+    // 同步标签按钮（需要同时访问两个注册表）
+    this.bindSyncTagButtons();
+
+    // 文本全选全局事件
     this.bindTextSelectEvents();
   }
 
@@ -544,557 +421,24 @@ class PromptManager implements IApp {
   }
 
   /**
-   * 绑定侧边栏事件
+   * 绑定同步标签按钮事件（需要同时访问两个注册表）
    */
-  bindSidebarEvents() {
-    const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-    const sidebar = document.getElementById('sidebar');
-    if (!toggleSidebarBtn || !sidebar) return;
+  bindSyncTagButtons() {
+    // 同步标签按钮（双向同步）- 提示词面板
+    TagManager.bindSyncButton(
+      'syncPromptTagsBtn',
+      this.promptTagManager,
+      this.imageTagManager,
+      this
+    );
 
-    toggleSidebarBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('collapsed');
-      const isCollapsed = sidebar.classList.contains('collapsed');
-      toggleSidebarBtn.title = isCollapsed ? '展开侧边栏' : '收起侧边栏';
-      localStorage.setItem(Constants.LocalStorageKey.SIDEBAR_COLLAPSED, String(isCollapsed));
-    });
-
-    // 恢复侧边栏状态
-    if (localStorage.getItem(Constants.LocalStorageKey.SIDEBAR_COLLAPSED) === 'true') {
-      sidebar.classList.add('collapsed');
-      toggleSidebarBtn.title = '展开侧边栏';
-    }
-  }
-
-  /**
-   * 绑定导航事件
-   */
-  async bindNavigationEvents() {
-    // 导航事件由 NavigationManager 处理
-    const settingsBtn = document.getElementById('settingsBtn');
-
-    settingsBtn?.addEventListener('click', async () => {
-      this.openSettingsModal();
-    });
-
-    // 统计模态框关闭按钮
-    document.getElementById('closeStatisticsModal')?.addEventListener('click', () => this.closeStatisticsModal());
-
-    // 统计模态框点击背景关闭
-    const statisticsModal = document.getElementById('statisticsModal');
-    if (statisticsModal) {
-      statisticsModal.addEventListener('click', (e) => {
-        if (e.target === statisticsModal) {
-          this.closeStatisticsModal();
-        }
-      });
-    }
-  }
-
-  /**
-   * 绑定工具栏事件
-   */
-  bindToolbarEvents() {
-    // 卡片信息显示开关
-    const cardInfoToggleBtn = document.getElementById('cardInfoToggleBtn');
-    const CARDS_INFO_VISIBLE_KEY = 'cardsInfoVisible';
-    
-    // 从 localStorage 加载状态
-    const isInfoVisible = localStorage.getItem(CARDS_INFO_VISIBLE_KEY) !== 'false';
-    if (!isInfoVisible) {
-      document.body.classList.add('cards-info-hidden');
-      cardInfoToggleBtn?.classList.remove('active');
-    }
-    
-    cardInfoToggleBtn?.addEventListener('click', () => {
-      const isHidden = document.body.classList.toggle('cards-info-hidden');
-      cardInfoToggleBtn.classList.toggle('active');
-      localStorage.setItem(CARDS_INFO_VISIBLE_KEY, String(!isHidden));
-      
-      // 更新提示
-      const action = isHidden ? '已隐藏' : '已显示';
-      this.showToast(`${action}卡片信息`, 'info');
-    });
-
-    // 刷新按钮
-    document.getElementById('reloadBtn')?.addEventListener('click', () => this.refreshData());
-
-    // 提示词工具栏
-    document.getElementById('promptAddBtn')?.addEventListener('click', () => this.newPromptManager.open());
-
-    // 图像工具栏
-    document.getElementById('imageAddBtn')?.addEventListener('click', () => this.imageUploadManager.open());
-
-    // 绑定图像上传事件
-    this.imageUploadManager.bindEvents();
-
-    // 标签筛选动作按钮
-    document.getElementById('promptTagFilterActionBtn')?.addEventListener('click', () => this.promptPanelManager.handleFilterAction?.());
-    document.getElementById('imageTagFilterActionBtn')?.addEventListener('click', () => this.imagePanelManager.handleFilterAction?.());
-
-    // 标签管理按钮
-    document.getElementById('promptTagManagerBtn')?.addEventListener('click', () => this.openPromptTagManagerModal());
-    document.getElementById('imageTagManagerBtn')?.addEventListener('click', () => this.openImageTagManagerModal());
-  }
-
-  /**
-   * 绑定搜索事件
-   */
-  bindSearchEvents() {
-    // 提示词搜索
-    const promptSearchInput = document.getElementById('promptSearchInput') as HTMLInputElement | null;
-    const clearPromptSearchBtn = document.getElementById('clearPromptSearchBtn');
-    if (promptSearchInput) {
-      promptSearchInput.addEventListener('input', (e) => {
-        const target = e.target as HTMLInputElement;
-        this.searchQuery = target.value;
-        this.promptPanelManager.renderView();
-        if (clearPromptSearchBtn) {
-          clearPromptSearchBtn.style.display = target.value ? 'flex' : 'none';
-        }
-      });
-    }
-    if (clearPromptSearchBtn && promptSearchInput) {
-      clearPromptSearchBtn.addEventListener('click', () => {
-        promptSearchInput.value = '';
-        this.searchQuery = '';
-        this.promptPanelManager.renderView();
-        clearPromptSearchBtn.style.display = 'none';
-        promptSearchInput.focus();
-      });
-    }
-
-    // 图像搜索
-    const imageSearchInput = document.getElementById('imageSearchInput') as HTMLInputElement | null;
-    const clearImageSearchBtn = document.getElementById('clearImageSearchBtn');
-    if (imageSearchInput) {
-      imageSearchInput.addEventListener('input', (e) => {
-        const target = e.target as HTMLInputElement;
-        this.imageSearchQuery = target.value;
-        this.imagePanelManager.renderView();
-        if (clearImageSearchBtn) {
-          clearImageSearchBtn.style.display = target.value ? 'flex' : 'none';
-        }
-      });
-    }
-    if (clearImageSearchBtn && imageSearchInput) {
-      clearImageSearchBtn.addEventListener('click', () => {
-        imageSearchInput.value = '';
-        this.imageSearchQuery = '';
-        this.imagePanelManager.renderView();
-        clearImageSearchBtn.style.display = 'none';
-        imageSearchInput.focus();
-      });
-    }
-  }
-
-  /**
-   * 绑定视图切换事件
-   */
-  bindViewToggleEvents() {
-    // 提示词视图
-    document.getElementById('promptGridViewBtn')?.addEventListener('click', () => {
-      this.promptPanelManager.setViewMode?.('grid');
-      this.updatePromptViewButtons('grid');
-    });
-    document.getElementById('promptListViewBtn')?.addEventListener('click', () => {
-      this.promptPanelManager.setViewMode?.('list');
-      this.updatePromptViewButtons('list');
-    });
-    document.getElementById('promptCompactViewBtn')?.addEventListener('click', () => {
-      this.promptPanelManager.setViewMode?.('list-compact');
-      this.updatePromptViewButtons('list-compact');
-    });
-
-    // 图像视图
-    document.getElementById('imageGridViewBtn')?.addEventListener('click', () => {
-      this.imagePanelManager.setViewMode?.('grid');
-      this.updateImageViewButtons('grid');
-    });
-    document.getElementById('imageListViewBtn')?.addEventListener('click', () => {
-      this.imagePanelManager.setViewMode?.('list');
-      this.updateImageViewButtons('list');
-    });
-    document.getElementById('imageCompactViewBtn')?.addEventListener('click', () => {
-      this.imagePanelManager.setViewMode?.('list-compact');
-      this.updateImageViewButtons('list-compact');
-    });
-  }
-
-  /**
-   * 绑定排序事件
-   */
-  bindSortEvents() {
-    // 提示词排序
-    const promptSortSelect = document.getElementById('promptSortSelect') as HTMLSelectElement | null;
-    const promptSortReverseBtn = document.getElementById('promptSortReverseBtn');
-    if (promptSortSelect) {
-      promptSortSelect.value = `${this.promptPanelManager.sortBy}-${this.promptPanelManager.sortOrder}`;
-      promptSortSelect.addEventListener('change', (e) => {
-        const target = e.target as HTMLSelectElement;
-        const [sortBy, sortOrder] = target.value.split('-');
-        this.promptPanelManager.sortBy = sortBy;
-        this.promptPanelManager.sortOrder = sortOrder;
-        localStorage.setItem(Constants.LocalStorageKey.PROMPT_SORT_BY, sortBy);
-        localStorage.setItem(Constants.LocalStorageKey.PROMPT_SORT_ORDER, sortOrder);
-        this.promptPanelManager.renderView();
-      });
-    }
-    if (promptSortReverseBtn) {
-      promptSortReverseBtn.addEventListener('click', () => {
-        const newOrder = this.promptPanelManager.sortOrder === 'asc' ? 'desc' : 'asc';
-        this.promptPanelManager.sortOrder = newOrder;
-        localStorage.setItem(Constants.LocalStorageKey.PROMPT_SORT_ORDER, newOrder);
-        if (promptSortSelect) {
-          promptSortSelect.value = `${this.promptPanelManager.sortBy}-${newOrder}`;
-        }
-        this.promptPanelManager.renderView();
-      });
-    }
-
-    // 提示词卡片大小
-    const promptCardSizeSlider = document.getElementById('promptCardSizeSlider') as HTMLInputElement | null;
-    if (promptCardSizeSlider) {
-      promptCardSizeSlider.value = String(this.promptPanelManager.cardSize);
-      this.promptPanelManager.setCardSize?.(this.promptPanelManager.cardSize);
-      promptCardSizeSlider.addEventListener('input', (e) => {
-        const target = e.target as HTMLInputElement;
-        this.promptPanelManager.setCardSize?.(parseInt(target.value));
-      });
-      promptCardSizeSlider.addEventListener('change', (e) => {
-        const target = e.target as HTMLInputElement;
-        localStorage.setItem(Constants.LocalStorageKey.PROMPT_CARD_SIZE, target.value);
-      });
-    }
-
-    // 图像排序
-    const imageSortSelect = document.getElementById('imageSortSelect') as HTMLSelectElement | null;
-    const imageSortReverseBtn = document.getElementById('imageSortReverseBtn');
-    if (imageSortSelect) {
-      imageSortSelect.value = `${this.imagePanelManager.sortBy}-${this.imagePanelManager.sortOrder}`;
-      imageSortSelect.addEventListener('change', (e) => {
-        const target = e.target as HTMLSelectElement;
-        const [sortBy, sortOrder] = target.value.split('-');
-        this.imagePanelManager.sortBy = sortBy;
-        this.imagePanelManager.sortOrder = sortOrder;
-        localStorage.setItem(Constants.LocalStorageKey.IMAGE_SORT_BY, sortBy);
-        localStorage.setItem(Constants.LocalStorageKey.IMAGE_SORT_ORDER, sortOrder);
-        this.imagePanelManager.renderView();
-      });
-    }
-    if (imageSortReverseBtn) {
-      imageSortReverseBtn.addEventListener('click', () => {
-        const newOrder = this.imagePanelManager.sortOrder === 'asc' ? 'desc' : 'asc';
-        this.imagePanelManager.sortOrder = newOrder;
-        localStorage.setItem(Constants.LocalStorageKey.IMAGE_SORT_ORDER, newOrder);
-        if (imageSortSelect) {
-          imageSortSelect.value = `${this.imagePanelManager.sortBy}-${newOrder}`;
-        }
-        this.imagePanelManager.renderView();
-      });
-    }
-
-    // 图像卡片大小
-    const imageCardSizeSlider = document.getElementById('imageCardSizeSlider') as HTMLInputElement | null;
-    if (imageCardSizeSlider) {
-      imageCardSizeSlider.value = String(this.imagePanelManager.cardSize);
-      this.imagePanelManager.setCardSize?.(this.imagePanelManager.cardSize);
-      imageCardSizeSlider.addEventListener('input', (e) => {
-        const target = e.target as HTMLInputElement;
-        this.imagePanelManager.setCardSize?.(parseInt(target.value));
-      });
-      imageCardSizeSlider.addEventListener('change', (e) => {
-        const target = e.target as HTMLInputElement;
-        localStorage.setItem(Constants.LocalStorageKey.IMAGE_CARD_SIZE, target.value);
-      });
-    }
-  }
-
-  /**
-   * 绑定标签筛选事件
-   */
-  bindTagFilterEvents() {
-    // 图像标签筛选排序
-    const imageTagFilterSortSelect = document.getElementById('imageTagFilterSortSelect') as HTMLSelectElement | null;
-    const imageTagFilterOrderBtn = document.getElementById('imageTagFilterOrderBtn');
-    if (imageTagFilterSortSelect) {
-      imageTagFilterSortSelect.value = `${this.imagePanelManager.tagFilterSortBy}-${this.imagePanelManager.tagFilterSortOrder}`;
-      imageTagFilterSortSelect.addEventListener('change', (e) => {
-        const target = e.target as HTMLSelectElement;
-        const [sortBy, sortOrder] = target.value.split('-');
-        this.imagePanelManager.tagFilterSortBy = sortBy;
-        this.imagePanelManager.tagFilterSortOrder = sortOrder;
-        localStorage.setItem(Constants.LocalStorageKey.IMAGE_TAG_FILTER_SORT_BY, sortBy);
-        localStorage.setItem(Constants.LocalStorageKey.IMAGE_TAG_FILTER_SORT_ORDER, sortOrder);
-        this.imagePanelManager.renderTagFilters();
-      });
-    }
-    if (imageTagFilterOrderBtn) {
-      imageTagFilterOrderBtn.addEventListener('click', () => {
-        const newOrder = this.imagePanelManager.tagFilterSortOrder === 'asc' ? 'desc' : 'asc';
-        this.imagePanelManager.tagFilterSortOrder = newOrder;
-        localStorage.setItem(Constants.LocalStorageKey.IMAGE_TAG_FILTER_SORT_ORDER, newOrder);
-        if (imageTagFilterSortSelect) {
-          imageTagFilterSortSelect.value = `${this.imagePanelManager.tagFilterSortBy}-${newOrder}`;
-        }
-        this.imagePanelManager.renderTagFilters();
-      });
-    }
-
-    // 提示词标签筛选排序
-    const promptTagFilterSortSelect = document.getElementById('promptTagFilterSortSelect') as HTMLSelectElement | null;
-    const promptTagFilterOrderBtn = document.getElementById('promptTagFilterOrderBtn');
-    if (promptTagFilterSortSelect) {
-      promptTagFilterSortSelect.value = `${this.promptPanelManager.tagFilterSortBy}-${this.promptPanelManager.tagFilterSortOrder}`;
-      promptTagFilterSortSelect.addEventListener('change', (e) => {
-        const target = e.target as HTMLSelectElement;
-        const [sortBy, sortOrder] = target.value.split('-');
-        this.promptPanelManager.tagFilterSortBy = sortBy;
-        this.promptPanelManager.tagFilterSortOrder = sortOrder;
-        localStorage.setItem(Constants.LocalStorageKey.PROMPT_TAG_FILTER_SORT_BY, sortBy);
-        localStorage.setItem(Constants.LocalStorageKey.PROMPT_TAG_FILTER_SORT_ORDER, sortOrder);
-        this.promptPanelManager.renderTagFilters();
-      });
-    }
-    if (promptTagFilterOrderBtn) {
-      promptTagFilterOrderBtn.addEventListener('click', () => {
-        const newOrder = this.promptPanelManager.tagFilterSortOrder === 'asc' ? 'desc' : 'asc';
-        this.promptPanelManager.tagFilterSortOrder = newOrder;
-        localStorage.setItem(Constants.LocalStorageKey.PROMPT_TAG_FILTER_SORT_ORDER, newOrder);
-        if (promptTagFilterSortSelect) {
-          promptTagFilterSortSelect.value = `${this.promptPanelManager.tagFilterSortBy}-${newOrder}`;
-        }
-        this.promptPanelManager.renderTagFilters();
-      });
-    }
-
-    // 标签筛选收起/展开
-    document.getElementById('promptTagFilterToggleBtn')?.addEventListener('click', () => this.togglePromptTagFilter());
-    document.getElementById('imageTagFilterToggleBtn')?.addEventListener('click', () => this.toggleImageTagFilter());
-
-    // 恢复标签筛选收起状态
-    if (localStorage.getItem(Constants.LocalStorageKey.PROMPT_TAG_FILTER_COLLAPSED) === 'true') {
-      document.getElementById('promptTagFilterSection')?.classList.add('collapsed');
-    }
-    if (localStorage.getItem(Constants.LocalStorageKey.IMAGE_TAG_FILTER_COLLAPSED) === 'true') {
-      document.getElementById('imageTagFilterSection')?.classList.add('collapsed');
-    }
-  }
-
-  /**
-   * 绑定对话框事件
-   */
-  bindDialogEvents() {
-    // 对话框事件由 ModalManager 处理
-  }
-
-  /**
-   * 绑定设置事件
-   */
-  bindSettingsEvents() {
-    // 设置事件由 SettingsManager 处理
-  }
-
-  /**
-   * 绑定提示词标签管理器事件
-   */
-  bindPromptTagManagerEvents() {
-    document.getElementById('closePromptTagManagerModal')?.addEventListener('click', () => this.modalManager?.closePromptTagManager());
-    document.getElementById('addPromptTagGroupBtn')?.addEventListener('click', () => this.tagGroupModalManager?.openEdit('prompt'));
-    const addPromptTagInManagerBtn = document.getElementById('addPromptTagInManagerBtn');
-    if (addPromptTagInManagerBtn) {
-      addPromptTagInManagerBtn.addEventListener('click', () => {
-        this.promptTagRegistry.addTagInManager();
-      });
-    } else {
-      window.electronAPI.logWarn('App', 'addPromptTagInManagerBtn not found');
-    }
-
-    // 批量管理按钮
-    const batchManagePromptTagsBtn = document.getElementById('batchManagePromptTagsBtn');
-    if (batchManagePromptTagsBtn) {
-      batchManagePromptTagsBtn.addEventListener('click', () => {
-        this.promptTagRegistry.toggleBatchMode();
-      });
-    }
-
-    // 同步标签按钮（双向同步）
-    const syncPromptTagsBtn = document.getElementById('syncPromptTagsBtn');
-    if (syncPromptTagsBtn) {
-      syncPromptTagsBtn.addEventListener('click', async () => {
-        try {
-          const result = await window.electronAPI.syncTagsBidirectional();
-          // 清除标签缓存并刷新页面
-          if (result.promptToImage.tags && result.promptToImage.tags.length > 0) {
-            this.imageTagRegistry.service._clearCache(this.imageTagRegistry.service.cacheKey);
-            this.imageTagRegistry.service._clearCache(this.imageTagRegistry.service.cacheKeyGroups);
-          }
-          if (result.imageToPrompt.tags && result.imageToPrompt.tags.length > 0) {
-            this.promptTagRegistry.service._clearCache(this.promptTagRegistry.service.cacheKey);
-            this.promptTagRegistry.service._clearCache(this.promptTagRegistry.service.cacheKeyGroups);
-          }
-          await Promise.all([this.promptTagRegistry.refresh(), this.imageTagRegistry.refresh()]);
-          // 显示同步结果对话框
-          DialogService.showConfirmDialogByConfig(DialogConfig.SYNC_TAGS_BIDIRECTIONAL, result);
-        } catch (error) {
-          window.electronAPI.logError('App', 'Failed to sync tags bidirectional', error);
-          this.showToast('同步标签失败: ' + (error as Error).message, 'error');
-        }
-      });
-    }
-
-    // 搜索
-    const searchInput = document.getElementById('promptTagManagerSearchInput') as HTMLInputElement | null;
-    const clearBtn = document.getElementById('clearPromptTagManagerSearchBtn');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        const target = e.target as HTMLInputElement;
-        this.promptTagRegistry.render(target.value);
-        if (clearBtn) clearBtn.style.display = target.value ? 'flex' : 'none';
-      });
-    }
-    if (clearBtn && searchInput) {
-      clearBtn.addEventListener('click', () => {
-        searchInput.value = '';
-        this.promptTagRegistry.render('');
-        clearBtn.style.display = 'none';
-        searchInput.focus();
-      });
-    }
-
-    // 排序
-    const sortSelect = document.getElementById('promptTagManagerSortSelect') as HTMLSelectElement | null;
-    const orderBtn = document.getElementById('promptTagManagerOrderBtn');
-    if (sortSelect) {
-      sortSelect.value = `${this.promptTagRegistry.sortBy}-${this.promptTagRegistry.sortOrder}`;
-      sortSelect.addEventListener('change', (e) => {
-        const target = e.target as HTMLSelectElement;
-        const [sortBy, sortOrder] = target.value.split('-');
-        this.promptTagRegistry.sortBy = sortBy;
-        this.promptTagRegistry.sortOrder = sortOrder as 'asc' | 'desc';
-        localStorage.setItem(`promptTagSortBy`, sortBy);
-        localStorage.setItem(`promptTagSortOrder`, sortOrder);
-        this.promptTagRegistry.render(searchInput?.value || '');
-      });
-    }
-    if (orderBtn && sortSelect) {
-      orderBtn.addEventListener('click', () => {
-        const newOrder = this.promptTagRegistry.sortOrder === 'asc' ? 'desc' : 'asc';
-        this.promptTagRegistry.sortOrder = newOrder;
-        localStorage.setItem(`promptTagSortOrder`, newOrder);
-        sortSelect.value = `${this.promptTagRegistry.sortBy}-${newOrder}`;
-        this.promptTagRegistry.render(searchInput?.value || '');
-      });
-    }
-  }
-
-  /**
-   * 绑定图像标签管理器事件
-   */
-  bindImageTagManagerEvents() {
-    document.getElementById('closeImageTagManagerModal')?.addEventListener('click', () => this.modalManager.closeImageTagManager());
-    document.getElementById('addImageTagGroupBtn')?.addEventListener('click', () => this.tagGroupModalManager.openEdit('image'));
-    const addImageTagInManagerBtn = document.getElementById('addImageTagInManagerBtn');
-    if (addImageTagInManagerBtn) {
-      addImageTagInManagerBtn.addEventListener('click', () => {
-        this.imageTagRegistry.addTagInManager();
-      });
-    } else {
-      window.electronAPI.logWarn('App', 'addImageTagInManagerBtn not found');
-    }
-
-    // 批量管理按钮
-    const batchManageImageTagsBtn = document.getElementById('batchManageImageTagsBtn');
-    if (batchManageImageTagsBtn) {
-      batchManageImageTagsBtn.addEventListener('click', () => {
-        this.imageTagRegistry.toggleBatchMode();
-      });
-    }
-
-    // 同步标签按钮（双向同步）
-    const syncImageTagsBtn = document.getElementById('syncImageTagsBtn');
-    if (syncImageTagsBtn) {
-      syncImageTagsBtn.addEventListener('click', async () => {
-        try {
-          const result = await window.electronAPI.syncTagsBidirectional();
-          // 清除标签缓存并刷新页面
-          if (result.promptToImage.tags && result.promptToImage.tags.length > 0) {
-            this.imageTagRegistry.service._clearCache(this.imageTagRegistry.service.cacheKey);
-            this.imageTagRegistry.service._clearCache(this.imageTagRegistry.service.cacheKeyGroups);
-          }
-          if (result.imageToPrompt.tags && result.imageToPrompt.tags.length > 0) {
-            this.promptTagRegistry.service._clearCache(this.promptTagRegistry.service.cacheKey);
-            this.promptTagRegistry.service._clearCache(this.promptTagRegistry.service.cacheKeyGroups);
-          }
-          await Promise.all([this.promptTagRegistry.refresh(), this.imageTagRegistry.refresh()]);
-          // 显示同步结果对话框
-          DialogService.showConfirmDialogByConfig(DialogConfig.SYNC_TAGS_BIDIRECTIONAL, result);
-        } catch (error) {
-          window.electronAPI.logError('App', 'Failed to sync tags bidirectional', error);
-          this.showToast('同步标签失败: ' + (error as Error).message, 'error');
-        }
-      });
-    }
-
-    // 搜索
-    const searchInput = document.getElementById('imageTagManagerSearchInput') as HTMLInputElement | null;
-    const clearBtn = document.getElementById('clearImageTagManagerSearchBtn');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        const target = e.target as HTMLInputElement;
-        this.imageTagRegistry.render(target.value);
-        if (clearBtn) clearBtn.style.display = target.value ? 'flex' : 'none';
-      });
-    }
-    if (clearBtn && searchInput) {
-      clearBtn.addEventListener('click', () => {
-        searchInput.value = '';
-        this.imageTagRegistry.render('');
-        clearBtn.style.display = 'none';
-        searchInput.focus();
-      });
-    }
-
-    // 排序
-    const sortSelect = document.getElementById('imageTagManagerSortSelect') as HTMLSelectElement | null;
-    const orderBtn = document.getElementById('imageTagManagerOrderBtn');
-    if (sortSelect) {
-      sortSelect.value = `${this.imageTagRegistry.sortBy}-${this.imageTagRegistry.sortOrder}`;
-      sortSelect.addEventListener('change', (e) => {
-        const target = e.target as HTMLSelectElement;
-        const [sortBy, sortOrder] = target.value.split('-');
-        this.imageTagRegistry.sortBy = sortBy;
-        this.imageTagRegistry.sortOrder = sortOrder as 'asc' | 'desc';
-        localStorage.setItem(`imageTagSortBy`, sortBy);
-        localStorage.setItem(`imageTagSortOrder`, sortOrder);
-        this.imageTagRegistry.render(searchInput?.value || '');
-      });
-    }
-    if (orderBtn && sortSelect) {
-      orderBtn.addEventListener('click', () => {
-        const newOrder = this.imageTagRegistry.sortOrder === 'asc' ? 'desc' : 'asc';
-        this.imageTagRegistry.sortOrder = newOrder;
-        localStorage.setItem(`imageTagSortOrder`, newOrder);
-        sortSelect.value = `${this.imageTagRegistry.sortBy}-${newOrder}`;
-        this.imageTagRegistry.render(searchInput?.value || '');
-      });
-    }
-  }
-
-  /**
-   * 绑定详情模态框事件
-   */
-  bindDetailModalEvents() {
-    // 提示词详情关闭
-    const closePromptDetailBtn = document.getElementById('promptDetailCloseBtn');
-    if (closePromptDetailBtn) {
-      closePromptDetailBtn.onclick = () => this.promptDetailManager.close();
-    }
-
-    // 图像详情关闭
-    document.getElementById('imageDetailCloseBtn')?.addEventListener('click', () => this.imageDetailManager.close());
-
-    // 收藏按钮（由 DetailManager 自动处理）
-    // PromptDetailManager 和 ImageDetailManager 在 initSaveManager 中绑定事件
+    // 同步标签按钮（双向同步）- 图像面板
+    TagManager.bindSyncButton(
+      'syncImageTagsBtn',
+      this.promptTagManager,
+      this.imageTagManager,
+      this
+    );
   }
 
   /**
@@ -1104,10 +448,10 @@ class PromptManager implements IApp {
     this.viewMode = this.viewMode === 'safe' ? 'nsfw' : 'safe';
 
     // 重新渲染
-    await this.promptPanelManager.renderView();
-    await this.promptPanelManager.renderTagFilters();
-    await this.imagePanelManager.renderView();
-    await this.imagePanelManager.renderTagFilters();
+    await this.promptPanelManager?.renderView();
+    await this.promptPanelManager?.renderTagFilters();
+    await this.imagePanelManager?.renderView();
+    await this.imagePanelManager?.renderTagFilters();
 
     // 刷新统计
     await this.renderStatistics();
@@ -1121,16 +465,16 @@ class PromptManager implements IApp {
   async refreshData() {
     try {
       // 加载数据
-      await this.promptPanelManager.loadData?.();
-      await this.imagePanelManager.loadData?.();
+      await this.promptPanelManager?.loadData?.();
+      await this.imagePanelManager?.loadData?.();
 
       // 刷新提示词和图像主界面
-      await this.promptPanelManager.renderView();
-      await this.imagePanelManager.renderView();
+      await this.promptPanelManager?.renderView();
+      await this.imagePanelManager?.renderView();
 
       // 刷新标签筛选
-      await this.promptPanelManager.renderTagFilters();
-      await this.imagePanelManager.renderTagFilters();
+      await this.promptPanelManager?.renderTagFilters();
+      await this.imagePanelManager?.renderTagFilters();
 
       // 刷新统计
       await this.renderStatistics();
@@ -1167,7 +511,7 @@ class PromptManager implements IApp {
    * @param type - 类型 (success, error, info, warning)
    */
   showToast(message: string, type = 'info') {
-    this.toastManager.show(message, type);
+    this.toastManager?.show(message, type);
   }
 
   /**
@@ -1176,7 +520,7 @@ class PromptManager implements IApp {
    * @param options - 选项
    */
   async openEditPromptModal(prompt: IPrompt, options = {}) {
-    await this.promptDetailManager.open(prompt as { id: string; title: string; content: string; [key: string]: unknown }, options);
+    await this.promptDetailManager?.open(prompt as { id: string; title: string; content: string; [key: string]: unknown }, options);
   }
 
   /**
@@ -1241,7 +585,7 @@ class PromptManager implements IApp {
    * @param image - 图像对象
    */
   async openImageDetailModal(image: IImage, options = {}) {
-    await this.imageDetailManager.open(image as { id: string; fileName: string; relativePath: string; [key: string]: unknown }, options);
+    await this.imageDetailManager?.open(image as { id: string; fileName: string; relativePath: string; [key: string]: unknown }, options);
   }
 
   /**
@@ -1305,11 +649,11 @@ class PromptManager implements IApp {
         // 绑定双击事件 - 打开全屏查看器
         imgEl.ondblclick = () => {
           // 使用当前快照中的图像列表
-          const itemsSnapshot = this.imageDetailManager.getItemsSnapshot();
+          const itemsSnapshot = this.imageDetailManager?.getItemsSnapshot();
           if (itemsSnapshot && itemsSnapshot.length > 0) {
             // 找到当前图像在列表中的索引
             const currentIndex = itemsSnapshot.findIndex(i => isSameId((i as { id: string }).id, image.id));
-            this.imageFullscreenManager.open(itemsSnapshot, currentIndex >= 0 ? currentIndex : 0);
+            this.imageFullscreenManager?.open(itemsSnapshot, currentIndex >= 0 ? currentIndex : 0);
           } else {
             // 如果没有快照，只显示当前图像
             const singleImage = [{
@@ -1317,7 +661,7 @@ class PromptManager implements IApp {
               relativePath: image.relativePath,
               fileName: image.fileName
             }];
-            this.imageFullscreenManager.open(singleImage, 0);
+            this.imageFullscreenManager?.open(singleImage, 0);
           }
         };
       } catch (error) {
@@ -1392,122 +736,24 @@ class PromptManager implements IApp {
   }
 
   /**
-   * 切换到提示词管理器
-   */
-  switchToPromptManager() {
-    this.navigationManager?.switchToPromptManager();
-  }
-
-  /**
-   * 切换到图像管理器
-   */
-  switchToImageManager() {
-    this.navigationManager?.switchToImageManager();
-  }
-
-  /**
    * 打开统计模态框
    */
   async openStatisticsModal() {
-    await this.renderStatistics();
-    const modal = document.getElementById('statisticsModal');
-    if (modal) {
-      modal.classList.add('active');
-    }
+    await this.statisticsManager?.openStatisticsModal();
   }
 
   /**
    * 关闭统计模态框
    */
   closeStatisticsModal() {
-    const modal = document.getElementById('statisticsModal');
-    if (modal) {
-      modal.classList.remove('active');
-    }
+    this.statisticsManager?.closeStatisticsModal();
   }
 
   /**
    * 渲染统计数据
    */
   async renderStatistics() {
-    try {
-      // 获取所有数据（包括已删除的）
-      const prompts = await window.electronAPI.getPrompts('', '');
-      const allImages = await window.electronAPI.getAllImagesForStats();
-      const promptTagGroups = await window.electronAPI.getPromptTagGroups();
-      const imageTagGroups = await window.electronAPI.getImageTagGroups();
-
-      // 根据当前视图模式过滤数据（safe 模式只显示 isSafe=1 的项目）
-      const isSafeMode = this.viewMode === 'safe';
-      const filteredPrompts = isSafeMode ? prompts.filter(p => p.isSafe !== 0) : prompts;
-      const filteredImages = isSafeMode ? allImages.filter(i => i.isSafe !== 0) : allImages;
-
-      // 提示词统计（基于过滤后的数据）
-      const totalPrompts = filteredPrompts.length;
-      const deletedPrompts = filteredPrompts.filter(p => p.isDeleted).length;
-      const favoritePrompts = filteredPrompts.filter(p => p.isFavorite && !p.isDeleted).length;
-      const promptsWithImages = filteredPrompts.filter(p => p.images && p.images.length > 0 && !p.isDeleted).length;
-      const totalPromptTags = promptTagGroups.reduce((sum, group) => sum + (group.tags ? group.tags.length : 0), 0);
-
-      // 图像统计（基于过滤后的数据）
-      const totalImages = filteredImages.length;
-      const deletedImages = filteredImages.filter(i => i.isDeleted).length;
-      const favoriteImages = filteredImages.filter(i => i.isFavorite && !i.isDeleted).length;
-      const referencedImages = filteredImages.filter(i => i.promptRefs && i.promptRefs.length > 0 && !i.isDeleted).length;
-      const totalImageTags = imageTagGroups.reduce((sum, group) => sum + (group.tags ? group.tags.length : 0), 0);
-
-      // 更新 DOM
-      this.updateStatElement('statPromptsTotal', totalPrompts);
-      this.updateStatElement('statPromptsDeleted', deletedPrompts);
-      this.updateStatElement('statPromptsFavorite', favoritePrompts);
-      this.updateStatElement('statPromptsWithImages', promptsWithImages);
-      this.updateStatElement('statPromptTagGroups', promptTagGroups.length);
-      this.updateStatElement('statPromptTagsTotal', totalPromptTags);
-
-      this.updateStatElement('statImagesTotal', totalImages);
-      this.updateStatElement('statImagesDeleted', deletedImages);
-      this.updateStatElement('statImagesFavorite', favoriteImages);
-      this.updateStatElement('statImagesReferenced', referencedImages);
-      this.updateStatElement('statImageTagGroups', imageTagGroups.length);
-      this.updateStatElement('statImageTagsTotal', totalImageTags);
-    } catch (error) {
-      window.electronAPI.logError('App', 'Failed to render statistics:', error);
-    }
-  }
-
-  /**
-   * 更新统计数字
-   */
-  updateStatElement(id: string, value: string | number) {
-    const element = document.getElementById(id);
-    if (element) {
-      element.textContent = String(value);
-    }
-  }
-
-  /**
-   * 打开设置模态框
-   */
-  async openSettingsModal() {
-    // 获取当前数据路径
-    try {
-      const dataPath = await window.electronAPI.getDataPath();
-      const el = document.getElementById('currentDataPath');
-      if (el) el.textContent = dataPath;
-    } catch (error) {
-      window.electronAPI.logError('App', 'Failed to get data path:', error);
-      const el = document.getElementById('currentDataPath');
-      if (el) el.textContent = '获取失败';
-    }
-
-    this.modalManager?.openSettings();
-  }
-
-  /**
-   * 关闭设置模态框
-   */
-  closeSettingsModal() {
-    this.modalManager?.closeSettings();
+    await this.statisticsManager?.renderStatistics();
   }
 
   /**
@@ -1523,7 +769,10 @@ class PromptManager implements IApp {
         path: selectedImage.path,
         isExisting: true
       });
-      this.renderImagePreviews();
+
+      // 触发图像预览重新渲染事件
+      document.dispatchEvent(new CustomEvent('renderImagePreviews'));
+
       this.showToast('Image added');
 
       // 立即保存到数据库
@@ -1536,171 +785,6 @@ class PromptManager implements IApp {
     } else {
       this.showToast('Image already exists', 'info');
     }
-  }
-
-  /**
-   * 渲染图像预览
-   */
-  async renderImagePreviews() {
-    const container = document.getElementById('imagePreviewList');
-    if (!container) return;
-
-    // 从 CacheManager 获取当前图像列表
-    const cachedImages = Array.from(this.currentImagesCache.values());
-    const validImages = cachedImages.filter(img => img.id);
-
-    // 提取有效图像 ID
-    const validImageIds = validImages.map(img => img.id);
-
-    // 检查缓存是否已填充：尝试获取第一个图像
-    let imageCacheReady = validImageIds.length > 0 && cacheManager.getCachedImage(validImageIds[0]);
-
-    // 获取图像完整信息：缓存已填充则直接使用，否则按 ID 批量获取
-    const allImages = imageCacheReady
-      ? null
-      : await window.electronAPI.getImagesByIds(validImageIds);
-
-    // 记录警告日志：发现无效图像
-    if (cachedImages.length !== validImages.length) {
-      const invalidCount = cachedImages.length - validImages.length;
-      const promptId = (document.getElementById('promptDetailId') as HTMLInputElement | null)?.value || 'unknown';
-      const invalidImages = cachedImages.filter(img => !img.id);
-
-      window.electronAPI.logWarn('PromptManager', `Found ${invalidCount} images without ID in prompt ${promptId}`, {
-        totalImages: cachedImages.length,
-        validImages: validImages.length,
-        invalidImages: invalidCount,
-        invalidImageDetails: invalidImages.map((img: unknown, idx: number) => ({
-          index: idx,
-          data: img
-        }))
-      });
-    }
-
-    // 保存到实例属性，供其他方法使用
-    this.displayedImages = validImages;
-
-    // 获取所有图像的完整路径并渲染
-    const previews = await Promise.all(
-      validImages.map(async (imgRef, index) => {
-        const img = this.findImageById(imgRef.id, allImages) as { relativePath?: string; thumbnailPath?: string; tags?: string[]; fileName?: string; id: string } | null;
-        if (!img) return '';
-        const imagePath = await window.electronAPI.getImagePath(img.relativePath || img.thumbnailPath || '');
-        const isFromDetailJump = this.isFromDetailJump;
-
-        // 生成标签 HTML（使用展示标签样式）
-        const tagsHtml = this.generateTagsHtml(img.tags, 'tag-display', 'tag-display-empty');
-
-        return `
-          <div class="image-preview-item" data-index="${index}">
-            <img src="file://${imagePath}" alt="${img.fileName}">
-            <div class="image-preview-tags">
-              ${tagsHtml}
-            </div>
-            <button type="button" class="view-image ${isFromDetailJump ? 'disabled-secondary' : ''}" data-index="${index}" data-image-id="${img.id}" title="${isFromDetailJump ? '已从详情界面跳转，禁止再次跳转' : '查看'}" ${isFromDetailJump ? 'disabled' : ''}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-            </button>
-            <button type="button" class="remove-image" data-index="${index}" title="删除">×</button>
-          </div>
-        `;
-      })
-    );
-
-    container.innerHTML = previews.filter(p => p).join('');
-
-    // 绑定删除事件
-    container.querySelectorAll('.remove-image').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const index = parseInt((btn as HTMLElement).dataset.index || '0');
-
-        // 从当前列表获取图像
-        const imgRef = this.displayedImages?.[index];
-
-        // 显示确认对话框
-        const confirmed = await DialogService.showConfirmDialogByConfig(DialogConfig.REMOVE_IMAGE_FROM_PROMPT);
-        if (!confirmed) return;
-
-        // 只从当前列表中移除引用，不删除实际文件
-        if (imgRef && (imgRef as { id?: string }).id) {
-          this.currentImagesCache.delete(String((imgRef as { id: string }).id));
-        }
-        this.renderImagePreviews();
-
-        // 立即保存到数据库
-        const promptIdEl = document.getElementById('promptDetailId') as HTMLInputElement | null;
-        const promptId = promptIdEl?.value;
-        if (promptId) {
-          const updatedImages = Array.from(this.currentImagesCache.values());
-          await this.savePromptField('images', updatedImages);
-        }
-      });
-    });
-
-    // 绑定查看事件
-    container.querySelectorAll('.view-image').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (this.isFromDetailJump) return;
-        const imageId = (btn as HTMLElement).dataset.imageId;
-        // 打开图像详情
-        if (!imageId) return;
-        const image = cacheManager.getCachedImage(imageId);
-        if (image) {
-          this.isFromDetailJump = true;
-          this.openImageDetailModal(image);
-        }
-      });
-    });
-
-    // 绑定右键菜单事件（设为首图）
-    container.querySelectorAll('.image-preview-item').forEach(item => {
-      item.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        const index = parseInt((item as HTMLElement).dataset.index || '0');
-        if (index === 0) return; // 已经是首图
-
-        // 获取图像对象
-        const imageId = (item as HTMLElement).dataset.imageId;
-        if (!imageId) return;
-        const image = cacheManager.getCachedImage(imageId);
-        if (!image) return;
-
-        // 创建右键菜单
-        this.imageContextMenuManager?.show({
-          x: (e as MouseEvent).clientX,
-          y: (e as MouseEvent).clientY,
-          image: image as IImage
-        });
-      });
-    });
-
-    // 绑定双击事件（全屏查看）
-    container.querySelectorAll('.image-preview-item img').forEach(img => {
-      img.addEventListener('dblclick', (e) => {
-        e.stopPropagation();
-        const item = img.closest('.image-preview-item');
-        const index = parseInt((item as HTMLElement).dataset.index || '0');
-        this.imageFullscreenManager.open(this.displayedImages || [], index);
-      });
-    });
-  }
-
-  /**
-   * 生成标签 HTML
-   * @param tags - 标签列表
-   * @param className - 标签样式类名
-   * @param emptyClassName - 空标签样式类名
-   * @returns HTML 字符串
-   */
-  generateTagsHtml(tags: string[] | undefined, className: string, emptyClassName: string) {
-    if (!tags || tags.length === 0) {
-      return `<span class="${emptyClassName}">无标签</span>`;
-    }
-    return tags.map(tag => `<span class="${className}">${tag}</span>`).join('');
   }
 
   /**
@@ -1764,32 +848,16 @@ class PromptManager implements IApp {
    * 打开提示词标签管理器模态框
    */
   async openPromptTagManagerModal() {
-    this.modalManager?.openPromptTagManager();
-    await this.promptTagRegistry.render();
+    this.promptTagManager?.openManager();
+    await this.promptTagManager?.render();
   }
-
-  /**
-   * 关闭提示词标签管理器模态框
-   */
-  closePromptTagManagerModal() {
-    this.modalManager?.closePromptTagManager();
-  }
-
-
 
   /**
    * 打开图像标签管理器模态框
    */
   openImageTagManagerModal() {
-    this.modalManager?.openImageTagManager();
-    this.imageTagRegistry.render();
-  }
-
-  /**
-   * 关闭图像标签管理器模态框
-   */
-  closeImageTagManagerModal() {
-    this.modalManager.closeImageTagManager();
+    this.imageTagManager?.openManager();
+    this.imageTagManager?.render();
   }
 
   /**
@@ -1923,22 +991,27 @@ class PromptManager implements IApp {
    * @param options - 选项
    * @returns 用户输入的内容，取消返回 null
    */
-  showInputDialog(title: string, label: string, defaultValue = '', options = {}): Promise<string | null> {
-    return this.modalManager.showInput(title, label, defaultValue, options) as Promise<string | null>;
+  showInputDialog(title: string, label: string, defaultValue = '', options = {}): Promise<{ value: string; groupId?: number | null } | null> {
+    return DialogService.showInputDialog({
+      title,
+      placeholder: label,
+      defaultValue,
+      ...options
+    });
   }
 
   /**
    * 关闭输入对话框
    */
   closeInputModal() {
-    this.modalManager.closeInput();
+    DialogService.clearAllDialogs();
   }
 
   /**
    * 关闭选择对话框
    */
   closeSelectModal() {
-    this.modalManager.closeSelect();
+    DialogService.clearAllDialogs();
   }
 }
 

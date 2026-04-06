@@ -6,16 +6,11 @@ export interface IEventStrategyItem {
   [key: string]: unknown;
 }
 
-// 导入 SelectionManager 类型
-import type { SelectionManager } from '../SelectionManager.ts';
+// 导入 MultiSelectManager 类型
+import type { MultiSelectManager } from '../MultiSelectManager.ts';
 
 export interface EventContext {
-  selectionManager: SelectionManager;
-  toolbarController?: {
-    enterBatchModeIfNeeded: () => void;
-    exitBatchModeIfEmpty: () => void;
-    updateUI: () => void;
-  };
+  multiSelectManager: MultiSelectManager;
   renderView: () => void | Promise<void>;
   items: IEventStrategyItem[];
 }

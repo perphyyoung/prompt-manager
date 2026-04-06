@@ -6,9 +6,8 @@ import { DetailViewManager } from './DetailViewManager.ts';
 import { HtmlUtils, validateFileName, isSameId, cacheManager } from '../../utils/index.ts';
 import { SaveManager, ImageSaveStrategy } from '../renderer_utils/index.ts';
 import { SimpleTagManagerFactory } from './SimpleTagManagerFactory.ts';
-import { EditableTagList, BatchTagManager } from '../components/index.ts';
 import { Constants } from '../../constants.ts';
-import { DialogService, DialogConfig, TagAutocomplete } from '../services/index.ts';
+import { TagAutocomplete, DialogService, DialogConfig } from '../services/index.ts';
 import { IImage, IPrompt } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
 
@@ -68,9 +67,6 @@ interface IImageDetailManagerOptions {
 
 export class ImageDetailManager extends DetailViewManager {
   private tagManager: unknown;
-  private simpleTagManager: ReturnType<typeof SimpleTagManagerFactory.createForImage> | null = null;
-  private editableTagList: EditableTagList | null = null;
-  private batchTagManager: BatchTagManager | null = null;
   private tagAutocomplete: TagAutocomplete | null = null;
   private imageSaveManager: SaveManager | null = null;
   private favoriteBtnHandler: (() => void) | null = null;
@@ -82,7 +78,7 @@ export class ImageDetailManager extends DetailViewManager {
 
   constructor(options: IImageDetailManagerOptions) {
     super({
-      app: options.app as unknown as { constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean }; [key: string]: unknown },
+      app: options.app as unknown as { constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean }; showToast: (message: string, type?: string) => void; [key: string]: unknown },
       modalId: 'imageDetailModal',
       closeBtnId: 'imageDetailCloseBtn'
     });
@@ -103,10 +99,10 @@ export class ImageDetailManager extends DetailViewManager {
       return;
     }
 
+    const app = this.app as unknown as IApp;
     this.returnToManager = options.returnToManager || null;
     this.returnToItem = options.returnToItem;
     this.returnToOptions = options;
-    const app = this.app as unknown as IApp;
     app.isFromDetailJump = !!options.returnToManager || app.isFromDetailJump;
 
     try {
@@ -265,81 +261,29 @@ export class ImageDetailManager extends DetailViewManager {
   private initTagManager(image: IImageExtended): void {
     const app = this.app as unknown as IApp;
 
-    // 清理旧的标签管理器
-    if (this.simpleTagManager) {
-      this.simpleTagManager = null;
-    }
-
-    // 清理旧的可编辑标签列表组件
-    if (this.editableTagList) {
-      this.editableTagList = null;
-    }
-
-    // 清理旧的批量标签管理器
-    if (this.batchTagManager) {
-      this.batchTagManager.destroy();
-      this.batchTagManager = null;
-    }
-
     // 使用工厂创建新的标签管理器
-    this.simpleTagManager = SimpleTagManagerFactory.createForImage(
+    const simpleTagManager = SimpleTagManagerFactory.createForImage(
       image as { id: string | number; tags?: string[]; [key: string]: unknown },
       app.imagePanelManager,
       (msg: string, type: string) => app.showToast(msg, type)
     );
 
-    // 设置渲染回调
-    this.simpleTagManager.onRender = () => {
-      if (!this.editableTagList) {
-        this.editableTagList = new EditableTagList({
-          containerId: 'imageDetailImageTags',
-          tagManager: this.simpleTagManager as { getTags: () => string[] },
-          onRemove: async (tagName: string) => {
-            await this.simpleTagManager?.removeTag(tagName);
-          }
-        });
-      }
-      this.editableTagList.renderWithInit();
-    };
+    // 使用基类的批量标签管理功能
+    this.initBatchTagManager(
+      {
+        toolbarId: 'imageDetailBatchToolbar',
+        containerId: 'imageDetailImageTags',
+        inputAreaId: 'imageDetailTagInputArea',
+        batchBtnId: 'imageDetailBatchTagBtn'
+      },
+      simpleTagManager as unknown as { getTags: () => string[]; setTags: (tags: string[]) => void; removeTag: (tagName: string) => Promise<void>; onRender?: (() => void) | null }
+    );
 
     // 设置初始标签
-    this.simpleTagManager.setTags(image.tags || []);
-
-    // 初始化批量标签管理器
-    this.initBatchTagManager();
+    simpleTagManager.setTags(image.tags || []);
 
     // 绑定标签输入事件
     this.bindTagInputEvents();
-  }
-
-  /**
-   * 初始化批量标签管理器
-   * @private
-   */
-  private initBatchTagManager(): void {
-    const app = this.app as unknown as IApp;
-
-    this.batchTagManager = new BatchTagManager({
-      containerId: 'imageDetailImageTags',
-      batchBtnId: 'imageDetailBatchTagBtn',
-      toolbarId: 'imageDetailBatchTagToolbar',
-      countId: 'imageDetailBatchTagCount',
-      deleteBtnId: 'imageDetailBatchTagDeleteBtn',
-      cancelBtnId: 'imageDetailBatchTagCancelBtn',
-      tagManager: this.simpleTagManager as { getTags: () => string[]; removeTags: (tags: string[]) => Promise<{ deleted: number }> },
-      showToast: (msg: string, type: string) => app.showToast(msg, type),
-      label: 'ImageDetailManager'
-    });
-
-    // 设置退出批量模式回调
-    this.batchTagManager.setOnExitBatchMode(() => {
-      this.editableTagList?.renderWithInit();
-      // 显示输入区域
-      const inputArea = document.getElementById('imageDetailTagInputArea');
-      if (inputArea) inputArea.style.display = '';
-    });
-
-    this.batchTagManager.init();
   }
 
   /**
@@ -357,11 +301,11 @@ export class ImageDetailManager extends DetailViewManager {
     // 创建新的自动完成组件
     this.tagAutocomplete = new TagAutocomplete({
       inputId: 'imageDetailTagInput',
-      dropdownId: 'imageDetailTagAutocomplete',
+      dropdownId: Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE,
       getTags: () => window.electronAPI.getAllTags(),
       onSelect: async (tagName: string) => {
         try {
-          await this.simpleTagManager?.addTag(tagName);
+          await this.simpleTagManager?.addTag?.(tagName);
           return true;
         } catch (error) {
           window.electronAPI.logError('ImageDetailManager.ts', 'Failed to add tag:', error);
@@ -372,9 +316,9 @@ export class ImageDetailManager extends DetailViewManager {
       onBatchAdd: async (tagNames: string[]) => {
         try {
           if (tagNames.length === 1) {
-            await this.simpleTagManager?.addTag(tagNames[0]);
+            await this.simpleTagManager?.addTag?.(tagNames[0]);
           } else {
-            await this.simpleTagManager?.addTags(tagNames);
+            await this.simpleTagManager?.addTags?.(tagNames);
           }
           return true;
         } catch (error) {
@@ -936,6 +880,16 @@ export class ImageDetailManager extends DetailViewManager {
     // 恢复禁止二级跳转状态
     const app = this.app as unknown as IApp;
     app.isFromDetailJump = true;
+  }
+
+  /**
+   * 切换批量模式（覆盖基类方法，添加调试日志）
+   * @protected
+   */
+  protected toggleBatchMode(): void {
+    window.electronAPI.logDebug('ImageDetailManager', `toggleBatchMode called, current isBatchMode=${this.isBatchMode}`);
+    super.toggleBatchMode();
+    window.electronAPI.logDebug('ImageDetailManager', `toggleBatchMode finished, new isBatchMode=${this.isBatchMode}`);
   }
 
   async close(): Promise<void> {

@@ -3,6 +3,9 @@
  * 提供全局快捷键支持，包括编辑导航、保存等操作
  */
 
+import { contextStack } from '../managers/ContextStackManager.ts';
+import { Constants } from '../../constants.ts';
+
 interface ShortcutInfo {
   action: string;
   description: string;
@@ -17,8 +20,10 @@ interface ShortcutManagerOptions {
     saveAndClosePromptDetail?: () => Promise<void>;
     saveAndCloseImageDetail?: () => Promise<void>;
     refreshData?: () => Promise<void>;
-    promptPanelManager?: { viewModeType: string; renderView: () => void | Promise<void> };
-    trashManager?: { loadTrash: () => Promise<void> };
+    promptPanelManager?: { viewModeType: string; renderView: () => void | Promise<void>; selectAllVisibleItems?: () => void } | null;
+    imagePanelManager?: { selectAllVisibleItems?: () => void } | null;
+    trashManager?: { loadTrash: () => Promise<void> } | null;
+    currentPanel?: string;
   };
 }
 
@@ -26,6 +31,7 @@ export class ShortcutManager {
   private app: ShortcutManagerOptions['app'];
   private shortcuts: Map<string, ShortcutInfo> = new Map();
   private enabled = true;
+  private isBound = false;
 
   constructor(options: ShortcutManagerOptions) {
     this.app = options.app;
@@ -48,7 +54,6 @@ export class ShortcutManager {
 
     // 搜索
     this.register('Ctrl+F', 'focusSearch', '聚焦搜索框');
-    this.register('Escape', 'clearSearch', '清除搜索');
 
     // 视图切换
     this.register('Ctrl+1', 'viewGrid', '网格视图');
@@ -100,17 +105,101 @@ export class ShortcutManager {
    * 绑定全局键盘事件
    */
   bind(): void {
+    if (this.isBound) {
+      return;
+    }
+
     document.addEventListener('keydown', (e) => {
       if (!this.enabled) return;
+
+      // Escape 键处理 - 基于上下文堆栈
+      if (e.key === 'Escape') {
+        this.handleEscape(e);
+        return;
+      }
+
+      // Ctrl+A 处理 - 基于上下文堆栈
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        this.handleSelectAll(e);
+        return;
+      }
 
       const keyCombo = this.getKeyCombo(e);
       const shortcut = this.shortcuts.get(keyCombo.toLowerCase());
 
-      if (shortcut) {
-        e.preventDefault();
-        this.handleAction(shortcut.action);
-      }
+      if (!shortcut) return;
+
+      e.preventDefault();
+      this.handleAction(shortcut.action);
     });
+
+    this.isBound = true;
+  }
+
+  /**
+   * 处理 Escape 键 - 基于上下文堆栈
+   * 直接调用 DOM 元素的 close 方法
+   */
+  private handleEscape(e: KeyboardEvent): void {
+    const id = contextStack.peek();
+
+    if (!id) {
+      window.electronAPI.logWarn('ShortcutManager', 'No element in stack');
+      return;
+    }
+
+    // 主面板不应该被 ESC 关闭，直接返回
+    if (id === Constants.Ids.IMAGE_PANEL || id === Constants.Ids.PROMPT_PANEL) {
+      return;
+    }
+
+    const element = document.getElementById(id);
+    if (!element) {
+      window.electronAPI.logError('ShortcutManager', `Element not found: ${id}`);
+      return;
+    }
+
+    if (typeof element.close === 'function') {
+      window.electronAPI.logDebug('ShortcutManager', `Closing: ${id}`);
+      element.close();
+      e.preventDefault();
+    } else {
+      window.electronAPI.logError('ShortcutManager', `No close method for: ${id}`);
+    }
+  }
+
+  /**
+   * 处理 Ctrl+A - 基于上下文堆栈
+   */
+  private handleSelectAll(e: KeyboardEvent): void {
+    // 检查焦点是否在输入框
+    const target = e.target as HTMLElement;
+    if (this.isTextInputElement(target)) {
+      return; // 让默认行为执行文本全选
+    }
+
+    // TODO: 根据当前面板处理全选
+    const currentPanel = this.app.currentPanel;
+    if (currentPanel === 'prompt') {
+      this.app.promptPanelManager?.selectAllVisibleItems?.();
+      e.preventDefault();
+    } else if (currentPanel === 'image') {
+      this.app.imagePanelManager?.selectAllVisibleItems?.();
+      e.preventDefault();
+    }
+  }
+
+  /**
+   * 检查元素是否是文本输入元素
+   */
+  private isTextInputElement(element: HTMLElement): boolean {
+    const tagName = element.tagName;
+    if (tagName === 'TEXTAREA') return true;
+    if (tagName === 'INPUT') {
+      const inputType = (element as HTMLInputElement).type;
+      return ['text', 'search', 'url', 'email', 'password', 'number'].includes(inputType);
+    }
+    return element.isContentEditable;
   }
 
   /**
@@ -161,9 +250,6 @@ export class ShortcutManager {
         case 'focusSearch':
           this.focusSearch();
           break;
-        case 'clearSearch':
-          this.clearSearch();
-          break;
 
         // 视图切换
         case 'viewGrid':
@@ -208,17 +294,14 @@ export class ShortcutManager {
    * 导航编辑器
    */
   navigateEditor(direction: string): void {
-    // 检查是否有模态框打开
     const promptDetailModal = document.querySelector('#promptDetailModal.active');
     const imageEditModal = document.querySelector('#imageEditModal.active');
 
     if (promptDetailModal) {
-      // 提示词编辑
       if (this.app.promptNavigator) {
         this.app.promptNavigator.navigateTo(direction);
       }
     } else if (imageEditModal) {
-      // 图像编辑
       if (this.app.imageNavigator) {
         this.app.imageNavigator.navigateTo(direction);
       }
@@ -263,20 +346,6 @@ export class ShortcutManager {
       if (searchInput) {
         searchInput.focus();
         searchInput.select();
-      }
-    }
-  }
-
-  /**
-   * 清除搜索
-   */
-  clearSearch(): void {
-    const activePanel = document.querySelector('.panel.active');
-    if (activePanel) {
-      const searchInput = activePanel.querySelector('input[type="search"]') as HTMLInputElement | null;
-      if (searchInput) {
-        searchInput.value = '';
-        searchInput.dispatchEvent(new Event('input'));
       }
     }
   }
