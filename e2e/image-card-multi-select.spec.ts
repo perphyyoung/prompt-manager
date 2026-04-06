@@ -41,13 +41,13 @@ test.describe('图像卡片视图多选功能', () => {
   async function enterImageGridView(page: any) {
     // 1. 切换到图像面板
     await page.click('#imageManagerBtn');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(100);
     await page.screenshot({ path: 'test-results/multi-select/01-image-panel.png' });
 
     // 2. 确保处于网格视图（点击网格视图按钮）
     const gridViewBtn = page.locator('#imageGridViewBtn');
     await gridViewBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(100);
     await page.screenshot({ path: 'test-results/multi-select/02-grid-view.png' });
 
     // 3. 等待图像卡片加载
@@ -66,24 +66,23 @@ test.describe('图像卡片视图多选功能', () => {
 
     // hover 第一个卡片显示复选框
     await firstCard.hover();
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(100);
     await page.screenshot({ path: 'test-results/multi-select/04-hover-card.png' });
 
     // 点击复选框选中
     const firstCheckbox = firstCard.locator('.card-checkbox');
     await expect(firstCheckbox).toBeVisible();
     await firstCheckbox.click();
-    await page.waitForTimeout(300);
     await page.screenshot({ path: 'test-results/multi-select/05-checkbox-checked.png' });
 
     // 验证批量工具栏显示
-    const batchToolbar = page.locator('#imageBatchToolbar');
+    const batchToolbar = page.locator('#mainBatchToolbar');
     await expect(batchToolbar).toBeVisible();
     await page.screenshot({ path: 'test-results/multi-select/06-batch-toolbar-visible.png' });
 
     // 验证选择计数显示
-    const countText = page.locator('#imageBatchSelectedCount');
-    await expect(countText).toContainText('已选择 1 项');
+    const countText = batchToolbar.locator('.batch-toolbar-count');
+    await expect(countText).toContainText('1');
 
     // 验证容器有 selection-mode 类
     const hasSelectionMode = await page.evaluate(() => {
@@ -105,7 +104,7 @@ test.describe('图像卡片视图多选功能', () => {
     await firstCard.locator('.card-checkbox').click();
 
     // 等待进入多选模式
-    await page.waitForSelector('#imageBatchToolbar', { state: 'visible' });
+    await page.waitForSelector('#mainBatchToolbar', { state: 'visible' });
     await page.screenshot({ path: 'test-results/multi-select/07-selection-mode.png' });
 
     // 不 hover 第二个卡片，直接检查复选框是否可见
@@ -123,14 +122,28 @@ test.describe('图像卡片视图多选功能', () => {
     // 进入图像网格视图
     await enterImageGridView(page);
 
-    // 获取图像总数
-    const totalImages = await page.evaluate(async () => {
-      const images = await window.electronAPI.getImages('createdAt', 'desc');
-      return images.filter((img: IImage) => !img.isDeleted).length;
-    });
+    // 清除搜索框内容（确保没有搜索筛选）
+    const searchInput = page.locator('#imageSearchInput');
+    await searchInput.fill('');
+    await page.waitForTimeout(100);
 
-    // 至少需要2个图像进行测试
-    if (totalImages < 2) {
+    // 清除标签筛选（如果有）
+    const filterActionBtn = page.locator('#imageTagFilterActionBtn');
+    const btnText = await filterActionBtn.textContent();
+    if (btnText === '清除筛选') {
+      await filterActionBtn.click();
+      // 等待筛选清除后的渲染完成
+      await page.waitForFunction(() => {
+        const btn = document.getElementById('imageTagFilterActionBtn');
+        return btn?.textContent === '标签筛选';
+      }, { timeout: 3000 });
+    }
+
+    // 获取当前可见的图像卡片数量
+    const visibleCards = await page.locator('.image-card').count();
+
+    // 至少需要2个可见图像进行测试
+    if (visibleCards < 2) {
       test.skip();
       return;
     }
@@ -141,18 +154,31 @@ test.describe('图像卡片视图多选功能', () => {
     await firstCard.locator('.card-checkbox').click();
 
     // 等待批量工具栏显示
-    await page.waitForSelector('#imageBatchToolbar', { state: 'visible' });
+    await page.waitForSelector('#mainBatchToolbar', { state: 'visible' });
     await page.screenshot({ path: 'test-results/multi-select/09-before-invert.png' });
 
     // 点击反选按钮
-    await page.click('#imageBatchInvertBtn');
-    await page.waitForTimeout(300);
+    const batchToolbar = page.locator('#mainBatchToolbar');
+    await batchToolbar.locator('[data-action="Invert"]').click();
     await page.screenshot({ path: 'test-results/multi-select/10-after-invert.png' });
 
-    // 验证选择数量 = 总数 - 1（原来选中的变为未选中）
-    const countText = await page.locator('#imageBatchSelectedCount').textContent();
-    const expectedCount = totalImages - 1;
-    expect(countText).toContain(`已选择 ${expectedCount} 项`);
+    // 验证选择数量 = 可见数量 - 1（原来选中的变为未选中）
+    const expectedCount = visibleCards - 1;
+
+    // 如果反选后选择数为0，工具栏会隐藏
+    if (expectedCount === 0) {
+      await expect(batchToolbar).not.toBeVisible();
+    } else {
+      // 等待计数文本更新
+      await page.waitForFunction((count: number) => {
+        const toolbar = document.getElementById('mainBatchToolbar');
+        const countElement = toolbar?.querySelector('.batch-toolbar-count');
+        return countElement?.textContent?.includes(`${count}`);
+      }, expectedCount, { timeout: 2000 });
+
+      const countText = await batchToolbar.locator('.batch-toolbar-count').textContent();
+      expect(countText).toContain(`${expectedCount}`);
+    }
   });
 
   test('批量工具栏 - 取消选择功能', async () => {
@@ -167,16 +193,15 @@ test.describe('图像卡片视图多选功能', () => {
     await firstCard.locator('.card-checkbox').click();
 
     // 等待批量工具栏显示
-    await page.waitForSelector('#imageBatchToolbar', { state: 'visible' });
+    await page.waitForSelector('#mainBatchToolbar', { state: 'visible' });
     await page.screenshot({ path: 'test-results/multi-select/11-before-cancel.png' });
 
     // 点击取消选择按钮
-    await page.click('#imageBatchCancelBtn');
-    await page.waitForTimeout(300);
+    const batchToolbar = page.locator('#mainBatchToolbar');
+    await batchToolbar.locator('[data-action="Cancel"]').click();
     await page.screenshot({ path: 'test-results/multi-select/12-after-cancel.png' });
 
     // 验证批量工具栏隐藏
-    const batchToolbar = page.locator('#imageBatchToolbar');
     await expect(batchToolbar).not.toBeVisible();
 
     // 验证 selection-mode 类被移除
@@ -206,36 +231,28 @@ test.describe('图像卡片视图多选功能', () => {
 
     // 点击图像面板确保焦点在面板内
     await page.click('#imageGrid');
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(100);
 
     // 按 Ctrl+A 全选
     await page.keyboard.press('Control+a');
-    await page.waitForTimeout(500);
     await page.screenshot({ path: 'test-results/multi-select/13-ctrl-a-select-all.png' });
 
     // 等待批量工具栏显示并更新计数
-    await page.waitForSelector('#imageBatchToolbar', { state: 'visible' });
-    await page.waitForTimeout(300);
+    await page.waitForSelector('#mainBatchToolbar', { state: 'visible' });
 
     // 验证批量工具栏显示
-    const batchToolbar = page.locator('#imageBatchToolbar');
+    const batchToolbar = page.locator('#mainBatchToolbar');
     await expect(batchToolbar).toBeVisible();
 
     // 验证选择数量等于总数（等待文本更新）
     await page.waitForFunction((expectedCount) => {
-      const countElement = document.getElementById('imageBatchSelectedCount');
-      return countElement?.textContent?.includes(`已选择 ${expectedCount} 项`);
+      const toolbar = document.getElementById('mainBatchToolbar');
+      const countElement = toolbar?.querySelector('.batch-toolbar-count');
+      return countElement?.textContent?.includes(`${expectedCount}`);
     }, totalImages, { timeout: 2000 });
 
-    const countText = await page.locator('#imageBatchSelectedCount').textContent();
-    expect(countText).toContain(`已选择 ${totalImages} 项`);
-
-    // 验证全选复选框被选中
-    const isSelectAllChecked = await page.evaluate(() => {
-      const checkbox = document.getElementById('imageBatchSelectAllCheckbox') as HTMLInputElement;
-      return checkbox?.checked;
-    });
-    expect(isSelectAllChecked).toBe(true);
+    const countText = await batchToolbar.locator('.batch-toolbar-count').textContent();
+    expect(countText).toContain(`${totalImages}`);
   });
 
   test('批量收藏功能', async () => {
@@ -250,7 +267,7 @@ test.describe('图像卡片视图多选功能', () => {
     await firstCard.locator('.card-checkbox').click();
 
     // 等待批量工具栏显示
-    await page.waitForSelector('#imageBatchToolbar', { state: 'visible' });
+    await page.waitForSelector('#mainBatchToolbar', { state: 'visible' });
 
     // 获取第一个图像的原始收藏状态
     const firstImageId = await firstCard.getAttribute('data-id');
@@ -260,8 +277,8 @@ test.describe('图像卡片视图多选功能', () => {
     }, firstImageId);
 
     // 点击批量收藏按钮
-    await page.click('#imageBatchFavoriteBtn');
-    await page.waitForTimeout(500);
+    const batchToolbar = page.locator('#mainBatchToolbar');
+    await batchToolbar.locator('[data-action="Favorite"]').click();
     await page.screenshot({ path: 'test-results/multi-select/14-batch-favorite.png' });
 
     // 验证收藏状态已切换
@@ -285,29 +302,29 @@ test.describe('图像卡片视图多选功能', () => {
     await firstCard.locator('.card-checkbox').click();
 
     // 等待批量工具栏显示
-    await page.waitForSelector('#imageBatchToolbar', { state: 'visible' });
+    await page.waitForSelector('#mainBatchToolbar', { state: 'visible' });
     await page.screenshot({ path: 'test-results/multi-select/15-grid-view-selected.png' });
 
     // 切换到列表视图
     await page.click('#imageListViewBtn');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(100);
     await page.screenshot({ path: 'test-results/multi-select/16-list-view-selected.png' });
 
     // 验证批量工具栏仍然显示
-    const batchToolbar = page.locator('#imageBatchToolbar');
+    const batchToolbar = page.locator('#mainBatchToolbar');
     await expect(batchToolbar).toBeVisible();
 
     // 验证选择计数仍然显示 1
-    const countText = page.locator('#imageBatchSelectedCount');
-    await expect(countText).toContainText('已选择 1 项');
+    const countText = batchToolbar.locator('.batch-toolbar-count');
+    await expect(countText).toContainText('1');
 
     // 切换回网格视图
     await page.click('#imageGridViewBtn');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(100);
     await page.screenshot({ path: 'test-results/multi-select/17-back-to-grid-selected.png' });
 
     // 验证选择状态仍然保留
     await expect(batchToolbar).toBeVisible();
-    await expect(countText).toContainText('已选择 1 项');
+    await expect(countText).toContainText('1');
   });
 });
