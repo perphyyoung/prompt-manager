@@ -30,13 +30,18 @@ export class StatisticsManager {
 
   constructor(app: IApp) {
     this.app = app;
-    this.bindModalEvents();
+    this.bindStatsEvents();
   }
 
   /**
    * 绑定模态框事件
    */
-  private bindModalEvents(): void {
+  private bindStatsEvents(): void {
+    // 统计按钮
+    document.getElementById(Constants.Ids.STATISTICS_BTN)?.addEventListener('click', () => {
+      this.openStatisticsModal();
+    });
+
     // 关闭按钮
     document.getElementById('closeStatisticsModal')?.addEventListener('click', () => this.closeStatisticsModal());
 

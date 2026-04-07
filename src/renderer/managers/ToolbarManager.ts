@@ -60,7 +60,6 @@ export class ToolbarManager {
    */
   private bindEvents(): void {
     this.bindRefreshEvents();
-    this.bindModalEvents();
     this.bindCardInfoToggleEvent();
   }
 
@@ -97,17 +96,6 @@ export class ToolbarManager {
   private bindRefreshEvents(): void {
     document.getElementById(Constants.Ids.REFRESH_DATA_BTN)?.addEventListener('click', () => this.refreshData());
     document.getElementById(Constants.Ids.RELAUNCH_BTN)?.addEventListener('click', () => this.relaunchApp());
-  }
-
-  /**
-   * 绑定模态框事件
-   * @private
-   */
-  private bindModalEvents(): void {
-    // 统计按钮
-    document.getElementById('statisticsBtn')?.addEventListener('click', () => {
-      this.app.openStatisticsModal?.();
-    });
   }
 
   /**

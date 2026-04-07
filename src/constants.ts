@@ -230,6 +230,7 @@ export class Constants {
     // 工具栏按钮
     REFRESH_DATA_BTN: 'refreshDataBtn',
     RELAUNCH_BTN: 'relaunchBtn',
+    STATISTICS_BTN: 'statisticsBtn',
 
     // 面板工具栏按钮
     PROMPT_ADD_BTN: 'promptAddBtn',
