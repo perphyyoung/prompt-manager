@@ -72,6 +72,7 @@ interface IElectronAPI {
   addPrompt: (prompt: Omit<IPrompt, 'id'>) => Promise<IPrompt>;
   updatePrompt: (id: string, updates: Partial<IPrompt>) => Promise<void>;
   softDeletePrompt: (id: string) => Promise<void>;
+  softDeletePrompts: (ids: string[]) => Promise<{ success: boolean; deleted: number }>;
   searchPrompts: (query: string) => Promise<IPrompt[]>;
 
   // 剪贴板
@@ -141,6 +142,7 @@ interface IElectronAPI {
   // 图像回收站
   getImageTrash: () => Promise<Array<IImage & { deletedAt: string; type: string }>>;
   softDeleteImage: (id: string) => Promise<void>;
+  softDeleteImages: (ids: string[]) => Promise<{ success: boolean; deleted: number }>;
   restoreImageFromTrash: (id: string) => Promise<void>;
   restoreAllImages: () => Promise<void>;
   permanentDeleteImage: (id: string) => Promise<boolean>;
@@ -219,6 +221,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   addPrompt: (prompt: Omit<IPrompt, 'id'>) => ipcRenderer.invoke('add-prompt', prompt),
   updatePrompt: (id: string, updates: Partial<IPrompt>) => ipcRenderer.invoke('update-prompt', id, updates),
   softDeletePrompt: (id: string) => ipcRenderer.invoke('soft-delete-prompt', id),
+  softDeletePrompts: (ids: string[]) => ipcRenderer.invoke('soft-delete-prompts', ids),
   searchPrompts: (query: string) => ipcRenderer.invoke('search-prompts', query),
 
   // ==================== 剪贴板 ====================
@@ -288,6 +291,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ==================== 图像回收站 ====================
   getImageTrash: () => ipcRenderer.invoke('get-image-trash'),
   softDeleteImage: (id: string) => ipcRenderer.invoke('soft-delete-image', id),
+  softDeleteImages: (ids: string[]) => ipcRenderer.invoke('soft-delete-images', ids),
   restoreImageFromTrash: (id: string) => ipcRenderer.invoke('restore-image-from-trash', id),
   restoreAllImages: () => ipcRenderer.invoke('restore-all-images'),
   permanentDeleteImage: (id: string) => ipcRenderer.invoke('permanent-delete-image', id),

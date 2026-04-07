@@ -5,6 +5,7 @@ import { LRUCache } from '../../utils/LRUCache.ts';
 export interface IBatchOperationConfig {
   delete?: {
     api: string;
+    batchApi?: string;
     cacheDelete?: (cacheManager: CacheManager) => LRUCache<unknown>;
     event?: string;
     confirm?: boolean;
@@ -112,6 +113,7 @@ export const MultiSelectConfig: Record<'prompt' | 'image', IMultiSelectConfig> =
     operations: {
       delete: {
         api: 'softDeletePrompt',
+        batchApi: 'softDeletePrompts',
         cacheDelete: (cacheManager: CacheManager) => cacheManager.getPromptCache(),
         event: 'promptsDeleted',
         confirm: true,
@@ -167,6 +169,7 @@ export const MultiSelectConfig: Record<'prompt' | 'image', IMultiSelectConfig> =
     operations: {
       delete: {
         api: 'softDeleteImage',
+        batchApi: 'softDeleteImages',
         cacheDelete: (cacheManager: CacheManager) => cacheManager.getImageCache(),
         event: 'imagesDeleted',
         confirm: true,

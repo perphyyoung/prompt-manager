@@ -1157,6 +1157,46 @@ async function deletePrompt(id: string): Promise<boolean> {
 }
 
 /**
+ * 批量软删除提示词
+ * 同时从关联的图像中移除这些提示词
+ * @param ids - 提示词ID数组
+ * @returns 删除结果
+ */
+async function softDeletePrompts(ids: string[]): Promise<{ success: boolean; deleted: number }> {
+  if (ids.length === 0) return { success: true, deleted: 0 };
+
+  const now = localTime();
+  const placeholders = ids.map(() => '?').join(',');
+
+  // 获取所有关联的图像ID
+  const imageRows = await all<{ image_id: string }>(
+    `SELECT image_id FROM prompt_image_relations WHERE prompt_id IN (${placeholders})`,
+    [...ids]
+  );
+  const relatedImageIds = [...new Set(imageRows.map(r => r.image_id))];
+
+  // 删除提示词-图像关联
+  await run(`DELETE FROM prompt_image_relations WHERE prompt_id IN (${placeholders})`, [...ids]);
+
+  // 更新关联图像的 updated_at
+  if (relatedImageIds.length > 0) {
+    const imagePlaceholders = relatedImageIds.map(() => '?').join(',');
+    await run(
+      `UPDATE images SET updated_at = ? WHERE id IN (${imagePlaceholders})`,
+      [now, ...relatedImageIds]
+    );
+  }
+
+  // 软删除提示词
+  const result = await run(
+    `UPDATE prompts SET is_deleted = 1, deleted_at = ? WHERE id IN (${placeholders})`,
+    [now, ...ids]
+  );
+
+  return { success: true, deleted: result.changes || 0 };
+}
+
+/**
  * 恢复已删除的提示词
  */
 async function restorePrompt(id: string): Promise<Prompt | null> {
@@ -2019,6 +2059,46 @@ async function softDeleteImage(id: string): Promise<boolean> {
 }
 
 /**
+ * 批量软删除图像
+ * 同时从关联的提示词中移除这些图像
+ * @param ids - 图像ID数组
+ * @returns 删除结果
+ */
+async function softDeleteImages(ids: string[]): Promise<{ success: boolean; deleted: number }> {
+  if (ids.length === 0) return { success: true, deleted: 0 };
+
+  const now = localTime();
+  const placeholders = ids.map(() => '?').join(',');
+
+  // 获取所有关联的提示词ID
+  const promptRows = await all<{ prompt_id: string }>(
+    `SELECT prompt_id FROM prompt_image_relations WHERE image_id IN (${placeholders})`,
+    [...ids]
+  );
+  const relatedPromptIds = [...new Set(promptRows.map(r => r.prompt_id))];
+
+  // 删除提示词-图像关联
+  await run(`DELETE FROM prompt_image_relations WHERE image_id IN (${placeholders})`, [...ids]);
+
+  // 更新关联提示词的 updated_at
+  if (relatedPromptIds.length > 0) {
+    const promptPlaceholders = relatedPromptIds.map(() => '?').join(',');
+    await run(
+      `UPDATE prompts SET updated_at = ? WHERE id IN (${promptPlaceholders})`,
+      [now, ...relatedPromptIds]
+    );
+  }
+
+  // 软删除图像
+  const result = await run(
+    `UPDATE images SET is_deleted = 1, deleted_at = ?, updated_at = ? WHERE id IN (${placeholders})`,
+    [now, now, ...ids]
+  );
+
+  return { success: true, deleted: result.changes || 0 };
+}
+
+/**
  * 恢复已删除的图像
  */
 async function restoreImage(id: string): Promise<Image | null> {
@@ -2774,6 +2854,7 @@ export {
   updatePrompt,
   searchPrompts,
   deletePrompt,
+  softDeletePrompts,
   restorePrompt,
   restoreAllPrompts,
   permanentDeletePrompt,
@@ -2802,6 +2883,7 @@ export {
   getImageByMD5,
   addImage,
   softDeleteImage,
+  softDeleteImages,
   restoreImage,
   restoreAllImages,
   permanentDeleteImage,

@@ -682,6 +682,16 @@ ipcMain.handle('soft-delete-prompt', async (event, id) => {
   return await db.deletePrompt(id);
 });
 
+// 批量软删除提示词
+ipcMain.handle('soft-delete-prompts', async (event, ids) => {
+  try {
+    return await db.softDeletePrompts(ids);
+  } catch (error) {
+    logError('Main', 'Batch soft delete prompts error:', error);
+    throw error;
+  }
+});
+
 // 检查标题是否已存在
 ipcMain.handle('is-title-exists', async (event, title, excludeId) => {
   return await db.isTitleExists(title, excludeId);
@@ -825,6 +835,16 @@ ipcMain.handle('soft-delete-image', async (event, id) => {
     return true;
   } catch (error) {
     logError('Main', 'Soft delete image error:', error);
+    throw error;
+  }
+});
+
+// 批量软删除图像
+ipcMain.handle('soft-delete-images', async (event, ids) => {
+  try {
+    return await db.softDeleteImages(ids);
+  } catch (error) {
+    logError('Main', 'Batch soft delete images error:', error);
     throw error;
   }
 });

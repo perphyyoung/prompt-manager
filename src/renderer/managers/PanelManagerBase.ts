@@ -1370,10 +1370,12 @@ export abstract class PanelManagerBase {
     }
 
     try {
-      for (const id of selectedIds) {
-        const apiFn = window.electronAPI[config.api as keyof typeof window.electronAPI] as (id: string) => Promise<void>;
-        await apiFn(id);
+      // 批量删除必须实现 batchApi
+      if (!config.batchApi) {
+        throw new Error(`批量删除配置错误: ${configKey} 未配置 batchApi`);
       }
+      const batchApiFn = window.electronAPI[config.batchApi as keyof typeof window.electronAPI] as (ids: string[]) => Promise<{ success: boolean; deleted: number }>;
+      await batchApiFn(selectedIds);
 
       // 清除缓存
       if (config.cacheDelete) {
