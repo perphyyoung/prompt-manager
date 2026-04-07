@@ -162,7 +162,10 @@ export class Constants {
 
     // 标签管理器按钮 ID
     PROMPT_TAG_MANAGER_BTN: 'promptTagManagerBtn',
-    IMAGE_TAG_MANAGER_BTN: 'imageTagManagerBtn'
+    IMAGE_TAG_MANAGER_BTN: 'imageTagManagerBtn',
+
+    // 卡片信息是否可见
+    CARDS_INFO_VISIBLE: 'cardsInfoVisible'
   });
 
   // 字体选项
@@ -230,7 +233,10 @@ export class Constants {
 
     // 面板工具栏按钮
     PROMPT_ADD_BTN: 'promptAddBtn',
-    IMAGE_ADD_BTN: 'imageAddBtn'
+    IMAGE_ADD_BTN: 'imageAddBtn',
+
+    // 卡片信息开关按钮
+    CARD_INFO_TOGGLE_BTN: 'cardInfoToggleBtn'
   } as const);
 }
 

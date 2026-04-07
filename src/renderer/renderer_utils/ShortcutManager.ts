@@ -397,7 +397,7 @@ export class ShortcutManager {
    * 切换卡片信息显示
    */
   toggleCardInfo(): void {
-    const cardInfoToggleBtn = document.getElementById('cardInfoToggleBtn');
+    const cardInfoToggleBtn = document.getElementById(Constants.Ids.CARD_INFO_TOGGLE_BTN);
     if (cardInfoToggleBtn) {
       cardInfoToggleBtn.click();
     }
