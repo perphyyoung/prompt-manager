@@ -755,13 +755,9 @@ ipcMain.handle('restore-all-prompts', async () => {
 // 清空提示词回收站
 ipcMain.handle('empty-prompt-trash', async () => {
   try {
-    const deletedPrompts = await db.getDeletedPrompts();
-    for (const prompt of deletedPrompts) {
-      await db.permanentDeletePrompt(prompt.id);
-    }
-    return true;
+    return await db.emptyPromptTrash();
   } catch (error) {
-    logError('Main', 'Empty recycle bin error:', error);
+    logError('Main', 'Empty prompt trash error:', error);
     throw error;
   }
 });

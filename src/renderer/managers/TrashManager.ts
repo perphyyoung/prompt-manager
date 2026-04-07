@@ -236,15 +236,36 @@ export class TrashManager {
 
   /**
    * 刷新主界面面板
+   * 恢复操作后需要刷新当前面板和关联面板
    */
   private refreshMainPanel(): void {
     if (!this.currentHandler) return;
 
+    // 刷新当前面板
     const panelManager = this.currentHandler.getMainPanelManager(this.app);
     if (panelManager && this.isPanelManager(panelManager)) {
       panelManager.renderView();
       panelManager.renderTagFilters();
       this.app.eventBus?.emit(this.currentHandler.eventName);
+    }
+
+    // 刷新关联面板（图像和提示词有关联关系）
+    if (this.currentHandler.type === Constants.TrashType.IMAGE) {
+      // 图像恢复后，提示词面板也需要刷新（可能有关联）
+      const promptPanelManager = this.app.promptPanelManager;
+      if (promptPanelManager && this.isPanelManager(promptPanelManager)) {
+        promptPanelManager.renderView();
+        promptPanelManager.renderTagFilters();
+      }
+      this.app.eventBus?.emit('promptsChanged');
+    } else if (this.currentHandler.type === Constants.TrashType.PROMPT) {
+      // 提示词恢复后，图像面板也需要刷新（可能有关联）
+      const imagePanelManager = this.app.imagePanelManager;
+      if (imagePanelManager && this.isPanelManager(imagePanelManager)) {
+        imagePanelManager.renderView();
+        imagePanelManager.renderTagFilters();
+      }
+      this.app.eventBus?.emit('imagesChanged');
     }
   }
 

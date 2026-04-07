@@ -834,7 +834,7 @@ async function getPromptsWithImages(promptRows: PromptRow[], options: MapPromptO
            i.relative_path as relativePath, i.thumbnail_path as thumbnailPath
     FROM prompt_image_relations pir
     JOIN images i ON pir.image_id = i.id
-    WHERE pir.prompt_id IN (${placeholders})
+    WHERE pir.prompt_id IN (${placeholders}) AND i.is_deleted = 0
     ORDER BY pir.prompt_id, pir.sort_order ASC
   `;
 
@@ -932,7 +932,7 @@ async function getPromptById(id: string): Promise<Prompt | null> {
            i.relative_path as relativePath, i.thumbnail_path as thumbnailPath
     FROM images i
     JOIN prompt_image_relations pir ON i.id = pir.image_id
-    WHERE pir.prompt_id = ?
+    WHERE pir.prompt_id = ? AND i.is_deleted = 0
   `;
   const images = await all<ImageRef>(imagesSql, [id]);
   prompt.images = images || [];
@@ -1123,31 +1123,12 @@ async function updatePrompt(id: string, updates: UpdatePromptParams): Promise<Pr
 
 /**
  * 软删除提示词
- * 同时从关联的图像中移除该提示词
+ * 保留关联关系，仅标记删除状态
  */
 async function deletePrompt(id: string): Promise<boolean> {
   const now = localTime();
 
-  // 获取所有关联的图像ID
-  const imageRows = await all<{ image_id: string }>(
-    'SELECT image_id FROM prompt_image_relations WHERE prompt_id = ?',
-    [id]
-  );
-  const relatedImageIds = imageRows.map(r => r.image_id);
-
-  // 删除提示词-图像关联
-  await run('DELETE FROM prompt_image_relations WHERE prompt_id = ?', [id]);
-
-  // 更新关联图像的 updated_at
-  if (relatedImageIds.length > 0) {
-    const placeholders = relatedImageIds.map(() => '?').join(',');
-    await run(
-      `UPDATE images SET updated_at = ? WHERE id IN (${placeholders})`,
-      [now, ...relatedImageIds]
-    );
-  }
-
-  // 软删除提示词
+  // 仅标记软删除，保留所有关联关系
   await run(
     'UPDATE prompts SET is_deleted = 1, deleted_at = ? WHERE id = ?',
     [now, id]
@@ -1158,7 +1139,7 @@ async function deletePrompt(id: string): Promise<boolean> {
 
 /**
  * 批量软删除提示词
- * 同时从关联的图像中移除这些提示词
+ * 保留关联关系，仅标记删除状态
  * @param ids - 提示词ID数组
  * @returns 删除结果
  */
@@ -1168,26 +1149,7 @@ async function softDeletePrompts(ids: string[]): Promise<{ success: boolean; del
   const now = localTime();
   const placeholders = ids.map(() => '?').join(',');
 
-  // 获取所有关联的图像ID
-  const imageRows = await all<{ image_id: string }>(
-    `SELECT image_id FROM prompt_image_relations WHERE prompt_id IN (${placeholders})`,
-    [...ids]
-  );
-  const relatedImageIds = [...new Set(imageRows.map(r => r.image_id))];
-
-  // 删除提示词-图像关联
-  await run(`DELETE FROM prompt_image_relations WHERE prompt_id IN (${placeholders})`, [...ids]);
-
-  // 更新关联图像的 updated_at
-  if (relatedImageIds.length > 0) {
-    const imagePlaceholders = relatedImageIds.map(() => '?').join(',');
-    await run(
-      `UPDATE images SET updated_at = ? WHERE id IN (${imagePlaceholders})`,
-      [now, ...relatedImageIds]
-    );
-  }
-
-  // 软删除提示词
+  // 仅标记软删除，保留所有关联关系
   const result = await run(
     `UPDATE prompts SET is_deleted = 1, deleted_at = ? WHERE id IN (${placeholders})`,
     [now, ...ids]
@@ -1212,7 +1174,26 @@ async function restorePrompt(id: string): Promise<Prompt | null> {
  * 永久删除提示词
  */
 async function permanentDeletePrompt(id: string): Promise<boolean> {
+  // 1. 删除关联关系
+  await run('DELETE FROM prompt_image_relations WHERE prompt_id = ?', [id]);
+
+  // 2. 删除数据库记录
   await run('DELETE FROM prompts WHERE id = ?', [id]);
+  return true;
+}
+
+/**
+ * 清空提示词回收站
+ * 删除所有软删除的提示词记录及其关联关系
+ */
+async function emptyPromptTrash(): Promise<boolean> {
+  // 1. 删除关联关系（使用 IN 子句批量删除）
+  await run(
+    'DELETE FROM prompt_image_relations WHERE prompt_id IN (SELECT id FROM prompts WHERE is_deleted = 1)'
+  );
+
+  // 2. 删除数据库记录
+  await run('DELETE FROM prompts WHERE is_deleted = 1');
   return true;
 }
 
@@ -2025,31 +2006,12 @@ async function addImage(image: CreateImageParams): Promise<Image | null> {
 
 /**
  * 软删除图像（移动到回收站）
- * 同时从关联的提示词中移除该图像
+ * 保留关联关系，仅标记删除状态
  */
 async function softDeleteImage(id: string): Promise<boolean> {
   const now = localTime();
 
-  // 获取所有关联的提示词ID
-  const promptRows = await all<{ prompt_id: string }>(
-    'SELECT prompt_id FROM prompt_image_relations WHERE image_id = ?',
-    [id]
-  );
-  const relatedPromptIds = promptRows.map(r => r.prompt_id);
-
-  // 删除提示词-图像关联
-  await run('DELETE FROM prompt_image_relations WHERE image_id = ?', [id]);
-
-  // 更新关联提示词的 updated_at
-  if (relatedPromptIds.length > 0) {
-    const placeholders = relatedPromptIds.map(() => '?').join(',');
-    await run(
-      `UPDATE prompts SET updated_at = ? WHERE id IN (${placeholders})`,
-      [now, ...relatedPromptIds]
-    );
-  }
-
-  // 软删除图像
+  // 仅标记软删除，保留所有关联关系
   await run(
     'UPDATE images SET is_deleted = 1, deleted_at = ?, updated_at = ? WHERE id = ?',
     [now, now, id]
@@ -2060,7 +2022,7 @@ async function softDeleteImage(id: string): Promise<boolean> {
 
 /**
  * 批量软删除图像
- * 同时从关联的提示词中移除这些图像
+ * 保留关联关系，仅标记删除状态
  * @param ids - 图像ID数组
  * @returns 删除结果
  */
@@ -2070,26 +2032,7 @@ async function softDeleteImages(ids: string[]): Promise<{ success: boolean; dele
   const now = localTime();
   const placeholders = ids.map(() => '?').join(',');
 
-  // 获取所有关联的提示词ID
-  const promptRows = await all<{ prompt_id: string }>(
-    `SELECT prompt_id FROM prompt_image_relations WHERE image_id IN (${placeholders})`,
-    [...ids]
-  );
-  const relatedPromptIds = [...new Set(promptRows.map(r => r.prompt_id))];
-
-  // 删除提示词-图像关联
-  await run(`DELETE FROM prompt_image_relations WHERE image_id IN (${placeholders})`, [...ids]);
-
-  // 更新关联提示词的 updated_at
-  if (relatedPromptIds.length > 0) {
-    const promptPlaceholders = relatedPromptIds.map(() => '?').join(',');
-    await run(
-      `UPDATE prompts SET updated_at = ? WHERE id IN (${promptPlaceholders})`,
-      [now, ...relatedPromptIds]
-    );
-  }
-
-  // 软删除图像
+  // 仅标记软删除，保留所有关联关系
   const result = await run(
     `UPDATE images SET is_deleted = 1, deleted_at = ?, updated_at = ? WHERE id IN (${placeholders})`,
     [now, now, ...ids]
@@ -2138,7 +2081,10 @@ async function deleteImageFiles(image: ImageFilePaths, dataDir: string): Promise
  * @param dataDir - 数据目录路径
  */
 async function permanentDeleteImage(id: string, dataDir: string): Promise<boolean> {
-  // 先获取图像信息以删除物理文件（只选择需要的字段）
+  // 1. 删除关联关系
+  await run('DELETE FROM prompt_image_relations WHERE image_id = ?', [id]);
+
+  // 2. 先获取图像信息以删除物理文件（只选择需要的字段）
   const image = await get<ImageFilePaths>(
     'SELECT relative_path, thumbnail_path FROM images WHERE id = ?',
     [id]
@@ -2148,7 +2094,7 @@ async function permanentDeleteImage(id: string, dataDir: string): Promise<boolea
     await deleteImageFiles(image, dataDir);
   }
 
-  // 删除数据库记录
+  // 3. 删除数据库记录
   await run('DELETE FROM images WHERE id = ?', [id]);
   return true;
 }
@@ -2214,17 +2160,22 @@ async function getDeletedImages(): Promise<Image[]> {
  * @param dataDir - 数据目录路径
  */
 async function emptyImageTrash(dataDir: string): Promise<boolean> {
-  // 获取所有软删除的图像（只选择文件路径相关字段）
+  // 1. 删除关联关系（使用 IN 子句批量删除）
+  await run(
+    'DELETE FROM prompt_image_relations WHERE image_id IN (SELECT id FROM images WHERE is_deleted = 1)'
+  );
+
+  // 2. 获取所有软删除的图像（只选择文件路径相关字段）
   const deletedImages = await all<ImageFilePaths>(
     'SELECT relative_path, thumbnail_path FROM images WHERE is_deleted = 1'
   );
 
-  // 删除物理文件
+  // 3. 删除物理文件
   for (const image of deletedImages) {
     await deleteImageFiles(image, dataDir);
   }
 
-  // 删除数据库记录
+  // 4. 删除数据库记录
   await run('DELETE FROM images WHERE is_deleted = 1');
   return true;
 }
@@ -2387,7 +2338,7 @@ async function getPromptImages(promptId: string): Promise<PromptImage[]> {
             WHERE itr.image_id = i.id) as image_tags
     FROM images i
     JOIN prompt_image_relations pir ON i.id = pir.image_id
-    WHERE pir.prompt_id = ?
+    WHERE pir.prompt_id = ? AND i.is_deleted = 0
     ORDER BY pir.sort_order ASC
   `;
   const rows = await all<ImageRow>(sql, [promptId]);
@@ -2858,6 +2809,7 @@ export {
   restorePrompt,
   restoreAllPrompts,
   permanentDeletePrompt,
+  emptyPromptTrash,
   getDeletedPrompts,
   // 提示词标签组操作
   createPromptTagGroup,
