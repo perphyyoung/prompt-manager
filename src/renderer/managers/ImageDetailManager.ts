@@ -2,7 +2,7 @@
  * 图像详情管理器
  * 负责管理图像详情模态框
  */
-import { DetailViewManager } from './DetailViewManager.ts';
+import { DetailViewManager, ISimpleTagManager } from './DetailViewManager.ts';
 import { HtmlUtils, validateFileName, isSameId, cacheManager } from '../../utils/index.ts';
 import { SaveManager, ImageSaveStrategy } from '../renderer_utils/index.ts';
 import { SimpleTagManagerFactory } from './SimpleTagManagerFactory.ts';
@@ -276,7 +276,7 @@ export class ImageDetailManager extends DetailViewManager {
         inputAreaId: 'imageDetailTagInputArea',
         batchBtnId: 'imageDetailBatchTagBtn'
       },
-      simpleTagManager as unknown as { getTags: () => string[]; setTags: (tags: string[]) => void; removeTag: (tagName: string) => Promise<void>; onRender?: (() => void) | null }
+      simpleTagManager as ISimpleTagManager
     );
 
     // 设置初始标签

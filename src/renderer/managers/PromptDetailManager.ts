@@ -2,7 +2,7 @@
  * 提示词详情管理器
  * 负责管理提示词详情模态框
  */
-import { DetailViewManager } from './DetailViewManager.ts';
+import { DetailViewManager, ISimpleTagManager } from './DetailViewManager.ts';
 import { validateTitle, cacheManager } from '../../utils/index.ts';
 import { SaveManager, PromptSaveStrategy } from '../renderer_utils/index.ts';
 import { Constants } from '../../constants.ts';
@@ -239,7 +239,7 @@ export class PromptDetailManager extends DetailViewManager {
         inputAreaId: 'promptDetailTagInputArea',
         batchBtnId: 'promptDetailBatchTagBtn'
       },
-      simpleTagManager as unknown as { getTags: () => string[]; setTags: (tags: string[]) => void; removeTag: (tagName: string) => Promise<void>; onRender?: (() => void) | null }
+      simpleTagManager as ISimpleTagManager
     );
 
     // 设置初始标签

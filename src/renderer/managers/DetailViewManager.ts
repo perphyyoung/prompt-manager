@@ -19,13 +19,14 @@ interface DetailViewManagerOptions {
 }
 
 // 简单标签管理器接口
-interface ISimpleTagManager {
+export interface ISimpleTagManager {
   getTags: () => string[];
   setTags: (tags: string[]) => void;
   removeTag: (tagName: string) => Promise<void> | Promise<boolean>;
-  addTag?: (tagName: string) => Promise<void>;
-  addTags?: (tagNames: string[]) => Promise<void>;
-  onRender?: (() => void) | null;
+  removeTags: (tagNames: string[]) => Promise<{ success: boolean; deleted: number }>;
+  addTag?: (tagName: string) => Promise<{ success: boolean }>;
+  addTags?: (tagNames: string[]) => Promise<{ success: boolean; added: number }>;
+  onRender?: ((tags?: string[]) => void) | null;
 }
 
 // 批量标签管理配置
@@ -505,10 +506,10 @@ export class DetailViewManager {
         { count: selectedTags.size }
       );
       if (confirmed) {
-        for (const tag of selectedTags) {
-          await this.simpleTagManager?.removeTag(tag);
+        const result = await this.simpleTagManager?.removeTags(Array.from(selectedTags));
+        if (result?.success) {
+          app.showToast(`已删除 ${result.deleted} 个标签`, 'success');
         }
-        app.showToast(`已删除 ${selectedTags.size} 个标签`, 'success');
         this.exitBatchMode();
       }
     } else {
