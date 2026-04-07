@@ -739,6 +739,48 @@ export abstract class PanelManagerBase {
   }
 
   /**
+   * 恢复标签筛选区展开/收起状态
+   */
+  restoreTagFilterState(): void {
+    const collapsed = localStorage.getItem(this.getTagFilterStorageKey());
+    if (collapsed === 'true') {
+      const section = document.getElementById(this.getTagFilterSectionId());
+      section?.classList.add('collapsed');
+    }
+  }
+
+  /**
+   * 切换标签筛选区展开/收起状态
+   */
+  async toggleTagFilterState(): Promise<void> {
+    const section = document.getElementById(this.getTagFilterSectionId());
+    if (section) {
+      section.classList.toggle('collapsed');
+      const collapsed = section.classList.contains('collapsed');
+      localStorage.setItem(this.getTagFilterStorageKey(), String(collapsed));
+    }
+    await this.renderTagFilters();
+  }
+
+  /**
+   * 获取标签筛选区 section ID
+   */
+  private getTagFilterSectionId(): string {
+    return this.storagePrefix === 'prompt'
+      ? Constants.LocalStorageKey.PROMPT_TAG_FILTER_SECTION
+      : Constants.LocalStorageKey.IMAGE_TAG_FILTER_SECTION;
+  }
+
+  /**
+   * 获取标签筛选区收起状态的 storage key
+   */
+  private getTagFilterStorageKey(): string {
+    return this.storagePrefix === 'prompt'
+      ? Constants.LocalStorageKey.PROMPT_TAG_FILTER_COLLAPSED
+      : Constants.LocalStorageKey.IMAGE_TAG_FILTER_COLLAPSED;
+  }
+
+  /**
    * 渲染主列表（模板方法）
    */
   async renderView(): Promise<void> {

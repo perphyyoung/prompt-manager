@@ -933,43 +933,6 @@ class PromptManager implements IApp {
   }
 
   /**
-   * 切换标签筛选收起/展开（通用）
-   * @param sectionId - 标签筛选区域ID
-   * @param storageKey - localStorage存储键
-   */
-  toggleTagFilter(sectionId: string, storageKey: string) {
-    const tagFilterSection = document.getElementById(sectionId);
-    if (tagFilterSection) {
-      tagFilterSection.classList.toggle('collapsed');
-      const collapsed = tagFilterSection.classList.contains('collapsed');
-      localStorage.setItem(storageKey, String(collapsed));
-      // 只通过图标和CSS类表示状态，不显示文字
-    }
-  }
-
-  /**
-   * 切换提示词标签筛选收起/展开
-   */
-  async togglePromptTagFilter() {
-    this.toggleTagFilter('promptTagFilterSection', 'promptTagFilterCollapsed');
-    // 刷新标签筛选器以确保计数最新
-    if (this.promptPanelManager) {
-      await this.promptPanelManager.renderTagFilters();
-    }
-  }
-
-  /**
-   * 切换图像标签筛选收起/展开
-   */
-  async toggleImageTagFilter() {
-    this.toggleTagFilter('imageTagFilterSection', 'imageTagFilterCollapsed');
-    // 刷新标签筛选器以确保计数最新
-    if (this.imagePanelManager) {
-      await this.imagePanelManager.renderTagFilters();
-    }
-  }
-
-  /**
    * 关闭确认对话框
    */
   closeConfirmModal() {

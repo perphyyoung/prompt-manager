@@ -12,11 +12,13 @@ interface IApp {
     loadData: () => Promise<unknown[]>;
     renderView: () => Promise<void>;
     clearTagFilter: () => void;
+    toggleTagFilterState: () => Promise<void>;
   } | null;
   imagePanelManager: {
     loadData: () => Promise<unknown[]>;
     renderView: () => Promise<void>;
     clearTagFilter: () => void;
+    toggleTagFilterState: () => Promise<void>;
   } | null;
   newPromptManager: {
     open: () => Promise<void>;
@@ -29,8 +31,6 @@ interface IApp {
   openStatisticsModal?: () => void;
   showToast?: (message: string, type: string) => void;
   relaunchApp?: () => Promise<void>;
-  togglePromptTagFilter?: () => Promise<void>;
-  toggleImageTagFilter?: () => Promise<void>;
 }
 
 /**
@@ -136,8 +136,8 @@ export class ToolbarManager {
   private bindTagFilterEvents(): void {
     document.getElementById('clearPromptTagFilter')?.addEventListener('click', () => this.app.promptPanelManager?.clearTagFilter());
     document.getElementById('clearImageTagFilter')?.addEventListener('click', () => this.app.imagePanelManager?.clearTagFilter());
-    document.getElementById('promptTagFilterToggleBtn')?.addEventListener('click', () => this.app.togglePromptTagFilter?.());
-    document.getElementById('imageTagFilterToggleBtn')?.addEventListener('click', () => this.app.toggleImageTagFilter?.());
+    document.getElementById('promptTagFilterToggleBtn')?.addEventListener('click', () => this.app.promptPanelManager?.toggleTagFilterState());
+    document.getElementById('imageTagFilterToggleBtn')?.addEventListener('click', () => this.app.imagePanelManager?.toggleTagFilterState());
   }
 
   /**

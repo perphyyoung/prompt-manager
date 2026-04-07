@@ -150,7 +150,11 @@ export class Constants {
 
     // 标签筛选收起状态
     PROMPT_TAG_FILTER_COLLAPSED: 'promptTagFilterCollapsed',
-    IMAGE_TAG_FILTER_COLLAPSED: 'imageTagFilterCollapsed'
+    IMAGE_TAG_FILTER_COLLAPSED: 'imageTagFilterCollapsed',
+
+    // 标签筛选区 section ID
+    PROMPT_TAG_FILTER_SECTION: 'promptTagFilterSection',
+    IMAGE_TAG_FILTER_SECTION: 'imageTagFilterSection'
   });
 
   // 字体选项

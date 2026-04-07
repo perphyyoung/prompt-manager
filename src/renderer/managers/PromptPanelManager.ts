@@ -209,6 +209,7 @@ export class PromptPanelManager extends PanelManagerBase {
       return;
     }
     await this.loadData();
+    this.restoreTagFilterState();
     this.isInitialized = true;
   }
 

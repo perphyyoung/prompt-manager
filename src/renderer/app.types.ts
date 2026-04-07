@@ -32,6 +32,7 @@ export interface IPanelManager {
   updateToolbarUI(): void;
   exitBatchMode(): void;
   selectAllVisibleItems(): void;
+  toggleTagFilterState(): Promise<void>;
 }
 
 /**
@@ -262,8 +263,6 @@ export interface IApp {
   emit(event: string, data?: unknown): void;
   updatePromptViewButtons(mode: string): void;
   updateImageViewButtons(mode: string): void;
-  togglePromptTagFilter(): Promise<void>;
-  toggleImageTagFilter(): Promise<void>;
   closeConfirmModal(): void;
   showInputDialog(title: string, label: string, defaultValue?: string, options?: unknown): Promise<{ value: string; groupId?: number | null } | null>;
   closeInputModal(): void;

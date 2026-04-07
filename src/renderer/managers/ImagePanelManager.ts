@@ -197,6 +197,7 @@ export class ImagePanelManager extends PanelManagerBase {
       return;
     }
     await this.loadData();
+    this.restoreTagFilterState();
     this.isInitialized = true;
   }
 
