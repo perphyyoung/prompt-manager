@@ -72,7 +72,6 @@ export class ToolbarManager {
     this.bindRefreshEvents();
     this.bindPromptToolbarEvents();
     this.bindImageToolbarEvents();
-    this.bindTagFilterEvents();
     this.bindTagManagerEvents();
     this.bindModalEvents();
     this.bindCardInfoToggleEvent();
@@ -127,17 +126,6 @@ export class ToolbarManager {
    */
   private bindImageToolbarEvents(): void {
     document.getElementById('imageAddBtn')?.addEventListener('click', () => this.app.imageUploadManager?.open());
-  }
-
-  /**
-   * 绑定标签筛选事件
-   * @private
-   */
-  private bindTagFilterEvents(): void {
-    document.getElementById('clearPromptTagFilter')?.addEventListener('click', () => this.app.promptPanelManager?.clearTagFilter());
-    document.getElementById('clearImageTagFilter')?.addEventListener('click', () => this.app.imagePanelManager?.clearTagFilter());
-    document.getElementById('promptTagFilterToggleBtn')?.addEventListener('click', () => this.app.promptPanelManager?.toggleTagFilterState());
-    document.getElementById('imageTagFilterToggleBtn')?.addEventListener('click', () => this.app.imagePanelManager?.toggleTagFilterState());
   }
 
   /**

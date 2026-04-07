@@ -72,6 +72,7 @@ export class PromptPanelManager extends PanelManagerBase {
     this.saveManager = options.saveManager;
     this.filteredPrompts = [];
     this.bindTagFilterActionEvent();
+    this.bindTagFilterToggleEvents();
   }
 
   /**
@@ -376,6 +377,13 @@ export class PromptPanelManager extends PanelManagerBase {
    */
   getFilterActionBtnId(): string {
     return 'promptTagFilterActionBtn';
+  }
+
+  /**
+   * 获取标签筛选收起/展开按钮 ID（实现基类抽象方法）
+   */
+  getTagFilterToggleBtnId(): string {
+    return Constants.LocalStorageKey.PROMPT_TAG_FILTER_TOGGLE_BTN;
   }
 
   /**

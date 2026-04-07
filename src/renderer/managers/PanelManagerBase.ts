@@ -119,6 +119,14 @@ export abstract class PanelManagerBase {
   // UI 配置（子类实现）
   protected abstract getUIConfig(): IUIConfig;
   protected abstract getUpdateAPI(): (id: string, data: unknown) => Promise<void>;
+  protected abstract getTagFilterToggleBtnId(): string;
+
+  /**
+   * 绑定标签筛选收起/展开按钮事件
+   */
+  protected bindTagFilterToggleEvents(): void {
+    document.getElementById(this.getTagFilterToggleBtnId())?.addEventListener('click', () => this.toggleTagFilterState());
+  }
 
   /**
    * @param options - 配置选项

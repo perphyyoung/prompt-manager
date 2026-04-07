@@ -71,6 +71,7 @@ export class ImagePanelManager extends PanelManagerBase {
     });
     this.filteredImages = [];
     this.bindTagFilterActionEvent();
+    this.bindTagFilterToggleEvents();
   }
 
   /**
@@ -79,6 +80,13 @@ export class ImagePanelManager extends PanelManagerBase {
    */
   private bindTagFilterActionEvent(): void {
     document.getElementById('imageTagFilterActionBtn')?.addEventListener('click', () => this.handleFilterAction());
+  }
+
+  /**
+   * 获取标签筛选收起/展开按钮 ID（实现基类抽象方法）
+   */
+  getTagFilterToggleBtnId(): string {
+    return Constants.LocalStorageKey.IMAGE_TAG_FILTER_TOGGLE_BTN;
   }
 
   /**

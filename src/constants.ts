@@ -154,7 +154,11 @@ export class Constants {
 
     // 标签筛选区 section ID
     PROMPT_TAG_FILTER_SECTION: 'promptTagFilterSection',
-    IMAGE_TAG_FILTER_SECTION: 'imageTagFilterSection'
+    IMAGE_TAG_FILTER_SECTION: 'imageTagFilterSection',
+
+    // 标签筛选区 toggle 按钮 ID
+    PROMPT_TAG_FILTER_TOGGLE_BTN: 'promptTagFilterToggleBtn',
+    IMAGE_TAG_FILTER_TOGGLE_BTN: 'imageTagFilterToggleBtn'
   });
 
   // 字体选项
