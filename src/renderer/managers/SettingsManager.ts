@@ -63,14 +63,14 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     // 设置状态
     this.currentTheme = 'light';
 
-    // 绑定模态框事件
-    this.bindModalEvents();
+    // 绑定设置模态框事件
+    this.bindSettingsEvents();
   }
 
   /**
-   * 绑定模态框事件
+   * 绑定设置模态框事件
    */
-  private bindModalEvents(): void {
+  private bindSettingsEvents(): void {
     // 关闭按钮
     document.getElementById('closeSettingsModal')?.addEventListener('click', () => this.closeModal());
 
