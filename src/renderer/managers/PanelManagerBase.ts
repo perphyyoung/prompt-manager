@@ -11,6 +11,10 @@ import { MultiSelectConfig, IBatchOperationConfig } from '../config/MultiSelectC
 import { DialogService, DialogConfigItem } from '../services/index.ts';
 import { Constants } from '../../constants.ts';
 
+// 卡片大小限制常量
+const MIN_CARD_SIZE = 100;
+const MAX_CARD_SIZE = 350;
+
 // 从 app.types.ts 导入 IEventBus
 import type { IEventBus } from '../app.types.ts';
 
@@ -833,6 +837,9 @@ export abstract class PanelManagerBase {
       // 子类实现具体的渲染逻辑
       await this.renderContainer(filtered);
 
+      // 设置卡片大小 CSS 变量
+      this.applyCardSize();
+
       // 更新选择模式类
       this.updateSelectionModeClass();
     } catch (error) {
@@ -1217,8 +1224,24 @@ export abstract class PanelManagerBase {
    * @param size - 卡片大小
    */
   setCardSize(size: number): void {
-    this.cardSize = size;
-    localStorage.setItem(`${this.storagePrefix}CardSize`, String(size));
+    // 校验范围
+    const clampedSize = Math.max(MIN_CARD_SIZE, Math.min(MAX_CARD_SIZE, size));
+    this.cardSize = clampedSize;
+    localStorage.setItem(`${this.storagePrefix}CardSize`, String(clampedSize));
+
+    // 更新 CSS 变量
+    this.applyCardSize();
+  }
+
+  /**
+   * 应用卡片大小到 CSS 变量
+   */
+  private applyCardSize(): void {
+    const config = this.getUIConfig();
+    const container = document.getElementById(config.gridContainerId);
+    if (container) {
+      container.style.setProperty('--card-size', `${this.cardSize}px`);
+    }
   }
 
   /**
