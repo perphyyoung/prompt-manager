@@ -1,5 +1,28 @@
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import path from 'path'
+import { Constants } from './src/constants.ts'
+
+function htmlVariablesPlugin() {
+  return {
+    name: 'py-html-variables-plugin',
+    transformIndexHtml(html: string) {
+      const usedKeys: string[] = []
+      const result = html.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+        usedKeys.push(key)
+        const id = (Constants.Ids as Record<string, string>)[key]
+        return id ?? match
+      })
+
+      for (const key of usedKeys) {
+        if (!(key in Constants.Ids)) {
+          throw new Error(`[py-html-variables-plugin] Invalid placeholder: {{${key}}}`)
+        }
+      }
+
+      return result
+    }
+  }
+}
 
 export default defineConfig({
   main: {
@@ -36,6 +59,9 @@ export default defineConfig({
   },
   renderer: {
     root: path.resolve(__dirname, 'src/renderer'),
+    plugins: [
+      htmlVariablesPlugin()
+    ],
     build: {
       outDir: path.resolve(__dirname, 'out/renderer'),
       rollupOptions: {
