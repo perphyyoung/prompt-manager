@@ -21,7 +21,9 @@ interface IApp {
   newPromptManager: {
     open: () => Promise<void>;
   } | null;
-  openUploadImageModal?: () => void;
+  imageUploadManager: {
+    open: () => void;
+  } | null;
   openPromptTagManagerModal?: () => void;
   openImageTagManagerModal?: () => void;
   openStatisticsModal?: () => void;
@@ -124,7 +126,7 @@ export class ToolbarManager {
    * @private
    */
   private bindImageToolbarEvents(): void {
-    document.getElementById('imageAddBtn')?.addEventListener('click', () => this.app.openUploadImageModal?.());
+    document.getElementById('imageAddBtn')?.addEventListener('click', () => this.app.imageUploadManager?.open());
   }
 
   /**
