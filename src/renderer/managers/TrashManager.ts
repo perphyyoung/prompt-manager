@@ -446,24 +446,6 @@ export class TrashManager {
   }
 
   /**
-   * 打开回收站模态框
-   * @param type - 回收站类型
-   */
-  private openModal(type: TrashType): void {
-    const config = TrashManager.MODAL_CONFIG[type];
-    if (!config) return;
-
-    const modal = document.getElementById(config.modalId);
-    if (modal) {
-      contextStack.push(config.elementId);
-      modal.style.display = 'flex';
-      // 添加 close 方法供 ShortcutManager 调用
-      (modal as HTMLElement & { close: () => void }).close = () => this.close();
-      this.activeModals.add(type);
-    }
-  }
-
-  /**
    * 关闭回收站模态框
    * @param type - 回收站类型
    */
@@ -486,10 +468,17 @@ export class TrashManager {
   async open(handler: TrashHandler): Promise<void> {
     this.currentHandler = handler;
     await this.loadTrash();
-    // 压栈：进入回收站视图上下文
+
     const type = handler.type as TrashType;
-    contextStack.push(TrashManager.MODAL_CONFIG[type].elementId);
-    this.openModal(type);
+    const config = TrashManager.MODAL_CONFIG[type];
+    const modal = document.getElementById(config.modalId);
+
+    if (modal) {
+      contextStack.push(config.elementId);
+      modal.style.display = 'flex';
+      (modal as HTMLElement & { close: () => void }).close = () => this.close();
+      this.activeModals.add(type);
+    }
   }
 
   /**
