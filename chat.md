@@ -39,6 +39,10 @@ cnpm run dist:win:nsis -> exe
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 需要输出中文版本的可复制的详细版本和简洁版本的 git commit 信息
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
 
+## 20260408
+
+根据 标签筛选 情况 更新界面的空状态提示, 参考搜索
+
 ## 20260407
 
 软删除改为不删除关联, 然后前端控制主界面不显示已软删除的内容, 只在回收站删除里做删除关联和物理删除的操作; 这一方案符合行业规范吗? 软删除的行业规范有哪些

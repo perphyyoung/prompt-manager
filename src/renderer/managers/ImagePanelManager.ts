@@ -246,6 +246,9 @@ export class ImagePanelManager extends PanelManagerBase {
     if (filtered.length === 0) {
       if (currentSearchQuery) {
         PanelRenderer.showEmptyState('imageGrid', 'imageEmptyState', `未找到匹配"${currentSearchQuery}"的图像`, '搜索无结果');
+      } else if (this.selectedTags.size > 0) {
+        const selectedTagNames = Array.from(this.selectedTags).join(', ');
+        PanelRenderer.showEmptyState('imageGrid', 'imageEmptyState', `没有符合标签"${selectedTagNames}"的图像`, '筛选无结果');
       } else {
         PanelRenderer.showEmptyState('imageGrid', 'imageEmptyState', '暂无图像');
       }
