@@ -129,24 +129,19 @@ export class CardConfig {
   getFooterInfo(item: Record<string, unknown>, sortBy: string): string {
     if (this.dataType.startsWith('trash')) {
       const deletedAt = this.getValue(item, 'deletedAt');
-      // 如果 deletedAt 是字符串，直接展示；如果是时间戳，格式化展示
-      const dateStr = typeof deletedAt === 'string'
-        ? deletedAt
-        : (deletedAt ? new Date(Number(deletedAt)).toLocaleDateString('zh-CN') : '-');
-      return `删除于 ${dateStr}`;
+      return `删除于 ${deletedAt || '-'}`;
     }
 
     switch (sortBy) {
       case 'updatedAt': {
         const updatedAt = this.getValue(item, 'updatedAt');
-        return `更新于 ${updatedAt ? new Date(Number(updatedAt)).toLocaleDateString('zh-CN') : '-'}`;
+        return `更新于 ${updatedAt || '-'}`;
       }
       case 'createdAt': {
         const createdAt = this.getValue(item, 'createdAt');
-        return `创建于 ${createdAt ? new Date(Number(createdAt)).toLocaleDateString('zh-CN') : '-'}`;
+        return `创建于 ${createdAt || '-'}`;
       }
       case 'title':
-        // 按标题排序时显示标题（仅提示词类型有标题）
         return String(this.getValue(item, 'title') || '无标题');
       case 'fileSize': {
         const fileSize = this.getValue(item, 'fileSize');
@@ -159,10 +154,9 @@ export class CardConfig {
         return `${width || '?'} x ${height || '?'}`;
       }
       default:
-        // 默认根据数据类型显示合适的信息
         if (this.dataType === 'prompt') {
           const defaultUpdatedAt = this.getValue(item, 'updatedAt');
-          return `更新于 ${defaultUpdatedAt ? new Date(Number(defaultUpdatedAt)).toLocaleDateString('zh-CN') : '-'}`;
+          return `更新于 ${defaultUpdatedAt || '-'}`;
         }
         return String(this.getValue(item, 'fileName') || this.getValue(item, 'title') || '');
     }
