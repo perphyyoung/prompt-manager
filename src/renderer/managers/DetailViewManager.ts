@@ -125,6 +125,25 @@ export class DetailViewManager {
   }
 
   /**
+   * 为 DOM 元素附加 ctrla 方法
+   * 非批量模式下阻止默认行为（Ctrl+A 无效）
+   * 批量模式下全选标签
+   */
+  private attachCtrlAMethod(): void {
+    const modal = document.getElementById(this.modalId);
+    if (modal) {
+      (modal as any).ctrla = () => {
+        if (this.isBatchMode) {
+          // 批量模式下全选标签
+          this.editableTagList?.selectAll();
+        }
+        // 始终返回 true 阻止默认行为（非批量模式下 Ctrl+A 无效）
+        return true;
+      };
+    }
+  }
+
+  /**
    * 绑定关闭事件
    */
   bindCloseEvent(): void {
@@ -165,6 +184,9 @@ export class DetailViewManager {
     if (modal) {
       modal.classList.add('active');
     }
+
+    // 附加 ctrla 方法
+    this.attachCtrlAMethod();
 
     // 压栈：进入详情视图上下文
     contextStack.push(this.modalId as ElementId);

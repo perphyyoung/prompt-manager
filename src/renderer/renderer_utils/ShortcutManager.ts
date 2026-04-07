@@ -170,6 +170,7 @@ export class ShortcutManager {
 
   /**
    * 处理 Ctrl+A - 基于上下文堆栈
+   * 调用 DOM 元素的 ctrla 方法，由界面自己决定是否处理
    */
   private handleSelectAll(e: KeyboardEvent): void {
     // 检查焦点是否在输入框
@@ -178,14 +179,31 @@ export class ShortcutManager {
       return; // 让默认行为执行文本全选
     }
 
-    // TODO: 根据当前面板处理全选
-    const currentPanel = this.app.currentPanel;
-    if (currentPanel === 'prompt') {
+    const id = contextStack.peek();
+
+    if (!id) {
+      return;
+    }
+
+    // 主面板：全选卡片
+    if (id === Constants.Ids.PROMPT_PANEL) {
       this.app.promptPanelManager?.selectAllVisibleItems?.();
       e.preventDefault();
-    } else if (currentPanel === 'image') {
+      return;
+    } else if (id === Constants.Ids.IMAGE_PANEL) {
       this.app.imagePanelManager?.selectAllVisibleItems?.();
       e.preventDefault();
+      return;
+    }
+
+    // 其他界面：调用 ctrla 方法，由界面自己决定是否处理
+    const element = document.getElementById(id);
+    if (element && typeof (element as any).ctrla === 'function') {
+      const handled = (element as any).ctrla();
+      // 只有界面处理了（返回 true 或 undefined）才阻止默认行为
+      if (handled !== false) {
+        e.preventDefault();
+      }
     }
   }
 

@@ -58,6 +58,13 @@ export class BatchToolbar {
     // 附加 close 方法用于 ESC 处理
     this.element.close = () => this.hide();
 
+    // 附加 ctrla 方法用于 Ctrl+A 处理
+    (this.element as any).ctrla = () => {
+      this.handleSelectAll();
+      // 返回 true 表示已处理
+      return true;
+    };
+
     // 更新计数显示
     this.updateCount(count);
 
@@ -106,6 +113,14 @@ export class BatchToolbar {
    */
   get visible(): boolean {
     return this.isVisible;
+  }
+
+  /**
+   * 处理全选操作
+   */
+  private handleSelectAll(): void {
+    // 触发 SelectAll 动作
+    this.onAction('SelectAll');
   }
 
   /**

@@ -771,6 +771,11 @@ export abstract class TagManager {
         floatingToolbar.querySelector('.batch-action-cancel')?.addEventListener('click', () => this.exitBatchMode());
 
         (floatingToolbar as any).close = () => this.exitBatchMode();
+        (floatingToolbar as any).ctrla = () => {
+          this.batchSelectAll();
+          // 返回 true 表示已处理
+          return true;
+        };
       } else {
         const countSpan = floatingToolbar.querySelector('.batch-toolbar-count');
         if (countSpan) {
@@ -936,6 +941,14 @@ export abstract class TagManager {
     if (modal) {
       modal.classList.add('active');
       (modal as any).close = () => this.closeManager();
+      (modal as any).ctrla = () => {
+        if (this.isBatchMode) {
+          // 批量模式下执行全选
+          this.batchSelectAll();
+        }
+        // 始终返回 true 阻止默认行为（非批量模式下 Ctrl+A 无效）
+        return true;
+      };
       contextStack.push(this.elements.modalId as ElementId);
     }
   }
