@@ -220,9 +220,14 @@ export class PromptPanelManager extends PanelManagerBase {
 
     const container = document.getElementById('promptGrid');
     const listContainer = document.getElementById('promptList');
+    const currentSearchQuery = this.getSearchQuery();
 
     if (filtered.length === 0) {
-      PanelRenderer.showEmptyState('promptGrid', 'promptEmptyState', '暂无提示词');
+      if (currentSearchQuery) {
+        PanelRenderer.showEmptyState('promptGrid', 'promptEmptyState', `未找到匹配"${currentSearchQuery}"的提示词`, '搜索无结果');
+      } else {
+        PanelRenderer.showEmptyState('promptGrid', 'promptEmptyState', '暂无提示词');
+      }
       if (listContainer) listContainer.style.display = 'none';
       return;
     }
