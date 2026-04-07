@@ -53,7 +53,7 @@ export class PromptSaveStrategy extends SaveStrategy {
   }
 
   async save(itemId: string, fieldName: string, value: unknown): Promise<SaveResult> {
-    const updateData: Record<string, unknown> = { [fieldName]: value ? 1 : 0 };
+    const updateData: Record<string, unknown> = { [fieldName]: value };
     await window.electronAPI.updatePrompt(itemId, updateData);
 
     // Update cache
@@ -92,7 +92,7 @@ export class ImageSaveStrategy extends SaveStrategy {
   }
 
   async save(itemId: string, fieldName: string, value: unknown): Promise<SaveResult> {
-    const updateData: Record<string, unknown> = { [fieldName]: value ? 1 : 0 };
+    const updateData: Record<string, unknown> = { [fieldName]: value };
     await window.electronAPI.updateImage(itemId, updateData);
 
     const cachedImage = cacheManager.getCachedImage(itemId);
