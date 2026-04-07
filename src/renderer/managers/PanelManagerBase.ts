@@ -23,6 +23,12 @@ interface IPanelManagerHost {
   showToast?: (message: string, type: string) => void;
   viewMode?: string;
   currentPanel?: string;
+  newPromptManager?: {
+    open: () => Promise<void>;
+  } | null;
+  imageUploadManager?: {
+    open: () => void;
+  } | null;
 }
 
 // 面板管理器基类选项接口

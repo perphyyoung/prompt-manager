@@ -226,7 +226,11 @@ export class Constants {
 
     // 工具栏按钮
     REFRESH_DATA_BTN: 'refreshDataBtn',
-    RELAUNCH_BTN: 'relaunchBtn'
+    RELAUNCH_BTN: 'relaunchBtn',
+
+    // 面板工具栏按钮
+    PROMPT_ADD_BTN: 'promptAddBtn',
+    IMAGE_ADD_BTN: 'imageAddBtn'
   } as const);
 }
 

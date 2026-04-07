@@ -6,9 +6,9 @@ function htmlVariablesPlugin() {
   return {
     name: 'py-html-variables-plugin',
     transformIndexHtml(html: string) {
-      const usedKeys: string[] = []
+      const usedKeys = new Set<string>()
       const result = html.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-        usedKeys.push(key)
+        usedKeys.add(key)
         const id = (Constants.Ids as Record<string, string>)[key]
         return id ?? match
       })

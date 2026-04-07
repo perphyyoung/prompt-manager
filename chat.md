@@ -36,7 +36,7 @@ composes 是 CSS Modules 语法, 当前项目怎样引入
 `SKILL.md` 按照规范来, 先测试失败的, 不要浪费时间在已经通过的, 最后再统一测试
 cnpm run test:e2e -- e2e/new-prompt-duplicate-prevention.spec.ts --headed 2>&1 | head -60
 cnpm run dist:win:nsis -> exe
-我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 需要输出可复制的详细版本和简洁版本的 git commit 信息
+我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 需要输出中文版本的可复制的详细版本和简洁版本的 git commit 信息
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
 
 ## 20260407

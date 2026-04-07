@@ -74,6 +74,15 @@ export class PromptPanelManager extends PanelManagerBase {
     this.bindTagFilterActionEvent();
     this.bindTagFilterToggleEvents();
     this.bindTagManagerEvents();
+    this.bindPromptToolbarEvents();
+  }
+
+  /**
+   * 绑定提示词工具栏事件
+   * @private
+   */
+  private bindPromptToolbarEvents(): void {
+    document.getElementById(Constants.Ids.PROMPT_ADD_BTN)?.addEventListener('click', () => this.app.newPromptManager?.open());
   }
 
   /**

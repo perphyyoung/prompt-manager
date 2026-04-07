@@ -73,6 +73,15 @@ export class ImagePanelManager extends PanelManagerBase {
     this.bindTagFilterActionEvent();
     this.bindTagFilterToggleEvents();
     this.bindTagManagerEvents();
+    this.bindImageToolbarEvents();
+  }
+
+  /**
+   * 绑定图像工具栏事件
+   * @private
+   */
+  private bindImageToolbarEvents(): void {
+    document.getElementById(Constants.Ids.IMAGE_ADD_BTN)?.addEventListener('click', () => this.app.imageUploadManager?.open());
   }
 
   /**
