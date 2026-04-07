@@ -158,7 +158,11 @@ export class Constants {
 
     // 标签筛选区 toggle 按钮 ID
     PROMPT_TAG_FILTER_TOGGLE_BTN: 'promptTagFilterToggleBtn',
-    IMAGE_TAG_FILTER_TOGGLE_BTN: 'imageTagFilterToggleBtn'
+    IMAGE_TAG_FILTER_TOGGLE_BTN: 'imageTagFilterToggleBtn',
+
+    // 标签管理器按钮 ID
+    PROMPT_TAG_MANAGER_BTN: 'promptTagManagerBtn',
+    IMAGE_TAG_MANAGER_BTN: 'imageTagManagerBtn'
   });
 
   // 字体选项

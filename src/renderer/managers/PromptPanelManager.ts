@@ -73,6 +73,7 @@ export class PromptPanelManager extends PanelManagerBase {
     this.filteredPrompts = [];
     this.bindTagFilterActionEvent();
     this.bindTagFilterToggleEvents();
+    this.bindTagManagerEvents();
   }
 
   /**
@@ -384,6 +385,20 @@ export class PromptPanelManager extends PanelManagerBase {
    */
   getTagFilterToggleBtnId(): string {
     return Constants.LocalStorageKey.PROMPT_TAG_FILTER_TOGGLE_BTN;
+  }
+
+  /**
+   * 获取标签管理器按钮 ID（实现基类抽象方法）
+   */
+  getTagManagerBtnId(): string {
+    return Constants.LocalStorageKey.PROMPT_TAG_MANAGER_BTN;
+  }
+
+  /**
+   * 打开标签管理器模态框（实现基类抽象方法）
+   */
+  protected openTagManagerModal(): void {
+    this.app.openPromptTagManagerModal?.();
   }
 
   /**

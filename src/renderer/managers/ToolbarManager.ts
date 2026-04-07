@@ -72,7 +72,6 @@ export class ToolbarManager {
     this.bindRefreshEvents();
     this.bindPromptToolbarEvents();
     this.bindImageToolbarEvents();
-    this.bindTagManagerEvents();
     this.bindModalEvents();
     this.bindCardInfoToggleEvent();
   }
@@ -126,15 +125,6 @@ export class ToolbarManager {
    */
   private bindImageToolbarEvents(): void {
     document.getElementById('imageAddBtn')?.addEventListener('click', () => this.app.imageUploadManager?.open());
-  }
-
-  /**
-   * 绑定标签管理器事件
-   * @private
-   */
-  private bindTagManagerEvents(): void {
-    document.getElementById('promptTagManagerBtn')?.addEventListener('click', () => this.app.openPromptTagManagerModal?.());
-    document.getElementById('imageTagManagerBtn')?.addEventListener('click', () => this.app.openImageTagManagerModal?.());
   }
 
   /**

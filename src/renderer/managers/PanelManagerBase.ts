@@ -11,14 +11,23 @@ import { MultiSelectConfig, IBatchOperationConfig } from '../config/MultiSelectC
 import { DialogService, DialogConfigItem } from '../services/index.ts';
 import { Constants } from '../../constants.ts';
 
-
-
 // 从 app.types.ts 导入 IEventBus
 import type { IEventBus } from '../app.types.ts';
 
+/**
+ * 面板管理器宿主接口
+ */
+interface IPanelManagerHost {
+  openPromptTagManagerModal?: () => void;
+  openImageTagManagerModal?: () => void;
+  showToast?: (message: string, type: string) => void;
+  viewMode?: string;
+  currentPanel?: string;
+}
+
 // 面板管理器基类选项接口
 interface PanelManagerBaseOptions {
-  app: unknown;
+  app: IPanelManagerHost;
   tagManager?: unknown;
   eventBus?: IEventBus;
   storagePrefix: string;
@@ -89,7 +98,7 @@ interface IUIConfig {
  */
 export abstract class PanelManagerBase {
   [key: string]: unknown;
-  app: unknown;
+  app: IPanelManagerHost;
   protected tagManager?: unknown;
   protected eventBus?: IEventBus;
   protected storagePrefix: string;
@@ -120,6 +129,19 @@ export abstract class PanelManagerBase {
   protected abstract getUIConfig(): IUIConfig;
   protected abstract getUpdateAPI(): (id: string, data: unknown) => Promise<void>;
   protected abstract getTagFilterToggleBtnId(): string;
+  protected abstract getTagManagerBtnId(): string;
+
+  /**
+   * 绑定标签管理器事件
+   */
+  protected bindTagManagerEvents(): void {
+    document.getElementById(this.getTagManagerBtnId())?.addEventListener('click', () => this.openTagManagerModal());
+  }
+
+  /**
+   * 打开标签管理器模态框（子类实现）
+   */
+  protected abstract openTagManagerModal(): void;
 
   /**
    * 绑定标签筛选收起/展开按钮事件
@@ -241,7 +263,7 @@ export abstract class PanelManagerBase {
    */
   protected isActivePanel(): boolean {
     // 通过 app.currentPanel 判断当前活动面板
-    const currentPanel = (this.app as { currentPanel?: string })?.currentPanel;
+    const currentPanel = this.app.currentPanel;
     if (!currentPanel) return false;
 
     // 根据 storagePrefix 判断面板类型
@@ -391,14 +413,14 @@ export abstract class PanelManagerBase {
           e.stopPropagation();
           const { content, hasContent } = config.getCopyContent(item);
           if (!hasContent) {
-            (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('没有可复制的内容', 'warning');
+            this.app.showToast?.('没有可复制的内容', 'warning');
             return;
           }
           try {
             await window.electronAPI.copyToClipboard(content);
-            (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('已复制到剪贴板', 'success');
+            this.app.showToast?.('已复制到剪贴板', 'success');
           } catch (error) {
-            (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('复制失败', 'error');
+            this.app.showToast?.('复制失败', 'error');
           }
         });
       }
@@ -448,14 +470,14 @@ export abstract class PanelManagerBase {
           e.stopPropagation();
           const { content, hasContent } = config.getCopyContent(itemData);
           if (!hasContent) {
-            (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('没有可复制的内容', 'warning');
+            this.app.showToast?.('没有可复制的内容', 'warning');
             return;
           }
           try {
             await window.electronAPI.copyToClipboard(content);
-            (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('已复制到剪贴板', 'success');
+            this.app.showToast?.('已复制到剪贴板', 'success');
           } catch (error) {
-            (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('复制失败', 'error');
+            this.app.showToast?.('复制失败', 'error');
           }
         });
       }
@@ -532,9 +554,9 @@ export abstract class PanelManagerBase {
           if (id) {
             try {
               await this.handleTagDrop(id, tagName, this.getUpdateAPI());
-              (this.app as { showToast?: (message: string, type: string) => void }).showToast?.('标签已添加', 'success');
+              this.app.showToast?.('标签已添加', 'success');
             } catch (error) {
-              (this.app as { showToast?: (message: string, type: string) => void }).showToast?.((error as Error).message, 'error');
+              this.app.showToast?.((error as Error).message, 'error');
             }
           }
         }
@@ -712,7 +734,7 @@ export abstract class PanelManagerBase {
   protected checkFilterChanged(): boolean {
     const currentTags = Array.from(this.selectedTags);
     const currentSearchQuery = this.getSearchQuery();
-    const currentViewMode = (this.app as { viewMode?: string }).viewMode;
+    const currentViewMode = this.app.viewMode;
 
     // 如果是第一次调用，初始化状态
     if (this._previousFilterState.selectedTags.length === 0 &&
@@ -802,7 +824,7 @@ export abstract class PanelManagerBase {
       filtered = filtered.filter((item: IPanelItem) => !item.isDeleted);
 
       // 根据 viewMode 过滤
-      const currentViewMode = (this.app as { viewMode?: string }).viewMode;
+      const currentViewMode = this.app.viewMode;
       if (currentViewMode === 'safe') {
         filtered = filtered.filter((item: IPanelItem) => item.isSafe !== 0);
       }
@@ -855,7 +877,7 @@ export abstract class PanelManagerBase {
       this.updateSelectionModeClass();
     } catch (error) {
       (window as { electronAPI?: { logError?: (context: string, message: string, data?: unknown) => void } }).electronAPI?.logError?.('PanelManagerBase.ts', `Failed to render ${this.getItemType()} list:`, error);
-      (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(`加载${this.getItemType()}失败`, 'error');
+      this.app.showToast?.(`加载${this.getItemType()}失败`, 'error');
     }
   }
 
@@ -893,7 +915,7 @@ export abstract class PanelManagerBase {
       const tagCounts = this.calculateTagCounts(tags);
 
       // 获取可见项目
-      const visibleItems = this.getItems().filter((item: IPanelItem) => !item.isDeleted && ((this.app as { viewMode?: string }).viewMode !== 'safe' || item.isSafe !== 0));
+      const visibleItems = this.getItems().filter((item: IPanelItem) => !item.isDeleted && (this.app.viewMode !== 'safe' || item.isSafe !== 0));
 
       // 计算特殊标签计数
       const specialTags = this.calculateSpecialTagCounts(visibleItems);
@@ -928,7 +950,7 @@ export abstract class PanelManagerBase {
    * @returns 标签计数对象
    */
   calculateTagCounts(tags: string[]): Record<string, number> {
-    const visibleItems = this.getItems().filter((item: IPanelItem) => !item.isDeleted && ((this.app as { viewMode?: string }).viewMode !== 'safe' || item.isSafe !== 0));
+    const visibleItems = this.getItems().filter((item: IPanelItem) => !item.isDeleted && (this.app.viewMode !== 'safe' || item.isSafe !== 0));
 
     const tagCounts: Record<string, number> = {};
     visibleItems.forEach((item: IPanelItem) => {
@@ -1374,12 +1396,12 @@ export abstract class PanelManagerBase {
         this.eventBus?.emit('imagesChanged');
       }
 
-      (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(
+      this.app.showToast?.(
         config.successMsg(selectedIds.length),
         'success'
       );
     } catch (error) {
-      (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(
+      this.app.showToast?.(
         config.errorMsg,
         'error'
       );
@@ -1423,12 +1445,12 @@ export abstract class PanelManagerBase {
         this.eventBus.emit(config.event, { ids: selectedIds, tags: tagInput });
       }
 
-      (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(
+      this.app.showToast?.(
         config.successMsg(selectedIds.length),
         'success'
       );
     } catch (error) {
-      (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(
+      this.app.showToast?.(
         config.errorMsg,
         'error'
       );
@@ -1462,12 +1484,12 @@ export abstract class PanelManagerBase {
         this.eventBus.emit(config.event, selectedIds);
       }
 
-      (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(
+      this.app.showToast?.(
         config.successMsg(selectedIds.length),
         'success'
       );
     } catch (error) {
-      (this.app as { showToast?: (message: string, type: string) => void }).showToast?.(
+      this.app.showToast?.(
         config.errorMsg,
         'error'
       );
