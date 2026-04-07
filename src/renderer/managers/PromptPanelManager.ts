@@ -598,7 +598,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 打开提示词编辑
    */
   openPromptDetail(prompt: IPrompt): void {
-    (this.app as PromptPanelManagerOptions['app']).openEditPromptModal(prompt, { filteredList: this.getItems() as IPrompt[] });
+    (this.app as PromptPanelManagerOptions['app']).openEditPromptModal(prompt, { filteredList: this.filteredPrompts });
   }
 }
 

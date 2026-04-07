@@ -616,7 +616,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 打开图像详情
    */
   openImageDetail(img: IImage): void {
-    (this.app as ImagePanelManagerOptions['app']).openImageDetailModal(img, { filteredList: this.getItems() as IImage[] });
+    (this.app as ImagePanelManagerOptions['app']).openImageDetailModal(img, { filteredList: this.filteredImages });
   }
 }
 
