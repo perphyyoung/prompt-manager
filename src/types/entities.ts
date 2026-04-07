@@ -77,6 +77,7 @@ export interface ITagService {
   getTagGroups(): Promise<{ id: number; name: string; sortOrder: number; tags: string[] }[]>;
   addTag(tag: string): Promise<unknown>;
   deleteTag(tag: string): Promise<unknown>;
+  deleteTags(tags: string[]): Promise<{ success: boolean; deleted: number }>;
   renameTag(oldTag: string, newTag: string): Promise<unknown>;
   assignTagToGroup(tag: string, groupId: number | null): Promise<unknown>;
   createGroup(name: string, sortOrder: number): Promise<unknown>;

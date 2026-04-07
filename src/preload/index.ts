@@ -119,6 +119,7 @@ interface IElectronAPI {
   addPromptTag: (tag: string) => Promise<void>;
   addPromptTags: (promptId: string, tagNames: string[]) => Promise<void>;
   deletePromptTag: (tag: string) => Promise<void>;
+  deletePromptTags: (tags: string[]) => Promise<{ success: boolean; deleted: number; tags: string[] }>;
   renamePromptTag: (oldTag: string, newTag: string) => Promise<void>;
 
   // 图像标签组管理
@@ -135,6 +136,7 @@ interface IElectronAPI {
   updateImage: (id: string, updates: Partial<IImage>) => Promise<void>;
   renameImageTag: (oldTag: string, newTag: string) => Promise<void>;
   deleteImageTag: (tag: string) => Promise<void>;
+  deleteImageTags: (tags: string[]) => Promise<{ success: boolean; deleted: number }>;
 
   // 图像回收站
   getImageTrash: () => Promise<Array<IImage & { deletedAt: string; type: string }>>;
@@ -264,6 +266,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   addPromptTag: (tag: string) => ipcRenderer.invoke('add-prompt-tag', tag),
   addPromptTags: (promptId: string, tagNames: string[]) => ipcRenderer.invoke('add-prompt-tags', promptId, tagNames),
   deletePromptTag: (tag: string) => ipcRenderer.invoke('delete-prompt-tag', tag),
+  deletePromptTags: (tags: string[]) => ipcRenderer.invoke('delete-prompt-tags', tags),
   renamePromptTag: (oldTag: string, newTag: string) => ipcRenderer.invoke('rename-prompt-tag', oldTag, newTag),
 
   // 图像标签组管理
@@ -280,6 +283,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateImage: (id: string, updates: Partial<IImage>) => ipcRenderer.invoke('update-image', id, updates),
   renameImageTag: (oldTag: string, newTag: string) => ipcRenderer.invoke('rename-image-tag', oldTag, newTag),
   deleteImageTag: (tag: string) => ipcRenderer.invoke('delete-image-tag', tag),
+  deleteImageTags: (tags: string[]) => ipcRenderer.invoke('delete-image-tags', tags),
 
   // ==================== 图像回收站 ====================
   getImageTrash: () => ipcRenderer.invoke('get-image-trash'),

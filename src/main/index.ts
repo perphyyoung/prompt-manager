@@ -874,10 +874,22 @@ ipcMain.handle('add-prompt-tags', async (event, promptId, tagNames) => {
 ipcMain.handle('delete-prompt-tag', async (event, tag) => {
   try {
     // 从数据库删除标签（会级联删除关联关系）
-    await db.run('DELETE FROM prompt_tags WHERE name = ?', [tag]);
+    await db.deletePromptTag(tag);
     return await db.getPromptTags();
   } catch (error) {
     logError('Main', 'Delete prompt tag error:', error);
+    throw error;
+  }
+});
+
+// 批量删除提示词标签
+ipcMain.handle('delete-prompt-tags', async (event, tags) => {
+  try {
+    const result = await db.deletePromptTags(tags);
+    const remainingTags = await db.getPromptTags();
+    return { ...result, tags: remainingTags };
+  } catch (error) {
+    logError('Main', 'Batch delete prompt tags error:', error);
     throw error;
   }
 });
@@ -1260,6 +1272,30 @@ ipcMain.handle('delete-image-tag', async (event, tag) => {
     return true;
   } catch (error) {
     logError('Main', 'Delete image tag error:', error);
+    throw error;
+  }
+});
+
+// 批量删除图像标签
+ipcMain.handle('delete-image-tags', async (event, tags) => {
+  try {
+    // 获取所有图像
+    const images = await db.getImages();
+
+    // 从每个图像中移除这些标签
+    for (const image of images) {
+      if (image.tags && image.tags.some(tag => tags.includes(tag))) {
+        const newTags = image.tags.filter(t => !tags.includes(t));
+        await db.updateImage(image.id, { tags: newTags });
+      }
+    }
+
+    // 从全局标签列表中批量删除
+    const result = await db.deleteImageTags(tags);
+
+    return result;
+  } catch (error) {
+    logError('Main', 'Batch delete image tags error:', error);
     throw error;
   }
 });

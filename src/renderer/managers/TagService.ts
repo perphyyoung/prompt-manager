@@ -170,6 +170,15 @@ export class TagService {
     return result;
   }
 
+  async deleteTags(tags: string[]): Promise<{ success: boolean; deleted: number }> {
+    const result = await (this.isPrompt
+      ? window.electronAPI.deletePromptTags(tags)
+      : window.electronAPI.deleteImageTags(tags));
+    this._clearCache(this.cacheKey);
+    this._clearCache(this.cacheKeyGroups);
+    return result;
+  }
+
   async assignTagToGroup(tag: string, groupId: number | null): Promise<any> {
     const result = await (this.isPrompt
       ? this.api.assignPromptTagToBelongGroup(tag, groupId)

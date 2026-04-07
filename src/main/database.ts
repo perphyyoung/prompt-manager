@@ -1278,6 +1278,29 @@ async function updatePromptTagGroupByTagName(tagName: string, groupId: number | 
 }
 
 /**
+ * 删除提示词标签
+ * @param name - 标签名称
+ */
+async function deletePromptTag(name: string): Promise<void> {
+  await run('DELETE FROM prompt_tags WHERE name = ?', [name]);
+}
+
+/**
+ * 批量删除提示词标签
+ * @param names - 标签名称数组
+ * @returns 删除结果
+ */
+async function deletePromptTags(names: string[]): Promise<{ success: boolean; deleted: number }> {
+  if (names.length === 0) return { success: true, deleted: 0 };
+
+  const placeholders = names.map(() => '?').join(',');
+  const sql = `DELETE FROM prompt_tags WHERE name IN (${placeholders})`;
+  const result = await run(sql, names);
+
+  return { success: true, deleted: result.changes || 0 };
+}
+
+/**
  * 标签配置定义
  */
 const TagConfig: TagConfigMap = {
@@ -2424,6 +2447,21 @@ async function deleteImageTag(name: string): Promise<void> {
 }
 
 /**
+ * 批量删除图像标签
+ * @param names - 标签名称数组
+ * @returns 删除结果
+ */
+async function deleteImageTags(names: string[]): Promise<{ success: boolean; deleted: number }> {
+  if (names.length === 0) return { success: true, deleted: 0 };
+
+  const placeholders = names.map(() => '?').join(',');
+  const sql = `DELETE FROM image_tags WHERE name IN (${placeholders})`;
+  const result = await run(sql, names);
+
+  return { success: true, deleted: result.changes || 0 };
+}
+
+/**
  * 分配图像标签到所属组
  * @param tagName - 标签名称
  * @param groupId - 标签组ID
@@ -2750,6 +2788,8 @@ export {
   getPromptTags,
   addPromptTag,
   addPromptTags,
+  deletePromptTag,
+  deletePromptTags,
   updatePromptTagGroupByTagName,
   // 通用标签操作
   renameTag,
@@ -2784,6 +2824,7 @@ export {
   addImageTag,
   addImageTags,
   deleteImageTag,
+  deleteImageTags,
   assignImageTagToBelongGroup,
   // 共享标签
   getAllTags,

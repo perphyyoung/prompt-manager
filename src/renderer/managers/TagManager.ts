@@ -816,17 +816,9 @@ export abstract class TagManager {
     if (!confirmed) return;
 
     try {
-      let successCount = 0;
-      for (const tag of this.selectedTags) {
-        try {
-          await this.service.deleteTag(tag);
-          successCount++;
-        } catch (error) {
-          window.electronAPI.logError('TagManager.ts', `Failed to delete tag ${tag}:`, error);
-        }
-      }
+      const result = await this.service.deleteTags(Array.from(this.selectedTags));
 
-      this.context.showToast(`已删除 ${successCount} 个标签`, 'success');
+      this.context.showToast(`已删除 ${result.deleted} 个标签`, 'success');
       this.exitBatchMode();
       await this.render();
       await this.refreshPanel();
