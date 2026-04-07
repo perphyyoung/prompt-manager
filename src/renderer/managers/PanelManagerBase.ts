@@ -215,52 +215,6 @@ export abstract class PanelManagerBase {
 
     // 绑定事件
     this.subscribeToEvents();
-
-    // 绑定键盘事件（批量操作快捷键）
-    this.bindKeyboardEvents();
-  }
-
-  /**
-   * 绑定键盘事件
-   * 支持批量操作的快捷键
-   * @deprecated 键盘事件处理已移至 ShortcutManager，由 ContextStackManager 管理上下文
-   */
-  protected bindKeyboardEvents(): void {
-    // Ctrl+A 和 Esc 处理已移至 ShortcutManager
-    // 保留此方法以便子类扩展
-  }
-
-  /**
-   * 检查是否有模态框打开
-   * @returns 是否有模态框打开
-   */
-  private isModalOpen(): boolean {
-    const modals = [
-      'imageDetailModal',
-      'promptDetailModal',
-      'imageTrashModal',
-      'promptTrashModal',
-      'settingsModal',
-      'statisticsModal',
-      'imageTagManagerModal',
-      'promptTagManagerModal'
-    ];
-    return modals.some(id => document.getElementById(id)?.classList.contains('active'));
-  }
-
-  /**
-   * 检查元素是否是文本输入元素
-   * @param element - 要检查的元素
-   * @returns 是否是文本输入元素
-   */
-  private isTextInputElement(element: HTMLElement): boolean {
-    const tagName = element.tagName;
-    if (tagName === 'TEXTAREA') return true;
-    if (tagName === 'INPUT') {
-      const inputType = (element as HTMLInputElement).type;
-      return ['text', 'search', 'url', 'email', 'password', 'number'].includes(inputType);
-    }
-    return element.isContentEditable;
   }
 
   /**

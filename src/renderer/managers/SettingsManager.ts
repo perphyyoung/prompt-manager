@@ -494,31 +494,6 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
   }
 
   /**
-   * 获取当前主题
-   * @returns 当前主题
-   */
-  getTheme(): string {
-    return this.currentTheme;
-  }
-
-  /**
-   * 获取视图模式
-   * @returns 视图模式
-   */
-  getViewMode(): string {
-    return this.app?.viewMode || Constants.ViewMode.SAFE;
-  }
-
-  /**
-   * 处理字体变更
-   * @param fontFamily - 字体值
-   * @private
-   */
-  private handleFontFamilyChange(fontFamily: string): void {
-    this.setFontFamily(fontFamily, true);
-  }
-
-  /**
    * 设置字体
    * @param fontFamily - 字体值
    * @param showToast - 是否显示提示
@@ -602,19 +577,6 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     if (viewModeSelect) {
       viewModeSelect.value = mode;
     }
-  }
-
-  /**
-   * 重置所有设置
-   */
-  async resetSettings(): Promise<void> {
-    // 重置主题
-    this.setTheme('light');
-
-    // 重置视图模式
-    await this.setViewMode('all');
-
-    this.app.showToast?.('设置已重置', 'success');
   }
 
   /**

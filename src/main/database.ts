@@ -378,30 +378,6 @@ const DB_CONFIG = {
 };
 
 /**
- * 设置慢查询阈值
- * @param ms - 阈值（毫秒）
- */
-export function setSlowQueryThreshold(ms: number): void {
-  if (ms <= 0) {
-    throw new Error('慢查询阈值必须大于 0');
-  }
-  // 使用 Object.defineProperty 覆盖 getter
-  Object.defineProperty(DB_CONFIG, 'SLOW_QUERY_THRESHOLD_MS', {
-    value: ms,
-    writable: true,
-    configurable: true
-  });
-}
-
-/**
- * 获取当前慢查询阈值
- * @returns 当前阈值（毫秒）
- */
-export function getSlowQueryThreshold(): number {
-  return DB_CONFIG.SLOW_QUERY_THRESHOLD_MS;
-}
-
-/**
  * 解析 SQLite 错误，转换为统一的 DatabaseError
  */
 function parseSQLiteError(err: Error, sql?: string, params?: any[]): DatabaseError {
