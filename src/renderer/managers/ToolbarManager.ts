@@ -18,7 +18,9 @@ interface IApp {
     renderView: () => Promise<void>;
     clearTagFilter: () => void;
   } | null;
-  openNewPromptPage?: () => void;
+  newPromptManager: {
+    open: () => Promise<void>;
+  } | null;
   openUploadImageModal?: () => void;
   openPromptTagManagerModal?: () => void;
   openImageTagManagerModal?: () => void;
@@ -114,7 +116,7 @@ export class ToolbarManager {
    * @private
    */
   private bindPromptToolbarEvents(): void {
-    document.getElementById('promptAddBtn')?.addEventListener('click', () => this.app.openNewPromptPage?.());
+    document.getElementById('promptAddBtn')?.addEventListener('click', () => this.app.newPromptManager?.open());
   }
 
   /**

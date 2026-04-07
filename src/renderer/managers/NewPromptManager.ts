@@ -175,7 +175,7 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
             isSafe: 1
           });
 
-          this.app.showToast('Prompt created successfully');
+          this.app.showToast('提示词创建成功');
 
           // 更新关联图像的缓存（因为数据库已更新 updated_at 和关联关系）
           for (const image of allImages) {
