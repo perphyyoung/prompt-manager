@@ -2,6 +2,7 @@
  * 工具栏管理器
  * 负责处理工具栏按钮事件和操作
  */
+import { Constants } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
 
 /**
@@ -107,8 +108,8 @@ export class ToolbarManager {
    * @private
    */
   private bindRefreshEvents(): void {
-    document.getElementById('reloadBtn')?.addEventListener('click', () => this.refreshData());
-    document.getElementById('refreshBtn')?.addEventListener('click', () => this.relaunchApp());
+    document.getElementById(Constants.Ids.REFRESH_DATA_BTN)?.addEventListener('click', () => this.refreshData());
+    document.getElementById(Constants.Ids.RELAUNCH_BTN)?.addEventListener('click', () => this.relaunchApp());
   }
 
   /**

@@ -222,7 +222,11 @@ export class Constants {
 
     // 标签自动完成下拉框
     PROMPT_DETAIL_TAG_AUTOCOMPLETE: 'promptDetailTagAutocomplete',
-    IMAGE_DETAIL_TAG_AUTOCOMPLETE: 'imageDetailTagAutocomplete'
+    IMAGE_DETAIL_TAG_AUTOCOMPLETE: 'imageDetailTagAutocomplete',
+
+    // 工具栏按钮
+    REFRESH_DATA_BTN: 'refreshDataBtn',
+    RELAUNCH_BTN: 'relaunchBtn'
   } as const);
 }
 

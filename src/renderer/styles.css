@@ -448,13 +448,13 @@ body * {
 }
 
 /* 重启按钮使用醒目的橙色 */
-#refreshBtn {
+#relaunchBtn {
   background: rgba(245, 158, 11, 0.1);
   border-color: rgba(245, 158, 11, 0.3);
   color: #f59e0b;
 }
 
-#refreshBtn:hover {
+#relaunchBtn:hover {
   background: #f59e0b;
   color: white;
   border-color: #f59e0b;
