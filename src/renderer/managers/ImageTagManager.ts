@@ -5,8 +5,8 @@ import { Constants, ElementId } from '../../constants.ts';
  * 图像标签管理器
  */
 export class ImageTagManager extends TagManager {
-  constructor(context: any) {
-    super('image', context);
+  constructor(app: any) {
+    super('image', app);
   }
 
   /**
@@ -41,7 +41,7 @@ export class ImageTagManager extends TagManager {
    * 获取图像面板管理器
    */
   protected getPanelManager(): any {
-    return this.context.imagePanelManager;
+    return this.app.imagePanelManager;
   }
 }
 

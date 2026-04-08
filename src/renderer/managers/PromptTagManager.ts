@@ -5,8 +5,8 @@ import { Constants, ElementId } from '../../constants.ts';
  * 提示词标签管理器
  */
 export class PromptTagManager extends TagManager {
-  constructor(context: any) {
-    super('prompt', context);
+  constructor(app: any) {
+    super('prompt', app);
   }
 
   /**
@@ -41,7 +41,7 @@ export class PromptTagManager extends TagManager {
    * 获取提示词面板管理器
    */
   protected getPanelManager(): any {
-    return this.context.promptPanelManager;
+    return this.app.promptPanelManager;
   }
 }
 

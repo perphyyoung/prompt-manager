@@ -4,42 +4,75 @@ import { LRUCache } from '../../utils/LRUCache.ts';
 import { TagUI } from './TagUI.ts';
 import { TagService } from './TagService.ts';
 import { TopGroupManager } from './TopGroupManager.ts';
-import { ITagWithGroup, ITagGroup } from '../../types/entities.ts';
+import { ITagWithGroup, ITagGroup, IImage, IPrompt } from '../../types/entities.ts';
 import { IEventStrategy, EventContext } from './Strategies/IEventStrategy.ts';
 import { MultiSelectManager, IToolbarConfig, IBatchOperationHandler } from './MultiSelectManager.ts';
 import { MultiSelectConfig, IBatchOperationConfig } from '../config/MultiSelectConfig.ts';
 import { DialogService, DialogConfigItem } from '../services/index.ts';
-import { Constants } from '../../constants.ts';
+import { Constants, Events } from '../../constants.ts';
 
 // 卡片大小限制常量
 const MIN_CARD_SIZE = 100;
 const MAX_CARD_SIZE = 350;
 
-// 从 app.types.ts 导入 IEventBus
 import type { IEventBus } from '../app.types.ts';
 
 /**
  * 面板管理器宿主接口
+ * 包含所有面板管理器需要的 app 属性
  */
 interface IPanelManagerHost {
+  // 通用属性
+  showToast: (message: string, type: string) => void;
+  viewMode: string;
+  currentPanel: string;
+  eventBus: IEventBus;
+
+  // 可选的模态框管理器
   openPromptTagManagerModal?: () => void;
   openImageTagManagerModal?: () => void;
-  showToast?: (message: string, type: string) => void;
-  viewMode?: string;
-  currentPanel?: string;
   newPromptManager?: {
     open: () => Promise<void>;
   } | null;
   imageUploadManager?: {
     open: () => void;
   } | null;
+
+  // 回收站和统计
+  trashManager?: { loadTrash: () => Promise<void> } | null;
+  renderStatistics?: () => Promise<void>;
+
+  // 缓存
+  imageCache?: LRUCache<IImage>;
+  promptCache?: LRUCache<IPrompt>;
+
+  // 搜索排序
+  searchSortManager?: {
+    getImageSearchQuery?: () => string;
+    getPromptSearchQuery?: () => string;
+  } | null;
+
+  // 模态框打开方法
+  openImageDetailModal?: (image: IImage, options: { filteredList: IImage[] }) => void;
+  openEditPromptModal?: (prompt: IPrompt, options: { filteredList: IPrompt[] }) => void;
+
+  // 工具提示
+  promptHoverTooltip?: {
+    bind: (selector: string, options: {
+      getContent: (element: Element) => string;
+      getImageId: (element: Element) => string | null;
+      delay: number;
+    }) => void;
+  } | null;
+
+  // 图像查找
+  findImageById?: (imageId: string, allImages?: Array<{ id: string }> | null) => { id: string } | null;
 }
 
 // 面板管理器基类选项接口
 interface PanelManagerBaseOptions {
   app: IPanelManagerHost;
   tagManager?: unknown;
-  eventBus?: IEventBus;
   storagePrefix: string;
   defaultCardSize?: number;
   onSelectionChange?: () => void;
@@ -110,7 +143,6 @@ export abstract class PanelManagerBase {
   [key: string]: unknown;
   app: IPanelManagerHost;
   protected tagManager?: unknown;
-  protected eventBus?: IEventBus;
   protected storagePrefix: string;
   protected defaultCardSize: number;
   protected onSelectionChange?: () => void;
@@ -169,7 +201,7 @@ export abstract class PanelManagerBase {
     }
     this.app = options.app;
     this.tagManager = options.tagManager;
-    this.eventBus = options.eventBus;
+    // eventBus 通过 app 访问
     this.storagePrefix = options.storagePrefix;
     this.defaultCardSize = options.defaultCardSize || 200;
     this.onSelectionChange = options.onSelectionChange;
@@ -210,8 +242,7 @@ export abstract class PanelManagerBase {
         label: multiSelectConfig.label,
         buttons: multiSelectConfig.buttons
       } : undefined,
-      handler: batchHandler,
-      eventBus: this.eventBus
+      handler: batchHandler
     });
 
     // 初始化工具栏
@@ -1370,15 +1401,15 @@ export abstract class PanelManagerBase {
       }
 
       // 发送事件
-      if (config.event && this.eventBus) {
-        this.eventBus.emit(config.event, selectedIds);
+      if (config.event) {
+        this.app.eventBus.emit(config.event, selectedIds);
       }
 
       // 通知对方面板刷新（关联关系已解除）
       if (configKey === 'image') {
-        this.eventBus?.emit('promptsChanged');
+        this.app.eventBus.emit(Events.PROMPTS_CHANGED);
       } else {
-        this.eventBus?.emit('imagesChanged');
+        this.app.eventBus.emit(Events.IMAGES_CHANGED);
       }
 
       this.app.showToast?.(
@@ -1426,8 +1457,8 @@ export abstract class PanelManagerBase {
       await this.refreshAfterUpdate();
 
       // 发送事件
-      if (config.event && this.eventBus) {
-        this.eventBus.emit(config.event, { ids: selectedIds, tags: tagInput });
+      if (config.event) {
+        this.app.eventBus.emit(config.event, { ids: selectedIds, tags: tagInput });
       }
 
       this.app.showToast?.(
@@ -1465,8 +1496,8 @@ export abstract class PanelManagerBase {
       await this.refreshAfterUpdate();
 
       // 发送事件
-      if (config.event && this.eventBus) {
-        this.eventBus.emit(config.event, selectedIds);
+      if (config.event) {
+        this.app.eventBus.emit(config.event, selectedIds);
       }
 
       this.app.showToast?.(

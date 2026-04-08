@@ -41,16 +41,12 @@ export interface IMultiSelectManagerOptions {
   onChange: () => void | Promise<void>;
   toolbarConfig?: IToolbarConfig;
   handler?: IBatchOperationHandler;
-  eventBus?: {
-    on: (event: string, callback: (...args: unknown[]) => void) => () => void;
-  };
 }
 
 export class MultiSelectManager {
   private state: IMultiSelectState;
   private onChange: () => void | Promise<void>;
   private handler?: IBatchOperationHandler;
-  private eventBus?: IMultiSelectManagerOptions['eventBus'];
 
   private toolbar: BatchToolbar | null = null;
 
@@ -61,7 +57,6 @@ export class MultiSelectManager {
     };
     this.onChange = options.onChange;
     this.handler = options.handler;
-    this.eventBus = options.eventBus;
 
     // 初始化工具栏
     if (options.toolbarConfig) {

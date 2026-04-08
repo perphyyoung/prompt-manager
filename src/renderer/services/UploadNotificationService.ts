@@ -1,3 +1,5 @@
+import { Events } from '../../constants.ts';
+
 /**
  * 上传通知服务
  * 负责处理上传相关的用户通知和事件触发
@@ -19,7 +21,7 @@ interface NotifyOptions {
 // 应用接口（简化）
 interface IApp {
   showToast?: (message: string, type?: string, duration?: number) => void;
-  eventBus?: {
+  eventBus: {
     emit: (event: string, data?: unknown) => void;
   };
 }
@@ -52,7 +54,7 @@ export class UploadNotificationService {
     }
 
     if (refresh) {
-      this.app.eventBus?.emit('imagesChanged');
+      this.app.eventBus.emit(Events.IMAGES_CHANGED);
     }
 
     return result;

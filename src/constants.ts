@@ -243,3 +243,32 @@ export class Constants {
 
 // 类型导出
 export type ElementId = typeof Constants.Ids[keyof typeof Constants.Ids];
+
+/**
+ * 事件名称常量
+ * 集中管理所有 EventBus 事件名称，避免魔法字符串
+ */
+export class Events {
+  // ========== 数据变更事件 ==========
+
+  /** 提示词数据发生变化（增删改） */
+  static readonly PROMPTS_CHANGED = 'promptsChanged';
+
+  /** 图像数据发生变化（增删改） */
+  static readonly IMAGES_CHANGED = 'imagesChanged';
+
+  // ========== 视图导航事件 ==========
+
+  /** 视图发生变化（面板切换、模态框开关等） */
+  static readonly VIEW_CHANGED = 'viewChanged';
+
+  /** 所有事件名称集合（用于调试和验证） */
+  static readonly ALL_EVENTS = [
+    Events.PROMPTS_CHANGED,
+    Events.IMAGES_CHANGED,
+    Events.VIEW_CHANGED,
+  ] as const;
+}
+
+/** 事件名称类型 */
+export type EventName = typeof Events.ALL_EVENTS[number];

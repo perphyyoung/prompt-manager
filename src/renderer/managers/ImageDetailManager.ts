@@ -6,7 +6,7 @@ import { DetailViewManager, ISimpleTagManager } from './DetailViewManager.ts';
 import { HtmlUtils, validateFileName, isSameId, cacheManager } from '../../utils/index.ts';
 import { SaveManager, ImageSaveStrategy } from '../renderer_utils/index.ts';
 import { SimpleTagManagerFactory } from './SimpleTagManagerFactory.ts';
-import { Constants } from '../../constants.ts';
+import { Constants, Events } from '../../constants.ts';
 import { TagAutocomplete, DialogService, DialogConfig } from '../services/index.ts';
 import { IImage, IPrompt } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
@@ -43,9 +43,9 @@ interface IApp {
   imageCache: LRUCache<IImage>;
   promptPanelManager: IRefreshablePanelManager | null;
   imagePanelManager: IRefreshablePanelManager | null;
-  eventBus?: {
+  eventBus: {
     emit: (event: string) => void;
-  } | null;
+  };
   showToast: (message: string, type?: string) => void;
   autoResizeTextarea: (element: HTMLElement) => void;
   promptDetailManager?: {
@@ -78,7 +78,7 @@ export class ImageDetailManager extends DetailViewManager {
 
   constructor(options: IImageDetailManagerOptions) {
     super({
-      app: options.app as unknown as { constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean }; showToast: (message: string, type?: string) => void; [key: string]: unknown },
+      app: options.app as unknown as { constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean }; showToast: (message: string, type?: string) => void; eventBus: { emit: (event: string, data?: unknown) => void }; [key: string]: unknown },
       modalId: 'imageDetailModal',
       closeBtnId: 'imageDetailCloseBtn'
     });
@@ -596,8 +596,8 @@ export class ImageDetailManager extends DetailViewManager {
       }
 
       // 通过事件通知刷新，避免直接调用导致的重复刷新
-      app.eventBus?.emit('promptsChanged');
-      app.eventBus?.emit('imagesChanged');
+      app.eventBus.emit(Events.PROMPTS_CHANGED);
+      app.eventBus.emit(Events.IMAGES_CHANGED);
       app.showToast('关联已解除', 'success');
     } catch (error) {
       window.electronAPI.logError('ImageDetailManager.ts', 'Failed to unlink image from prompt:', error);
@@ -636,7 +636,7 @@ export class ImageDetailManager extends DetailViewManager {
       itemId: image.id,
       onAfterSave: async () => {
         // 通过事件通知刷新，避免直接调用导致的重复刷新
-        app.eventBus?.emit('imagesChanged');
+        app.eventBus.emit(Events.IMAGES_CHANGED);
       }
     });
 

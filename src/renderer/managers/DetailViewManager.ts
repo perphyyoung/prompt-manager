@@ -1,4 +1,4 @@
-import { Constants, ElementId } from '../../constants.ts';
+import { Constants, ElementId, Events } from '../../constants.ts';
 import { ListNavigator } from '../../utils/index.ts';
 import { EditableTagList } from '../components/index.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
@@ -9,7 +9,7 @@ interface DetailViewManagerOptions {
   app: {
     constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean };
     showToast: (message: string, type?: string) => void;
-    eventBus?: {
+    eventBus: {
       emit: (event: string, data?: unknown) => void;
     };
     [key: string]: unknown;
@@ -192,7 +192,7 @@ export class DetailViewManager {
     contextStack.push(this.modalId as ElementId);
 
     // 发布视图变化事件，通知其他组件清理多选工具栏
-    this.app.eventBus?.emit('viewChanged', { view: 'detail', modalId: this.modalId });
+    this.app.eventBus.emit(Events.VIEW_CHANGED, { view: 'detail', modalId: this.modalId });
   }
 
   /**

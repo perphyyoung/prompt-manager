@@ -1,15 +1,16 @@
 import { DelaySaveStrategy } from '../services/index.ts';
 import { ImagePreviewManager } from './ImagePreviewManager.ts';
 import { DuplicatePreventionMixin } from '../../utils/index.ts';
+import { Events } from '../../constants.ts';
 
 /**
  * App 类型定义
  */
 interface IApp {
   showToast: (message: string, type?: string) => void;
-  eventBus?: {
+  eventBus: {
     emit: (event: string) => void;
-  } | null;
+  };
 }
 
 /**
@@ -53,7 +54,7 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
   constructor(options: IImageUploadManagerOptions) {
     super();
     this.app = options.app;
-    this.strategy = new DelaySaveStrategy(this.app as unknown as Record<string, unknown>);
+    this.strategy = new DelaySaveStrategy(this.app as unknown as { eventBus: { emit: (event: string) => void }; [key: string]: unknown });
     this.previewManager = new ImagePreviewManager({
       containerId: 'modalImagePreviewList',
       onRemove: (index: number) => this.handleRemoveImage(index)
@@ -237,9 +238,9 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
     }
 
     // 按需刷新：始终刷新图像列表，有提示词时刷新提示词列表
-    this.app.eventBus?.emit('imagesChanged');
+    this.app.eventBus.emit(Events.IMAGES_CHANGED);
     if (shouldRefreshPrompts) {
-      this.app.eventBus?.emit('promptsChanged');
+      this.app.eventBus.emit(Events.PROMPTS_CHANGED);
     }
     this.close();
   }

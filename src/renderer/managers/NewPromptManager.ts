@@ -2,6 +2,7 @@ import { DialogService, DialogConfig, DelaySaveStrategy } from '../services/inde
 import { ImagePreviewManager } from './ImagePreviewManager.ts';
 import { cacheManager, DuplicatePreventionMixin } from '../../utils/index.ts';
 import { IImage } from '../../types/entities.ts';
+import { Events } from '../../constants.ts';
 
 /**
  * App 类型定义
@@ -9,9 +10,9 @@ import { IImage } from '../../types/entities.ts';
 interface IApp {
   showToast: (message: string, type?: string) => void;
   autoResizeTextarea: (element: HTMLElement) => void;
-  eventBus?: {
+  eventBus: {
     emit: (event: string) => void;
-  } | null;
+  };
 }
 
 /**
@@ -62,7 +63,7 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
   constructor(options: INewPromptManagerOptions) {
     super();
     this.app = options.app;
-    this.strategy = new DelaySaveStrategy(this.app as unknown as Record<string, unknown>);
+    this.strategy = new DelaySaveStrategy(this.app as unknown as { eventBus: { emit: (event: string) => void }; [key: string]: unknown });
     this.previewManager = new ImagePreviewManager({
       containerId: 'newPromptImagePreviewList',
       onRemove: (index: number) => this.handleRemoveImage(index)
@@ -187,9 +188,9 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
 
           // 按需刷新：有图像时刷新图像列表，始终刷新提示词列表
           if (allImages.length > 0) {
-            this.app.eventBus?.emit('imagesChanged');
+            this.app.eventBus.emit(Events.IMAGES_CHANGED);
           }
-          this.app.eventBus?.emit('promptsChanged');
+          this.app.eventBus.emit(Events.PROMPTS_CHANGED);
           return { success: true };
         } catch (error) {
           window.electronAPI.logError('NewPromptManager.ts', 'Failed to create prompt:', error);

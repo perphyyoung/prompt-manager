@@ -2,7 +2,7 @@ import { cacheManager } from '../../utils/index.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
 import type { IEventBus } from '../app.types.ts';
 import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig, UnifiedListRenderer, PromptListConfig } from './SharedComponents/index.ts';
-import { Constants } from '../../constants.ts';
+import { Constants, Events } from '../../constants.ts';
 import { DialogConfig } from '../services/index.ts';
 
 import { IPrompt } from '../../types/entities.ts';
@@ -17,7 +17,7 @@ interface PromptPanelManagerOptions {
     searchSortManager?: { getPromptSearchQuery: () => string } | null;
     openEditPromptModal: (prompt: IPrompt, options: { filteredList: IPrompt[] }) => void;
     showToast: (message: string, type: string) => void;
-    emit: (event: string, data?: unknown) => void;
+    eventBus: IEventBus;
     currentPanel: string;
     viewMode: string;
     trashManager?: { loadTrash: () => Promise<void> } | null;
@@ -33,7 +33,6 @@ interface PromptPanelManagerOptions {
   };
   tagManager?: unknown;
   saveManager?: unknown;
-  eventBus?: IEventBus;
 }
 
 interface ImageInfo {
@@ -65,7 +64,6 @@ export class PromptPanelManager extends PanelManagerBase {
     super({
       app: options.app,
       tagManager: options.tagManager,
-      eventBus: options.eventBus,
       storagePrefix: 'prompt',
       defaultCardSize: 260
     });
@@ -484,25 +482,25 @@ export class PromptPanelManager extends PanelManagerBase {
         prompt.isDeleted = true;
       }
       await this.renderView();
-      (this.app as PromptPanelManagerOptions['app']).emit('promptsChanged', { prompts: this.prompts });
+      this.app.eventBus.emit(Events.PROMPTS_CHANGED, { prompts: this.prompts });
 
       // 通知图像面板刷新（关联的图像已移除该提示词）
-      (this.app as PromptPanelManagerOptions['app']).emit('imagesChanged');
+      this.app.eventBus.emit(Events.IMAGES_CHANGED);
 
       // 刷新回收站
-      if ((this.app as PromptPanelManagerOptions['app']).trashManager) {
-        await (this.app as PromptPanelManagerOptions['app']).trashManager!.loadTrash();
+      if (this.app.trashManager) {
+        await this.app.trashManager.loadTrash();
       }
 
       // 刷新统计界面
-      if ((this.app as PromptPanelManagerOptions['app']).currentPanel === 'statistics') {
-        await (this.app as PromptPanelManagerOptions['app']).renderStatistics?.();
+      if (this.app.currentPanel === 'statistics') {
+        await this.app.renderStatistics?.();
       }
 
-      (this.app as PromptPanelManagerOptions['app']).showToast('提示词已删除', 'success');
+      this.app.showToast('提示词已删除', 'success');
     } catch (error) {
       window.electronAPI.logError('PromptPanelManager.ts', 'Failed to delete prompt:', error);
-      (this.app as PromptPanelManagerOptions['app']).showToast('删除失败：' + (error as Error).message, 'error');
+      this.app.showToast('删除失败：' + (error as Error).message, 'error');
     }
   }
 
@@ -568,8 +566,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 订阅事件（重写基类方法）
    */
   subscribeToEvents(): void {
-    if (!this.eventBus) return;
-    this.eventBus.on('promptsChanged', () => {
+    this.app.eventBus.on(Events.PROMPTS_CHANGED, () => {
       this.refreshAfterUpdate();
     });
   }

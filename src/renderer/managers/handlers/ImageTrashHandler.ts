@@ -1,5 +1,5 @@
 import { localTime } from '../../../utils/index.ts';
-import { Constants } from '../../../constants.ts';
+import { Constants, Events } from '../../../constants.ts';
 import type { CacheUpdateData, TrashItem } from './TrashHandler.ts';
 
 /**
@@ -10,7 +10,7 @@ export class ImageTrashHandler {
   readonly type: string = Constants.TrashType.IMAGE;
   readonly containerId: string = 'imageTrashList';
   readonly label: string = '图像';
-  readonly eventName: string = 'imagesChanged';
+  readonly eventName: string = Events.IMAGES_CHANGED;
 
   // ========== API 操作 ==========
 

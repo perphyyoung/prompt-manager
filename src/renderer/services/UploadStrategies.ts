@@ -21,6 +21,10 @@ interface UploadResult {
 
 // 应用接口（简化）
 interface IApp {
+  showToast?: (message: string, type?: string, duration?: number) => void;
+  eventBus: {
+    emit: (event: string, data?: unknown) => void;
+  };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }

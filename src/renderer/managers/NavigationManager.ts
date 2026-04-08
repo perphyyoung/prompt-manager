@@ -4,7 +4,7 @@
  */
 
 import { contextStack } from './ContextStackManager.ts';
-import { Constants } from '../../constants.ts';
+import { Constants, Events } from '../../constants.ts';
 import { logInfo } from '@/main/logger.ts';
 
 // 面板配置接口
@@ -36,7 +36,7 @@ interface IApp {
   } | null;
   updatePromptViewButtons: (viewMode: string) => void;
   updateImageViewButtons: (viewMode: string) => void;
-  eventBus?: {
+  eventBus: {
     emit: (event: string, data?: unknown) => void;
   };
 }
@@ -166,7 +166,7 @@ export class NavigationManager {
 
     // 发布视图变化事件，通知所有组件清理多选工具栏
     window.electronAPI.logDebug('NavigationManager', `emit viewChanged, panel: ${panelName}, current: ${this.currentPanel}`);
-    this.app.eventBus?.emit('viewChanged', { view: 'panel', panel: panelName });
+    this.app.eventBus.emit(Events.VIEW_CHANGED, { view: 'panel', panel: panelName });
 
     // 隐藏所有面板
     this.panels.forEach((panel) => {

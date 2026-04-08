@@ -5,7 +5,7 @@
 import { DetailViewManager, ISimpleTagManager } from './DetailViewManager.ts';
 import { validateTitle, cacheManager } from '../../utils/index.ts';
 import { SaveManager, PromptSaveStrategy } from '../renderer_utils/index.ts';
-import { Constants } from '../../constants.ts';
+import { Constants, Events } from '../../constants.ts';
 import { DirectSaveStrategy, TagAutocomplete } from '../services/index.ts';
 import { SimpleTagManagerFactory } from './SimpleTagManagerFactory.ts';
 import { ImageContextMenuManager } from './ImageContextMenuManager.ts';
@@ -48,9 +48,9 @@ interface IApp {
   isFromDetailJump: boolean;
   currentImagesCache: LRUCache<IImage>;
   promptPanelManager: IRefreshablePanelManager | null;
-  eventBus?: {
+  eventBus: {
     emit: (event: string) => void;
-  } | null;
+  };
   showToast: (message: string, type?: string) => void;
   autoResizeTextarea: (element: HTMLElement) => void;
   imageSelectorManager?: {
@@ -80,7 +80,7 @@ export class PromptDetailManager extends DetailViewManager {
    */
   constructor(options: IPromptDetailManagerOptions) {
     super({
-      app: options.app as unknown as { constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean }; showToast: (message: string, type?: string) => void; [key: string]: unknown },
+      app: options.app as unknown as { constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean }; showToast: (message: string, type?: string) => void; eventBus: { emit: (event: string, data?: unknown) => void }; [key: string]: unknown },
       modalId: 'promptDetailModal',
       closeBtnId: 'promptDetailCloseBtn'
     });
@@ -88,7 +88,7 @@ export class PromptDetailManager extends DetailViewManager {
     this.tagManager = options.tagRegistry;
 
     // 图像上传策略（直接保存，适合频繁操作）
-    this.uploadStrategy = new DirectSaveStrategy(this.app as unknown as Record<string, unknown>);
+    this.uploadStrategy = new DirectSaveStrategy(this.app as unknown as { eventBus: { emit: (event: string, data?: unknown) => void }; [key: string]: unknown });
 
     // 防抖标志：防止重复打开文件对话框
     this.isOpeningDialog = false;
@@ -327,8 +327,8 @@ export class PromptDetailManager extends DetailViewManager {
       itemId: prompt.id,
       onAfterSave: async () => {
         // 通过事件通知刷新，避免直接调用导致的重复刷新
-        app.eventBus?.emit('promptsChanged');
-        app.eventBus?.emit('imagesChanged');
+        app.eventBus.emit(Events.PROMPTS_CHANGED);
+        app.eventBus.emit(Events.IMAGES_CHANGED);
       }
     });
 
@@ -858,8 +858,8 @@ export class PromptDetailManager extends DetailViewManager {
       const updates = { [field]: value };
       await window.electronAPI.updatePrompt(promptId, updates);
 
-      app.eventBus?.emit('imagesChanged');
-      app.eventBus?.emit('promptsChanged');
+      app.eventBus.emit(Events.IMAGES_CHANGED);
+      app.eventBus.emit(Events.PROMPTS_CHANGED);
     } catch (error) {
       window.electronAPI.logError('PromptDetailManager', `Failed to save prompt field: ${error instanceof Error ? error.message : String(error)}`, error);
     }

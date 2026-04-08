@@ -1,5 +1,5 @@
 import { localTime } from '../../../utils/index.ts';
-import { Constants } from '../../../constants.ts';
+import { Constants, Events } from '../../../constants.ts';
 import type { CacheUpdateData, TrashItem } from './TrashHandler.ts';
 
 /**
@@ -10,7 +10,7 @@ export class PromptTrashHandler {
   readonly type: string = Constants.TrashType.PROMPT;
   readonly containerId: string = 'promptTrashList';
   readonly label: string = '提示词';
-  readonly eventName: string = 'promptsChanged';
+  readonly eventName: string = Events.PROMPTS_CHANGED;
 
   // ========== API 操作 ==========
 

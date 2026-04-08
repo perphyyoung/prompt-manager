@@ -1,16 +1,29 @@
 /**
  * 事件总线
  * 用于模块间通信和解耦
+ * 单例模式实现
  */
 
 // 事件回调函数类型
 type EventCallback<T = unknown> = (data: T) => void;
 
 class EventBus {
+  private static instance: EventBus;
   private events: Map<string, Set<EventCallback>>;
 
-  constructor() {
+  private constructor() {
     this.events = new Map();
+  }
+
+  /**
+   * 获取单例实例
+   * @returns EventBus 单例
+   */
+  static getInstance(): EventBus {
+    if (!EventBus.instance) {
+      EventBus.instance = new EventBus();
+    }
+    return EventBus.instance;
   }
 
   /**
@@ -94,4 +107,5 @@ class EventBus {
   }
 }
 
-export default EventBus;
+// 导出单例实例
+export default EventBus.getInstance();

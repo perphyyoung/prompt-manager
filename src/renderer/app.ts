@@ -3,7 +3,7 @@
  * 作为协调器，整合各个面板管理器
  */
 
-import { Constants } from '../constants.ts';
+import { Constants, Events } from '../constants.ts';
 import { DialogService, DialogConfig } from './services/index.ts';
 import {
   PromptPanelManager, ImagePanelManager,
@@ -17,7 +17,8 @@ import {
   StatisticsManager
 } from './managers/index.ts';
 
-import { EventBus, HtmlUtils, isSameId, cacheManager } from '../utils/index.ts';
+import eventBus from '../utils/EventBus.ts';
+import { HtmlUtils, isSameId, cacheManager } from '../utils/index.ts';
 import { HoverTooltipManager, ShortcutManager, SaveManager, PromptSaveStrategy } from './renderer_utils/index.ts';
 import type { ITagRegistry, IPrompt, IImage } from '../types/entities.ts';
 import type {
@@ -136,8 +137,8 @@ class PromptManager implements IApp {
     this.imageSelectorSortBy = localStorage.getItem(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_BY) || 'updatedAt';
     this.imageSelectorSortOrder = localStorage.getItem(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_ORDER) || 'desc';
 
-    // 事件总线
-    this.eventBus = new EventBus();
+    // 事件总线（单例）
+    this.eventBus = eventBus;
 
     // 当前面板状态 (由 NavigationManager 管理)
     this.currentPanel = 'prompt'; // 默认打开提示词面板
@@ -242,15 +243,13 @@ class PromptManager implements IApp {
         onAfterSave: () => {
           this.showToast('保存成功', 'success');
         }
-      }),
-      eventBus: this.eventBus
+      })
     });
 
     // 初始化图像面板管理器
     this.imagePanelManager = new ImagePanelManager({
       app: this as IApp,
-      tagManager: this.imageTagManager,
-      eventBus: this.eventBus
+      tagManager: this.imageTagManager
     });
 
     // ========== 4. 功能管理器 ==========
@@ -837,8 +836,8 @@ class PromptManager implements IApp {
       }
 
       // 通过事件通知刷新，避免直接调用导致的重复刷新
-      this.eventBus.emit('promptsChanged');
-      this.eventBus.emit('imagesChanged');
+      this.eventBus.emit(Events.PROMPTS_CHANGED);
+      this.eventBus.emit(Events.IMAGES_CHANGED);
     } finally {
       this._saveLocks?.delete(lockKey);
     }

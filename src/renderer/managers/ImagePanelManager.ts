@@ -2,7 +2,7 @@ import { cacheManager } from '../../utils/index.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
 import type { IEventBus } from '../app.types.ts';
 import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig, UnifiedListRenderer, ImageListConfig } from './SharedComponents/index.ts';
-import { Constants } from '../../constants.ts';
+import { Constants, Events } from '../../constants.ts';
 import { DialogConfig } from '../services/index.ts';
 
 import { IImage } from '../../types/entities.ts';
@@ -17,7 +17,7 @@ interface ImagePanelManagerOptions {
     searchSortManager?: { getImageSearchQuery: () => string } | null;
     openImageDetailModal: (image: IImage, options: { filteredList: IImage[] }) => void;
     showToast: (message: string, type: string) => void;
-    emit: (event: string, data?: unknown) => void;
+    eventBus: IEventBus;
     currentPanel: string;
     viewMode: string;
     trashManager?: { loadTrash: () => Promise<void> } | null;
@@ -31,7 +31,6 @@ interface ImagePanelManagerOptions {
     } | null;
   };
   tagManager?: unknown;
-  eventBus?: IEventBus;
 }
 
 interface PromptRef {
@@ -65,7 +64,6 @@ export class ImagePanelManager extends PanelManagerBase {
     super({
       app: options.app,
       tagManager: options.tagManager,
-      eventBus: options.eventBus,
       storagePrefix: 'image',
       defaultCardSize: 180
     });
@@ -491,25 +489,25 @@ export class ImagePanelManager extends PanelManagerBase {
         image.isDeleted = true;
       }
       await this.renderView();
-      (this.app as ImagePanelManagerOptions['app']).emit('imagesChanged', { images: this.images });
+      this.app.eventBus.emit(Events.IMAGES_CHANGED, { images: this.images });
 
       // 通知提示词面板刷新（关联的提示词已移除该图像）
-      (this.app as ImagePanelManagerOptions['app']).emit('promptsChanged');
+      this.app.eventBus.emit(Events.PROMPTS_CHANGED);
 
       // 刷新回收站
-      if ((this.app as ImagePanelManagerOptions['app']).trashManager) {
-        await (this.app as ImagePanelManagerOptions['app']).trashManager!.loadTrash();
+      if (this.app.trashManager) {
+        await this.app.trashManager.loadTrash();
       }
 
       // 刷新统计界面
-      if ((this.app as ImagePanelManagerOptions['app']).currentPanel === 'statistics') {
-        await (this.app as ImagePanelManagerOptions['app']).renderStatistics?.();
+      if (this.app.currentPanel === 'statistics') {
+        await this.app.renderStatistics?.();
       }
 
-      (this.app as ImagePanelManagerOptions['app']).showToast('图像已移至回收站', 'success');
+      this.app.showToast('图像已移至回收站', 'success');
     } catch (error) {
       window.electronAPI.logError('ImagePanelManager.ts', 'Failed to delete image:', error);
-      (this.app as ImagePanelManagerOptions['app']).showToast('删除失败：' + (error as Error).message, 'error');
+      this.app.showToast('删除失败：' + (error as Error).message, 'error');
     }
   }
 
@@ -586,8 +584,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 订阅事件（重写基类方法）
    */
   subscribeToEvents(): void {
-    if (!this.eventBus) return;
-    this.eventBus.on('imagesChanged', () => {
+    this.app.eventBus.on(Events.IMAGES_CHANGED, () => {
       this.refreshAfterUpdate();
     });
   }

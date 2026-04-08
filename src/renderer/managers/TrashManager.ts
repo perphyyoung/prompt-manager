@@ -1,6 +1,6 @@
 import { DialogService, DialogConfig, DialogConfigData } from '../services/index.ts';
 import { UnifiedCardRenderer, PromptTrashConfig, ImageTrashConfig } from './SharedComponents/index.ts';
-import { Constants, ElementId } from '../../constants.ts';
+import { Constants, ElementId, Events } from '../../constants.ts';
 import { PromptTrashHandler, ImageTrashHandler } from './handlers/index.ts';
 import { localTime } from '../../utils/index.ts';
 import { contextStack } from './ContextStackManager.ts';
@@ -35,7 +35,6 @@ interface TrashManagerOptions {
  */
 export class TrashManager {
   private readonly app: IApp;
-  private readonly eventBus: IEventBus;
   private trashItems: TrashItem[] = [];
   private currentHandler: TrashHandler | null = null;
   private activeModals: Set<TrashType> = new Set();
@@ -63,7 +62,7 @@ export class TrashManager {
    */
   constructor(options: TrashManagerOptions) {
     this.app = options.app;
-    this.eventBus = options.eventBus;
+    // eventBus 通过 app 访问
 
     // 初始化处理器
     this.promptHandler = new PromptTrashHandler();
@@ -95,7 +94,6 @@ export class TrashManager {
       }));
 
       await this.renderTrashList();
-      this.eventBus.emit('trashLoaded', { items: this.trashItems });
     } catch (error) {
       window.electronAPI.logError('TrashManager.js', 'Failed to load trash:', error);
       this.app.showToast('加载回收站失败', 'error');
@@ -246,7 +244,7 @@ export class TrashManager {
     if (panelManager && this.isPanelManager(panelManager)) {
       panelManager.renderView();
       panelManager.renderTagFilters();
-      this.app.eventBus?.emit(this.currentHandler.eventName);
+      this.app.eventBus.emit(this.currentHandler.eventName);
     }
 
     // 刷新关联面板（图像和提示词有关联关系）
@@ -257,7 +255,7 @@ export class TrashManager {
         promptPanelManager.renderView();
         promptPanelManager.renderTagFilters();
       }
-      this.app.eventBus?.emit('promptsChanged');
+      this.app.eventBus.emit(Events.PROMPTS_CHANGED);
     } else if (this.currentHandler.type === Constants.TrashType.PROMPT) {
       // 提示词恢复后，图像面板也需要刷新（可能有关联）
       const imagePanelManager = this.app.imagePanelManager;
@@ -265,7 +263,7 @@ export class TrashManager {
         imagePanelManager.renderView();
         imagePanelManager.renderTagFilters();
       }
-      this.app.eventBus?.emit('imagesChanged');
+      this.app.eventBus.emit(Events.IMAGES_CHANGED);
     }
   }
 
@@ -296,8 +294,6 @@ export class TrashManager {
       if (this.app.currentPanel === 'statistics') {
         await this.app.renderStatistics();
       }
-
-      this.eventBus.emit('itemRestored', { id: itemId, type: this.currentHandler.type });
     } catch (error) {
       window.electronAPI.logError('TrashManager.js', 'Failed to restore item:', error);
       this.app.showToast('恢复失败', 'error');
@@ -395,7 +391,7 @@ export class TrashManager {
     try {
       await this.currentHandler.clearAllItems();
       this.app.showToast('回收站已清空', 'success');
-      this.app.eventBus?.emit(this.currentHandler.eventName);
+      this.app.eventBus.emit(this.currentHandler.eventName);
       await this.loadTrash();
     } catch (error) {
       window.electronAPI.logError('TrashManager.js', 'Failed to clear trash:', error);

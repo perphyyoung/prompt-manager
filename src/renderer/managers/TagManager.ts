@@ -1,6 +1,6 @@
 import { TagService } from './TagService.ts';
 import { TagUI } from './TagUI.ts';
-import { Constants, ElementId } from '../../constants.ts';
+import { Constants, ElementId, Events } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
 import { ITagService } from '../../types/entities.ts';
 import { contextStack } from './ContextStackManager.ts';
@@ -42,7 +42,7 @@ export abstract class TagManager {
   sortBy: string;
   sortOrder: 'asc' | 'desc';
   service: ITagService;
-  protected context: any;
+  protected app: any;
   protected ui: TagUI;
   protected eventBus: any;
   protected selectedTagGroup: any;
@@ -58,12 +58,12 @@ export abstract class TagManager {
 
   private unsubscribeViewChanged?: () => void;
 
-  constructor(type: string, context: any) {
+  constructor(type: string, app: any) {
     this.type = type;
-    this.context = context;
+    this.app = app;
     this.service = TagService.getInstance(type);
     this.ui = new TagUI(type);
-    this.eventBus = context.eventBus;
+    // eventBus 通过 app 访问
     this.selectedTagGroup = null;
 
     // 排序状态
@@ -99,8 +99,7 @@ export abstract class TagManager {
         onFavorite: () => {},
         onDelete: () => this.batchDeleteTags(),
         onCancel: () => this.exitBatchMode()
-      },
-      eventBus: this.eventBus
+      }
     });
 
     // 订阅视图变化事件
@@ -134,9 +133,7 @@ export abstract class TagManager {
    * 订阅视图变化事件
    */
   private subscribeToViewChanges(): void {
-    if (!this.eventBus) return;
-
-    this.unsubscribeViewChanged = this.eventBus.on('viewChanged', () => {
+    this.unsubscribeViewChanged = this.app.eventBus.on(Events.VIEW_CHANGED, () => {
       this.hideBatchToolbar();
     });
   }
@@ -206,7 +203,7 @@ export abstract class TagManager {
       this.updateSelectionModeClass();
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', `Failed to render ${this.type} tag manager:`, error);
-      this.context.showToast(`加载${this.getTypeLabel()}标签失败`, 'error');
+      this.app.showToast(`加载${this.getTypeLabel()}标签失败`, 'error');
     }
   }
 
@@ -224,12 +221,12 @@ export abstract class TagManager {
   async addTag(tag: string): Promise<void> {
     try {
       await this.service.addTag(tag);
-      this.context.showToast('标签已添加', 'success');
+      this.app.showToast('标签已添加', 'success');
       await this.render();
       await this.refreshPanel();
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to add tag:', error);
-      this.context.showToast('添加标签失败', 'error');
+      this.app.showToast('添加标签失败', 'error');
     }
   }
 
@@ -245,12 +242,12 @@ export abstract class TagManager {
 
     try {
       await this.service.deleteTag(tag);
-      this.context.showToast(`${this.getTypeLabel()}标签已删除`);
+      this.app.showToast(`${this.getTypeLabel()}标签已删除`);
       await this.render();
       await this.refreshPanel();
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to delete tag:', error);
-      this.context.showToast('删除失败: ' + (error as Error).message, 'error');
+      this.app.showToast('删除失败: ' + (error as Error).message, 'error');
     }
   }
 
@@ -260,12 +257,12 @@ export abstract class TagManager {
   async updateTag(oldTag: string, newTag: string): Promise<void> {
     try {
       await this.service.renameTag(oldTag, newTag);
-      this.context.showToast('标签已更新', 'success');
+      this.app.showToast('标签已更新', 'success');
       await this.render();
       await this.refreshPanel();
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to update tag:', error);
-      this.context.showToast('更新标签失败: ' + (error as Error).message, 'error');
+      this.app.showToast('更新标签失败: ' + (error as Error).message, 'error');
     }
   }
 
@@ -544,7 +541,7 @@ export abstract class TagManager {
       }
     }
 
-    const result = await this.context.showInputDialog('重命名标签', '请输入新标签名:', oldTag, {
+    const result = await this.app.showInputDialog('重命名标签', '请输入新标签名:', oldTag, {
       showGroupSelect: true,
       groups: groups,
       defaultGroupId: currentGroupId
@@ -558,7 +555,7 @@ export abstract class TagManager {
     if (newTag === oldTag) return;
 
     if (allTags.includes(newTag)) {
-      this.context.showToast('标签名已存在，请使用其他名称', 'error');
+      this.app.showToast('标签名已存在，请使用其他名称', 'error');
       return;
     }
 
@@ -575,12 +572,12 @@ export abstract class TagManager {
       if (groupId !== undefined) {
         await this.service.assignTagToGroup(newTag, groupId);
       }
-      this.context.showToast('标签已重命名', 'success');
+      this.app.showToast('标签已重命名', 'success');
       await this.refreshPanel();
       await this.render();
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to rename tag:', error);
-      this.context.showToast('重命名标签失败: ' + (error as Error).message, 'error');
+      this.app.showToast('重命名标签失败: ' + (error as Error).message, 'error');
     }
   }
 
@@ -593,12 +590,12 @@ export abstract class TagManager {
 
     try {
       await this.service.deleteGroup(groupId);
-      this.context.showToast('标签组已删除');
+      this.app.showToast('标签组已删除');
       const searchInput = document.getElementById(this.searchInputId) as HTMLInputElement | null;
       await this.render(searchInput ? searchInput.value : '');
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to delete tag group:', error);
-      this.context.showToast('删除失败: ' + (error as Error).message, 'error');
+      this.app.showToast('删除失败: ' + (error as Error).message, 'error');
     }
   }
 
@@ -608,13 +605,13 @@ export abstract class TagManager {
   private async assignTagToGroup(tagName: string, groupId: number | null): Promise<void> {
     try {
       await this.service.assignTagToGroup(tagName, groupId);
-      this.context.showToast('标签组已更新');
+      this.app.showToast('标签组已更新');
       const searchInput = document.getElementById(this.searchInputId) as HTMLInputElement | null;
       await this.render(searchInput ? searchInput.value : '');
       await this.refreshPanel();
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to assign tag to group:', error);
-      this.context.showToast('更新失败: ' + (error as Error).message, 'error');
+      this.app.showToast('更新失败: ' + (error as Error).message, 'error');
     }
   }
 
@@ -645,14 +642,14 @@ export abstract class TagManager {
           name: group.name,
           sortOrder: newSortOrder
         });
-        this.context.showToast('标签组已固定到首位', 'success');
+        this.app.showToast('标签组已固定到首位', 'success');
         const searchInput = document.getElementById(this.searchInputId) as HTMLInputElement | null;
         await this.render(searchInput ? searchInput.value : '');
         await this.refreshPanel();
       }
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to pin tag group to top:', error);
-      this.context.showToast('固定失败: ' + (error as Error).message, 'error');
+      this.app.showToast('固定失败: ' + (error as Error).message, 'error');
     }
   }
 
@@ -663,7 +660,7 @@ export abstract class TagManager {
     const groups = await this.service.getTagGroups();
     const allTags = await this.service.getTags();
 
-    const result = await this.context.showInputDialog(`新建${this.getTypeLabel()}标签`, '请输入标签名称', defaultValue, {
+    const result = await this.app.showInputDialog(`新建${this.getTypeLabel()}标签`, '请输入标签名称', defaultValue, {
       showGroupSelect: true,
       groups: groups,
       defaultGroupId: defaultGroupId
@@ -673,25 +670,25 @@ export abstract class TagManager {
     const trimmedTag = result.value.trim();
 
     if (Constants.ALL_SPECIAL_TAGS.includes(trimmedTag)) {
-      this.context.showToast(`"${trimmedTag}" 是系统保留标签，不能使用`, 'error');
+      this.app.showToast(`"${trimmedTag}" 是系统保留标签，不能使用`, 'error');
       await this.addTagInManagerWithDialog(trimmedTag, result.groupId);
       return;
     }
 
     if (allTags.includes(trimmedTag)) {
-      this.context.showToast('标签已存在', 'error');
+      this.app.showToast('标签已存在', 'error');
       return;
     }
 
     try {
       await this.service.addTag(trimmedTag);
       await this.service.assignTagToGroup(trimmedTag, result.groupId || null);
-      this.context.showToast('标签已创建', 'success');
+      this.app.showToast('标签已创建', 'success');
       await this.render();
       await this.refreshPanel();
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to create tag:', error);
-      this.context.showToast('创建标签失败: ' + (error as Error).message, 'error');
+      this.app.showToast('创建标签失败: ' + (error as Error).message, 'error');
     }
   }
 
@@ -700,7 +697,6 @@ export abstract class TagManager {
    */
   selectTagGroup(group: any): void {
     this.selectedTagGroup = group;
-    this.eventBus?.emit('tagGroupSelected', { group });
     this.render();
   }
 
@@ -761,7 +757,7 @@ export abstract class TagManager {
   private async batchDeleteTags(): Promise<void> {
     const selectedIds = Array.from(this.multiSelectManager.selectedIds);
     if (selectedIds.length === 0) {
-      this.context.showToast('请先选择要删除的标签', 'warning');
+      this.app.showToast('请先选择要删除的标签', 'warning');
       return;
     }
 
@@ -775,13 +771,13 @@ export abstract class TagManager {
     try {
       const result = await this.service.deleteTags(selectedIds);
 
-      this.context.showToast(`已删除 ${result.deleted} 个标签`, 'success');
+      this.app.showToast(`已删除 ${result.deleted} 个标签`, 'success');
       this.exitBatchMode();
       await this.render();
       await this.refreshPanel();
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to batch delete tags:', error);
-      this.context.showToast('批量删除失败', 'error');
+      this.app.showToast('批量删除失败', 'error');
     }
   }
 
@@ -791,13 +787,13 @@ export abstract class TagManager {
   private async batchMoveToGroup(): Promise<void> {
     const selectedIds = Array.from(this.multiSelectManager.selectedIds);
     if (selectedIds.length === 0) {
-      this.context.showToast('请先选择要移动的标签', 'warning');
+      this.app.showToast('请先选择要移动的标签', 'warning');
       return;
     }
 
     const groups = await this.service.getTagGroups();
 
-    const result = await this.context.showInputDialog(
+    const result = await this.app.showInputDialog(
       '批量移动到组',
       `将 ${selectedIds.length} 个标签移动到:`,
       '',
@@ -822,13 +818,13 @@ export abstract class TagManager {
         }
       }
 
-      this.context.showToast(`已移动 ${successCount} 个标签`, 'success');
+      this.app.showToast(`已移动 ${successCount} 个标签`, 'success');
       this.exitBatchMode();
       await this.render();
       await this.refreshPanel();
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to batch move tags:', error);
-      this.context.showToast('批量移动失败', 'error');
+      this.app.showToast('批量移动失败', 'error');
     }
   }
 
@@ -868,7 +864,7 @@ export abstract class TagManager {
    * 打开标签管理器模态框
    */
   openManager(): void {
-    this.eventBus?.emit('viewChanged', { view: 'tagManager', type: this.type });
+    this.app.eventBus.emit(Events.VIEW_CHANGED, { view: 'tagManager', type: this.type });
 
     const modal = document.getElementById(this.elements.modalId);
     if (modal) {
@@ -892,7 +888,7 @@ export abstract class TagManager {
    * 关闭标签管理器模态框
    */
   closeManager(): void {
-    this.eventBus?.emit('viewChanged', { view: 'main', from: 'tagManager' });
+    this.app.eventBus.emit(Events.VIEW_CHANGED, { view: 'main', from: 'tagManager' });
 
     const modal = document.getElementById(this.elements.modalId);
     if (modal) {
@@ -967,7 +963,7 @@ export abstract class TagManager {
     const sortOrder = parseInt(sortOrderInput?.value || '0', 10);
 
     if (!name) {
-      this.context.showToast('请输入标签组名称', 'error');
+      this.app.showToast('请输入标签组名称', 'error');
       return;
     }
 
@@ -982,7 +978,7 @@ export abstract class TagManager {
       await this.refreshPanel();
 
       this.closeGroupEdit();
-      this.context.showToast(groupIdStr ? '标签组已更新' : '标签组已创建', 'success');
+      this.app.showToast(groupIdStr ? '标签组已更新' : '标签组已创建', 'success');
     } catch (error: any) {
       window.electronAPI?.logError('TagManager.ts', 'Failed to save tag group:', error);
       if (error.message?.includes('DUPLICATE_NAME')) {
@@ -992,7 +988,7 @@ export abstract class TagManager {
           { name }
         );
       } else {
-        this.context.showToast('保存失败: ' + error.message, 'error');
+        this.app.showToast('保存失败: ' + error.message, 'error');
       }
     }
   }
@@ -1110,7 +1106,7 @@ export abstract class TagManager {
     buttonId: string,
     promptManager: TagManager | null,
     imageManager: TagManager | null,
-    context: { showToast: (message: string, type?: string) => void }
+    app: { showToast: (message: string, type?: string) => void }
   ): void {
     const button = document.getElementById(buttonId);
     if (!button) return;
@@ -1122,7 +1118,7 @@ export abstract class TagManager {
         DialogService.showConfirmDialogByConfig(DialogConfig.SYNC_TAGS_BIDIRECTIONAL, result);
       } catch (error) {
         window.electronAPI.logError('TagManager.ts', 'Failed to sync tags bidirectional', error);
-        context.showToast('同步标签失败: ' + (error as Error).message, 'error');
+        app.showToast('同步标签失败: ' + (error as Error).message, 'error');
       }
     });
   }
