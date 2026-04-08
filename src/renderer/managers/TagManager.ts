@@ -548,39 +548,7 @@ export abstract class TagManager {
     if (newTag === oldTag) return;
 
     if (allTags.includes(newTag)) {
-      let currentGroupName = '未分组';
-      for (const group of groups) {
-        if (group.tags && group.tags.includes(newTag)) {
-          currentGroupName = group.name;
-          break;
-        }
-      }
-
-      let targetGroupName = '未分组';
-      if (selectedGroupId) {
-        const targetGroup = groups.find((g: any) => String(g.id) === String(selectedGroupId));
-        if (targetGroup) {
-          targetGroupName = targetGroup.name;
-        }
-      }
-
-      const confirmed = await DialogService.showConfirmDialogByConfig(
-        DialogConfig.TAG_EXISTS,
-        { tagName: newTag, currentGroupName, newGroupName: targetGroupName }
-      );
-
-      if (!confirmed) return;
-
-      try {
-        await this.service.deleteTag(oldTag);
-        await this.service.assignTagToGroup(newTag, selectedGroupId || null);
-        this.context.showToast('标签已移动到新组', 'success');
-        await this.render();
-        await this.refreshPanel();
-      } catch (error) {
-        window.electronAPI.logError('TagManager.ts', 'Failed to move tag to group:', error);
-        this.context.showToast('移动标签失败: ' + (error as Error).message, 'error');
-      }
+      this.context.showToast('标签名已存在，请使用其他名称', 'error');
       return;
     }
 
@@ -700,38 +668,8 @@ export abstract class TagManager {
       return;
     }
 
-    const existingTag = allTags.includes(trimmedTag);
-    if (existingTag) {
-      let currentGroupName = '未分组';
-      for (const group of groups) {
-        if (group.tags && group.tags.includes(trimmedTag)) {
-          currentGroupName = group.name;
-          break;
-        }
-      }
-      const newGroupName = result.groupId
-        ? groups.find((g: any) => String(g.id) === String(result.groupId))?.name || '未分组'
-        : '未分组';
-
-      const confirmed = await DialogService.showConfirmDialogByConfig(
-        DialogConfig.TAG_EXISTS,
-        { tagName: trimmedTag, currentGroupName, newGroupName }
-      );
-
-      if (!confirmed) {
-        await this.addTagInManagerWithDialog(trimmedTag, result.groupId);
-        return;
-      }
-
-      try {
-        await this.service.assignTagToGroup(trimmedTag, result.groupId || null);
-        this.context.showToast('标签已移动到新组', 'success');
-        await this.render();
-        await this.refreshPanel();
-      } catch (error) {
-        window.electronAPI.logError('TagManager.ts', 'Failed to move tag:', error);
-        this.context.showToast('移动标签失败: ' + (error as Error).message, 'error');
-      }
+    if (allTags.includes(trimmedTag)) {
+      this.context.showToast('标签已存在', 'error');
       return;
     }
 
