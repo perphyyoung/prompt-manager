@@ -51,7 +51,6 @@ export class MultiSelectManager {
   private onChange: () => void | Promise<void>;
   private handler?: IBatchOperationHandler;
   private eventBus?: IMultiSelectManagerOptions['eventBus'];
-  private unsubscribeViewChanged?: () => void;
 
   private toolbar: BatchToolbar | null = null;
 
@@ -73,8 +72,6 @@ export class MultiSelectManager {
       });
     }
 
-    // 订阅视图变化事件
-    this.subscribeToViewChanges();
   }
 
   /**
@@ -117,20 +114,6 @@ export class MultiSelectManager {
         this.handler?.onCancel();
         break;
     }
-  }
-
-  /**
-   * 订阅视图变化事件
-   * @private
-   */
-  private subscribeToViewChanges(): void {
-    if (!this.eventBus) return;
-
-    this.unsubscribeViewChanged = this.eventBus.on('viewChanged', () => {
-      // 视图变化时清理多选状态并隐藏工具栏
-      this.clear();
-      this.hideToolbar();
-    });
   }
 
   // ==================== 状态获取 ====================
@@ -231,9 +214,16 @@ export class MultiSelectManager {
   }
 
   clear(): void {
+    const stack = new Error().stack || '';
+    window.electronAPI.logDebug('MultiSelectManager', `clear called, stack: ${stack.split('\n').slice(1, 3).join(' | ')}`);
     this.state.selectedIds.clear();
     this.state.lastSelectedIndex = undefined;
     this.onChange();
+  }
+
+  clearImmediately(): void {
+    this.state.selectedIds.clear();
+    this.state.lastSelectedIndex = undefined;
   }
 
   resetLastSelectedIndex(): void {
@@ -284,11 +274,5 @@ export class MultiSelectManager {
     this.clear();
     this.toolbar?.destroy();
     this.toolbar = null;
-
-    // 取消订阅视图变化事件
-    if (this.unsubscribeViewChanged) {
-      this.unsubscribeViewChanged();
-      this.unsubscribeViewChanged = undefined;
-    }
   }
 }

@@ -165,6 +165,7 @@ export class NavigationManager {
     }
 
     // 发布视图变化事件，通知所有组件清理多选工具栏
+    window.electronAPI.logDebug('NavigationManager', `emit viewChanged, panel: ${panelName}, current: ${this.currentPanel}`);
     this.app.eventBus?.emit('viewChanged', { view: 'panel', panel: panelName });
 
     // 隐藏所有面板

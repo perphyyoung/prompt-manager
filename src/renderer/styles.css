@@ -4631,6 +4631,7 @@ body * {
   border-radius: 20px;
   transition: all 0.2s ease;
   min-width: 80px;
+  z-index: 1;
 }
 
 .tag-manager-item:hover {
@@ -4652,6 +4653,27 @@ body * {
 }
 
 /* 标签名称 */
+/* 拖拽手柄 */
+.tag-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+  cursor: grab;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.tag-drag-handle:hover {
+  transform: scale(1.1);
+}
+
+.tag-drag-handle:active {
+  cursor: grabbing;
+}
+
 .tag-manager-item-name {
   font-size: 13px;
   font-weight: 500;
@@ -4671,7 +4693,7 @@ body * {
 .tag-manager-item-count {
   position: absolute;
   top: -6px;
-  right: -6px;
+  left: -6px;
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
@@ -4688,45 +4710,53 @@ body * {
 }
 
 /* Hover 遮罩层 - 覆盖整个标签 */
-.tag-manager-item-actions {
+.tag-edit-btn,
+.tag-delete-btn {
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: rgba(99, 102, 241, 0.1);
-  border-radius: inherit;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  pointer-events: none;
-}
-
-.tag-manager-item:hover .tag-manager-item-actions {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* 操作按钮 */
-.tag-manager-item-actions button {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: white;
-  border: none;
+  border: 1px solid var(--border-color);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s ease;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+  z-index: 2;
 }
 
-.tag-manager-item-actions button:hover {
+.tag-edit-btn:hover,
+.tag-delete-btn:hover {
   transform: scale(1.1);
 }
 
-.tag-badge-edit { color: var(--primary-color); }
-.tag-badge-delete { color: var(--danger-color); }
+.tag-edit-btn {
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--primary-color);
+}
+
+.tag-edit-btn:hover {
+  opacity: 1 !important;
+}
+
+.tag-delete-btn {
+  top: -6px;
+  right: -6px;
+  color: var(--danger-color);
+}
+
+.tag-delete-btn:hover {
+  opacity: 1 !important;
+}
+
+.tag-manager-item:hover .tag-edit-btn,
+.tag-manager-item:hover .tag-delete-btn {
+  opacity: 0.9;
+}
 
 .tag-manager-item-name.editing {
   display: flex;

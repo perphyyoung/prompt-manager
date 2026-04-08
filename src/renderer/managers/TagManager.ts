@@ -157,10 +157,11 @@ export abstract class TagManager {
    * 渲染标签管理器
    */
   async render(searchTerm: string = ''): Promise<void> {
+    const stack = new Error().stack || '';
+    window.electronAPI.logDebug('TagManager', `${this.type} render called, searchTerm: ${searchTerm}, stack: ${stack.split('\n').slice(1, 4).join(' | ')}`);
     try {
-      // 搜索条件改变时清空选择
       if (this.lastSearchTerm !== searchTerm) {
-        this.multiSelectManager.clear();
+        this.multiSelectManager.clearImmediately();
         this.lastSearchTerm = searchTerm;
       }
 
@@ -198,6 +199,7 @@ export abstract class TagManager {
       const html = this.ui.generateRegistryHtml(groups, groupedTags, ungroupedTags, tagCounts, searchTerm, this.isBatchModeActive, this.multiSelectManager.selectedIds);
       container.innerHTML = html;
 
+      this._eventsBound = false;
       this.bindEvents(container);
 
       // 更新选择模式类
@@ -278,50 +280,30 @@ export abstract class TagManager {
    * 绑定事件（使用事件委托）
    */
   bindEvents(container: HTMLElement): void {
+    window.electronAPI.logDebug('TagManager', 'bindEvents executing, _eventsBound=' + this._eventsBound + ', isBatchMode=' + this.isBatchModeActive);
     if (this._eventsBound) return;
     this._eventsBound = true;
 
     // 使用事件委托处理所有点击事件
     container.addEventListener('click', async (e) => {
       const target = e.target as HTMLElement;
+      window.electronAPI.logDebug('TagManager', 'click event, target: ' + target.className + ', tagItem: ' + target.closest('.tag-manager-item')?.className);
 
-      // 批量模式下的标签项选择处理
+      // 批量模式下的标签项选择（单击选择）
       if (this.isBatchModeActive) {
-        // 查找最近的标签项元素
         const tagItem = target.closest('.tag-manager-item[data-tag]');
         if (tagItem) {
-          // 如果点击的是复选框，不处理（由 change 事件处理）
-          if (target.closest('.tag-batch-checkbox')) {
-            return;
-          }
-
           const tag = (tagItem as HTMLElement).dataset.tag;
           if (!tag) return;
-
-          // 获取当前标签项的索引
           const index = parseInt((tagItem as HTMLElement).dataset.index || '0', 10);
-
-          if ((e as MouseEvent).shiftKey && this.multiSelectManager.lastSelectedIndex !== undefined) {
-            // Shift+点击：范围选择
-            const allItems = Array.from(container.querySelectorAll('.tag-manager-item[data-tag]'));
-            this.multiSelectManager.rangeSelect(
-              allItems.map((el, i) => ({ id: (el as HTMLElement).dataset.tag || '', index: i })),
-              index
-            );
-          } else if ((e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey) {
-            // Ctrl+点击：多选
-            this.multiSelectManager.toggleSelection(tag, index);
-          } else {
-            // 普通点击：单选
-            this.multiSelectManager.singleSelect(tag, index);
-          }
-          return;
+          this.multiSelectManager.singleSelect(tag, index);
         }
+        return;
       }
 
       // 非批量模式下的编辑/删除按钮处理
       // 处理编辑按钮点击
-      const editBtn = target.closest('.tag-badge-edit');
+      const editBtn = target.closest('.tag-edit-btn');
       if (editBtn) {
         e.stopPropagation();
         const tag = (editBtn as HTMLElement).dataset.tag;
@@ -330,7 +312,7 @@ export abstract class TagManager {
       }
 
       // 处理删除按钮点击
-      const deleteBtn = target.closest('.tag-badge-delete');
+      const deleteBtn = target.closest('.tag-delete-btn');
       if (deleteBtn) {
         e.stopPropagation();
         const tag = (deleteBtn as HTMLElement).dataset.tag;
@@ -374,8 +356,10 @@ export abstract class TagManager {
       }
     });
 
-    this.bindDragEvents(container);
-    this.bindGroupContextMenu(container);
+    if (!this.isBatchModeActive) {
+      this.bindDragEvents(container);
+      this.bindGroupContextMenu(container);
+    }
   }
 
   /**
@@ -480,15 +464,37 @@ export abstract class TagManager {
    * 绑定拖拽事件
    */
   private bindDragEvents(container: HTMLElement): void {
-    const allTagItems = container.querySelectorAll('.tag-manager-item[draggable="true"]');
+    window.electronAPI.logDebug('TagManager', 'bindDragEvents called, isBatchModeActive=' + this.isBatchModeActive);
+    const dragItems = container.querySelectorAll('.tag-manager-item[draggable="true"]');
+    window.electronAPI.logDebug('TagManager', `bindDragEvents: found ${dragItems.length} draggable items`);
     const dropTargets = container.querySelectorAll('.tag-group-card[data-drop-target="true"]');
 
-    allTagItems.forEach(item => {
-      item.addEventListener('dragstart', (e) => {
-        const dragEvent = e as DragEvent;
-        dragEvent.dataTransfer?.setData('text/plain', (item as HTMLElement).dataset.tag || '');
-        dragEvent.dataTransfer && (dragEvent.dataTransfer.effectAllowed = 'move');
+    dragItems.forEach(item => {
+      item.addEventListener('mousedown', (e) => {
+        window.electronAPI.logDebug('TagManager', 'mousedown captured');
+        const mouseEvent = e as MouseEvent;
+        if (mouseEvent.button !== 0) return;
+        
+        const target = e.target as HTMLElement;
+        window.electronAPI.logDebug('TagManager', 'mousedown target: ' + target.className);
+        
+        if (target.closest('.tag-edit-btn') || target.closest('.tag-delete-btn')) {
+          window.electronAPI.logDebug('TagManager', 'blocked by edit/delete button');
+          return;
+        }
+        
         item.classList.add('dragging');
+        window.electronAPI.logDebug('TagManager', 'mousedown for drag done');
+      });
+
+      item.addEventListener('dragstart', (e) => {
+        window.electronAPI.logDebug('TagManager', 'dragstart event fired');
+        const tagName = (item as HTMLElement).dataset.tag || '';
+        window.electronAPI.logDebug('TagManager', 'dragstart set data for: ' + tagName);
+        
+        const dragEvent = e as DragEvent;
+        dragEvent.dataTransfer?.setData('text/plain', tagName);
+        dragEvent.dataTransfer && (dragEvent.dataTransfer.effectAllowed = 'move');
       });
 
       item.addEventListener('dragend', () => {
@@ -726,15 +732,17 @@ export abstract class TagManager {
   exitBatchMode(): void {
     this.isBatchModeActive = false;
     this.multiSelectManager.clear();
-    this.multiSelectManager.hideToolbar();
-    this.render(this.lastSearchTerm);
+    this._eventsBound = false;
   }
 
   /**
-   * 隐藏批量工具栏
+   * 隐藏批量工具栏（viewChanged 回调使用）
    */
   hideBatchToolbar(): void {
-    this.exitBatchMode();
+    this.multiSelectManager.hideToolbar();
+    if (this.isBatchModeActive) {
+      this.isBatchModeActive = false;
+    }
   }
 
   /**

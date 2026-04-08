@@ -94,30 +94,33 @@ export class TagUI {
     const batchClass = isBatchMode ? 'batch-mode' : '';
     const escapedTag = HtmlUtils.escapeHtml(tag);
 
-    const actions = isBatchMode
-      ? `<div class="tag-checkbox-wrapper"><input type="checkbox" class="tag-batch-checkbox" data-tag="${escapedTag}" data-index="${index}" ${isSelected ? 'checked' : ''}></div>`
-      : `<div class="tag-manager-item-actions">
-          <button class="tag-badge-edit" data-tag="${escapedTag}" title="编辑">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
-          </button>
-          <button class="tag-badge-delete" data-tag="${escapedTag}" title="删除">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-          </button>
-        </div>`;
-
     const draggableAttr = isBatchMode ? '' : 'draggable="true"';
+
+    const editBtn = isBatchMode ? '' : `<button class="tag-edit-btn" data-tag="${escapedTag}" title="编辑">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+      </svg>
+    </button>`;
+
+    const deleteBtn = isBatchMode ? '' : `<button class="tag-delete-btn" data-tag="${escapedTag}" title="删除">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+    </button>`;
+
+    const checkbox = isBatchMode
+      ? `<div class="tag-checkbox-wrapper"><input type="checkbox" class="tag-batch-checkbox" data-tag="${escapedTag}" data-index="${index}" ${isSelected ? 'checked' : ''}></div>`
+      : '';
 
     return `
       <div class="tag-manager-item ${batchClass} ${selectedClass}" data-id="${escapedTag}" data-tag="${escapedTag}" data-index="${index}" data-group-id="${groupId ?? ''}" ${draggableAttr}>
-        ${actions}
-        <div class="tag-manager-item-name" title="${escapedTag}">${escapedTag}</div>
+        ${checkbox}
         <div class="tag-manager-item-count">${count}</div>
+        <div class="tag-manager-item-name" title="${escapedTag}">${escapedTag}</div>
+        ${editBtn}
+        ${deleteBtn}
       </div>
     `;
   }
