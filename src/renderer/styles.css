@@ -4741,6 +4741,7 @@ body * {
 
 .tag-edit-btn:hover {
   opacity: 1 !important;
+  transform: translateX(-50%) scale(1.1);
 }
 
 .tag-delete-btn {
