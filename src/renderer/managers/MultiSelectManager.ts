@@ -32,6 +32,7 @@ export interface IBatchOperationHandler {
   onSelectAll: () => void;
   onInvert: () => void;
   onAddTag: () => void;
+  onMove: () => void;
   onFavorite: () => void;
   onDelete: () => void;
   onCancel: () => void;
@@ -98,6 +99,9 @@ export class MultiSelectManager {
         break;
       case 'AddTag':
         this.handler?.onAddTag();
+        break;
+      case 'Move':
+        this.handler?.onMove();
         break;
       case 'Favorite':
         this.handler?.onFavorite();
@@ -209,8 +213,6 @@ export class MultiSelectManager {
   }
 
   clear(): void {
-    const stack = new Error().stack || '';
-    window.electronAPI.logDebug('MultiSelectManager', `clear called, stack: ${stack.split('\n').slice(1, 3).join(' | ')}`);
     this.state.selectedIds.clear();
     this.state.lastSelectedIndex = undefined;
     this.onChange();

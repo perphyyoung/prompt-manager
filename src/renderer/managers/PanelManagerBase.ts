@@ -227,6 +227,7 @@ export abstract class PanelManagerBase {
       onSelectAll: () => this.selectAllVisibleItems(),
       onInvert: () => this.handleBatchInvert(),
       onAddTag: () => this.handleBatchAddTag(),
+      onMove: () => {},
       onFavorite: () => this.handleBatchFavorite(),
       onDelete: () => this.handleBatchDelete(),
       onCancel: () => this.handleBatchCancel()

@@ -223,6 +223,14 @@ export class Constants {
     DROPDOWN: 'dropdown',
     DIALOG: 'confirmModal',
 
+    // 选择对话框
+    SELECT_MODAL: 'selectModal',
+    SELECT_MODAL_FIELD: 'selectModalField',
+    SELECT_MODAL_TITLE: 'selectModalTitle',
+    SELECT_MODAL_OK_BTN: 'selectOkBtn',
+    SELECT_MODAL_CANCEL_BTN: 'selectCancelBtn',
+    CLOSE_SELECT_MODAL: 'closeSelectModal',
+
     // 标签自动完成下拉框
     PROMPT_DETAIL_TAG_AUTOCOMPLETE: 'promptDetailTagAutocomplete',
     IMAGE_DETAIL_TAG_AUTOCOMPLETE: 'imageDetailTagAutocomplete',

@@ -568,12 +568,12 @@ export class DialogService {
     defaultValue?: string;
   }): Promise<string | null> {
     return new Promise((resolve) => {
-      const modal = document.getElementById('selectModal');
-      const titleEl = document.getElementById('selectModalTitle');
-      const selectEl = document.getElementById('selectModalSelect') as HTMLSelectElement | null;
-      const confirmBtn = document.getElementById('selectOkBtn');
-      const cancelBtn = document.getElementById('selectCancelBtn');
-      const closeBtn = document.getElementById('closeSelectModal');
+      const modal = document.getElementById(Constants.Ids.SELECT_MODAL);
+      const titleEl = document.getElementById(Constants.Ids.SELECT_MODAL_TITLE);
+      const selectEl = document.getElementById(Constants.Ids.SELECT_MODAL_FIELD) as HTMLSelectElement | null;
+      const confirmBtn = document.getElementById(Constants.Ids.SELECT_MODAL_OK_BTN);
+      const cancelBtn = document.getElementById(Constants.Ids.SELECT_MODAL_CANCEL_BTN);
+      const closeBtn = document.getElementById(Constants.Ids.CLOSE_SELECT_MODAL);
 
       if (!modal || !selectEl) {
         // 回退到原生对话框
@@ -599,7 +599,7 @@ export class DialogService {
 
       const cleanup = () => {
         (modal as HTMLElement).style.display = 'none';
-        _activeModals.delete('selectModal');
+        _activeModals.delete(Constants.Ids.SELECT_MODAL);
         confirmBtn?.removeEventListener('click', handleConfirm);
         cancelBtn?.removeEventListener('click', handleCancel);
         closeBtn?.removeEventListener('click', handleCancel);
@@ -631,7 +631,7 @@ export class DialogService {
       contextStack.push(selectStackEntry);
 
       (modal as HTMLElement).style.display = 'flex';
-      _activeModals.add('selectModal');
+      _activeModals.add(Constants.Ids.SELECT_MODAL);
     });
   }
 

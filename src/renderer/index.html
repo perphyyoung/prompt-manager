@@ -1310,11 +1310,11 @@
   </div>
 
   <!-- 选择对话框 Modal -->
-  <div id="selectModal" class="modal">
-    <div class="modal-content-medium">
+  <div id="{{SELECT_MODAL}}" class="modal">
+    <div class="modal-content-small">
       <div class="modal-header">
-        <h2 id="selectModalTitle">选择</h2>
-        <button class="close-btn" id="closeSelectModal">
+        <h2 id="{{SELECT_MODAL_TITLE}}">选择</h2>
+        <button class="close-btn" id="{{CLOSE_SELECT_MODAL}}">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1324,13 +1324,13 @@
       <div class="modal-body">
         <div class="form-group">
           <label id="selectModalLabel" class="form-label">请选择</label>
-          <select id="selectModalField" class="tag-manager-sort-select">
+          <select id="{{SELECT_MODAL_FIELD}}" class="tag-manager-sort-select">
           </select>
         </div>
       </div>
       <div class="modal-footer input-modal-footer">
-        <button type="button" class="btn btn-secondary btn-modal" id="selectCancelBtn">取消</button>
-        <button type="button" class="btn btn-primary btn-modal" id="selectOkBtn">确定</button>
+        <button type="button" class="btn btn-secondary btn-modal" id="{{SELECT_MODAL_CANCEL_BTN}}">取消</button>
+        <button type="button" class="btn btn-primary btn-modal" id="{{SELECT_MODAL_OK_BTN}}">确定</button>
       </div>
     </div>
   </div>

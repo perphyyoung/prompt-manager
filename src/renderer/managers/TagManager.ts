@@ -94,6 +94,7 @@ export abstract class TagManager {
         onSelectAll: () => this.batchSelectAll(),
         onInvert: () => this.batchInvert(),
         onAddTag: () => {},
+        onMove: () => this.batchMoveToGroup(),
         onFavorite: () => {},
         onDelete: () => this.batchDeleteTags(),
         onCancel: () => this.exitBatchMode()
@@ -136,8 +137,6 @@ export abstract class TagManager {
    * 渲染标签管理器
    */
   async render(searchTerm: string = ''): Promise<void> {
-    const stack = new Error().stack || '';
-    window.electronAPI.logDebug('TagManager', `${this.type} render called, searchTerm: ${searchTerm}, stack: ${stack.split('\n').slice(1, 4).join(' | ')}`);
     try {
       if (this.lastSearchTerm !== searchTerm) {
         this.multiSelectManager.clearImmediately();
@@ -259,14 +258,12 @@ export abstract class TagManager {
    * 绑定事件（使用事件委托）
    */
   bindEvents(container: HTMLElement): void {
-    window.electronAPI.logDebug('TagManager', 'bindEvents executing, _eventsBound=' + this._eventsBound + ', isBatchMode=' + this.isBatchModeActive);
     if (this._eventsBound) return;
     this._eventsBound = true;
 
     // 使用事件委托处理所有点击事件
     container.addEventListener('click', async (e) => {
       const target = e.target as HTMLElement;
-      window.electronAPI.logDebug('TagManager', 'click event, target: ' + target.className + ', tagItem: ' + target.closest('.tag-manager-item')?.className);
 
       // 批量模式下的标签项选择（单击选择）
       if (this.isBatchModeActive) {
@@ -443,33 +440,24 @@ export abstract class TagManager {
    * 绑定拖拽事件
    */
   private bindDragEvents(container: HTMLElement): void {
-    window.electronAPI.logDebug('TagManager', 'bindDragEvents called, isBatchModeActive=' + this.isBatchModeActive);
     const dragItems = container.querySelectorAll('.tag-manager-item[draggable="true"]');
-    window.electronAPI.logDebug('TagManager', `bindDragEvents: found ${dragItems.length} draggable items`);
     const dropTargets = container.querySelectorAll('.tag-group-card[data-drop-target="true"]');
 
     dragItems.forEach(item => {
       item.addEventListener('mousedown', (e) => {
-        window.electronAPI.logDebug('TagManager', 'mousedown captured');
         const mouseEvent = e as MouseEvent;
         if (mouseEvent.button !== 0) return;
-        
+
         const target = e.target as HTMLElement;
-        window.electronAPI.logDebug('TagManager', 'mousedown target: ' + target.className);
-        
         if (target.closest('.tag-edit-btn') || target.closest('.tag-delete-btn')) {
-          window.electronAPI.logDebug('TagManager', 'blocked by edit/delete button');
           return;
         }
-        
+
         item.classList.add('dragging');
-        window.electronAPI.logDebug('TagManager', 'mousedown for drag done');
       });
 
       item.addEventListener('dragstart', (e) => {
-        window.electronAPI.logDebug('TagManager', 'dragstart event fired');
         const tagName = (item as HTMLElement).dataset.tag || '';
-        window.electronAPI.logDebug('TagManager', 'dragstart set data for: ' + tagName);
         
         const dragEvent = e as DragEvent;
         dragEvent.dataTransfer?.setData('text/plain', tagName);
@@ -708,6 +696,9 @@ export abstract class TagManager {
    * 退出批量管理模式
    */
   exitBatchMode(): void {
+    if (this.isBatchModeActive) {
+      this.multiSelectManager.hideToolbar();
+    }
     this.isBatchModeActive = false;
     this.multiSelectManager.clear();
     this._eventsBound = false;
@@ -775,25 +766,26 @@ export abstract class TagManager {
 
     const groups = await this.service.getTagGroups();
 
-    const result = await this.app.showInputDialog(
-      '批量移动到组',
-      `将 ${selectedIds.length} 个标签移动到:`,
-      '',
-      {
-        showGroupSelect: true,
-        groups: groups,
-        defaultGroupId: null,
-        allowEmpty: true
-      }
-    );
+    const options = [
+      { value: '', label: '未分组' },
+      ...groups.map(g => ({ value: String(g.id), label: g.name }))
+    ];
 
-    if (!result || result.groupId === undefined) return;
+    const result = await DialogService.showSelectDialog({
+      title: `将 ${selectedIds.length} 个标签移动到`,
+      options,
+      defaultValue: ''
+    });
+
+    if (result === null) return;
+
+    const groupId = result === '' ? null : parseInt(result, 10);
 
     try {
       let successCount = 0;
       for (const tag of selectedIds) {
         try {
-          await this.service.assignTagToGroup(tag, result.groupId || null);
+          await this.service.assignTagToGroup(tag, groupId);
           successCount++;
         } catch (error) {
           window.electronAPI.logError('TagManager.ts', `Failed to move tag ${tag}:`, error);
@@ -870,7 +862,6 @@ export abstract class TagManager {
         close: () => {
           // 如果被其他视图覆盖，隐藏批量工具栏
           if (this.isBatchModeActive) {
-            window.electronAPI.logDebug('TagManager', `close on push: ${this.elements.modalId}`);
             this.hideBatchToolbar();
           }
         }
@@ -883,13 +874,14 @@ export abstract class TagManager {
    * 关闭标签管理器模态框
    */
   closeManager(): void {
+    // 先退出批量模式，确保工具栏先出栈
+    this.exitBatchMode();
+
     const modal = document.getElementById(this.elements.modalId);
     if (modal) {
       modal.classList.remove('active');
     }
     contextStack.pop(this.elements.modalId as ElementId);
-
-    this.exitBatchMode();
   }
 
   /**
