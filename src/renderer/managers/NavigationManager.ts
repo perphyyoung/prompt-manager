@@ -3,8 +3,8 @@
  * 负责处理面板切换和导航逻辑
  */
 
-import { contextStack } from './ContextStackManager.ts';
-import { Constants, Events } from '../../constants.ts';
+import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
+import { Constants } from '../../constants.ts';
 import { logInfo } from '@/main/logger.ts';
 
 // 面板配置接口
@@ -164,10 +164,6 @@ export class NavigationManager {
       return;
     }
 
-    // 发布视图变化事件，通知所有组件清理多选工具栏
-    window.electronAPI.logDebug('NavigationManager', `emit viewChanged, panel: ${panelName}, current: ${this.currentPanel}`);
-    this.app.eventBus.emit(Events.VIEW_CHANGED, { view: 'panel', panel: panelName });
-
     // 隐藏所有面板
     this.panels.forEach((panel) => {
       const element = document.getElementById(panel.id || '');
@@ -205,11 +201,13 @@ export class NavigationManager {
 
     // 更新上下文堆栈
     contextStack.reset();
-    if (panelName === 'prompt') {
-      contextStack.push(Constants.Ids.PROMPT_PANEL);
-    } else if (panelName === 'image') {
-      contextStack.push(Constants.Ids.IMAGE_PANEL);
-    }
+    const panelId = panelName === 'prompt' ? Constants.Ids.PROMPT_PANEL : Constants.Ids.IMAGE_PANEL;
+    const stackEntry: IContextStackEntry = {
+      id: panelId,
+      state: { isBatchToolbarVisible: false },
+      close: () => { /* 面板级别不需要关闭 */ }
+    };
+    contextStack.push(stackEntry);
 
     // 保存状态
     this.savePanelState();

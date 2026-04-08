@@ -1,6 +1,6 @@
 import { Constants } from '../../constants.ts';
 import { ListNavigator } from '../../utils/index.ts';
-import { contextStack } from './ContextStackManager.ts';
+import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 
 interface ImageFullscreenManagerOptions {
   app: unknown;
@@ -88,7 +88,12 @@ export class ImageFullscreenManager {
     viewer.classList.add('active');
 
     // 压栈：进入全屏查看器上下文
-    contextStack.push(Constants.Ids.IMAGE_FULLSCREEN_VIEWER);
+    const stackEntry: IContextStackEntry = {
+      id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER,
+      state: { isBatchToolbarVisible: false },
+      close: () => { this.close(); }
+    };
+    contextStack.push(stackEntry);
 
     // 添加 close 方法供 ShortcutManager 调用
     (viewer as HTMLElement & { close: () => void }).close = () => this.close();

@@ -3,7 +3,7 @@
  * 负责统计数据的计算和渲染
  */
 
-import { contextStack } from './ContextStackManager.ts';
+import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { Constants } from '../../constants.ts';
 import type { IApp } from '../app.types.ts';
 
@@ -64,7 +64,12 @@ export class StatisticsManager {
     const modal = document.getElementById('statisticsModal');
     if (modal) {
       // 压栈：进入统计视图上下文
-      contextStack.push(Constants.Ids.STATISTICS_MODAL);
+      const stackEntry: IContextStackEntry = {
+        id: Constants.Ids.STATISTICS_MODAL,
+        state: { isBatchToolbarVisible: false },
+        close: () => { this.closeStatisticsModal(); }
+      };
+      contextStack.push(stackEntry);
       modal.classList.add('active');
       // 添加 close 方法供 ShortcutManager 调用
       (modal as HTMLElement & { close: () => void }).close = () => this.closeStatisticsModal();

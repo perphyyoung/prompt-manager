@@ -1,6 +1,18 @@
 import { ElementId } from '../../constants.ts';
 
 /**
+ * 上下文栈条目接口
+ * 包含视图 ID、状态和关闭回调
+ */
+export interface IContextStackEntry {
+  id: ElementId;
+  state: {
+    isBatchToolbarVisible: boolean;
+  };
+  close: () => void;
+}
+
+/**
  * 上下文堆栈管理器
  * 使用堆栈结构管理 UI 上下文层级，支持嵌套界面
  *
@@ -14,7 +26,7 @@ import { ElementId } from '../../constants.ts';
  */
 export class ContextStackManager {
   private static instance: ContextStackManager;
-  private stack: ElementId[] = [];
+  private stack: IContextStackEntry[] = [];
 
   static getInstance(): ContextStackManager {
     if (!ContextStackManager.instance) {
@@ -27,16 +39,25 @@ export class ContextStackManager {
 
   /**
    * 压栈 - 进入新的 UI 上下文
-   * @param id - DOM 元素 ID
+   * @param entry - 栈条目
    */
-  push(id: ElementId): void {
-    if (this.stack[this.stack.length - 1] === id) {
-      window.electronAPI.logWarn('ContextStackManager', `push: skipped ${id} (already on top)`);
+  push(entry: IContextStackEntry): void {
+    // 检查是否已在栈顶
+    const currentTop = this.stack[this.stack.length - 1];
+    if (currentTop?.id === entry.id) {
+      window.electronAPI.logWarn('ContextStackManager', `push: skipped ${entry.id} (already on top)`);
       return;
     }
 
-    this.stack.push(id);
-    window.electronAPI.logDebug('ContextStackManager', `push: ${id}, stack=[${this.stack.join(', ')}]`);
+    // 关闭当前栈顶（如果有批量工具栏显示）
+    if (currentTop?.state.isBatchToolbarVisible) {
+      window.electronAPI.logDebug('ContextStackManager', `close before push: ${currentTop.id}`);
+      currentTop.close();
+      currentTop.state.isBatchToolbarVisible = false;
+    }
+
+    this.stack.push(entry);
+    window.electronAPI.logDebug('ContextStackManager', `push: ${entry.id}, stack=[${this.stack.map(e => e.id).join(', ')}]`);
   }
 
   /**
@@ -51,33 +72,50 @@ export class ContextStackManager {
     }
 
     const top = this.stack[this.stack.length - 1];
-    if (expectedId && top !== expectedId) {
+    if (expectedId && top.id !== expectedId) {
       window.electronAPI.logError('ContextStackManager',
-        `pop: mismatch! expected=${expectedId}, actual=${top}, stack=[${this.stack.join(', ')}]`);
+        `pop: mismatch! expected=${expectedId}, actual=${top.id}, stack=[${this.stack.map(e => e.id).join(', ')}]`);
       return false;
     }
 
     const popped = this.stack.pop();
     const stackTrace = new Error().stack?.split('\n').slice(2, 5).join(' | ');
     window.electronAPI.logDebug('ContextStackManager',
-      `pop: ${popped}, stack=[${this.stack.join(', ')}], caller=${stackTrace}`);
+      `pop: ${popped?.id}, stack=[${this.stack.map(e => e.id).join(', ')}], caller=${stackTrace}`);
+
     return true;
+  }
+
+  /**
+   * 获取栈顶条目（当前活动上下文）
+   * @returns 当前活动的栈条目
+   */
+  peek(): IContextStackEntry | undefined {
+    return this.stack[this.stack.length - 1];
   }
 
   /**
    * 获取栈顶 ID（当前活动上下文）
    * @returns 当前活动的 DOM 元素 ID
    */
-  peek(): ElementId | undefined {
-    return this.stack[this.stack.length - 1];
+  peekId(): ElementId | undefined {
+    return this.stack[this.stack.length - 1]?.id;
   }
 
   /**
    * 获取完整堆栈（用于调试）
    * @returns 堆栈的副本
    */
-  getStack(): ElementId[] {
+  getStack(): IContextStackEntry[] {
     return [...this.stack];
+  }
+
+  /**
+   * 获取堆栈 ID 列表（用于调试）
+   * @returns ID 列表
+   */
+  getStackIds(): ElementId[] {
+    return this.stack.map(e => e.id);
   }
 
   /**
@@ -94,7 +132,7 @@ export class ContextStackManager {
    * @returns 是否在堆栈中
    */
   contains(id: ElementId): boolean {
-    return this.stack.includes(id);
+    return this.stack.some(entry => entry.id === id);
   }
 
   /**
@@ -111,7 +149,7 @@ export class ContextStackManager {
    * @returns 是否在栈顶
    */
   isInContext(id: ElementId): boolean {
-    return this.stack[this.stack.length - 1] === id;
+    return this.stack[this.stack.length - 1]?.id === id;
   }
 }
 

@@ -3,7 +3,7 @@ import { UnifiedCardRenderer, PromptTrashConfig, ImageTrashConfig } from './Shar
 import { Constants, ElementId, Events } from '../../constants.ts';
 import { PromptTrashHandler, ImageTrashHandler } from './handlers/index.ts';
 import { localTime } from '../../utils/index.ts';
-import { contextStack } from './ContextStackManager.ts';
+import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import type { TrashHandler, TrashItem } from './handlers/TrashHandler.ts';
 import type { IApp, IEventBus, IPanelManager } from '../app.types.ts';
 
@@ -491,7 +491,12 @@ export class TrashManager {
     const modal = document.getElementById(config.modalId);
 
     if (modal) {
-      contextStack.push(config.elementId);
+      const stackEntry: IContextStackEntry = {
+        id: config.elementId as ElementId,
+        state: { isBatchToolbarVisible: false },
+        close: () => { this.close(); }
+      };
+      contextStack.push(stackEntry);
       modal.style.display = 'flex';
       (modal as HTMLElement & { close: () => void }).close = () => this.close();
       this.activeModals.add(type);

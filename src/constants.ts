@@ -257,16 +257,10 @@ export class Events {
   /** 图像数据发生变化（增删改） */
   static readonly IMAGES_CHANGED = 'imagesChanged';
 
-  // ========== 视图导航事件 ==========
-
-  /** 视图发生变化（面板切换、模态框开关等） */
-  static readonly VIEW_CHANGED = 'viewChanged';
-
   /** 所有事件名称集合（用于调试和验证） */
   static readonly ALL_EVENTS = [
     Events.PROMPTS_CHANGED,
     Events.IMAGES_CHANGED,
-    Events.VIEW_CHANGED,
   ] as const;
 }
 

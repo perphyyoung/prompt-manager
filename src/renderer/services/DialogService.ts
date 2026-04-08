@@ -1,4 +1,4 @@
-import { contextStack } from '../managers/ContextStackManager.ts';
+import { contextStack, IContextStackEntry } from '../managers/ContextStackManager.ts';
 import { Constants } from '../../constants.ts';
 
 /**
@@ -356,7 +356,12 @@ export class DialogService {
       _previousFocus = document.activeElement;
 
       // 压栈：进入对话框上下文（在设置显示之前）
-      contextStack.push(Constants.Ids.DIALOG);
+      const stackEntry: IContextStackEntry = {
+        id: Constants.Ids.DIALOG,
+        state: { isBatchToolbarVisible: false },
+        close: () => { DialogService._closeConfirm(false); }
+      };
+      contextStack.push(stackEntry);
 
       (modal as HTMLElement).style.display = 'flex';
       // 添加 close 方法供 ShortcutManager 调用
@@ -534,7 +539,12 @@ export class DialogService {
       inputEl.addEventListener('keydown', handleKeyDown);
 
       // 压栈：进入对话框上下文
-      contextStack.push(Constants.Ids.DIALOG);
+      const inputStackEntry: IContextStackEntry = {
+        id: Constants.Ids.DIALOG,
+        state: { isBatchToolbarVisible: false },
+        close: () => { cleanup(); resolve(null); }
+      };
+      contextStack.push(inputStackEntry);
 
       (modal as HTMLElement).style.display = 'flex';
       _activeModals.add('inputModal');
@@ -613,7 +623,12 @@ export class DialogService {
       closeBtn?.addEventListener('click', handleCancel);
 
       // 压栈：进入对话框上下文
-      contextStack.push(Constants.Ids.DIALOG);
+      const selectStackEntry: IContextStackEntry = {
+        id: Constants.Ids.DIALOG,
+        state: { isBatchToolbarVisible: false },
+        close: () => { cleanup(); resolve(null); }
+      };
+      contextStack.push(selectStackEntry);
 
       (modal as HTMLElement).style.display = 'flex';
       _activeModals.add('selectModal');

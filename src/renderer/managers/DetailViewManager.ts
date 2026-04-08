@@ -1,8 +1,8 @@
-import { Constants, ElementId, Events } from '../../constants.ts';
+import { Constants, ElementId } from '../../constants.ts';
 import { ListNavigator } from '../../utils/index.ts';
 import { EditableTagList } from '../components/index.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
-import { contextStack } from './ContextStackManager.ts';
+import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { BatchToolbar, IBatchToolbarConfig } from '../components/BatchToolbar.ts';
 
 interface DetailViewManagerOptions {
@@ -188,11 +188,21 @@ export class DetailViewManager {
     // 附加 ctrla 方法
     this.attachCtrlAMethod();
 
-    // 压栈：进入详情视图上下文
-    contextStack.push(this.modalId as ElementId);
-
-    // 发布视图变化事件，通知其他组件清理多选工具栏
-    this.app.eventBus.emit(Events.VIEW_CHANGED, { view: 'detail', modalId: this.modalId });
+    // 压栈：进入详情视图上下文，包含批量模式状态
+    const stackEntry: IContextStackEntry = {
+      id: this.modalId as ElementId,
+      state: {
+        isBatchToolbarVisible: this.isBatchMode
+      },
+      close: () => {
+        // 如果被其他视图覆盖，退出批量模式
+        if (this.isBatchMode) {
+          window.electronAPI.logDebug('DetailViewManager', `close on push: ${this.modalId}`);
+          this.exitBatchMode();
+        }
+      }
+    };
+    contextStack.push(stackEntry);
   }
 
   /**

@@ -141,7 +141,7 @@ export class ShortcutManager {
    * 直接调用 DOM 元素的 close 方法
    */
   private handleEscape(e: KeyboardEvent): void {
-    const id = contextStack.peek();
+    const id = contextStack.peekId();
 
     if (!id) {
       window.electronAPI.logWarn('ShortcutManager', 'No element in stack');
@@ -179,7 +179,7 @@ export class ShortcutManager {
       return; // 让默认行为执行文本全选
     }
 
-    const id = contextStack.peek();
+    const id = contextStack.peekId();
 
     if (!id) {
       return;

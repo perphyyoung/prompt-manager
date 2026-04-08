@@ -3,7 +3,7 @@
  * 提供标签输入的自动完成、键盘导航等功能
  */
 
-import { contextStack } from '../managers/ContextStackManager.ts';
+import { contextStack, IContextStackEntry } from '../managers/ContextStackManager.ts';
 import { Constants } from '../../constants.ts';
 import type { ElementId } from '../../constants.ts';
 
@@ -164,7 +164,12 @@ export class TagAutocomplete {
     (this.dropdown as HTMLElement & { close: () => void }).close = () => this.hideDropdown();
 
     // 压栈：进入下拉菜单上下文
-    contextStack.push(this.dropdownId);
+    const stackEntry: IContextStackEntry = {
+      id: this.dropdownId,
+      state: { isBatchToolbarVisible: false },
+      close: () => { this.hideDropdown(); }
+    };
+    contextStack.push(stackEntry);
 
     // 绑定点击事件
     this.dropdown.querySelectorAll('.autocomplete-item').forEach(item => {

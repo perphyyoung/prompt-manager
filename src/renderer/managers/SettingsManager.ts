@@ -2,7 +2,7 @@ import { Constants, ElementId } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
 import { ElectronDataClearApi } from '../services/ElectronDataClearApi.ts';
 import { DuplicatePreventionMixin } from '../../utils/index.ts';
-import { contextStack } from './ContextStackManager.ts';
+import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 
 /**
  * 数据清空 API 接口
@@ -95,7 +95,12 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
 
     const modal = document.getElementById('settingsModal');
     if (modal) {
-      contextStack.push(Constants.Ids.SETTINGS_MODAL);
+      const stackEntry: IContextStackEntry = {
+        id: Constants.Ids.SETTINGS_MODAL,
+        state: { isBatchToolbarVisible: false },
+        close: () => { this.closeModal(); }
+      };
+      contextStack.push(stackEntry);
       modal.classList.add('active');
       // 添加 close 方法供 ShortcutManager 调用
       (modal as HTMLElement & { close: () => void }).close = () => this.closeModal();

@@ -1,9 +1,9 @@
 import { TagService } from './TagService.ts';
 import { TagUI } from './TagUI.ts';
-import { Constants, ElementId, Events } from '../../constants.ts';
+import { Constants, ElementId } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
 import { ITagService } from '../../types/entities.ts';
-import { contextStack } from './ContextStackManager.ts';
+import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { focusInput } from '../renderer_utils/index.ts';
 import { MultiSelectManager } from './MultiSelectManager.ts';
 
@@ -56,8 +56,6 @@ export abstract class TagManager {
   protected lastSearchTerm: string = '';
   protected isBatchModeActive: boolean = false;
 
-  private unsubscribeViewChanged?: () => void;
-
   constructor(type: string, app: any) {
     this.type = type;
     this.app = app;
@@ -102,9 +100,6 @@ export abstract class TagManager {
       }
     });
 
-    // 订阅视图变化事件
-    this.subscribeToViewChanges();
-
     // 绑定标签管理器事件
     this.bindManagerEvents();
 
@@ -130,22 +125,9 @@ export abstract class TagManager {
   protected abstract getPanelManager(): any;
 
   /**
-   * 订阅视图变化事件
-   */
-  private subscribeToViewChanges(): void {
-    this.unsubscribeViewChanged = this.app.eventBus.on(Events.VIEW_CHANGED, () => {
-      this.hideBatchToolbar();
-    });
-  }
-
-  /**
    * 销毁资源
    */
   destroy(): void {
-    if (this.unsubscribeViewChanged) {
-      this.unsubscribeViewChanged();
-      this.unsubscribeViewChanged = undefined;
-    }
     // 销毁 MultiSelectManager
     this.multiSelectManager.destroy();
   }
@@ -732,7 +714,7 @@ export abstract class TagManager {
   }
 
   /**
-   * 隐藏批量工具栏（viewChanged 回调使用）
+   * 隐藏批量工具栏
    */
   hideBatchToolbar(): void {
     this.multiSelectManager.hideToolbar();
@@ -864,8 +846,6 @@ export abstract class TagManager {
    * 打开标签管理器模态框
    */
   openManager(): void {
-    this.app.eventBus.emit(Events.VIEW_CHANGED, { view: 'tagManager', type: this.type });
-
     const modal = document.getElementById(this.elements.modalId);
     if (modal) {
       modal.classList.add('active');
@@ -880,7 +860,22 @@ export abstract class TagManager {
         this.batchSelectAll();
         return true;
       };
-      contextStack.push(this.elements.modalId as ElementId);
+
+      // 压栈：进入标签管理器上下文，包含批量模式状态
+      const stackEntry: IContextStackEntry = {
+        id: this.elements.modalId,
+        state: {
+          isBatchToolbarVisible: this.isBatchModeActive
+        },
+        close: () => {
+          // 如果被其他视图覆盖，隐藏批量工具栏
+          if (this.isBatchModeActive) {
+            window.electronAPI.logDebug('TagManager', `close on push: ${this.elements.modalId}`);
+            this.hideBatchToolbar();
+          }
+        }
+      };
+      contextStack.push(stackEntry);
     }
   }
 
@@ -888,8 +883,6 @@ export abstract class TagManager {
    * 关闭标签管理器模态框
    */
   closeManager(): void {
-    this.app.eventBus.emit(Events.VIEW_CHANGED, { view: 'main', from: 'tagManager' });
-
     const modal = document.getElementById(this.elements.modalId);
     if (modal) {
       modal.classList.remove('active');

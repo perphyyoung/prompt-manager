@@ -3,7 +3,7 @@
  * 统一处理批量工具栏的创建、显示、隐藏和ESC关闭
  */
 
-import { contextStack } from '../managers/ContextStackManager.ts';
+import { contextStack, IContextStackEntry } from '../managers/ContextStackManager.ts';
 import { ElementId } from '../../constants.ts';
 
 export interface IBatchToolbarButton {
@@ -73,7 +73,12 @@ export class BatchToolbar {
     this.updateCount(count);
 
     // 压栈：进入批量模式上下文
-    contextStack.push(this.config.id as ElementId);
+    const stackEntry: IContextStackEntry = {
+      id: this.config.id as ElementId,
+      state: { isBatchToolbarVisible: true },
+      close: () => { this.hide(); }
+    };
+    contextStack.push(stackEntry);
   }
 
   /**
