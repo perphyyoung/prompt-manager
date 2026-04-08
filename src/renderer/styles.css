@@ -4853,13 +4853,13 @@ body * {
   padding-left: 36px;
 }
 
-/* 复选框包装器 */
+/* 复选框包装器 - 默认隐藏，在选择模式下显示 */
 .tag-checkbox-wrapper {
   position: absolute;
   left: 8px;
   top: 50%;
   transform: translateY(-50%);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   width: 20px;
@@ -4931,6 +4931,40 @@ body * {
   background: rgba(99, 102, 241, 0.15);
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* ==================== 标签管理界面选择模式样式 ==================== */
+
+/* 选择模式下的标签项 */
+#promptTagGroupCards.selection-mode .tag-manager-item,
+#imageTagGroupCards.selection-mode .tag-manager-item {
+  cursor: pointer;
+}
+
+#promptTagGroupCards.selection-mode .tag-manager-item:hover,
+#imageTagGroupCards.selection-mode .tag-manager-item:hover {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: var(--primary-color);
+}
+
+/* 选择模式下隐藏编辑/删除按钮，显示复选框 */
+#promptTagGroupCards.selection-mode .tag-manager-item-actions,
+#imageTagGroupCards.selection-mode .tag-manager-item-actions {
+  display: none;
+}
+
+#promptTagGroupCards.selection-mode .tag-checkbox-wrapper,
+#imageTagGroupCards.selection-mode .tag-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+/* 非选择模式下隐藏复选框包装器 */
+#promptTagGroupCards:not(.selection-mode) .tag-checkbox-wrapper,
+#imageTagGroupCards:not(.selection-mode) .tag-checkbox-wrapper {
+  display: none;
 }
 
 /* ==================== 通用批量操作工具栏样式 ==================== */

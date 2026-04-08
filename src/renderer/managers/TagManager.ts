@@ -5,6 +5,7 @@ import { DialogService, DialogConfig } from '../services/index.ts';
 import { ITagService } from '../../types/entities.ts';
 import { contextStack } from './ContextStackManager.ts';
 import { focusInput } from '../renderer_utils/index.ts';
+import { MultiSelectManager } from './MultiSelectManager.ts';
 
 /**
  * 标签管理器元素 ID 配置
@@ -48,10 +49,11 @@ export abstract class TagManager {
   protected containerId: string;
   protected emptyStateId: string;
   protected searchInputId: string;
-  protected isBatchMode: boolean;
-  protected selectedTags: Set<string>;
   protected elements: ITagManagerElements;
   protected groupEditActive: boolean = false;
+  protected multiSelectManager: MultiSelectManager;
+  protected lastSearchTerm: string = '';
+  protected isBatchModeActive: boolean = false;
 
   private unsubscribeViewChanged?: () => void;
 
@@ -62,8 +64,6 @@ export abstract class TagManager {
     this.ui = new TagUI(type);
     this.eventBus = context.eventBus;
     this.selectedTagGroup = null;
-    this.isBatchMode = false;
-    this.selectedTags = new Set();
 
     // 排序状态
     this.sortBy = localStorage.getItem(`${type}TagSortBy`) || 'count';
@@ -74,6 +74,33 @@ export abstract class TagManager {
     this.containerId = this.elements.containerId;
     this.emptyStateId = this.elements.emptyStateId;
     this.searchInputId = this.elements.searchInputId;
+
+    // 初始化 MultiSelectManager
+    this.multiSelectManager = new MultiSelectManager({
+      onChange: async () => {
+        await this.render(this.lastSearchTerm);
+        this.multiSelectManager.updateToolbarUI();
+      },
+      toolbarConfig: {
+        label: '标签',
+        buttons: [
+          { id: 'selectAll', text: '全选', className: 'batch-action-select-all', action: 'SelectAll', title: '全选所有可见标签' },
+          { id: 'invert', text: '反选', className: 'batch-action-invert', action: 'Invert', title: '反选所有可见标签' },
+          { id: 'move', text: '移动到组', className: 'batch-action-move', action: 'Move', title: '移动选中的标签到指定组' },
+          { id: 'delete', text: '删除', className: 'batch-action-delete', action: 'Delete', title: '删除选中的标签' },
+          { id: 'cancel', text: '取消', className: 'batch-action-cancel', action: 'Cancel', title: '退出批量管理模式' }
+        ]
+      },
+      handler: {
+        onSelectAll: () => this.batchSelectAll(),
+        onInvert: () => this.batchInvert(),
+        onAddTag: () => {},
+        onFavorite: () => {},
+        onDelete: () => this.batchDeleteTags(),
+        onCancel: () => this.exitBatchMode()
+      },
+      eventBus: this.eventBus
+    });
 
     // 订阅视图变化事件
     this.subscribeToViewChanges();
@@ -121,6 +148,8 @@ export abstract class TagManager {
       this.unsubscribeViewChanged();
       this.unsubscribeViewChanged = undefined;
     }
+    // 销毁 MultiSelectManager
+    this.multiSelectManager.destroy();
   }
 
   /**
@@ -128,6 +157,12 @@ export abstract class TagManager {
    */
   async render(searchTerm: string = ''): Promise<void> {
     try {
+      // 搜索条件改变时清空选择
+      if (this.lastSearchTerm !== searchTerm) {
+        this.multiSelectManager.clear();
+        this.lastSearchTerm = searchTerm;
+      }
+
       const tags = await this.service.getTags();
       const groups = await this.service.getTagGroups();
       const container = document.getElementById(this.containerId);
@@ -159,14 +194,13 @@ export abstract class TagManager {
       const sortedTags = this.sortTags(filteredTags, tagCounts);
       const { groupedTags, ungroupedTags } = this.service.groupTagsByGroup(sortedTags, groups);
 
-      const html = this.ui.generateRegistryHtml(groups, groupedTags, ungroupedTags, tagCounts, searchTerm, this.isBatchMode, this.selectedTags);
+      const html = this.ui.generateRegistryHtml(groups, groupedTags, ungroupedTags, tagCounts, searchTerm, this.isBatchModeActive, this.multiSelectManager.selectedIds);
       container.innerHTML = html;
 
       this.bindEvents(container);
 
-      if (this.isBatchMode) {
-        this.bindBatchEvents(container);
-      }
+      // 更新选择模式类
+      this.updateSelectionModeClass();
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', `Failed to render ${this.type} tag manager:`, error);
       this.context.showToast(`加载${this.getTypeLabel()}标签失败`, 'error');
@@ -240,66 +274,104 @@ export abstract class TagManager {
   }
 
   /**
-   * 绑定事件
+   * 绑定事件（使用事件委托）
    */
   bindEvents(container: HTMLElement): void {
-    container.querySelectorAll('.tag-badge-edit').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
+    // 使用事件委托处理所有点击事件
+    container.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+
+      // 批量模式下的标签项选择处理
+      if (this.isBatchModeActive) {
+        // 查找最近的标签项元素
+        const tagItem = target.closest('.tag-manager-item[data-tag]');
+        if (tagItem) {
+          // 如果点击的是复选框，不处理（由 change 事件处理）
+          if (target.closest('.tag-batch-checkbox')) {
+            return;
+          }
+
+          const tag = (tagItem as HTMLElement).dataset.tag;
+          if (!tag) return;
+
+          // 获取当前标签项的索引
+          const index = parseInt((tagItem as HTMLElement).dataset.index || '0', 10);
+
+          if ((e as MouseEvent).shiftKey && this.multiSelectManager.lastSelectedIndex !== undefined) {
+            // Shift+点击：范围选择
+            const allItems = Array.from(container.querySelectorAll('.tag-manager-item[data-tag]'));
+            this.multiSelectManager.rangeSelect(
+              allItems.map((el, i) => ({ id: (el as HTMLElement).dataset.tag || '', index: i })),
+              index
+            );
+          } else if ((e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey) {
+            // Ctrl+点击：多选
+            this.multiSelectManager.toggleSelection(tag, index);
+          } else {
+            // 普通点击：单选
+            this.multiSelectManager.singleSelect(tag, index);
+          }
+          return;
+        }
+      }
+
+      // 非批量模式下的编辑/删除按钮处理
+      // 处理编辑按钮点击
+      const editBtn = target.closest('.tag-badge-edit');
+      if (editBtn) {
         e.stopPropagation();
-        const tag = (btn as HTMLElement).dataset.tag;
+        const tag = (editBtn as HTMLElement).dataset.tag;
         if (tag) await this.startRenameTag(tag);
-      });
-    });
+        return;
+      }
 
-    container.querySelectorAll('.tag-badge-delete').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
+      // 处理删除按钮点击
+      const deleteBtn = target.closest('.tag-badge-delete');
+      if (deleteBtn) {
         e.stopPropagation();
-        const tag = (btn as HTMLElement).dataset.tag;
+        const tag = (deleteBtn as HTMLElement).dataset.tag;
         if (tag) await this.deleteTag(tag);
-      });
-    });
+        return;
+      }
 
-    container.querySelectorAll('.tag-group-btn.edit').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      // 处理标签组编辑按钮
+      const groupEditBtn = target.closest('.tag-group-btn.edit');
+      if (groupEditBtn) {
         e.stopPropagation();
-        const groupId = parseInt((btn as HTMLElement).dataset.id || '0');
+        const groupId = parseInt((groupEditBtn as HTMLElement).dataset.id || '0');
         this.openGroupEdit(groupId);
-      });
+        return;
+      }
+
+      // 处理标签组删除按钮
+      const groupDeleteBtn = target.closest('.tag-group-btn.delete');
+      if (groupDeleteBtn) {
+        e.stopPropagation();
+        const groupId = parseInt((groupDeleteBtn as HTMLElement).dataset.id || '0');
+        await this.deleteGroup(groupId);
+        return;
+      }
     });
 
-    container.querySelectorAll('.tag-group-btn.delete').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const groupId = parseInt((btn as HTMLElement).dataset.id || '0');
-        await this.deleteGroup(groupId);
-      });
+    // 使用事件委托处理复选框变化（批量模式）
+    container.addEventListener('change', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('tag-batch-checkbox')) {
+        const checkbox = target as HTMLInputElement;
+        const tag = checkbox.dataset.tag;
+        const index = parseInt(checkbox.dataset.index || '0', 10);
+        if (tag) {
+          if (checkbox.checked) {
+            this.multiSelectManager.addSelectionWithIndex(tag, index);
+          } else {
+            this.multiSelectManager.removeSelection(tag);
+          }
+        }
+      }
     });
 
     this.bindDragEvents(container);
     this.bindGroupContextMenu(container);
-  }
-
-  /**
-   * 绑定批量管理事件
-   */
-  private bindBatchEvents(container: HTMLElement): void {
-    container.querySelectorAll('.tag-batch-checkbox').forEach(checkbox => {
-      checkbox.addEventListener('change', (e) => {
-        const target = e.target as HTMLInputElement;
-        const tag = target.dataset.tag;
-        if (tag) {
-          this.toggleTagSelection(tag);
-          const item = target.closest('.tag-manager-item');
-          if (item) {
-            if (target.checked) {
-              item.classList.add('tag-selected');
-            } else {
-              item.classList.remove('tag-selected');
-            }
-          }
-        }
-      });
-    });
   }
 
   /**
@@ -697,131 +769,61 @@ export abstract class TagManager {
    * 切换批量管理模式
    */
   toggleBatchMode(): void {
-    this.isBatchMode = !this.isBatchMode;
-    this.selectedTags.clear();
-
-    if (this.isBatchMode) {
-      contextStack.push(this.elements.batchToolbarId as ElementId);
+    if (this.isBatchModeActive) {
+      this.exitBatchMode();
     } else {
-      contextStack.pop(this.elements.batchToolbarId as ElementId);
+      this.isBatchModeActive = true;
+      this.multiSelectManager.showToolbar();
+      this.render(this.lastSearchTerm);
     }
-
-    this.render();
-    this.updateBatchToolbar();
   }
 
   /**
    * 退出批量管理模式
    */
   exitBatchMode(): void {
-    if (this.isBatchMode) {
-      this.isBatchMode = false;
-      this.selectedTags.clear();
-      contextStack.pop(this.elements.batchToolbarId as ElementId);
-      this.render();
-      this.updateBatchToolbar();
-    }
+    this.isBatchModeActive = false;
+    this.multiSelectManager.clear();
+    this.multiSelectManager.hideToolbar();
+    this.render(this.lastSearchTerm);
   }
 
   /**
    * 隐藏批量工具栏
    */
   hideBatchToolbar(): void {
-    if (this.isBatchMode) {
-      this.exitBatchMode();
-    } else {
-      const floatingToolbar = document.getElementById(this.elements.batchToolbarId);
-      if (floatingToolbar) {
-        floatingToolbar.classList.remove('visible');
-        setTimeout(() => floatingToolbar.remove(), 300);
-      }
-    }
+    this.exitBatchMode();
   }
 
   /**
-   * 更新批量管理工具栏
+   * 更新选择模式类
    */
-  private updateBatchToolbar(): void {
-    const toolbarId = this.elements.batchToolbarId;
-    let floatingToolbar = document.getElementById(toolbarId) as HTMLElement | null;
-
-    if (this.isBatchMode) {
-      if (!floatingToolbar) {
-        floatingToolbar = document.createElement('div');
-        floatingToolbar.id = toolbarId;
-        floatingToolbar.className = 'batch-toolbar';
-        floatingToolbar.innerHTML = `
-          <div class="batch-toolbar-content">
-            <span class="batch-toolbar-count">已选择 0 个标签</span>
-            <div class="batch-toolbar-actions">
-              <button class="batch-action-btn batch-action-select-all">全选</button>
-              <button class="batch-action-btn batch-action-invert">反选</button>
-              <button class="batch-action-btn batch-action-move">移动到组</button>
-              <button class="batch-action-btn batch-action-delete">删除</button>
-              <button class="batch-action-btn batch-action-cancel">取消</button>
-            </div>
-          </div>
-        `;
-        document.body.appendChild(floatingToolbar);
-
-        floatingToolbar.querySelector('.batch-action-select-all')?.addEventListener('click', () => this.batchSelectAll());
-        floatingToolbar.querySelector('.batch-action-invert')?.addEventListener('click', () => this.batchInvert());
-        floatingToolbar.querySelector('.batch-action-delete')?.addEventListener('click', () => this.batchDeleteTags());
-        floatingToolbar.querySelector('.batch-action-move')?.addEventListener('click', () => this.batchMoveToGroup());
-        floatingToolbar.querySelector('.batch-action-cancel')?.addEventListener('click', () => this.exitBatchMode());
-
-        (floatingToolbar as any).close = () => this.exitBatchMode();
-        (floatingToolbar as any).ctrla = () => {
-          this.batchSelectAll();
-          // 返回 true 表示已处理
-          return true;
-        };
-      } else {
-        const countSpan = floatingToolbar.querySelector('.batch-toolbar-count');
-        if (countSpan) {
-          countSpan.textContent = `已选择 ${this.selectedTags.size} 个标签`;
-        }
-      }
-
-      floatingToolbar.classList.add('visible');
-    } else {
-      if (floatingToolbar) {
-        floatingToolbar.classList.remove('visible');
-        setTimeout(() => floatingToolbar?.remove(), 300);
-      }
+  private updateSelectionModeClass(): void {
+    const container = document.getElementById(this.containerId);
+    if (container) {
+      container.classList.toggle('selection-mode', this.isBatchModeActive);
     }
-  }
-
-  /**
-   * 切换标签选中状态
-   */
-  toggleTagSelection(tag: string): void {
-    if (this.selectedTags.has(tag)) {
-      this.selectedTags.delete(tag);
-    } else {
-      this.selectedTags.add(tag);
-    }
-    this.updateBatchToolbar();
   }
 
   /**
    * 批量删除标签
    */
   private async batchDeleteTags(): Promise<void> {
-    if (this.selectedTags.size === 0) {
+    const selectedIds = Array.from(this.multiSelectManager.selectedIds);
+    if (selectedIds.length === 0) {
       this.context.showToast('请先选择要删除的标签', 'warning');
       return;
     }
 
     const confirmed = await DialogService.showConfirmDialogByConfig(
       DialogConfig.BATCH_DELETE_TAGS,
-      { count: this.selectedTags.size }
+      { count: selectedIds.length }
     );
 
     if (!confirmed) return;
 
     try {
-      const result = await this.service.deleteTags(Array.from(this.selectedTags));
+      const result = await this.service.deleteTags(selectedIds);
 
       this.context.showToast(`已删除 ${result.deleted} 个标签`, 'success');
       this.exitBatchMode();
@@ -837,7 +839,8 @@ export abstract class TagManager {
    * 批量移动标签到组
    */
   private async batchMoveToGroup(): Promise<void> {
-    if (this.selectedTags.size === 0) {
+    const selectedIds = Array.from(this.multiSelectManager.selectedIds);
+    if (selectedIds.length === 0) {
       this.context.showToast('请先选择要移动的标签', 'warning');
       return;
     }
@@ -846,7 +849,7 @@ export abstract class TagManager {
 
     const result = await this.context.showInputDialog(
       '批量移动到组',
-      `将 ${this.selectedTags.size} 个标签移动到:`,
+      `将 ${selectedIds.length} 个标签移动到:`,
       '',
       {
         showGroupSelect: true,
@@ -860,7 +863,7 @@ export abstract class TagManager {
 
     try {
       let successCount = 0;
-      for (const tag of this.selectedTags) {
+      for (const tag of selectedIds) {
         try {
           await this.service.assignTagToGroup(tag, result.groupId || null);
           successCount++;
@@ -887,17 +890,11 @@ export abstract class TagManager {
     if (!container) return;
 
     const tagItems = container.querySelectorAll('.tag-manager-item[data-tag]');
-    tagItems.forEach(item => {
-      const tag = (item as HTMLElement).dataset.tag;
-      if (tag) {
-        this.selectedTags.add(tag);
-        const checkbox = item.querySelector('.tag-batch-checkbox') as HTMLInputElement | null;
-        if (checkbox) checkbox.checked = true;
-        item.classList.add('tag-selected');
-      }
-    });
+    const ids = Array.from(tagItems).map((item) => {
+      return (item as HTMLElement).dataset.tag || '';
+    }).filter(id => id);
 
-    this.updateBatchToolbar();
+    this.multiSelectManager.selectAll(ids);
   }
 
   /**
@@ -908,25 +905,11 @@ export abstract class TagManager {
     if (!container) return;
 
     const tagItems = container.querySelectorAll('.tag-manager-item[data-tag]');
-    tagItems.forEach(item => {
-      const tag = (item as HTMLElement).dataset.tag;
-      if (tag) {
-        if (this.selectedTags.has(tag)) {
-          this.selectedTags.delete(tag);
-        } else {
-          this.selectedTags.add(tag);
-        }
-        const checkbox = item.querySelector('.tag-batch-checkbox') as HTMLInputElement | null;
-        if (checkbox) checkbox.checked = this.selectedTags.has(tag);
-        if (this.selectedTags.has(tag)) {
-          item.classList.add('tag-selected');
-        } else {
-          item.classList.remove('tag-selected');
-        }
-      }
-    });
+    const allIds = Array.from(tagItems).map((item) => {
+      return (item as HTMLElement).dataset.tag || '';
+    }).filter(id => id);
 
-    this.updateBatchToolbar();
+    this.multiSelectManager.invertSelection(allIds);
   }
 
   // ========== 标签管理器模态框控制 ==========
@@ -942,11 +925,13 @@ export abstract class TagManager {
       modal.classList.add('active');
       (modal as any).close = () => this.closeManager();
       (modal as any).ctrla = () => {
-        if (this.isBatchMode) {
-          // 批量模式下执行全选
-          this.batchSelectAll();
+        if (!this.isBatchModeActive) {
+          // 非批量模式：进入批量模式但不立即渲染，等全选后再渲染
+          this.isBatchModeActive = true;
+          this.multiSelectManager.showToolbar();
         }
-        // 始终返回 true 阻止默认行为（非批量模式下 Ctrl+A 无效）
+        // 批量模式下执行全选
+        this.batchSelectAll();
         return true;
       };
       contextStack.push(this.elements.modalId as ElementId);

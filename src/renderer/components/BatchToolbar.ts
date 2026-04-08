@@ -42,7 +42,11 @@ export class BatchToolbar {
    * 显示工具栏
    */
   show(count: number = 0): void {
-    if (this.isVisible) return;
+    if (this.isVisible) {
+      // 已经显示，只更新计数
+      this.updateCount(count);
+      return;
+    }
 
     if (!this.element) {
       this.element = this.createElement();

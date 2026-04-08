@@ -57,10 +57,12 @@ export class TagUI {
     selectedTags: Set<string> = new Set()
   ): string {
     let html = '';
+    let globalIndex = 0;
 
     // 未分组标签卡片
     if (ungroupedTags.length > 0) {
-      html += this.generateUngroupedTagCard(ungroupedTags, tagCounts, isBatchMode, selectedTags);
+      html += this.generateUngroupedTagCard(ungroupedTags, tagCounts, isBatchMode, selectedTags, globalIndex);
+      globalIndex += ungroupedTags.length;
     }
 
     // 标签组卡片（按排序顺序）
@@ -69,7 +71,8 @@ export class TagUI {
       const tags = groupedTags[group.id] || [];
       // 搜索模式下只显示有标签的组，非搜索模式显示所有组
       if (tags.length > 0 || !searchTerm) {
-        html += this.generateTagGroupCard(group, tags, tagCounts, index === 0, isBatchMode, selectedTags);
+        html += this.generateTagGroupCard(group, tags, tagCounts, index === 0, isBatchMode, selectedTags, globalIndex);
+        globalIndex += tags.length;
       }
     });
 
@@ -84,14 +87,15 @@ export class TagUI {
     count: number,
     groupId: number | null = null,
     isBatchMode = false,
-    isSelected = false
+    isSelected = false,
+    index: number = 0
   ): string {
     const selectedClass = isSelected ? 'tag-selected' : '';
     const batchClass = isBatchMode ? 'batch-mode' : '';
     const escapedTag = HtmlUtils.escapeHtml(tag);
 
     const actions = isBatchMode
-      ? `<div class="tag-checkbox-wrapper"><input type="checkbox" class="tag-batch-checkbox" data-tag="${escapedTag}" ${isSelected ? 'checked' : ''}></div>`
+      ? `<div class="tag-checkbox-wrapper"><input type="checkbox" class="tag-batch-checkbox" data-tag="${escapedTag}" data-index="${index}" ${isSelected ? 'checked' : ''}></div>`
       : `<div class="tag-manager-item-actions">
           <button class="tag-badge-btn tag-badge-edit" data-tag="${escapedTag}" title="编辑">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -110,7 +114,7 @@ export class TagUI {
     const draggableAttr = isBatchMode ? '' : 'draggable="true"';
 
     return `
-      <div class="tag-manager-item tag-in-card ${batchClass} ${selectedClass}" data-tag="${escapedTag}" data-group-id="${groupId ?? ''}" ${draggableAttr}>
+      <div class="tag-manager-item tag-in-card ${batchClass} ${selectedClass}" data-id="${escapedTag}" data-tag="${escapedTag}" data-index="${index}" data-group-id="${groupId ?? ''}" ${draggableAttr}>
         ${actions}
         <div class="tag-manager-item-content">
           <div class="tag-manager-item-name" title="${escapedTag}">${escapedTag}</div>
@@ -132,10 +136,11 @@ export class TagUI {
     isBatchMode = false,
     selectedTags: Set<string> = new Set(),
     isUngrouped = false,
-    sortOrder = 0
+    sortOrder = 0,
+    startIndex: number = 0
   ): string {
-    const tagsHtml = tags.map(tag =>
-      this.generateTagItemHtml(tag, tagCounts[tag] ?? 0, groupId, isBatchMode, selectedTags.has(tag))
+    const tagsHtml = tags.map((tag, index) =>
+      this.generateTagItemHtml(tag, tagCounts[tag] ?? 0, groupId, isBatchMode, selectedTags.has(tag), startIndex + index)
     ).join('');
 
     if (isUngrouped) {
@@ -189,9 +194,10 @@ export class TagUI {
     tags: string[],
     tagCounts: Record<string, number>,
     isBatchMode = false,
-    selectedTags: Set<string> = new Set()
+    selectedTags: Set<string> = new Set(),
+    startIndex: number = 0
   ): string {
-    return this.generateTagGroupCardHtml(null, '未分组', tags, tagCounts, false, isBatchMode, selectedTags, true, 0);
+    return this.generateTagGroupCardHtml(null, '未分组', tags, tagCounts, false, isBatchMode, selectedTags, true, 0, startIndex);
   }
 
   /**
@@ -203,9 +209,10 @@ export class TagUI {
     tagCounts: Record<string, number>,
     isFirst = false,
     isBatchMode = false,
-    selectedTags: Set<string> = new Set()
+    selectedTags: Set<string> = new Set(),
+    startIndex: number = 0
   ): string {
-    return this.generateTagGroupCardHtml(group.id, group.name, tags, tagCounts, isFirst, isBatchMode, selectedTags, false, group.sortOrder ?? 0);
+    return this.generateTagGroupCardHtml(group.id, group.name, tags, tagCounts, isFirst, isBatchMode, selectedTags, false, group.sortOrder ?? 0, startIndex);
   }
 
   /**

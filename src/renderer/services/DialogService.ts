@@ -312,6 +312,13 @@ export class DialogService {
     const dialogType = config.type || 'warning';
 
     return new Promise((resolve) => {
+      // 再次检查，防止在 Promise 创建过程中被其他调用修改状态
+      if (_confirmCallback) {
+        console.warn('Confirm dialog already open (race condition), rejecting new call');
+        resolve(false);
+        return;
+      }
+
       const modal = document.getElementById('confirmModal');
       const modalTitle = document.getElementById('confirmModalTitle');
       const modalMessage = document.getElementById('confirmModalMessage');
@@ -348,7 +355,7 @@ export class DialogService {
 
       _previousFocus = document.activeElement;
 
-      // 压栈：进入对话框上下文
+      // 压栈：进入对话框上下文（在设置显示之前）
       contextStack.push(Constants.Ids.DIALOG);
 
       (modal as HTMLElement).style.display = 'flex';
@@ -397,6 +404,11 @@ export class DialogService {
   }
 
   private static _closeConfirm(result = false): void {
+    // 防止重复关闭导致栈不匹配
+    if (!_confirmCallback) {
+      return;
+    }
+
     const modal = document.getElementById('confirmModal');
     if (modal) {
       (modal as HTMLElement).style.display = 'none';
@@ -407,10 +419,9 @@ export class DialogService {
     if (cancelBtn) (cancelBtn as HTMLElement).style.display = '';
     if (okBtn) (okBtn as HTMLElement).style.margin = '';
 
-    if (_confirmCallback) {
-      _confirmCallback(result);
-      _confirmCallback = null;
-    }
+    // 调用回调并清空
+    _confirmCallback(result);
+    _confirmCallback = null;
 
     _activeModals.delete('confirmModal');
 
