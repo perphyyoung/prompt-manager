@@ -51,6 +51,7 @@ export abstract class TagManager {
   protected searchInputId: string;
   protected elements: ITagManagerElements;
   protected groupEditActive: boolean = false;
+  protected _eventsBound: boolean = false;
   protected multiSelectManager: MultiSelectManager;
   protected lastSearchTerm: string = '';
   protected isBatchModeActive: boolean = false;
@@ -277,6 +278,9 @@ export abstract class TagManager {
    * 绑定事件（使用事件委托）
    */
   bindEvents(container: HTMLElement): void {
+    if (this._eventsBound) return;
+    this._eventsBound = true;
+
     // 使用事件委托处理所有点击事件
     container.addEventListener('click', async (e) => {
       const target = e.target as HTMLElement;
