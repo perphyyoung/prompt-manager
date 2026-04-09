@@ -14,6 +14,67 @@
 | [6-new-prompt-duplicate-prevention.spec.ts](./6-new-prompt-duplicate-prevention.spec.ts) | 新建提示词防重复提交 |
 | [7-main-card-multi-select.spec.ts](./7-main-card-multi-select.spec.ts) | 主界面卡片视图多选功能 |
 | [8-main-view-shift-select.spec.ts](./8-main-view-shift-select.spec.ts) | Shift 范围选择功能 |
+| [9-tag-manager.spec.ts](./9-tag-manager.spec.ts) | 标签管理器功能（图像和提示词） |
+| [cleanup-test-tag-groups.ts](./cleanup-test-tag-groups.ts) | 清理测试产生的标签组工具 |
+
+---
+
+### 9-tag-manager.spec.ts
+
+**测试内容**：标签管理器功能（图像和提示词）
+
+**涉及组件/管理器**：
+- `TagManager` - 标签管理
+- `ImageTagManager` - 图像标签管理
+- `PromptTagManager` - 提示词标签管理
+
+**测试场景**：
+1. **图像标签管理 - 非批量功能**
+   - 打开/关闭标签管理器
+   - 新建标签
+   - 编辑标签（重命名）
+   - 删除标签
+   - 排序标签
+   - 新建标签组
+   - 编辑标签组
+   - 删除标签组
+   - 搜索并批量删除 e2e 标签
+2. **图像标签管理 - 批量功能**
+   - 进入/退出批量模式
+   - 批量全选/反选标签
+   - 批量删除标签
+   - 批量移动到组
+3. **提示词标签管理 - 非批量功能**（同图像）
+4. **提示词标签管理 - 批量功能**（同图像）
+
+**修改相关文件时需关注**：
+- 修改标签管理器界面时
+- 修改标签 CRUD 操作时
+- 修改标签组管理功能时
+- 修改批量操作功能时
+
+---
+
+### cleanup-test-tag-groups.ts
+
+**测试内容**：清理测试产生的标签组工具
+
+**用途**：
+- 删除 E2E 测试创建的以 "e2e_" 开头的标签组
+- 用于测试环境清理和数据恢复
+
+**使用方法**：
+```bash
+npx tsx e2e/cleanup-test-tag-groups.ts
+```
+
+**清理范围**：
+- 图像标签组（通过 `getImageTagGroups` / `deleteImageTagGroup`）
+- 提示词标签组（通过 `getPromptTagGroups` / `deletePromptTagGroup`）
+
+**修改相关文件时需关注**：
+- 修改标签组 API 时
+- 修改 Electron API 接口时
 
 ---
 

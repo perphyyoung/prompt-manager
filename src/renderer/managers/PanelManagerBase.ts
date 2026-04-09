@@ -240,6 +240,7 @@ export abstract class PanelManagerBase {
         this.multiSelectManager.updateToolbarUI();
       },
       toolbarConfig: multiSelectConfig ? {
+        id: this.storagePrefix === 'prompt' ? Constants.Ids.PROMPT_TAG_BATCH_TOOLBAR : Constants.Ids.IMAGE_TAG_BATCH_TOOLBAR,
         label: multiSelectConfig.label,
         buttons: multiSelectConfig.buttons
       } : undefined,

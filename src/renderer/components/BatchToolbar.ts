@@ -83,8 +83,10 @@ export class BatchToolbar {
 
   /**
    * 隐藏工具栏
+   * @param triggerCancel 是否触发取消回调，默认为 true。当因选择为空自动隐藏时应设为 false
    */
-  hide(): void {
+  hide(triggerCancel: boolean = true): void {
+    window.electronAPI.logDebug('BatchToolbar', `hide called, triggerCancel=${triggerCancel}, isVisible=${this.isVisible}`);
     if (!this.isVisible || !this.element) return;
 
     this.element.classList.remove('visible');
@@ -101,8 +103,11 @@ export class BatchToolbar {
       }
     }, 300);
 
-    // 调用关闭回调
-    this.onClose?.();
+    // 调用关闭回调（仅在用户主动关闭时）
+    if (triggerCancel) {
+      window.electronAPI.logDebug('BatchToolbar', 'calling onClose callback');
+      this.onClose?.();
+    }
   }
 
   /**

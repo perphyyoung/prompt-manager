@@ -77,10 +77,17 @@ export abstract class TagManager {
     // 初始化 MultiSelectManager
     this.multiSelectManager = new MultiSelectManager({
       onChange: async () => {
-        await this.render(this.lastSearchTerm);
+        // 批量模式下同步复选框状态，不重新渲染列表
+        // 避免批量操作（全选、反选）触发不必要的重渲染
+        if (this.isBatchModeActive) {
+          this.syncCheckboxStates();
+        } else {
+          await this.render(this.lastSearchTerm);
+        }
         this.multiSelectManager.updateToolbarUI();
       },
       toolbarConfig: {
+        id: this.elements.batchToolbarId,
         label: '标签',
         buttons: [
           { id: 'selectAll', text: '全选', className: 'batch-action-select-all', action: 'SelectAll', title: '全选所有可见标签' },
@@ -138,7 +145,8 @@ export abstract class TagManager {
    */
   async render(searchTerm: string = ''): Promise<void> {
     try {
-      if (this.lastSearchTerm !== searchTerm) {
+      // 批量模式下不清除选择，避免搜索时丢失批量选择
+      if (this.lastSearchTerm !== searchTerm && !this.isBatchModeActive) {
         this.multiSelectManager.clearImmediately();
         this.lastSearchTerm = searchTerm;
       }
@@ -696,10 +704,15 @@ export abstract class TagManager {
    * 退出批量管理模式
    */
   exitBatchMode(): void {
-    if (this.isBatchModeActive) {
-      this.multiSelectManager.hideToolbar();
-    }
+    window.electronAPI.logDebug('TagManager', `exitBatchMode called, isBatchModeActive=${this.isBatchModeActive}`);
+    if (!this.isBatchModeActive) return;
+
+    // 先设置标志，防止递归调用
     this.isBatchModeActive = false;
+
+    // 隐藏工具栏，但不触发 onClose 回调（避免递归）
+    this.multiSelectManager.hideToolbarWithoutCancel();
+
     this.multiSelectManager.clear();
     this._eventsBound = false;
   }
@@ -725,10 +738,31 @@ export abstract class TagManager {
   }
 
   /**
+   * 同步复选框状态与选择状态
+   * 在批量模式下，当选择状态改变时手动更新复选框
+   */
+  private syncCheckboxStates(): void {
+    const container = document.getElementById(this.containerId);
+    if (!container) return;
+
+    const selectedIds = this.multiSelectManager.selectedIds;
+    const checkboxes = container.querySelectorAll('.tag-batch-checkbox') as NodeListOf<HTMLInputElement>;
+
+    checkboxes.forEach((checkbox) => {
+      const tag = checkbox.dataset.tag;
+      if (tag) {
+        checkbox.checked = selectedIds.has(tag);
+      }
+    });
+  }
+
+  /**
    * 批量删除标签
    */
   private async batchDeleteTags(): Promise<void> {
+    window.electronAPI.logDebug('TagManager', 'batchDeleteTags called');
     const selectedIds = Array.from(this.multiSelectManager.selectedIds);
+    window.electronAPI.logDebug('TagManager', `batchDeleteTags: selectedIds.length=${selectedIds.length}`);
     if (selectedIds.length === 0) {
       this.app.showToast('请先选择要删除的标签', 'warning');
       return;
@@ -739,10 +773,15 @@ export abstract class TagManager {
       { count: selectedIds.length }
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      window.electronAPI.logDebug('TagManager', 'batchDeleteTags: user cancelled');
+      return;
+    }
 
+    window.electronAPI.logDebug('TagManager', `batchDeleteTags: deleting ${selectedIds.length} tags`);
     try {
       const result = await this.service.deleteTags(selectedIds);
+      window.electronAPI.logDebug('TagManager', `batchDeleteTags: deleted ${result.deleted} tags`);
 
       this.app.showToast(`已删除 ${result.deleted} 个标签`, 'success');
       this.exitBatchMode();
@@ -844,9 +883,10 @@ export abstract class TagManager {
       (modal as any).close = () => this.closeManager();
       (modal as any).ctrla = () => {
         if (!this.isBatchModeActive) {
-          // 非批量模式：进入批量模式但不立即渲染，等全选后再渲染
+          // 非批量模式：进入批量模式并重新渲染以显示复选框
           this.isBatchModeActive = true;
           this.multiSelectManager.showToolbar();
+          this.render(this.lastSearchTerm);
         }
         // 批量模式下执行全选
         this.batchSelectAll();

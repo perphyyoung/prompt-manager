@@ -205,6 +205,10 @@ let _confirmCallback: ((result: boolean) => void) | null = null;
 let _previousFocus: Element | null = null;
 const _activeModals = new Set<string>();
 let _buttonsBound = false;
+// 用于防止输入对话框事件重复绑定
+let _inputDialogBound = false;
+// 用于防止选择对话框事件重复绑定
+let _selectDialogBound = false;
 
 // ==================== 对话框服务 ====================
 export class DialogService {
@@ -217,13 +221,21 @@ export class DialogService {
 
   private static _bindButtonEvents(): void {
     if (_buttonsBound) return;
-    document.getElementById('confirmOkBtn')?.addEventListener('click', () => {
+    window.electronAPI.logDebug('DialogService', '_bindButtonEvents called');
+    const okBtn = document.getElementById(Constants.Ids.CONFIRM_OK_BTN);
+    const cancelBtn = document.getElementById(Constants.Ids.CONFIRM_CANCEL_BTN);
+    const closeBtn = document.getElementById(Constants.Ids.CLOSE_CONFIRM_MODAL);
+    window.electronAPI.logDebug('DialogService', `okBtn=${okBtn ? 'found' : 'not found'}, cancelBtn=${cancelBtn ? 'found' : 'not found'}, closeBtn=${closeBtn ? 'found' : 'not found'}`);
+    okBtn?.addEventListener('click', () => {
+      window.electronAPI.logDebug('DialogService', 'confirmOkBtn clicked');
       DialogService._closeConfirm(true);
     });
-    document.getElementById('confirmCancelBtn')?.addEventListener('click', () => {
+    cancelBtn?.addEventListener('click', () => {
+      window.electronAPI.logDebug('DialogService', 'confirmCancelBtn clicked');
       DialogService._closeConfirm(false);
     });
-    document.getElementById('closeConfirmModal')?.addEventListener('click', () => {
+    closeBtn?.addEventListener('click', () => {
+      window.electronAPI.logDebug('DialogService', 'closeConfirmModal clicked');
       DialogService._closeConfirm(false);
     });
     _buttonsBound = true;
@@ -319,9 +331,9 @@ export class DialogService {
         return;
       }
 
-      const modal = document.getElementById('confirmModal');
-      const modalTitle = document.getElementById('confirmModalTitle');
-      const modalMessage = document.getElementById('confirmModalMessage');
+      const modal = document.getElementById(Constants.Ids.CONFIRM_MODAL);
+      const modalTitle = document.getElementById(Constants.Ids.CONFIRM_MODAL_TITLE);
+      const modalMessage = document.getElementById(Constants.Ids.CONFIRM_MODAL_MESSAGE);
 
       if (!modal) {
         resolve(window.confirm(msg));
@@ -341,8 +353,8 @@ export class DialogService {
       // 设置对话框类型样式
       modal.dataset.dialogType = dialogType;
 
-      const cancelBtn = document.getElementById('confirmCancelBtn');
-      const okBtn = document.getElementById('confirmOkBtn');
+      const cancelBtn = document.getElementById(Constants.Ids.CONFIRM_CANCEL_BTN);
+      const okBtn = document.getElementById(Constants.Ids.CONFIRM_OK_BTN);
 
       // info 类型只显示确认按钮
       if (dialogType === 'info') {
@@ -357,7 +369,7 @@ export class DialogService {
 
       // 压栈：进入对话框上下文（在设置显示之前）
       const stackEntry: IContextStackEntry = {
-        id: Constants.Ids.DIALOG,
+        id: Constants.Ids.CONFIRM_DIALOG,
         state: { isBatchToolbarVisible: false },
         close: () => { DialogService._closeConfirm(false); }
       };
@@ -366,10 +378,10 @@ export class DialogService {
       (modal as HTMLElement).style.display = 'flex';
       // 添加 close 方法供 ShortcutManager 调用
       (modal as HTMLElement & { close: () => void }).close = () => DialogService._closeConfirm(false);
-      _activeModals.add('confirmModal');
+      _activeModals.add(Constants.Ids.CONFIRM_MODAL);
 
       setTimeout(() => {
-        document.getElementById('confirmOkBtn')?.focus();
+        document.getElementById(Constants.Ids.CONFIRM_OK_BTN)?.focus();
       }, 0);
 
       _confirmCallback = (result: boolean) => {
@@ -414,24 +426,27 @@ export class DialogService {
       return;
     }
 
-    const modal = document.getElementById('confirmModal');
+    const modal = document.getElementById(Constants.Ids.CONFIRM_MODAL);
     if (modal) {
       (modal as HTMLElement).style.display = 'none';
     }
 
-    const cancelBtn = document.getElementById('confirmCancelBtn');
-    const okBtn = document.getElementById('confirmOkBtn');
+    const cancelBtn = document.getElementById(Constants.Ids.CONFIRM_CANCEL_BTN);
+    const okBtn = document.getElementById(Constants.Ids.CONFIRM_OK_BTN);
     if (cancelBtn) (cancelBtn as HTMLElement).style.display = '';
     if (okBtn) (okBtn as HTMLElement).style.margin = '';
 
-    // 调用回调并清空
-    _confirmCallback(result);
+    // 先清空回调，防止回调中再次触发关闭
+    const callback = _confirmCallback;
     _confirmCallback = null;
 
-    _activeModals.delete('confirmModal');
+    // 调用回调
+    callback(result);
+
+    _activeModals.delete(Constants.Ids.CONFIRM_MODAL);
 
     // 出栈：退出对话框上下文
-    contextStack.pop(Constants.Ids.DIALOG);
+    contextStack.pop(Constants.Ids.CONFIRM_DIALOG);
 
     if (_previousFocus instanceof HTMLElement) {
       _previousFocus.focus();
@@ -453,16 +468,22 @@ export class DialogService {
     groups?: Array<{ id: string | number; name: string }>;
     defaultGroupId?: string | number;
   }): Promise<{ value: string; groupId?: number | null } | null> {
+    // 如果输入对话框已经在显示中，直接返回 null
+    if (_activeModals.has(Constants.Ids.INPUT_MODAL)) {
+      window.electronAPI.logDebug('DialogService', 'showInputDialog skipped: already showing');
+      return null;
+    }
+
     return new Promise((resolve) => {
-      const modal = document.getElementById('inputModal');
-      const titleEl = document.getElementById('inputModalTitle');
-      const labelEl = document.getElementById('inputModalLabel');
-      const inputEl = document.getElementById('inputModalField') as HTMLInputElement | HTMLTextAreaElement | null;
-      const groupSection = document.getElementById('inputModalGroupSection');
-      const groupSelect = document.getElementById('inputModalGroupSelect') as HTMLSelectElement | null;
-      const confirmBtn = document.getElementById('inputOkBtn');
-      const cancelBtn = document.getElementById('inputCancelBtn');
-      const closeBtn = document.getElementById('closeInputModal');
+      const modal = document.getElementById(Constants.Ids.INPUT_MODAL);
+      const titleEl = document.getElementById(Constants.Ids.INPUT_MODAL_TITLE);
+      const labelEl = document.getElementById(Constants.Ids.INPUT_MODAL_LABEL);
+      const inputEl = document.getElementById(Constants.Ids.INPUT_MODAL_FIELD) as HTMLInputElement | HTMLTextAreaElement | null;
+      const groupSection = document.getElementById(Constants.Ids.INPUT_MODAL_GROUP_SECTION);
+      const groupSelect = document.getElementById(Constants.Ids.INPUT_MODAL_GROUP_SELECT) as HTMLSelectElement | null;
+      const confirmBtn = document.getElementById(Constants.Ids.INPUT_OK_BTN);
+      const cancelBtn = document.getElementById(Constants.Ids.INPUT_CANCEL_BTN);
+      const closeBtn = document.getElementById(Constants.Ids.CLOSE_INPUT_MODAL);
 
       if (!modal || !inputEl) {
         const result = prompt(options.title, options.defaultValue || '');
@@ -498,30 +519,37 @@ export class DialogService {
         groupSection.style.display = 'none';
       }
 
+      let isClosing = false;
+
       const cleanup = () => {
         (modal as HTMLElement).style.display = 'none';
-        _activeModals.delete('inputModal');
+        _activeModals.delete(Constants.Ids.INPUT_MODAL);
         confirmBtn?.removeEventListener('click', handleConfirm);
         cancelBtn?.removeEventListener('click', handleCancel);
         closeBtn?.removeEventListener('click', handleCancel);
         inputEl.removeEventListener('keydown', handleKeyDown);
+        _inputDialogBound = false;
+      };
+
+      const closeDialog = (result: { value: string; groupId?: number | null } | null) => {
+        if (isClosing) return;
+        isClosing = true;
+        cleanup();
+        contextStack.pop(Constants.Ids.INPUT_DIALOG);
+        resolve(result);
       };
 
       const handleConfirm = () => {
         const value = inputEl.value.trim();
         const hasGroupSelect = groupSection && groupSection.style.display !== 'none' && groupSelect;
-        cleanup();
-        contextStack.pop(Constants.Ids.DIALOG);
-        resolve({
+        closeDialog({
           value,
           groupId: hasGroupSelect ? (groupSelect.value ? parseInt(groupSelect.value, 10) : null) : undefined
         });
       };
 
       const handleCancel = () => {
-        cleanup();
-        contextStack.pop(Constants.Ids.DIALOG);
-        resolve(null);
+        closeDialog(null);
       };
 
       const handleKeyDown = (e: Event) => {
@@ -533,21 +561,25 @@ export class DialogService {
         // Escape 由 ShortcutManager 统一处理
       };
 
-      confirmBtn?.addEventListener('click', handleConfirm);
-      cancelBtn?.addEventListener('click', handleCancel);
-      closeBtn?.addEventListener('click', handleCancel);
-      inputEl.addEventListener('keydown', handleKeyDown);
+      // 只绑定一次事件监听器
+      if (!_inputDialogBound) {
+        confirmBtn?.addEventListener('click', handleConfirm);
+        cancelBtn?.addEventListener('click', handleCancel);
+        closeBtn?.addEventListener('click', handleCancel);
+        inputEl.addEventListener('keydown', handleKeyDown);
+        _inputDialogBound = true;
+      }
 
       // 压栈：进入对话框上下文
       const inputStackEntry: IContextStackEntry = {
-        id: Constants.Ids.DIALOG,
+        id: Constants.Ids.INPUT_DIALOG,
         state: { isBatchToolbarVisible: false },
-        close: () => { cleanup(); resolve(null); }
+        close: () => { closeDialog(null); }
       };
       contextStack.push(inputStackEntry);
 
       (modal as HTMLElement).style.display = 'flex';
-      _activeModals.add('inputModal');
+      _activeModals.add(Constants.Ids.INPUT_MODAL);
       inputEl.focus();
 
       // 将光标移到末尾
@@ -567,6 +599,12 @@ export class DialogService {
     options: Array<{ value: string; label: string }>;
     defaultValue?: string;
   }): Promise<string | null> {
+    // 如果选择对话框已经在显示中，直接返回 null
+    if (_activeModals.has(Constants.Ids.SELECT_MODAL)) {
+      window.electronAPI.logDebug('DialogService', 'showSelectDialog skipped: already showing');
+      return null;
+    }
+
     return new Promise((resolve) => {
       const modal = document.getElementById(Constants.Ids.SELECT_MODAL);
       const titleEl = document.getElementById(Constants.Ids.SELECT_MODAL_TITLE);
@@ -597,36 +635,47 @@ export class DialogService {
         selectEl.appendChild(option);
       });
 
+      let isClosing = false;
+
       const cleanup = () => {
         (modal as HTMLElement).style.display = 'none';
         _activeModals.delete(Constants.Ids.SELECT_MODAL);
         confirmBtn?.removeEventListener('click', handleConfirm);
         cancelBtn?.removeEventListener('click', handleCancel);
         closeBtn?.removeEventListener('click', handleCancel);
+        _selectDialogBound = false;
+      };
+
+      const closeDialog = (result: string | null) => {
+        if (isClosing) return;
+        isClosing = true;
+        cleanup();
+        contextStack.pop(Constants.Ids.SELECT_DIALOG);
+        resolve(result);
       };
 
       const handleConfirm = () => {
         const value = selectEl.value;
-        cleanup();
-        contextStack.pop(Constants.Ids.DIALOG);
-        resolve(value);
+        closeDialog(value);
       };
 
       const handleCancel = () => {
-        cleanup();
-        contextStack.pop(Constants.Ids.DIALOG);
-        resolve(null);
+        closeDialog(null);
       };
 
-      confirmBtn?.addEventListener('click', handleConfirm);
-      cancelBtn?.addEventListener('click', handleCancel);
-      closeBtn?.addEventListener('click', handleCancel);
+      // 只绑定一次事件监听器
+      if (!_selectDialogBound) {
+        confirmBtn?.addEventListener('click', handleConfirm);
+        cancelBtn?.addEventListener('click', handleCancel);
+        closeBtn?.addEventListener('click', handleCancel);
+        _selectDialogBound = true;
+      }
 
       // 压栈：进入对话框上下文
       const selectStackEntry: IContextStackEntry = {
-        id: Constants.Ids.DIALOG,
+        id: Constants.Ids.SELECT_DIALOG,
         state: { isBatchToolbarVisible: false },
-        close: () => { cleanup(); resolve(null); }
+        close: () => { closeDialog(null); }
       };
       contextStack.push(selectStackEntry);
 

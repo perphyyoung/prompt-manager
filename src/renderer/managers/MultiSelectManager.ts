@@ -16,6 +16,7 @@ export interface IToolbarButton {
 }
 
 export interface IToolbarConfig {
+  id: string;
   label: string;
   buttons: IToolbarButton[];
 }
@@ -75,7 +76,7 @@ export class MultiSelectManager {
    */
   private toBatchToolbarConfig(config: IToolbarConfig): IBatchToolbarConfig {
     return {
-      id: 'mainBatchToolbar',
+      id: config.id,
       label: config.label,
       buttons: config.buttons.map(btn => ({
         action: btn.action,
@@ -245,13 +246,24 @@ export class MultiSelectManager {
    * 隐藏底部悬浮工具栏
    */
   hideToolbar(): void {
+    window.electronAPI.logDebug('MultiSelectManager', 'hideToolbar called');
     this.toolbar?.hide();
+  }
+
+  /**
+   * 隐藏工具栏，但不触发 onClose 回调
+   * 用于 exitBatchMode 中避免递归调用
+   */
+  hideToolbarWithoutCancel(): void {
+    window.electronAPI.logDebug('MultiSelectManager', 'hideToolbarWithoutCancel called');
+    this.toolbar?.hide(false);
   }
 
   /**
    * 更新工具栏 UI
    */
   updateToolbarUI(): void {
+    window.electronAPI.logDebug('MultiSelectManager', `updateToolbarUI called, hasSelection=${this.hasSelection}, count=${this.count}`);
     if (this.hasSelection) {
       if (this.toolbar?.visible) {
         // 工具栏已显示，只更新计数
@@ -261,7 +273,9 @@ export class MultiSelectManager {
         this.toolbar?.show(this.count);
       }
     } else {
-      this.toolbar?.hide();
+      // 选择为空时自动隐藏，不触发取消回调（triggerCancel=false）
+      window.electronAPI.logDebug('MultiSelectManager', 'hiding toolbar because no selection');
+      this.toolbar?.hide(false);
     }
   }
 

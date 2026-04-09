@@ -39,6 +39,11 @@ cnpm run dist:win:nsis -> exe
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 需要输出中文版本的可复制的详细版本和简洁版本的 git commit 信息
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
 
+## 20260409
+
+-不同对话框方法使用了相同的按钮 ID -> 区分
+修改测试, 将搜索作为图像和提示词的最后一项, 测试内容: 搜索 e2e, 验证只出现了 e2e 的结果; 然后 ctrla 全选, 验证出现复选框; 然后点击批量删除, 验证 e2e 的所有标签被删除; 结束测试
+
 ## 20260408
 
 ContextStackManager 添加一个变量开关, 用于控制是否启动 VIEW_CHANGED, 默认不启用, 调试时根据情况修改; 结合项目的实际情况(比如 已实现了close), 给出适合当前项目的 增强型上下文栈, 写到文件, 不需要具体代码, 描述情况思路即可, 我要审核

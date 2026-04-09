@@ -1,4 +1,4 @@
-import { ElementId } from '../../constants.ts';
+import { Constants, ElementId } from '../../constants.ts';
 
 /**
  * 上下文栈条目接口
@@ -50,7 +50,11 @@ export class ContextStackManager {
     }
 
     // 关闭当前栈顶（如果有批量工具栏显示）
-    if (currentTop?.state.isBatchToolbarVisible) {
+    // 但确认对话框、输入对话框和选择对话框弹出时不关闭批量工具栏
+    const isDialog = entry.id === Constants.Ids.CONFIRM_DIALOG ||
+                     entry.id === Constants.Ids.INPUT_DIALOG ||
+                     entry.id === Constants.Ids.SELECT_DIALOG;
+    if (currentTop?.state.isBatchToolbarVisible && !isDialog) {
       window.electronAPI.logDebug('ContextStackManager', `close before push: ${currentTop.id}`);
       currentTop.close();
       currentTop.state.isBatchToolbarVisible = false;

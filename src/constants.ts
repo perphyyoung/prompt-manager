@@ -221,7 +221,9 @@ export class Constants {
 
     // 下拉菜单和对话框（用于 ESC 处理）
     DROPDOWN: 'dropdown',
-    DIALOG: 'confirmModal',
+    CONFIRM_DIALOG: 'confirmModal',
+    INPUT_DIALOG: 'inputModal',
+    SELECT_DIALOG: 'selectModal',
 
     // 选择对话框
     SELECT_MODAL: 'selectModal',
@@ -245,7 +247,87 @@ export class Constants {
     IMAGE_ADD_BTN: 'imageAddBtn',
 
     // 卡片信息开关按钮
-    CARD_INFO_TOGGLE_BTN: 'cardInfoToggleBtn'
+    CARD_INFO_TOGGLE_BTN: 'cardInfoToggleBtn',
+
+    // 标签组卡片容器（用于区分图像和提示词标签组）
+    PROMPT_TAG_GROUP_CARDS: 'promptTagGroupCards',
+    IMAGE_TAG_GROUP_CARDS: 'imageTagGroupCards',
+
+    // 主界面左上角的提示词和图像的图标按钮
+    IMAGE_MANAGER_BTN: 'imageManagerBtn',
+    PROMPT_MANAGER_BTN: 'promptManagerBtn',
+
+    // 标签管理器按钮
+    IMAGE_TAG_MANAGER_BTN: 'imageTagManagerBtn',
+    PROMPT_TAG_MANAGER_BTN: 'promptTagManagerBtn',
+    CLOSE_IMAGE_TAG_MANAGER_MODAL: 'closeImageTagManagerModal',
+    CLOSE_PROMPT_TAG_MANAGER_MODAL: 'closePromptTagManagerModal',
+    ADD_IMAGE_TAG_IN_MANAGER_BTN: 'addImageTagInManagerBtn',
+    ADD_PROMPT_TAG_IN_MANAGER_BTN: 'addPromptTagInManagerBtn',
+    ADD_IMAGE_TAG_GROUP_BTN: 'addImageTagGroupBtn',
+    ADD_PROMPT_TAG_GROUP_BTN: 'addPromptTagGroupBtn',
+    BATCH_MANAGE_IMAGE_TAGS_BTN: 'batchManageImageTagsBtn',
+    BATCH_MANAGE_PROMPT_TAGS_BTN: 'batchManagePromptTagsBtn',
+
+    // 标签管理器搜索和排序
+    IMAGE_TAG_MANAGER_SEARCH_INPUT: 'imageTagManagerSearchInput',
+    PROMPT_TAG_MANAGER_SEARCH_INPUT: 'promptTagManagerSearchInput',
+    CLEAR_IMAGE_TAG_MANAGER_SEARCH_BTN: 'clearImageTagManagerSearchBtn',
+    CLEAR_PROMPT_TAG_MANAGER_SEARCH_BTN: 'clearPromptTagManagerSearchBtn',
+    IMAGE_TAG_MANAGER_SORT_SELECT: 'imageTagManagerSortSelect',
+    PROMPT_TAG_MANAGER_SORT_SELECT: 'promptTagManagerSortSelect',
+    IMAGE_TAG_MANAGER_ORDER_BTN: 'imageTagManagerOrderBtn',
+    PROMPT_TAG_MANAGER_ORDER_BTN: 'promptTagManagerOrderBtn',
+
+    // 输入对话框
+    INPUT_MODAL: 'inputModal',
+    INPUT_MODAL_TITLE: 'inputModalTitle',
+    INPUT_MODAL_LABEL: 'inputModalLabel',
+    INPUT_MODAL_FIELD: 'inputModalField',
+    INPUT_MODAL_GROUP_SECTION: 'inputModalGroupSection',
+    INPUT_MODAL_GROUP_SELECT: 'inputModalGroupSelect',
+    INPUT_OK_BTN: 'inputOkBtn',
+    INPUT_CANCEL_BTN: 'inputCancelBtn',
+    CLOSE_INPUT_MODAL: 'closeInputModal',
+
+    // 标签组编辑模态框
+    IMAGE_TAG_GROUP_EDIT_MODAL: 'imageTagGroupEditModal',
+    PROMPT_TAG_GROUP_EDIT_MODAL: 'promptTagGroupEditModal',
+    IMAGE_TAG_GROUP_EDIT_NAME: 'imageTagGroupEditName',
+    PROMPT_TAG_GROUP_EDIT_NAME: 'promptTagGroupEditName',
+    SAVE_IMAGE_TAG_GROUP_BTN: 'saveImageTagGroupBtn',
+    SAVE_PROMPT_TAG_GROUP_BTN: 'savePromptTagGroupBtn',
+
+    // 确认对话框
+    CONFIRM_MODAL: 'confirmModal',
+    CONFIRM_MODAL_TITLE: 'confirmModalTitle',
+    CONFIRM_MODAL_MESSAGE: 'confirmModalMessage',
+    CONFIRM_OK_BTN: 'confirmOkBtn',
+    CONFIRM_CANCEL_BTN: 'confirmCancelBtn',
+    CLOSE_CONFIRM_MODAL: 'closeConfirmModal',
+
+    // Toast 容器
+    TOAST_CONTAINER: 'toastContainer',
+
+    // 标签管理器空状态
+    IMAGE_TAG_MANAGER_EMPTY: 'imageTagManagerEmpty',
+    PROMPT_TAG_MANAGER_EMPTY: 'promptTagManagerEmpty',
+
+    // 标签组编辑模态框关闭按钮
+    CLOSE_IMAGE_TAG_GROUP_EDIT_MODAL: 'closeImageTagGroupEditModal',
+    CLOSE_PROMPT_TAG_GROUP_EDIT_MODAL: 'closePromptTagGroupEditModal',
+
+    // 标签组编辑模态框取消按钮
+    CANCEL_IMAGE_TAG_GROUP_EDIT_BTN: 'cancelImageTagGroupEditBtn',
+    CANCEL_PROMPT_TAG_GROUP_EDIT_BTN: 'cancelPromptTagGroupEditBtn',
+
+    // 标签组编辑模态框输入字段
+    IMAGE_TAG_GROUP_EDIT_TYPE: 'imageTagGroupEditType',
+    PROMPT_TAG_GROUP_EDIT_TYPE: 'promptTagGroupEditType',
+    IMAGE_TAG_GROUP_EDIT_ID: 'imageTagGroupEditId',
+    PROMPT_TAG_GROUP_EDIT_ID: 'promptTagGroupEditId',
+    IMAGE_TAG_GROUP_EDIT_SORT_ORDER: 'imageTagGroupEditSortOrder',
+    PROMPT_TAG_GROUP_EDIT_SORT_ORDER: 'promptTagGroupEditSortOrder'
   } as const);
 }
 
