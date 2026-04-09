@@ -5,6 +5,57 @@ description: Use when writing or debugging E2E tests with Playwright. Symptoms i
 
 # E2E Testing Standards
 
+## MUST FOLLOW - Critical Rules
+
+These rules are **ABSOLUTE REQUIREMENTS** - no exceptions allowed:
+
+1. **ALWAYS use Constants.Ids for DOM element selectors**
+   ```typescript
+   // ❌ WRONG: Hardcoded ID - prone to errors when source changes
+   await page.click('#selectModalOkBtn');
+
+   // ✅ CORRECT: Use Constants.Ids - ensures consistency with source code
+   await page.click(`#${Constants.Ids.SELECT_MODAL_OK_BTN}`);
+   ```
+   - Source code uses `Constants.Ids.Xxx` for type safety
+   - Test code must use the same constants to maintain consistency
+   - If the constant doesn't exist, check `src/constants.ts` and use the actual ID defined there
+   - **For `waitForFunction` and `page.evaluate`**: Pass constants as parameters since they run in browser context
+     ```typescript
+     // ❌ WRONG: Constants not available in browser context
+     await page.waitForFunction(() => {
+       const items = document.querySelectorAll(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item`);
+       return items.length > 0;
+     });
+
+     // ✅ CORRECT: Pass constant value as parameter
+     await page.waitForFunction(
+       (containerId: string) => {
+         const items = document.querySelectorAll(`#${containerId} .tag-manager-item`);
+         return items.length > 0;
+       },
+       Constants.Ids.IMAGE_TAG_GROUP_CARDS  // Pass constant as parameter
+     );
+     ```
+
+2. **NEVER delete non-test data in E2E tests**
+   - Always create test data first, then delete only the test data
+   - Use search + select pattern to target only test-created items
+
+3. **NEVER use `waitForTimeout` for waiting**
+   - Use explicit conditions instead (waitForSelector, waitForFunction, etc.)
+   - See "Reliable Verification" section below for correct patterns
+
+## Prohibited Behaviors
+
+- Do not write tests without understanding the code
+- Do not assert without screenshots
+- Do not only look at the last screenshot
+- Do not assume page state without verification
+- Do not skip automated test verification
+
+---
+
 ## Mandatory Process for Writing E2E Tests
 
 ### Phase 1: Understand the Code (Must Complete First)
@@ -42,7 +93,6 @@ Before writing any test code, you must:
    - Do not assume the test starts at the target interface
    - Explicitly write steps to enter the target interface in test comments
    - Use helper functions to encapsulate navigation logic
-   - **NEVER use `waitForTimeout` for waiting** - use explicit conditions instead
    - Example:
      ```typescript
      /**
@@ -89,7 +139,7 @@ Before writing any test code, you must:
      ```typescript
      // ❌ Wrong: implicit 'any' type
      await element.evaluate(el => el.classList.contains('active'));
-     
+
      // ✅ Correct: explicit HTMLElement type
      await element.evaluate((el: HTMLElement) => el.classList.contains('active'));
      ```
@@ -262,16 +312,6 @@ For specific testing techniques and best practices, see **[testing-techniques.md
 - **[Database State Verification](testing-techniques.md#database-state-verification)** - Verifying data through API
 - **[Reliable Waiting Strategies](testing-techniques.md#reliable-waiting-strategies)** - Explicit wait conditions instead of arbitrary delays
 
----
-
-## Prohibited Behaviors
-
-- Do not write tests without understanding the code
-- Do not assert without screenshots
-- Do not only look at the last screenshot
-- Do not assume page state without verification
-- Do not skip automated test verification
-
 ## Test Cleanup (After All Tests Pass)
 
 After all tests pass, clean up debugging code:
@@ -285,7 +325,7 @@ After all tests pass, clean up debugging code:
      // ❌ Before cleanup
      console.log(`Debug: ${value}`);
      window.electronAPI.logInfo('E2E-Test', 'Test step', data);
-     
+
      // ✅ After cleanup
      // (no logging for simple test assertions)
      ```
