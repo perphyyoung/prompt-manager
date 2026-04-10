@@ -9,7 +9,61 @@ description: Use when writing or debugging E2E tests with Playwright. Symptoms i
 
 These rules are **ABSOLUTE REQUIREMENTS** - no exceptions allowed:
 
-1. **ALWAYS use Constants.Ids for DOM element selectors**
+1. **Use Electron log API for test logging**
+   - Use `window.electronAPI.logInfo()` to record test logs to `pm.log`
+   - Example:
+
+     ```typescript
+     await page.evaluate((params) => {
+       window.electronAPI.logInfo('E2E-Test', 'Test operation', {
+         param1: params.value1,
+         param2: params.value2
+       });
+       // ... test logic
+     }, testData);
+     ```
+
+   - Logs will be written to `./pm.log`
+   - Use logs for debugging instead of `console.log` in production tests
+
+2. **Log test item description before each test**
+
+   ```typescript
+   // ✅ CORRECT: Use Electron log API to log test description
+   test('should create new prompt', async ({ page }) => {
+     await page.evaluate(() => {
+       window.electronAPI.logInfo('E2E-Test', 'Starting test: Create new prompt - Verifies prompt creation flow');
+     });
+     // ... test code
+   });
+   ```
+
+   - This helps quickly identify which test is running in logs
+   - Use `window.electronAPI.logInfo()` as specified in Rule 1
+
+   **Recommended: Create a helper function for reuse**
+
+   ```typescript
+   /**
+    * 记录测试开始日志
+    * @param page - Playwright page instance
+    * @param testName - 测试名称
+    */
+   async function logTestStart(page: any, testName: string): Promise<void> {
+     await page.evaluate((name: string) => {
+       window.electronAPI.logInfo('E2E-Test', `Starting test: ${name}`);
+     }, testName);
+   }
+
+   // Usage in test
+   test('should create new prompt', async ({ page }) => {
+     await logTestStart(page, 'Create new prompt');
+     // ... test code
+   });
+   ```
+
+3. **ALWAYS use Constants.Ids for DOM element selectors**
+
    ```typescript
    // ❌ WRONG: Hardcoded ID - prone to errors when source changes
    await page.click('#selectModalOkBtn');
@@ -17,10 +71,12 @@ These rules are **ABSOLUTE REQUIREMENTS** - no exceptions allowed:
    // ✅ CORRECT: Use Constants.Ids - ensures consistency with source code
    await page.click(`#${Constants.Ids.SELECT_MODAL_OK_BTN}`);
    ```
+
    - Source code uses `Constants.Ids.Xxx` for type safety
    - Test code must use the same constants to maintain consistency
    - If the constant doesn't exist, check `src/constants.ts` and use the actual ID defined there
    - **For `waitForFunction` and `page.evaluate`**: Pass constants as parameters since they run in browser context
+
      ```typescript
      // ❌ WRONG: Constants not available in browser context
      await page.waitForFunction(() => {
@@ -38,11 +94,11 @@ These rules are **ABSOLUTE REQUIREMENTS** - no exceptions allowed:
      );
      ```
 
-2. **NEVER delete non-test data in E2E tests**
+4. **NEVER delete non-test data in E2E tests**
    - Always create test data first, then delete only the test data
    - Use search + select pattern to target only test-created items
 
-3. **NEVER use `waitForTimeout` for waiting**
+5. **NEVER use `waitForTimeout` for waiting**
    - Use explicit conditions instead (waitForSelector, waitForFunction, etc.)
    - See "Reliable Verification" section below for correct patterns
 
@@ -80,6 +136,7 @@ Before writing any test code, you must:
 ### Phase 2: Write Tests
 
 1. **Take screenshots after each key operation**
+
    ```typescript
    await page.screenshot({ path: `test-results/debug-${stepName}.png` });
    ```
@@ -94,6 +151,7 @@ Before writing any test code, you must:
    - Explicitly write steps to enter the target interface in test comments
    - Use helper functions to encapsulate navigation logic
    - Example:
+
      ```typescript
      /**
       * Enter image grid view helper function
@@ -118,24 +176,10 @@ Before writing any test code, you must:
    - Verify success before next step
    - Check screenshots to locate issues on failure
 
-5. **Use Electron log API for test logging**
-   - Use `window.electronAPI.logInfo()` to record test logs to `pm.log`
-   - Example:
-     ```typescript
-     await page.evaluate((params) => {
-       window.electronAPI.logInfo('E2E-Test', 'Test operation', {
-         param1: params.value1,
-         param2: params.value2
-       });
-       // ... test logic
-     }, testData);
-     ```
-   - Logs will be written to `./pm.log`
-   - Use logs for debugging instead of `console.log` in production tests
-
-6. **Add explicit type annotations**
+5. **Add explicit type annotations**
    - All `.evaluate()` callbacks must have explicit parameter types
    - Example:
+
      ```typescript
      // ❌ Wrong: implicit 'any' type
      await element.evaluate(el => el.classList.contains('active'));
@@ -144,22 +188,26 @@ Before writing any test code, you must:
      await element.evaluate((el: HTMLElement) => el.classList.contains('active'));
      ```
 
-7. **Run type checking before testing**
+6. **Run type checking before testing**
    - Verify test file passes TypeScript type checking BEFORE running tests:
+
      ```bash
      npx tsc --noEmit e2e/<test-file>.spec.ts
      ```
+
    - Fix all type errors first
    - This ensures test script correctness before execution
 
-8. **Type check after every modification**
+7. **Type check after every modification**
    - After making ANY changes to test code:
      1. Run `npx tsc --noEmit` to verify type correctness
      2. Only run tests after type checking passes
    - Workflow:
-     ```
+
+     ```plain
      Modify code → Type check → Fix errors (if any) → Run tests
      ```
+
    - This prevents wasting time running tests with type errors
 
 ### Phase 3: Automated Test Verification
@@ -168,13 +216,16 @@ After writing E2E tests, you must run automated verification:
 
 1. **Run failed tests first** (when debugging)
    - Use `--grep` to run only the failed test:
+
      ```bash
      npx playwright test e2e/<test-file>.spec.ts --grep "Test Name" --reporter=list
      ```
+
    - Fix the issue and verify it passes
    - Then run all tests to ensure no regressions
 
 2. **Run all tests** (after fixes or initial write)
+
    ```bash
    npx playwright test e2e/<test-file>.spec.ts --reporter=list
    ```
@@ -229,13 +280,14 @@ Before running E2E tests, prepare the environment:
    - Empty the contents of `pm.log` file instead of deleting it
    - This ensures a clean log for debugging while keeping the file handle
    - Example:
+
      ```powershell
      # Windows PowerShell
      Clear-Content pm.log
      ```
 
 2. **Verify build is up to date**
-   - Run `npm run build` to ensure latest code is compiled
+   - Run `npx tsc --noEmit; npm run build` to ensure no type error and latest code is compiled
    - Check for any build errors before testing
 
 ## Reliable Verification (NO Arbitrary Wait Times)
@@ -243,6 +295,7 @@ Before running E2E tests, prepare the environment:
 **NEVER extend wait times as a fix for flaky tests.** This masks real issues and slows down tests.
 
 ### The Wrong Way (Prohibited)
+
 ```typescript
 // ❌ WRONG: Extending wait time without understanding why
 await page.waitForTimeout(2000); // Was 500ms, increased because "it might help"
@@ -316,28 +369,14 @@ For specific testing techniques and best practices, see **[testing-techniques.md
 
 After all tests pass, clean up debugging code:
 
-1. **Remove all debug logging**
-   - Delete all `console.log()` statements
-   - Delete all `window.electronAPI.logInfo()` calls used for debugging
-   - Keep only production logging if absolutely necessary
-   - Example:
-     ```typescript
-     // ❌ Before cleanup
-     console.log(`Debug: ${value}`);
-     window.electronAPI.logInfo('E2E-Test', 'Test step', data);
-
-     // ✅ After cleanup
-     // (no logging for simple test assertions)
-     ```
-
-2. **Remove unnecessary test logic**
+1. **Remove unnecessary test logic**
    - Simplify complex workarounds that were only for debugging
    - Keep only the essential test assertions
 
-3. **Re-run full test suite**
+2. **Re-run full test suite**
    - Ensure cleanup didn't break any tests
    - Verify all tests still pass after cleanup
 
-4. **Final type checking verification**
+3. **Final type checking verification**
    - Run `npx tsc --noEmit` on the entire project
    - Ensure no type errors remain
