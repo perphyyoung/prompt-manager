@@ -14,7 +14,7 @@ import {
 } from '../../../src/utils/FileUtils.js';
 
 describe('FileUtils', () => {
-  let tempDir;
+  let tempDir: string;
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fileutils-test-'));
@@ -99,8 +99,8 @@ describe('FileUtils', () => {
       await fs.writeFile(path.join(sourceDir, 'file1.txt'), 'a'.repeat(100));
       await fs.writeFile(path.join(sourceDir, 'file2.txt'), 'b'.repeat(200));
 
-      const progressCalls = [];
-      const onProgress = (progress, fileName) => {
+      const progressCalls: Array<{ progress: number; fileName: string }> = [];
+      const onProgress = (progress: number, fileName: string): void => {
         progressCalls.push({ progress, fileName });
       };
 
