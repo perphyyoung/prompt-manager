@@ -57,15 +57,15 @@ test.describe('标签管理功能', () => {
  * 3. Click imageTagManagerBtn to open tag manager
  * 4. Wait for imageTagManagerModal to be visible
  */
-async function enterImageTagManager(page: any) {
-  await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
-  await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, { state: 'visible', timeout: 5000 });
-  await page.screenshot({ path: 'test-results/tag-manager/image-01-panel.png' });
+  async function enterImageTagManager(page: any) {
+    await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, { state: 'visible', timeout: 5000 });
+    await page.screenshot({ path: 'test-results/tag-manager/image-01-panel.png' });
 
-  await page.click(`#${Constants.Ids.IMAGE_TAG_MANAGER_BTN}`);
-  await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, { state: 'visible', timeout: 5000 });
-  await page.screenshot({ path: 'test-results/tag-manager/image-02-manager-opened.png' });
-}
+    await page.click(`#${Constants.Ids.IMAGE_TAG_MANAGER_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, { state: 'visible', timeout: 5000 });
+    await page.screenshot({ path: 'test-results/tag-manager/image-02-manager-opened.png' });
+  }
 
   /**
  * 进入提示词面板并打开标签管理器
@@ -75,106 +75,106 @@ async function enterImageTagManager(page: any) {
  * 3. Click promptTagManagerBtn to open tag manager
  * 4. Wait for promptTagManagerModal to be visible
  */
-async function enterPromptTagManager(page: any) {
-  await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
-  await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, { state: 'visible', timeout: 5000 });
-  await page.screenshot({ path: 'test-results/tag-manager/prompt-01-panel.png' });
+  async function enterPromptTagManager(page: any) {
+    await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, { state: 'visible', timeout: 5000 });
+    await page.screenshot({ path: 'test-results/tag-manager/prompt-01-panel.png' });
 
-  await page.click(`#${Constants.Ids.PROMPT_TAG_MANAGER_BTN}`);
-  await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, { state: 'visible', timeout: 5000 });
-  await page.screenshot({ path: 'test-results/tag-manager/prompt-02-manager-opened.png' });
-}
+    await page.click(`#${Constants.Ids.PROMPT_TAG_MANAGER_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, { state: 'visible', timeout: 5000 });
+    await page.screenshot({ path: 'test-results/tag-manager/prompt-02-manager-opened.png' });
+  }
 
   /**
  * 关闭图像标签管理器
  */
-async function closeImageTagManager(page: any) {
-  await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
-  await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 });
-  await page.screenshot({ path: 'test-results/tag-manager/image-manager-closed.png' });
-}
+  async function closeImageTagManager(page: any) {
+    await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 });
+    await page.screenshot({ path: 'test-results/tag-manager/image-manager-closed.png' });
+  }
 
-/**
- * 关闭提示词标签管理器
- */
-async function closePromptTagManager(page: any) {
-  await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
-  await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 });
-  await page.screenshot({ path: 'test-results/tag-manager/prompt-manager-closed.png' });
-}
+  /**
+   * 关闭提示词标签管理器
+   */
+  async function closePromptTagManager(page: any) {
+    await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 });
+    await page.screenshot({ path: 'test-results/tag-manager/prompt-manager-closed.png' });
+  }
 
   /**
  * 在图像标签管理器中创建标签
  */
-async function createImageTagInManager(page: any, tagName: string, groupId: string = ''): Promise<void> {
-  await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_IN_MANAGER_BTN}`);
-  await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, { state: 'visible', timeout: 5000 });
-  await page.screenshot({ path: `test-results/tag-manager/image-input-dialog-${tagName.slice(0, 10)}.png` });
+  async function createImageTagInManager(page: any, tagName: string, groupId: string = ''): Promise<void> {
+    await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_IN_MANAGER_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, { state: 'visible', timeout: 5000 });
+    await page.screenshot({ path: `test-results/tag-manager/image-input-dialog-${tagName.slice(0, 10)}.png` });
 
-  await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, tagName);
+    await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, tagName);
 
-  if (groupId) {
-    await page.selectOption(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`, groupId);
+    if (groupId) {
+      await page.selectOption(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`, groupId);
+    }
+
+    await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
+
+    // Wait for tag to be created via API
+    await page.waitForFunction(async (name: string) => {
+      const tags = await window.electronAPI.getImageTags();
+      return tags.includes(name);
+    }, tagName, { timeout: 5000 });
+
+    await page.screenshot({ path: `test-results/tag-manager/image-tag-created-${tagName.slice(0, 10)}.png` });
   }
-
-  await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
-
-  // Wait for tag to be created via API
-  await page.waitForFunction(async (name: string) => {
-    const tags = await window.electronAPI.getImageTags();
-    return tags.includes(name);
-  }, tagName, { timeout: 5000 });
-
-  await page.screenshot({ path: `test-results/tag-manager/image-tag-created-${tagName.slice(0, 10)}.png` });
-}
 
   /**
  * 在提示词标签管理器中创建标签
  */
-async function createPromptTagInManager(page: any, tagName: string, groupId: string = ''): Promise<void> {
-  await page.click(`#${Constants.Ids.ADD_PROMPT_TAG_IN_MANAGER_BTN}`);
-  await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, { state: 'visible', timeout: 5000 });
-  await page.screenshot({ path: `test-results/tag-manager/prompt-input-dialog-${tagName.slice(0, 10)}.png` });
+  async function createPromptTagInManager(page: any, tagName: string, groupId: string = ''): Promise<void> {
+    await page.click(`#${Constants.Ids.ADD_PROMPT_TAG_IN_MANAGER_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, { state: 'visible', timeout: 5000 });
+    await page.screenshot({ path: `test-results/tag-manager/prompt-input-dialog-${tagName.slice(0, 10)}.png` });
 
-  await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, tagName);
+    await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, tagName);
 
-  if (groupId) {
-    await page.selectOption(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`, groupId);
+    if (groupId) {
+      await page.selectOption(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`, groupId);
+    }
+
+    await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
+
+    // Wait for tag to be created via API
+    await page.waitForFunction(async (name: string) => {
+      const tags = await window.electronAPI.getAllTags();
+      return tags.includes(name);
+    }, tagName, { timeout: 5000 });
+
+    await page.screenshot({ path: `test-results/tag-manager/prompt-tag-created-${tagName.slice(0, 10)}.png` });
   }
-
-  await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
-
-  // Wait for tag to be created via API
-  await page.waitForFunction(async (name: string) => {
-    const tags = await window.electronAPI.getAllTags();
-    return tags.includes(name);
-  }, tagName, { timeout: 5000 });
-
-  await page.screenshot({ path: `test-results/tag-manager/prompt-tag-created-${tagName.slice(0, 10)}.png` });
-}
 
   /**
  * 在图像标签管理器中创建标签组
  */
-async function createImageTagGroup(page: any, groupName: string): Promise<number> {
-  await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_GROUP_BTN}`);
-  await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL}`, { state: 'visible', timeout: 5000 });
-  await page.screenshot({ path: `test-results/tag-manager/image-group-dialog-${groupName.slice(0, 10)}.png` });
+  async function createImageTagGroup(page: any, groupName: string): Promise<number> {
+    await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_GROUP_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL}`, { state: 'visible', timeout: 5000 });
+    await page.screenshot({ path: `test-results/tag-manager/image-group-dialog-${groupName.slice(0, 10)}.png` });
 
-  await page.fill(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_NAME}`, groupName);
-  await page.click(`#${Constants.Ids.SAVE_IMAGE_TAG_GROUP_BTN}`);
+    await page.fill(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_NAME}`, groupName);
+    await page.click(`#${Constants.Ids.SAVE_IMAGE_TAG_GROUP_BTN}`);
 
-  // Wait for group to be created via API
-  const groupId = await page.waitForFunction(async (name: string) => {
-    const groups = await window.electronAPI.getImageTagGroups();
-    const group = groups.find((g: { name: string; id: number }) => g.name === name);
-    return group?.id;
-  }, groupName, { timeout: 5000 });
+    // Wait for group to be created via API
+    const groupId = await page.waitForFunction(async (name: string) => {
+      const groups = await window.electronAPI.getImageTagGroups();
+      const group = groups.find((g: { name: string; id: number }) => g.name === name);
+      return group?.id;
+    }, groupName, { timeout: 5000 });
 
-  await page.screenshot({ path: `test-results/tag-manager/image-group-created-${groupName.slice(0, 10)}.png` });
+    await page.screenshot({ path: `test-results/tag-manager/image-group-created-${groupName.slice(0, 10)}.png` });
 
-  return groupId;
-}
+    return groupId;
+  }
 
   /**
    * 在提示词标签管理器中创建标签组
@@ -202,6 +202,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
   test.describe('图像标签管理 - 非批量功能', () => {
     test('打开和关闭标签管理器', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('打开和关闭标签管理器');
       await enterImageTagManager(page);
 
       // Verify modal is active
@@ -222,6 +223,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('新建标签', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('新建标签');
       await enterImageTagManager(page);
 
       const testTagName = generateTestTagName('img_tag');
@@ -239,6 +241,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('编辑标签（重命名）', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('编辑标签（重命名）');
       await enterImageTagManager(page);
 
       // Create a test tag first
@@ -281,6 +284,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('删除标签', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('删除标签');
       await enterImageTagManager(page);
 
       // Create a test tag first
@@ -320,6 +324,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('排序标签', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('排序标签');
       await enterImageTagManager(page);
 
       // Change sort order
@@ -339,6 +344,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('新建标签组', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('新建标签组');
       await enterImageTagManager(page);
 
       const groupName = generateTestTagName('img_group');
@@ -358,6 +364,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('编辑标签组', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('编辑标签组');
       await enterImageTagManager(page);
 
       // Create a test group first
@@ -399,6 +406,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('删除标签组', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('删除标签组');
       await enterImageTagManager(page);
 
       // Create a test group first
@@ -436,6 +444,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('搜索并批量删除 e2e 标签', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('搜索并批量删除 e2e 标签');
       await enterImageTagManager(page);
 
       // Create multiple e2e test tags
@@ -520,6 +529,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
   test.describe('图像标签管理 - 批量功能', () => {
     test('进入和退出批量模式', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('进入和退出批量模式');
       await enterImageTagManager(page);
 
       // Click batch manage button
@@ -555,6 +565,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('批量全选和反选', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('批量全选和反选');
       await enterImageTagManager(page);
 
       // Create some test tags first
@@ -600,6 +611,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('批量删除标签', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('批量删除标签');
       await enterImageTagManager(page);
 
       // Create a test tag
@@ -659,6 +671,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('批量移动到组', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('批量移动到组');
       await enterImageTagManager(page);
 
       // Create a test group
@@ -717,6 +730,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
   test.describe('提示词标签管理 - 非批量功能', () => {
     test('打开和关闭标签管理器', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('打开和关闭标签管理器（提示词）');
       await enterPromptTagManager(page);
 
       // Verify modal is active
@@ -737,6 +751,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('新建标签', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('新建标签（提示词）');
       await enterPromptTagManager(page);
 
       const testTagName = generateTestTagName('prompt_tag');
@@ -754,6 +769,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('编辑标签（重命名）', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('编辑标签（重命名）（提示词）');
       await enterPromptTagManager(page);
 
       // Create a test tag first
@@ -796,6 +812,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('删除标签', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('删除标签（提示词）');
       await enterPromptTagManager(page);
 
       // Create a test tag first
@@ -835,6 +852,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('排序标签', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('排序标签（提示词）');
       await enterPromptTagManager(page);
 
       // Change sort order
@@ -854,6 +872,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('新建标签组', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('新建标签组（提示词）');
       await enterPromptTagManager(page);
 
       const groupName = generateTestTagName('prompt_group');
@@ -873,6 +892,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('编辑标签组', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('编辑标签组（提示词）');
       await enterPromptTagManager(page);
 
       // Create a test group first
@@ -914,6 +934,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('删除标签组', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('删除标签组（提示词）');
       await enterPromptTagManager(page);
 
       // Create a test group first
@@ -951,6 +972,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('搜索并批量删除 e2e 标签', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('搜索并批量删除 e2e 标签（提示词）');
       await enterPromptTagManager(page);
 
       // Create multiple e2e test tags
@@ -1035,6 +1057,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
   test.describe('提示词标签管理 - 批量功能', () => {
     test('进入和退出批量模式', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('进入和退出批量模式（提示词）');
       await enterPromptTagManager(page);
 
       // Click batch manage button
@@ -1070,6 +1093,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('批量全选和反选', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('批量全选和反选（提示词）');
       await enterPromptTagManager(page);
 
       // Create some test tags first
@@ -1113,6 +1137,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('批量删除标签', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('批量删除标签（提示词）');
       await enterPromptTagManager(page);
 
       // Create a test tag
@@ -1172,6 +1197,7 @@ async function createImageTagGroup(page: any, groupName: string): Promise<number
 
     test('批量移动到组', async () => {
       const page = electronTest.getPage();
+      await electronTest.logTestStart('批量移动到组（提示词）');
       await enterPromptTagManager(page);
 
       // Create a test group

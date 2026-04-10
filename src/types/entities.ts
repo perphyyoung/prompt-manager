@@ -178,3 +178,52 @@ export interface ITagRegistry {
   /** 初始化模态框事件 */
   initModals(): void;
 }
+
+// ==================== 对话框类型 ====================
+
+/** 对话框类型 */
+export type DialogType = 'info' | 'warning';
+
+/** 对话框消息函数 */
+export type DialogMessageFunction = (data: IDialogContext) => string;
+
+/** 对话框模板 */
+export interface IDialogTemplate {
+  title: string | DialogMessageFunction;
+  message: string | DialogMessageFunction;
+  type?: DialogType;
+}
+
+/** 对话框上下文数据 */
+export interface IDialogContext {
+  name?: string;
+  count?: number;
+  oldName?: string;
+  newName?: string;
+  sourceName?: string;
+  targetName?: string;
+  tagName?: string;
+  groupName?: string;
+  type?: string;
+  oldDataDir?: string;
+  promptTitle?: string;
+  promptToImage?: {
+    imported: number;
+    skipped: number;
+    tags: string[];
+    tagGroups: Array<{ groupName: string; tags: string[] }>;
+    ungroupedTags: string[];
+  };
+  imageToPrompt?: {
+    imported: number;
+    skipped: number;
+    tags: string[];
+    tagGroups: Array<{ groupName: string; tags: string[] }>;
+    ungroupedTags: string[];
+  };
+}
+
+/** 可关闭元素接口 - 扩展 HTMLElement 添加 close 方法供 ShortcutManager 调用 */
+export interface IClosableElement extends HTMLElement {
+  close?: () => void;
+}

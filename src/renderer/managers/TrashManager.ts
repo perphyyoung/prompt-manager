@@ -1,4 +1,5 @@
-import { DialogService, DialogConfig, DialogConfigData } from '../services/index.ts';
+import { DialogService, DialogConfig } from '../services/index.ts';
+import type { IDialogContext, IClosableElement } from '../../types/entities.ts';
 import { UnifiedCardRenderer, PromptTrashConfig, ImageTrashConfig } from './SharedComponents/index.ts';
 import { Constants, ElementId, Events } from '../../constants.ts';
 import { PromptTrashHandler, ImageTrashHandler } from './handlers/index.ts';
@@ -343,7 +344,7 @@ export class TrashManager {
   async permanentlyDeleteItem(itemId: string): Promise<void> {
     if (!this.currentHandler) return;
 
-    const data: DialogConfigData = { type: this.currentHandler.type };
+    const data: IDialogContext = { type: this.currentHandler.type };
     const confirmed = await DialogService.showConfirmDialogByConfig(
       DialogConfig.PERMANENT_DELETE,
       data
@@ -373,7 +374,7 @@ export class TrashManager {
   confirmClearTrash(): void {
     if (!this.currentHandler) return;
 
-    const data: DialogConfigData = { type: this.currentHandler.type };
+    const data: IDialogContext = { type: this.currentHandler.type };
     DialogService.showConfirmDialogByConfig(
       DialogConfig.EMPTY_TRASH,
       data
@@ -498,7 +499,7 @@ export class TrashManager {
       };
       contextStack.push(stackEntry);
       modal.style.display = 'flex';
-      (modal as HTMLElement & { close: () => void }).close = () => this.close();
+      (modal as IClosableElement).close = () => this.close();
       this.activeModals.add(type);
     }
   }
@@ -521,13 +522,6 @@ export class TrashManager {
       return this.activeModals.has(type);
     }
     return this.activeModals.size > 0;
-  }
-
-  /**
-   * 关闭所有回收站模态框
-   */
-  closeAllModals(): void {
-    this.activeModals.forEach(type => this.closeModal(type));
   }
 }
 

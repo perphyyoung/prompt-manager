@@ -4,6 +4,7 @@ import { EditableTagList } from '../components/index.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { BatchToolbar, IBatchToolbarConfig } from '../components/BatchToolbar.ts';
+import type { IClosableElement } from '../../types/entities.ts';
 
 interface DetailViewManagerOptions {
   app: {
@@ -118,7 +119,7 @@ export class DetailViewManager {
    * 为 DOM 元素附加 close 方法
    */
   private attachCloseMethod(): void {
-    const modal = document.getElementById(this.modalId);
+    const modal = document.getElementById(this.modalId) as IClosableElement;
     if (modal) {
       modal.close = () => this.close();
     }
@@ -180,9 +181,14 @@ export class DetailViewManager {
     // 立即隐藏 hover tooltip（如果正在显示）
     this.hideHoverTooltip();
 
-    const modal = document.getElementById(this.modalId);
+    const modal = document.getElementById(this.modalId) as IClosableElement;
     if (modal) {
       modal.classList.add('active');
+
+      // 添加 close 方法供 ShortcutManager 调用
+      modal.close = () => {
+        this.close();
+      };
     }
 
     // 附加 ctrla 方法

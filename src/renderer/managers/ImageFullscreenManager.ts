@@ -1,6 +1,7 @@
 import { Constants } from '../../constants.ts';
 import { ListNavigator } from '../../utils/index.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
+import type { IClosableElement } from '../../types/entities.ts';
 
 interface ImageFullscreenManagerOptions {
   app: unknown;
@@ -96,7 +97,7 @@ export class ImageFullscreenManager {
     contextStack.push(stackEntry);
 
     // 添加 close 方法供 ShortcutManager 调用
-    (viewer as HTMLElement & { close: () => void }).close = () => this.close();
+    (viewer as IClosableElement).close = () => this.close();
 
     // 聚焦以接收键盘事件
     viewer.focus();

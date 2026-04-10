@@ -5,6 +5,7 @@
 
 import { contextStack, IContextStackEntry } from '../managers/ContextStackManager.ts';
 import { ElementId } from '../../constants.ts';
+import type { IClosableElement } from '../../types/entities.ts';
 
 export interface IBatchToolbarButton {
   action: string;
@@ -29,7 +30,7 @@ export class BatchToolbar {
   private config: IBatchToolbarConfig;
   private onAction: (action: string) => void;
   private onClose?: () => void;
-  private element: HTMLElement | null = null;
+  private element: IClosableElement | null = null;
   private isVisible: boolean = false;
 
   constructor(options: IBatchToolbarOptions) {
@@ -63,7 +64,7 @@ export class BatchToolbar {
     this.element.close = () => this.hide();
 
     // 附加 ctrla 方法用于 Ctrl+A 处理
-    (this.element as any).ctrla = () => {
+    (this.element as HTMLElement & { ctrla: () => boolean }).ctrla = () => {
       this.handleSelectAll();
       // 返回 true 表示已处理
       return true;
@@ -86,7 +87,6 @@ export class BatchToolbar {
    * @param triggerCancel 是否触发取消回调，默认为 true。当因选择为空自动隐藏时应设为 false
    */
   hide(triggerCancel: boolean = true): void {
-    window.electronAPI.logDebug('BatchToolbar', `hide called, triggerCancel=${triggerCancel}, isVisible=${this.isVisible}`);
     if (!this.isVisible || !this.element) return;
 
     this.element.classList.remove('visible');

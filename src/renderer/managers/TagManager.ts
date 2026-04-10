@@ -6,6 +6,7 @@ import { ITagService } from '../../types/entities.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { focusInput } from '../renderer_utils/index.ts';
 import { MultiSelectManager } from './MultiSelectManager.ts';
+import { immediateDebounce } from '../../utils/debounce.ts';
 
 /**
  * 标签管理器元素 ID 配置
@@ -52,6 +53,9 @@ export abstract class TagManager {
   protected elements: ITagManagerElements;
   protected groupEditActive: boolean = false;
   protected _eventsBound: boolean = false;
+  protected _managerEventsBound: boolean = false;
+  protected _groupEditEventsBound: boolean = false;
+  protected _isOperationInProgress: boolean = false;
   protected multiSelectManager: MultiSelectManager;
   protected lastSearchTerm: string = '';
   protected isBatchModeActive: boolean = false;
@@ -110,6 +114,9 @@ export abstract class TagManager {
 
     // 绑定标签管理器事件
     this.bindManagerEvents();
+
+    // 绑定容器内事件（使用事件委托到 document）
+    this.bindEvents();
 
     // 初始化标签组编辑模态框事件
     this.initGroupEditModals();
@@ -185,8 +192,8 @@ export abstract class TagManager {
       const html = this.ui.generateRegistryHtml(groups, groupedTags, ungroupedTags, tagCounts, searchTerm, this.isBatchModeActive, this.multiSelectManager.selectedIds);
       container.innerHTML = html;
 
-      this._eventsBound = false;
-      this.bindEvents(container);
+      // 绑定容器特定的拖拽和右键菜单事件
+      this.bindContainerEvents(container);
 
       // 更新选择模式类
       this.updateSelectionModeClass();
@@ -222,14 +229,18 @@ export abstract class TagManager {
   /**
    * 删除标签
    */
+  private _isDeletingTag: boolean = false;
   async deleteTag(tag: string): Promise<void> {
-    const confirmed = await DialogService.showConfirmDialogByConfig(
-      DialogConfig.DELETE_TAG,
-      { name: tag }
-    );
-    if (!confirmed) return;
-
+    if (this._isDeletingTag) return;
+    this._isDeletingTag = true;
+    
     try {
+      const confirmed = await DialogService.showConfirmDialogByConfig(
+        DialogConfig.DELETE_TAG,
+        { name: tag }
+      );
+      if (!confirmed) return;
+
       await this.service.deleteTag(tag);
       this.app.showToast(`${this.getTypeLabel()}标签已删除`);
       await this.render();
@@ -237,6 +248,8 @@ export abstract class TagManager {
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to delete tag:', error);
       this.app.showToast('删除失败: ' + (error as Error).message, 'error');
+    } finally {
+      this._isDeletingTag = false;
     }
   }
 
@@ -263,15 +276,26 @@ export abstract class TagManager {
   }
 
   /**
-   * 绑定事件（使用事件委托）
+   * 绑定事件（使用事件委托到 document）
+   * 只在初始化时调用一次，不在 render 中重复绑定
    */
-  bindEvents(container: HTMLElement): void {
+  bindEvents(): void {
     if (this._eventsBound) return;
     this._eventsBound = true;
 
     // 使用事件委托处理所有点击事件
-    container.addEventListener('click', async (e) => {
+    document.addEventListener('click', async (e) => {
       const target = e.target as HTMLElement;
+      
+      // 检查点击是否在标签管理器容器内
+      const container = document.getElementById(this.elements.containerId);
+      if (!container?.contains(target)) return;
+      
+      const tagName = target.closest('.tag-delete-btn')?.getAttribute('data-tag') || 
+                      target.closest('.tag-edit-btn')?.getAttribute('data-tag') ||
+                      target.closest('.tag-manager-item')?.getAttribute('data-tag') || 'unknown';
+      const stackTrace = new Error().stack?.split('\n').slice(2, 5).join(' | ');
+      window.electronAPI.logDebug('TagManager', `click event on tag=${tagName}, target=${target.className || target.tagName}, isTrusted=${e.isTrusted}, path=${stackTrace}`);
 
       // 批量模式下的标签项选择（单击选择）
       if (this.isBatchModeActive) {
@@ -288,44 +312,59 @@ export abstract class TagManager {
       // 非批量模式下的编辑/删除按钮处理
       // 处理编辑按钮点击
       const editBtn = target.closest('.tag-edit-btn');
-      if (editBtn) {
+      if (editBtn && !this._isOperationInProgress) {
         e.stopPropagation();
+        this._isOperationInProgress = true;
         const tag = (editBtn as HTMLElement).dataset.tag;
         if (tag) await this.startRenameTag(tag);
+        this._isOperationInProgress = false;
         return;
       }
 
       // 处理删除按钮点击
       const deleteBtn = target.closest('.tag-delete-btn');
-      if (deleteBtn) {
+      if (deleteBtn && !this._isOperationInProgress) {
         e.stopPropagation();
         const tag = (deleteBtn as HTMLElement).dataset.tag;
-        if (tag) await this.deleteTag(tag);
+        if (tag) {
+          this._isOperationInProgress = true;
+          await this.deleteTag(tag);
+          this._isOperationInProgress = false;
+        }
         return;
       }
 
       // 处理标签组编辑按钮
       const groupEditBtn = target.closest('.tag-group-btn.edit');
-      if (groupEditBtn) {
+      if (groupEditBtn && !this._isOperationInProgress) {
         e.stopPropagation();
+        this._isOperationInProgress = true;
         const groupId = parseInt((groupEditBtn as HTMLElement).dataset.id || '0');
         this.openGroupEdit(groupId);
+        this._isOperationInProgress = false;
         return;
       }
 
       // 处理标签组删除按钮
       const groupDeleteBtn = target.closest('.tag-group-btn.delete');
-      if (groupDeleteBtn) {
+      if (groupDeleteBtn && !this._isOperationInProgress) {
         e.stopPropagation();
+        this._isOperationInProgress = true;
         const groupId = parseInt((groupDeleteBtn as HTMLElement).dataset.id || '0');
         await this.deleteGroup(groupId);
+        this._isOperationInProgress = false;
         return;
       }
     });
 
     // 使用事件委托处理复选框变化（批量模式）
-    container.addEventListener('change', (e) => {
+    document.addEventListener('change', (e) => {
       const target = e.target as HTMLElement;
+      
+      // 检查是否在容器内
+      const container = document.getElementById(this.elements.containerId);
+      if (!container?.contains(target)) return;
+      
       if (target.classList.contains('tag-batch-checkbox')) {
         const checkbox = target as HTMLInputElement;
         const tag = checkbox.dataset.tag;
@@ -339,7 +378,12 @@ export abstract class TagManager {
         }
       }
     });
+  }
 
+  /**
+   * 绑定拖拽和右键菜单事件（需要在 render 后调用）
+   */
+  bindContainerEvents(container: HTMLElement): void {
     if (!this.isBatchModeActive) {
       this.bindDragEvents(container);
       this.bindGroupContextMenu(container);
@@ -508,6 +552,17 @@ export abstract class TagManager {
    * 开始重命名标签
    */
   private async startRenameTag(oldTag: string): Promise<void> {
+    if (!this._safeRenameTag) {
+      this._safeRenameTag = immediateDebounce(async (tag: string) => {
+        await this._doRenameTag(tag);
+      }, 300);
+    }
+    this._safeRenameTag(oldTag);
+  }
+
+  private _safeRenameTag: ((tag: string) => void) | null = null;
+
+  private async _doRenameTag(oldTag: string): Promise<void> {
     const groups = await this.service.getTagGroups();
     const allTags = await this.service.getTags();
 
@@ -519,7 +574,10 @@ export abstract class TagManager {
       }
     }
 
-    const result = await this.app.showInputDialog('重命名标签', '请输入新标签名:', oldTag, {
+    const result = await DialogService.showInputDialog({
+      title: '重命名标签',
+      placeholder: '请输入新标签名:',
+      defaultValue: oldTag,
       showGroupSelect: true,
       groups: groups,
       defaultGroupId: currentGroupId
@@ -638,7 +696,10 @@ export abstract class TagManager {
     const groups = await this.service.getTagGroups();
     const allTags = await this.service.getTags();
 
-    const result = await this.app.showInputDialog(`新建${this.getTypeLabel()}标签`, '请输入标签名称', defaultValue, {
+    const result = await DialogService.showInputDialog({
+      title: `新建${this.getTypeLabel()}标签`,
+      placeholder: '请输入标签名称',
+      defaultValue: defaultValue,
       showGroupSelect: true,
       groups: groups,
       defaultGroupId: defaultGroupId
@@ -714,7 +775,6 @@ export abstract class TagManager {
     this.multiSelectManager.hideToolbarWithoutCancel();
 
     this.multiSelectManager.clear();
-    this._eventsBound = false;
   }
 
   /**
@@ -1029,6 +1089,9 @@ export abstract class TagManager {
    * 初始化标签组编辑模态框事件
    */
   private initGroupEditModals(): void {
+    if (this._groupEditEventsBound) return;
+    this._groupEditEventsBound = true;
+
     document.getElementById(this.elements.groupEditCloseBtnId)?.addEventListener('click', () => this.closeGroupEdit());
     document.getElementById(this.elements.groupEditCancelBtnId)?.addEventListener('click', () => this.closeGroupEdit());
     document.getElementById(this.elements.groupEditSaveBtnId)?.addEventListener('click', () => this.saveGroupEdit());
@@ -1038,6 +1101,9 @@ export abstract class TagManager {
    * 绑定标签管理器事件
    */
   private bindManagerEvents(): void {
+    if (this._managerEventsBound) return;
+    this._managerEventsBound = true;
+
     document.getElementById(this.elements.closeButtonId)?.addEventListener('click', () => this.closeManager());
     document.getElementById(this.elements.addTagGroupBtnId)?.addEventListener('click', () => this.openGroupEdit());
     document.getElementById(this.elements.addTagInManagerBtnId)?.addEventListener('click', () => this.addTagInManager());

@@ -1,6 +1,6 @@
 // Dialog 服务
 export { DialogService, DialogConfig } from './DialogService.ts';
-export type { DialogConfigData, DialogConfigItem } from './DialogService.ts';
+export type { IDialogTemplate, IDialogContext } from '../../types/entities.ts';
 
 // 上传相关服务
 export { ImageUploadService } from './ImageUploadService.ts';

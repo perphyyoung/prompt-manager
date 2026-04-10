@@ -213,7 +213,8 @@ export class Constants {
     IMAGE_FULLSCREEN_VIEWER: 'imageFullscreenViewer',
 
     // 主面板批量模式工具栏
-    MAIN_BATCH_TOOLBAR: 'mainBatchToolbar',
+    PROMPT_MAIN_BATCH_TOOLBAR: 'promptMainBatchToolbar',
+    IMAGE_MAIN_BATCH_TOOLBAR: 'imageMainBatchToolbar',
 
     // 标签管理器批量工具栏
     PROMPT_TAG_BATCH_TOOLBAR: 'promptTagBatchToolbar',

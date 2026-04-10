@@ -164,6 +164,9 @@ class PromptManager implements IApp {
       // 初始化 hover tooltip
       this.initHoverTooltips();
 
+      // 初始化对话框服务（只绑定一次事件）
+      DialogService.init();
+
       // 初始化面板管理器（只加载数据，不渲染视图）
       await this.initPanelManagers();
 
@@ -929,51 +932,6 @@ class PromptManager implements IApp {
         imageCardSizeSliderContainer.style.display = 'none';
       }
     }
-  }
-
-  /**
-   * 关闭确认对话框
-   */
-  closeConfirmModal() {
-    const modal = document.getElementById('confirmModal');
-    if (modal) {
-      modal.style.display = 'none';
-    }
-    if (this.confirmResolve) {
-      this.confirmResolve(false);
-      this.confirmResolve = null;
-    }
-  }
-
-  /**
-   * 显示输入对话框
-   * @param title - 对话框标题
-   * @param label - 输入标签文本
-   * @param defaultValue - 默认值
-   * @param options - 选项
-   * @returns 用户输入的内容，取消返回 null
-   */
-  showInputDialog(title: string, label: string, defaultValue = '', options = {}): Promise<{ value: string; groupId?: number | null } | null> {
-    return DialogService.showInputDialog({
-      title,
-      placeholder: label,
-      defaultValue,
-      ...options
-    });
-  }
-
-  /**
-   * 关闭输入对话框
-   */
-  closeInputModal() {
-    DialogService.clearAllDialogs();
-  }
-
-  /**
-   * 关闭选择对话框
-   */
-  closeSelectModal() {
-    DialogService.clearAllDialogs();
   }
 }
 

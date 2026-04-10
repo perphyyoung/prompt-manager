@@ -5,6 +5,7 @@
  */
 
 import { BatchToolbar, IBatchToolbarConfig } from '../components/BatchToolbar.ts';
+import { rafDebounce } from '../../utils/debounce.ts';
 
 export interface IToolbarButton {
   id: string;
@@ -246,7 +247,6 @@ export class MultiSelectManager {
    * 隐藏底部悬浮工具栏
    */
   hideToolbar(): void {
-    window.electronAPI.logDebug('MultiSelectManager', 'hideToolbar called');
     this.toolbar?.hide();
   }
 
@@ -260,10 +260,9 @@ export class MultiSelectManager {
   }
 
   /**
-   * 更新工具栏 UI
+   * 实际执行工具栏 UI 更新（私有方法）
    */
-  updateToolbarUI(): void {
-    window.electronAPI.logDebug('MultiSelectManager', `updateToolbarUI called, hasSelection=${this.hasSelection}, count=${this.count}`);
+  private _doUpdateToolbarUI(): void {
     if (this.hasSelection) {
       if (this.toolbar?.visible) {
         // 工具栏已显示，只更新计数
@@ -278,6 +277,14 @@ export class MultiSelectManager {
       this.toolbar?.hide(false);
     }
   }
+
+  /**
+   * 更新工具栏 UI（防抖版本）
+   * 使用 requestAnimationFrame 确保在下一帧渲染前执行，避免频繁更新
+   */
+  updateToolbarUI = rafDebounce(() => {
+    this._doUpdateToolbarUI();
+  });
 
   // ==================== 清理 ====================
 

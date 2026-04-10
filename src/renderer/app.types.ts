@@ -263,10 +263,6 @@ export interface IApp {
   emit(event: string, data?: unknown): void;
   updatePromptViewButtons(mode: string): void;
   updateImageViewButtons(mode: string): void;
-  closeConfirmModal(): void;
-  showInputDialog(title: string, label: string, defaultValue?: string, options?: unknown): Promise<{ value: string; groupId?: number | null } | null>;
-  closeInputModal(): void;
-  closeSelectModal(): void;
 }
 
 /**

@@ -5,6 +5,7 @@
 
 import { contextStack } from '../managers/ContextStackManager.ts';
 import { Constants } from '../../constants.ts';
+import type { IClosableElement } from '../../types/entities.ts';
 
 interface ShortcutInfo {
   action: string;
@@ -153,7 +154,7 @@ export class ShortcutManager {
       return;
     }
 
-    const element = document.getElementById(id);
+    const element = document.getElementById(id) as IClosableElement;
     if (!element) {
       window.electronAPI.logError('ShortcutManager', `Element not found: ${id}`);
       return;
@@ -185,12 +186,12 @@ export class ShortcutManager {
       return;
     }
 
-    // 主面板：全选卡片
-    if (id === Constants.Ids.PROMPT_PANEL) {
+    // 主面板或主面板的批量工具栏：全选卡片
+    if (id === Constants.Ids.PROMPT_PANEL || id === Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR) {
       this.app.promptPanelManager?.selectAllVisibleItems?.();
       e.preventDefault();
       return;
-    } else if (id === Constants.Ids.IMAGE_PANEL) {
+    } else if (id === Constants.Ids.IMAGE_PANEL || id === Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR) {
       this.app.imagePanelManager?.selectAllVisibleItems?.();
       e.preventDefault();
       return;

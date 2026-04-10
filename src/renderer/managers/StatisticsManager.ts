@@ -6,6 +6,7 @@
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { Constants } from '../../constants.ts';
 import type { IApp } from '../app.types.ts';
+import type { IClosableElement } from '../../types/entities.ts';
 
 export interface IStatistics {
   // 提示词统计
@@ -72,7 +73,7 @@ export class StatisticsManager {
       contextStack.push(stackEntry);
       modal.classList.add('active');
       // 添加 close 方法供 ShortcutManager 调用
-      (modal as HTMLElement & { close: () => void }).close = () => this.closeStatisticsModal();
+      (modal as IClosableElement).close = () => this.closeStatisticsModal();
     }
   }
 

@@ -4331,6 +4331,10 @@ body * {
   font-weight: 600;
   color: var(--text-primary);
   font-size: var(--font-size-base);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tag-group-card-sort {

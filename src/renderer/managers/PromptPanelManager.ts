@@ -311,7 +311,7 @@ export class PromptPanelManager extends PanelManagerBase {
     this.bindListButtonEvents(filtered);
     this.bindHoverPreview('.list-item--prompt');
     this.bindCardDropEvents(listContainer);
-    this.multiSelectManager.updateToolbarUI();
+    // updateToolbarUI 由调用方（setViewMode/onChange）统一处理，避免重复调用
   }
 
   /**

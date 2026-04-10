@@ -8,7 +8,8 @@ import { ITagWithGroup, ITagGroup, IImage, IPrompt } from '../../types/entities.
 import { IEventStrategy, EventContext } from './Strategies/IEventStrategy.ts';
 import { MultiSelectManager, IToolbarConfig, IBatchOperationHandler } from './MultiSelectManager.ts';
 import { MultiSelectConfig, IBatchOperationConfig } from '../config/MultiSelectConfig.ts';
-import { DialogService, DialogConfigItem } from '../services/index.ts';
+import { DialogService } from '../services/index.ts';
+import type { IDialogTemplate } from '../../types/entities.ts';
 import { Constants, Events } from '../../constants.ts';
 
 // 卡片大小限制常量
@@ -240,7 +241,7 @@ export abstract class PanelManagerBase {
         this.multiSelectManager.updateToolbarUI();
       },
       toolbarConfig: multiSelectConfig ? {
-        id: this.storagePrefix === 'prompt' ? Constants.Ids.PROMPT_TAG_BATCH_TOOLBAR : Constants.Ids.IMAGE_TAG_BATCH_TOOLBAR,
+        id: this.storagePrefix === 'prompt' ? Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR : Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR,
         label: multiSelectConfig.label,
         buttons: multiSelectConfig.buttons
       } : undefined,
@@ -387,7 +388,7 @@ export abstract class PanelManagerBase {
         deleteBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
           const { config: dialogConfig, name } = config.getDeleteConfirmConfig(item);
-          const confirmed = await DialogService.showConfirmDialogByConfig(dialogConfig as DialogConfigItem, name ? { name } : undefined);
+          const confirmed = await DialogService.showConfirmDialogByConfig(dialogConfig as IDialogTemplate, name ? { name } : undefined);
           if (confirmed) {
             await this.deleteItem(String(item.id));
           }
@@ -453,7 +454,7 @@ export abstract class PanelManagerBase {
         deleteBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
           const { config: dialogConfig, name } = config.getDeleteConfirmConfig(itemData);
-          const confirmed = await DialogService.showConfirmDialogByConfig(dialogConfig as DialogConfigItem, name ? { name } : undefined);
+          const confirmed = await DialogService.showConfirmDialogByConfig(dialogConfig as IDialogTemplate, name ? { name } : undefined);
           if (confirmed) {
             await this.deleteItem(String(id));
           }

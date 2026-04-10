@@ -105,6 +105,17 @@ export class ElectronTestHelper {
     const page = this.getPage();
     await page.screenshot({ path: join(__dirname, `screenshots/${name}.png`) });
   }
+
+  /**
+   * 记录测试开始日志
+   * @param testName - 测试名称
+   */
+  async logTestStart(testName: string): Promise<void> {
+    const page = this.getPage();
+    await page.evaluate((name: string) => {
+      window.electronAPI.logInfo('E2E-Test', `Starting test: ${name}`);
+    }, testName);
+  }
 }
 
 /**

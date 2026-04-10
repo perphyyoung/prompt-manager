@@ -42,7 +42,7 @@ export class ListEventStrategy implements IEventStrategy {
         }
 
         context.renderView();
-        context.multiSelectManager.updateToolbarUI();
+        // updateToolbarUI 由 onChange 回调统一处理，避免重复调用
       });
     });
   }

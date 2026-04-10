@@ -6,6 +6,7 @@
 import { contextStack, IContextStackEntry } from '../managers/ContextStackManager.ts';
 import { Constants } from '../../constants.ts';
 import type { ElementId } from '../../constants.ts';
+import type { IClosableElement } from '../../types/entities.ts';
 
 // 配置选项接口
 interface TagAutocompleteOptions {
@@ -161,7 +162,7 @@ export class TagAutocomplete {
     this.dropdown.classList.add('active');
 
     // 添加 close 方法供 ShortcutManager 调用
-    (this.dropdown as HTMLElement & { close: () => void }).close = () => this.hideDropdown();
+    (this.dropdown as IClosableElement).close = () => this.hideDropdown();
 
     // 压栈：进入下拉菜单上下文
     const stackEntry: IContextStackEntry = {

@@ -6,6 +6,7 @@ import { Constants, ElementId } from '../../constants.ts';
  */
 export interface IContextStackEntry {
   id: ElementId;
+  title?: string;
   state: {
     isBatchToolbarVisible: boolean;
   };
@@ -42,10 +43,14 @@ export class ContextStackManager {
    * @param entry - 栈条目
    */
   push(entry: IContextStackEntry): void {
+    const stackTrace = new Error().stack?.split('\n').slice(2, 5).join(' | ');
+    const titleStr = entry.title || '';
+    const newId = `${entry.id}${titleStr}`;
+
     // 检查是否已在栈顶
     const currentTop = this.stack[this.stack.length - 1];
     if (currentTop?.id === entry.id) {
-      window.electronAPI.logWarn('ContextStackManager', `push: skipped ${entry.id} (already on top)`);
+      window.electronAPI.logWarn('ContextStackManager', `push ${newId} skipped, stack=[${this.stack.map(e => e.id).join(', ')}], caller=${stackTrace}`);
       return;
     }
 
@@ -55,13 +60,13 @@ export class ContextStackManager {
                      entry.id === Constants.Ids.INPUT_DIALOG ||
                      entry.id === Constants.Ids.SELECT_DIALOG;
     if (currentTop?.state.isBatchToolbarVisible && !isDialog) {
-      window.electronAPI.logDebug('ContextStackManager', `close before push: ${currentTop.id}`);
+      window.electronAPI.logInfo('ContextStackManager', `close before push ${currentTop.id} for ${newId}`);
       currentTop.close();
       currentTop.state.isBatchToolbarVisible = false;
     }
 
     this.stack.push(entry);
-    window.electronAPI.logDebug('ContextStackManager', `push: ${entry.id}, stack=[${this.stack.map(e => e.id).join(', ')}]`);
+    window.electronAPI.logDebug('ContextStackManager', `push ${newId}, stack=[${this.stack.map(e => e.id).join(', ')}], caller=${stackTrace}`);
   }
 
   /**
@@ -69,23 +74,26 @@ export class ContextStackManager {
    * @param expectedId - 期望出栈的 ID（用于验证）
    * @returns 是否成功出栈
    */
-  pop(expectedId?: ElementId): boolean {
+  pop(expectedId: ElementId): boolean {
+    const stackTrace = new Error().stack?.split('\n').slice(2, 5).join(' | ');
+    
     if (this.stack.length === 0) {
-      window.electronAPI.logWarn('ContextStackManager', `pop: skipped (stack is empty)`);
+      window.electronAPI.logWarn('ContextStackManager', `pop ${expectedId}: skipped (stack is empty), caller=${stackTrace}`);
       return false;
     }
 
     const top = this.stack[this.stack.length - 1];
-    if (expectedId && top.id !== expectedId) {
+    if (top.id !== expectedId) {
       window.electronAPI.logError('ContextStackManager',
-        `pop: mismatch! expected=${expectedId}, actual=${top.id}, stack=[${this.stack.map(e => e.id).join(', ')}]`);
+        `pop: mismatch! expected=${expectedId}, actual=${top.id}, stack=[${this.stack.map(e => e.id).join(', ')}], caller=${stackTrace}`);
       return false;
     }
 
     const popped = this.stack.pop();
-    const stackTrace = new Error().stack?.split('\n').slice(2, 5).join(' | ');
+    const titleStr = popped?.title || '';
+    const newId = `${popped?.id}${titleStr}`;
     window.electronAPI.logDebug('ContextStackManager',
-      `pop: ${popped?.id}, stack=[${this.stack.map(e => e.id).join(', ')}], caller=${stackTrace}`);
+      `pop: ${newId}, stack=[${this.stack.map(e => e.id).join(', ')}], caller=${stackTrace}`);
 
     return true;
   }
