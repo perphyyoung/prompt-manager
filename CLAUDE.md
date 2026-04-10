@@ -9,7 +9,10 @@
 
 ## 禁止行为
 
-- 禁止使用 PowerShell 替换，可以使用 TS 替换
+- 禁止以下替换方式(允许使用 TypeScript/JavaScript 脚本进行替换)：
+  - PowerShell 命令替换（如 `(Get-Content file) -replace 'old', 'new' | Set-Content file`）
+  - 任何命令行文本替换工具（如 sed、awk、perl 等）
+  - 正则表达式批量替换整个文件
 - 禁止 `git commit`
 - 禁止动态导入
 
