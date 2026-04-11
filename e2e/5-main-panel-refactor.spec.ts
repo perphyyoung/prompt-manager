@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createElectronTest } from './electron-test.ts';
+import { createElectronTest, enterImageGridView, enterImageListView, enterPromptGridView, enterPromptListView } from './electron-test.ts';
 import type { IElectronAPI, IImage, IPrompt } from '../src/preload/index.ts';
 
 declare global {
@@ -50,74 +50,6 @@ test.describe('主界面重构功能', () => {
   test.afterAll(async () => {
     await electronTest.close();
   });
-
-  /**
-   * 进入图像网格视图的辅助函数
-   * 步骤：
-   * 1. 点击 #imageManagerBtn 切换到图像面板
-   * 2. 点击 #imageGridViewBtn 确保处于网格视图
-   * 3. 等待 .image-card 元素可见
-   */
-  async function enterImageGridView(page: any) {
-    await page.click('#imageManagerBtn');
-    await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
-    await page.click('#imageGridViewBtn');
-    const firstCard = page.locator('.image-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/refactor/image-grid-view.png' });
-    return firstCard;
-  }
-
-  /**
-   * 进入图像列表视图的辅助函数
-   * 步骤：
-   * 1. 点击 #imageManagerBtn 切换到图像面板
-   * 2. 点击 #imageListViewBtn 切换到列表视图
-   * 3. 等待 .list-item--image 元素可见
-   */
-  async function enterImageListView(page: any) {
-    await page.click('#imageManagerBtn');
-    await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
-    await page.click('#imageListViewBtn');
-    const firstItem = page.locator('.list-item--image').first();
-    await expect(firstItem).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/refactor/image-list-view.png' });
-    return firstItem;
-  }
-
-  /**
-   * 进入提示词网格视图的辅助函数
-   * 步骤：
-   * 1. 点击 #promptManagerBtn 切换到提示词面板
-   * 2. 点击 #promptGridViewBtn 确保处于网格视图
-   * 3. 等待 .prompt-card 元素可见
-   */
-  async function enterPromptGridView(page: any) {
-    await page.click('#promptManagerBtn');
-    await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
-    await page.click('#promptGridViewBtn');
-    const firstCard = page.locator('.prompt-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/refactor/prompt-grid-view.png' });
-    return firstCard;
-  }
-
-  /**
-   * 进入提示词列表视图的辅助函数
-   * 步骤：
-   * 1. 点击 #promptManagerBtn 切换到提示词面板
-   * 2. 点击 #promptListViewBtn 切换到列表视图
-   * 3. 等待 .list-item--prompt 元素可见
-   */
-  async function enterPromptListView(page: any) {
-    await page.click('#promptManagerBtn');
-    await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
-    await page.click('#promptListViewBtn');
-    const firstItem = page.locator('.list-item--prompt').first();
-    await expect(firstItem).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/refactor/prompt-list-view.png' });
-    return firstItem;
-  }
 
   test.describe('图像面板功能', () => {
     test('图像卡片收藏按钮功能', async () => {

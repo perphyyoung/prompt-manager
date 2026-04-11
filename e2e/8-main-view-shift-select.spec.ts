@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createElectronTest } from './electron-test.ts';
+import { createElectronTest, enterImageListView, enterPromptListView } from './electron-test.ts';
 import type { IElectronAPI, IImage, IPrompt } from '../src/preload/index.ts';
 
 declare global {
@@ -29,78 +29,6 @@ test.describe('Shift 范围选择', () => {
   test.afterEach(async () => {
     await electronTest.close();
   });
-
-  /**
-   * 进入图像列表视图的辅助函数
-   *
-   * 进入目标界面步骤：
-   * 1. 点击 #imageManagerBtn 切换到图像面板
-   * 2. 点击 #imageListViewBtn 切换到列表视图
-   * 3. 等待 .list-item--image 元素可见
-   */
-  async function enterImageListView(page: any) {
-    // 1. 切换到图像面板
-    await page.click('#imageManagerBtn');
-    // 等待面板可见（通过检查 display 属性）
-    await page.waitForFunction(() => {
-      const panel = document.getElementById('imagePanel');
-      return panel && (panel as HTMLElement).style.display === 'flex';
-    }, { timeout: 5000 });
-    await page.screenshot({ path: 'test-results/shift-select/01-image-panel.png' });
-
-    // 2. 切换到列表视图（点击列表视图按钮）
-    const listViewBtn = page.locator('#imageListViewBtn');
-    await listViewBtn.click();
-    // 等待列表视图按钮激活
-    await page.waitForFunction(() => {
-      const btn = document.getElementById('imageListViewBtn');
-      return btn && btn.classList.contains('active');
-    }, { timeout: 5000 });
-    await page.screenshot({ path: 'test-results/shift-select/02-list-view.png' });
-
-    // 3. 等待列表项加载
-    const firstRow = page.locator('.list-item--image').first();
-    await expect(firstRow).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/shift-select/03-list-loaded.png' });
-
-    return firstRow;
-  }
-
-  /**
-   * 进入提示词列表视图的辅助函数
-   *
-   * 进入目标界面步骤：
-   * 1. 点击 #promptManagerBtn 切换到提示词面板
-   * 2. 点击 #promptListViewBtn 切换到列表视图
-   * 3. 等待 .list-item--prompt 元素可见
-   */
-  async function enterPromptListView(page: any) {
-    // 1. 切换到提示词面板
-    await page.click('#promptManagerBtn');
-    // 等待面板可见（通过检查 display 属性）
-    await page.waitForFunction(() => {
-      const panel = document.getElementById('promptPanel');
-      return panel && (panel as HTMLElement).style.display === 'flex';
-    }, { timeout: 5000 });
-    await page.screenshot({ path: 'test-results/shift-select/prompt-01-panel.png' });
-
-    // 2. 切换到列表视图（点击列表视图按钮）
-    const listViewBtn = page.locator('#promptListViewBtn');
-    await listViewBtn.click();
-    // 等待列表视图按钮激活
-    await page.waitForFunction(() => {
-      const btn = document.getElementById('promptListViewBtn');
-      return btn && btn.classList.contains('active');
-    }, { timeout: 5000 });
-    await page.screenshot({ path: 'test-results/shift-select/prompt-02-list-view.png' });
-
-    // 3. 等待列表项加载
-    const firstRow = page.locator('.list-item--prompt').first();
-    await expect(firstRow).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/shift-select/prompt-03-list-loaded.png' });
-
-    return firstRow;
-  }
 
   test('图像列表视图 - Shift+ 点击范围选择', async () => {
     const page = electronTest.getPage();

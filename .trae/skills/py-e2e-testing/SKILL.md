@@ -102,6 +102,28 @@ These rules are **ABSOLUTE REQUIREMENTS** - no exceptions allowed:
    - Use explicit conditions instead (waitForSelector, waitForFunction, etc.)
    - See "Reliable Verification" section below for correct patterns
 
+6. **Use shared helper functions from `e2e/electron-test.ts`**
+   - Import and reuse existing helper functions instead of duplicating code
+   - Available helper categories:
+     - **ElectronTestHelper class**: `launch()`, `close()`, `getPage()`, `waitForSelector()`, `click()`, `getText()`, `exists()`, `wait()`, `screenshot()`, `logTestStart()`
+     - **Tag Manager helpers**: `enterImageTagManager()`, `enterPromptTagManager()`, `createImageTagInManager()`, `createPromptTagInManager()`, `createImageTagGroup()`, `createPromptTagGroup()`, etc.
+     - **View Navigation helpers**: `enterImageGridView()`, `enterPromptGridView()`, `enterImageListView()`, `enterPromptListView()`
+     - **Detail View helpers**: `openImageDetail()`, `openPromptDetail()`, `enterImageDetailView()`, `enterPromptDetailView()`
+     - **Database helpers**: `getImageFromDatabase()`, `getPromptFromDatabase()`, `getFirstImageId()`, `getFirstPromptId()`
+     - **Tag Filter helpers**: `ensureTagFilterExpanded()`
+   - See full documentation: [e2e-测试共享辅助函数库.md](e2e-测试共享辅助函数库.md)
+   - **When adding new shared functions**: First add to `e2e/electron-test.ts`, then update `e2e-测试共享辅助函数库.md`
+
+   ```typescript
+   // ✅ CORRECT: Import and reuse helper functions
+   import { createElectronTest, enterImageGridView, getImageFromDatabase } from './electron-test.ts';
+
+   const electronTest = createElectronTest();
+   await electronTest.launch();
+   const page = electronTest.getPage();
+   const firstCard = await enterImageGridView(page);
+   ```
+
 ## Prohibited Behaviors
 
 - Do not write tests without understanding the code

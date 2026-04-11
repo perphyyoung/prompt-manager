@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createElectronTest } from './electron-test.ts';
+import { createElectronTest, enterImageGridView, enterPromptGridView } from './electron-test.ts';
 import type { IElectronAPI, IImage, IPrompt } from '../src/preload/index.ts';
 import { Constants } from '../src/constants.ts';
 
@@ -30,40 +30,6 @@ test.describe('主界面卡片视图多选功能', () => {
   test.afterEach(async () => {
     await electronTest.close();
   });
-
-  /**
-   * 进入图像网格视图的辅助函数
-   * 步骤：
-   * 1. 点击 #imageManagerBtn 切换到图像面板
-   * 2. 点击 #imageGridViewBtn 确保处于网格视图
-   * 3. 等待 .image-card 元素可见
-   */
-  async function enterImageGridView(page: any) {
-    await page.click('#imageManagerBtn');
-    await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
-    await page.click('#imageGridViewBtn');
-    const firstCard = page.locator('.image-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/multi-select/image-grid-view.png' });
-    return firstCard;
-  }
-
-  /**
-   * 进入提示词网格视图的辅助函数
-   * 步骤：
-   * 1. 点击 #promptManagerBtn 切换到提示词面板
-   * 2. 点击 #promptGridViewBtn 确保处于网格视图
-   * 3. 等待 .prompt-card 元素可见
-   */
-  async function enterPromptGridView(page: any) {
-    await page.click('#promptManagerBtn');
-    await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
-    await page.click('#promptGridViewBtn');
-    const firstCard = page.locator('.prompt-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/multi-select/prompt-grid-view.png' });
-    return firstCard;
-  }
 
   test.describe('图像面板多选功能', () => {
     test('图像复选框选中后进入多选模式', async () => {

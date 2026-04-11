@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createElectronTest } from './electron-test.ts';
+import { createElectronTest, enterImageGridView } from './electron-test.ts';
 import type { IElectronAPI, IPrompt } from '../src/preload/index.ts';
 
 declare global {
@@ -30,29 +30,6 @@ test.describe('新建提示词防重复提交', () => {
   test.afterEach(async () => {
     await electronTest.close();
   });
-
-  /**
-   * 进入图像网格视图并返回第一个图像卡片的辅助函数
-   */
-  async function enterImageGridView(page: any) {
-    // 1. 切换到图像面板
-    await page.click('#imageManagerBtn');
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: 'test-results/01-image-panel.png' });
-
-    // 2. 确保处于网格视图（点击网格视图按钮）
-    const gridViewBtn = page.locator('#imageGridViewBtn');
-    await gridViewBtn.click();
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: 'test-results/02-grid-view.png' });
-
-    // 3. 等待图像卡片加载
-    const firstImage = page.locator('.image-card').first();
-    await expect(firstImage).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/03-cards-loaded.png' });
-
-    return firstImage;
-  }
 
   test('快速点击完成按钮应该只创建一个提示词', async () => {
     const page = electronTest.getPage();

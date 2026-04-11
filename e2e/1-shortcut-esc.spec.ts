@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { createElectronTest } from './electron-test.ts';
+import { createElectronTest, enterImageGridView, enterPromptGridView, openImageDetail, openPromptDetail } from './electron-test.ts';
+import type { IElectronAPI } from '../src/preload/index.ts';
+
+declare global {
+  interface Window {
+    electronAPI: IElectronAPI;
+  }
+}
 
 test.describe('Esc 键快捷键功能', () => {
   const electronTest = createElectronTest();
@@ -11,70 +18,6 @@ test.describe('Esc 键快捷键功能', () => {
   test.afterEach(async () => {
     await electronTest.close();
   });
-
-  /**
-   * 进入图像网格视图的辅助函数
-   * 步骤：
-   * 1. 点击 #imageManagerBtn 切换到图像面板
-   * 2. 点击 #imageGridViewBtn 确保处于网格视图
-   * 3. 等待 .image-card 元素可见
-   */
-  async function enterImageGridView(page: any) {
-    await page.click('#imageManagerBtn');
-    await page.waitForTimeout(100);
-    await page.click('#imageGridViewBtn');
-    await page.waitForTimeout(100);
-    const firstCard = page.locator('.image-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 5000 });
-    return firstCard;
-  }
-
-  /**
-   * 进入提示词网格视图的辅助函数
-   * 步骤：
-   * 1. 点击 #promptManagerBtn 切换到提示词面板
-   * 2. 点击 #promptGridViewBtn 确保处于网格视图
-   * 3. 等待 .prompt-card 元素可见
-   */
-  async function enterPromptGridView(page: any) {
-    await page.click('#promptManagerBtn');
-    await page.waitForTimeout(100);
-    await page.click('#promptGridViewBtn');
-    await page.waitForTimeout(100);
-    const firstCard = page.locator('.prompt-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 5000 });
-    return firstCard;
-  }
-
-  /**
-   * 打开图像详情界面的辅助函数
-   * 步骤：
-   * 1. 点击第一个图像卡片
-   * 2. 等待 #imageDetailModal 显示 active 类
-   */
-  async function openImageDetail(page: any) {
-    const firstCard = page.locator('.image-card').first();
-    await firstCard.click();
-    await page.waitForTimeout(100);
-    const detailModal = page.locator('#imageDetailModal');
-    await expect(detailModal).toHaveClass(/active/);
-    return detailModal;
-  }
-
-  /**
-   * 打开提示词详情界面的辅助函数
-   * 步骤：
-   * 1. 点击第一个提示词卡片
-   * 2. 等待 #promptDetailModal 显示 active 类
-   */
-  async function openPromptDetail(page: any) {
-    const firstCard = page.locator('.prompt-card').first();
-    await firstCard.click();
-    await page.waitForTimeout(100);
-    const detailModal = page.locator('#promptDetailModal');
-    await expect(detailModal).toHaveClass(/active/);
-    return detailModal;
-  }
 
   // ==================== 通用功能测试（同时测试图像和提示词面板）====================
 

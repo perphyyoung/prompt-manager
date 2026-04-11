@@ -1,5 +1,16 @@
 import { test, expect } from '@playwright/test';
-import { createElectronTest } from './electron-test.ts';
+import {
+  createElectronTest,
+  generateTestTagName,
+  enterImageTagManager,
+  enterPromptTagManager,
+  closeImageTagManager,
+  closePromptTagManager,
+  createImageTagInManager,
+  createPromptTagInManager,
+  createImageTagGroup,
+  createPromptTagGroup
+} from './electron-test.ts';
 import type { IElectronAPI } from '../src/preload/index.ts';
 import { Constants } from '../src/constants.ts';
 
@@ -41,163 +52,6 @@ test.describe('标签管理功能', () => {
   test.afterAll(async () => {
     await electronTest.close();
   });
-
-  /**
-   * 生成唯一测试标签名
-   */
-  function generateTestTagName(prefix: string): string {
-    return `e2e_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  }
-
-  /**
- * 进入图像面板并打开标签管理器
- * Steps to enter target interface:
- * 1. Click imageManagerBtn to switch to image panel
- * 2. Wait for imagePanel to be visible
- * 3. Click imageTagManagerBtn to open tag manager
- * 4. Wait for imageTagManagerModal to be visible
- */
-  async function enterImageTagManager(page: any) {
-    await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, { state: 'visible', timeout: 5000 });
-    await page.screenshot({ path: 'test-results/tag-manager/image-01-panel.png' });
-
-    await page.click(`#${Constants.Ids.IMAGE_TAG_MANAGER_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, { state: 'visible', timeout: 5000 });
-    await page.screenshot({ path: 'test-results/tag-manager/image-02-manager-opened.png' });
-  }
-
-  /**
- * 进入提示词面板并打开标签管理器
- * Steps to enter target interface:
- * 1. Click promptManagerBtn to switch to prompt panel
- * 2. Wait for promptPanel to be visible
- * 3. Click promptTagManagerBtn to open tag manager
- * 4. Wait for promptTagManagerModal to be visible
- */
-  async function enterPromptTagManager(page: any) {
-    await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, { state: 'visible', timeout: 5000 });
-    await page.screenshot({ path: 'test-results/tag-manager/prompt-01-panel.png' });
-
-    await page.click(`#${Constants.Ids.PROMPT_TAG_MANAGER_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, { state: 'visible', timeout: 5000 });
-    await page.screenshot({ path: 'test-results/tag-manager/prompt-02-manager-opened.png' });
-  }
-
-  /**
- * 关闭图像标签管理器
- */
-  async function closeImageTagManager(page: any) {
-    await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
-    await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 });
-    await page.screenshot({ path: 'test-results/tag-manager/image-manager-closed.png' });
-  }
-
-  /**
-   * 关闭提示词标签管理器
-   */
-  async function closePromptTagManager(page: any) {
-    await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
-    await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 });
-    await page.screenshot({ path: 'test-results/tag-manager/prompt-manager-closed.png' });
-  }
-
-  /**
- * 在图像标签管理器中创建标签
- */
-  async function createImageTagInManager(page: any, tagName: string, groupId: string = ''): Promise<void> {
-    await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_IN_MANAGER_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, { state: 'visible', timeout: 5000 });
-    await page.screenshot({ path: `test-results/tag-manager/image-input-dialog-${tagName.slice(0, 10)}.png` });
-
-    await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, tagName);
-
-    if (groupId) {
-      await page.selectOption(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`, groupId);
-    }
-
-    await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
-
-    // Wait for tag to be created via API
-    await page.waitForFunction(async (name: string) => {
-      const tags = await window.electronAPI.getImageTags();
-      return tags.includes(name);
-    }, tagName, { timeout: 5000 });
-
-    await page.screenshot({ path: `test-results/tag-manager/image-tag-created-${tagName.slice(0, 10)}.png` });
-  }
-
-  /**
- * 在提示词标签管理器中创建标签
- */
-  async function createPromptTagInManager(page: any, tagName: string, groupId: string = ''): Promise<void> {
-    await page.click(`#${Constants.Ids.ADD_PROMPT_TAG_IN_MANAGER_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, { state: 'visible', timeout: 5000 });
-    await page.screenshot({ path: `test-results/tag-manager/prompt-input-dialog-${tagName.slice(0, 10)}.png` });
-
-    await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, tagName);
-
-    if (groupId) {
-      await page.selectOption(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`, groupId);
-    }
-
-    await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
-
-    // Wait for tag to be created via API
-    await page.waitForFunction(async (name: string) => {
-      const tags = await window.electronAPI.getAllTags();
-      return tags.includes(name);
-    }, tagName, { timeout: 5000 });
-
-    await page.screenshot({ path: `test-results/tag-manager/prompt-tag-created-${tagName.slice(0, 10)}.png` });
-  }
-
-  /**
- * 在图像标签管理器中创建标签组
- */
-  async function createImageTagGroup(page: any, groupName: string): Promise<number> {
-    await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_GROUP_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL}`, { state: 'visible', timeout: 5000 });
-    await page.screenshot({ path: `test-results/tag-manager/image-group-dialog-${groupName.slice(0, 10)}.png` });
-
-    await page.fill(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_NAME}`, groupName);
-    await page.click(`#${Constants.Ids.SAVE_IMAGE_TAG_GROUP_BTN}`);
-
-    // Wait for group to be created via API
-    const groupId = await page.waitForFunction(async (name: string) => {
-      const groups = await window.electronAPI.getImageTagGroups();
-      const group = groups.find((g: { name: string; id: number }) => g.name === name);
-      return group?.id;
-    }, groupName, { timeout: 5000 });
-
-    await page.screenshot({ path: `test-results/tag-manager/image-group-created-${groupName.slice(0, 10)}.png` });
-
-    return groupId;
-  }
-
-  /**
-   * 在提示词标签管理器中创建标签组
-   */
-  async function createPromptTagGroup(page: any, groupName: string): Promise<number> {
-    await page.click(`#${Constants.Ids.ADD_PROMPT_TAG_GROUP_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_MODAL}`, { state: 'visible', timeout: 5000 });
-    await page.screenshot({ path: `test-results/tag-manager/prompt-group-dialog-${groupName.slice(0, 10)}.png` });
-
-    await page.fill(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_NAME}`, groupName);
-    await page.click(`#${Constants.Ids.SAVE_PROMPT_TAG_GROUP_BTN}`);
-
-    // Wait for group to be created via API
-    const groupId = await page.waitForFunction(async (name: string) => {
-      const groups = await window.electronAPI.getPromptTagGroups();
-      const group = groups.find((g: { name: string; id: number }) => g.name === name);
-      return group?.id;
-    }, groupName, { timeout: 5000 });
-
-    await page.screenshot({ path: `test-results/tag-manager/prompt-group-created-${groupName.slice(0, 10)}.png` });
-
-    return groupId;
-  }
 
   test.describe('图像标签管理 - 非批量功能', () => {
     test('打开和关闭标签管理器', async () => {

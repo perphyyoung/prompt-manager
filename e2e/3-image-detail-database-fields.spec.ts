@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { createElectronTest } from './electron-test.ts';
-import type { IElectronAPI, IImage, IPrompt } from '../src/preload/index.ts';
+import { createElectronTest, enterImageDetailView, getImageFromDatabase } from './electron-test.ts';
+import type { IElectronAPI, IImage } from '../src/preload/index.ts';
 
 declare global {
   interface Window {
@@ -35,51 +35,6 @@ test.describe('图像详情界面数据库字段读取', () => {
   test.afterEach(async () => {
     await electronTest.close();
   });
-
-  /**
-   * 进入图像详情界面的辅助函数
-   */
-  async function enterImageDetailView(page: any) {
-    // 1. 切换到图像面板
-    await page.click('#imageManagerBtn');
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: 'test-results/image-detail/01-image-panel.png' });
-
-    // 2. 等待图像卡片加载
-    const firstCard = page.locator('.image-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/image-detail/02-cards-loaded.png' });
-
-    // 3. 获取第一个图像的ID
-    const firstImageId = await firstCard.getAttribute('data-id');
-    expect(firstImageId).toBeTruthy();
-
-    // 4. 点击卡片打开详情
-    await firstCard.click();
-    await page.waitForTimeout(500);
-
-    // 5. 等待详情模态框显示
-    const detailModal = page.locator('#imageDetailModal');
-    await expect(detailModal).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/image-detail/03-detail-opened.png' });
-
-    return { firstImageId, firstCard };
-  }
-
-  /**
-   * 从数据库获取图像完整信息
-   */
-  async function getImageFromDatabase(page: any, imageId: string): Promise<IImage | null> {
-    return await page.evaluate(async (id: string) => {
-      try {
-        const image = await window.electronAPI.getImageById(id);
-        return image as IImage;
-      } catch (error) {
-        console.error('Failed to get image from database:', error);
-        return null;
-      }
-    }, imageId);
-  }
 
   test('文件名 (fileName) 字段正确显示', async () => {
     const page = electronTest.getPage();

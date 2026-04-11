@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createElectronTest } from './electron-test.ts';
+import { createElectronTest, enterImageGridView, enterPromptGridView, ensureTagFilterExpanded } from './electron-test.ts';
 import type { IElectronAPI, IImage, IPrompt } from '../src/preload/index.ts';
 
 declare global {
@@ -10,7 +10,7 @@ declare global {
 
 /**
  * 标签拖拽功能 E2E 测试
- * 
+ *
  * 测试场景：
  * 1. 通过标签管理器创建测试标签
  * 2. 将标签拖拽到图像卡片
@@ -20,7 +20,7 @@ declare global {
  */
 test.describe('标签拖拽功能', () => {
   const electronTest = createElectronTest();
-  
+
   // 存储测试用图像和提示词的 ID
   let testImageId: string = '';
   let testPromptId: string = '';
@@ -59,73 +59,6 @@ test.describe('标签拖拽功能', () => {
     await electronTest.close();
   });
 
-  /**
-   * 进入图像网格视图的辅助函数
-   * Steps to enter target interface:
-   * 1. Click #imageManagerBtn to switch to image panel
-   * 2. Wait for #imagePanel to be visible
-   * 3. Click #imageGridViewBtn to ensure grid view
-   * 4. Wait for .image-card elements to be visible
-   */
-  async function enterImageGridView(page: any) {
-    await page.click('#imageManagerBtn');
-    await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
-    await page.screenshot({ path: 'test-results/drag-drop/image-01-panel.png' });
-
-    const gridViewBtn = page.locator('#imageGridViewBtn');
-    await gridViewBtn.click();
-    await page.waitForSelector('#imageGridViewBtn.active', { timeout: 5000 });
-    await page.screenshot({ path: 'test-results/drag-drop/image-02-grid.png' });
-
-    const firstCard = page.locator('.image-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/drag-drop/image-03-loaded.png' });
-
-    return firstCard;
-  }
-
-  /**
-   * 进入提示词网格视图的辅助函数
-   * Steps to enter target interface:
-   * 1. Click #promptManagerBtn to switch to prompt panel
-   * 2. Wait for #promptPanel to be visible
-   * 3. Click #promptGridViewBtn to ensure grid view
-   * 4. Wait for .prompt-card elements to be visible
-   */
-  async function enterPromptGridView(page: any) {
-    await page.click('#promptManagerBtn');
-    await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
-    await page.screenshot({ path: 'test-results/drag-drop/prompt-01-panel.png' });
-
-    const gridViewBtn = page.locator('#promptGridViewBtn');
-    await gridViewBtn.click();
-    await page.waitForSelector('#promptGridViewBtn.active', { timeout: 5000 });
-    await page.screenshot({ path: 'test-results/drag-drop/prompt-02-grid.png' });
-
-    const firstCard = page.locator('.prompt-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/drag-drop/prompt-03-loaded.png' });
-
-    return firstCard;
-  }
-
-  /**
-   * 确保标签筛选区域展开的辅助函数
-   */
-  async function ensureTagFilterExpanded(page: any, filterSectionId: string, toggleBtnId: string) {
-    const tagFilterSection = page.locator(`#${filterSectionId}`);
-    const isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) => el.classList.contains('collapsed'));
-
-    if (isCollapsed) {
-      await page.click(`#${toggleBtnId}`);
-      // Wait for collapsed class to be removed
-      await page.waitForFunction((id: string) => {
-        const el = document.getElementById(id);
-        return el && !el.classList.contains('collapsed');
-      }, filterSectionId, { timeout: 5000 });
-    }
-  }
-
   test.describe('图像标签拖拽', () => {
     test('标签拖拽到图像卡片 - 展开状态', async () => {
       const page = electronTest.getPage();
@@ -160,30 +93,30 @@ test.describe('标签拖拽功能', () => {
 
       const groupSelect = page.locator('#inputModalGroupSelect');
       await groupSelect.selectOption({ index: 1 });
-      
+
       await page.click('#inputOkBtn');
-      
+
       // 使用 waitForFunction 轮询检查标签是否创建成功（更可靠）
       await page.waitForFunction(async (tagName: string) => {
         const tags = await window.electronAPI.getAllTags();
         return tags.includes(tagName);
       }, testTagName, { timeout: 5000 });
-      
+
       await page.screenshot({ path: 'test-results/drag-drop/image-07-tag-created.png' });
-      
+
       // 关闭标签管理器
       await page.click('#closeImageTagManagerModal');
       await page.waitForSelector('#imageTagManagerModal', { state: 'hidden', timeout: 5000 });
       await page.screenshot({ path: 'test-results/drag-drop/image-08-manager-closed.png' });
-      
+
       await ensureTagFilterExpanded(page, 'imageTagFilterSection', 'imageTagFilterToggleBtn');
-      
+
       // 等待标签出现在筛选列表中（使用 waitForFunction 轮询检查）
       await page.waitForFunction((tagName: string) => {
         const tagElement = document.querySelector(`#imageTagFilterList .tag-filter-item[data-tag="${tagName}"]`);
         return tagElement !== null;
       }, testTagName, { timeout: 5000 });
-      
+
       const newTagElement = page.locator(`#imageTagFilterList .tag-filter-item[data-tag="${testTagName}"]`);
       await expect(newTagElement).toBeVisible({ timeout: 5000 });
 
@@ -265,30 +198,30 @@ test.describe('标签拖拽功能', () => {
 
       const groupSelect = page.locator('#inputModalGroupSelect');
       await groupSelect.selectOption({ index: 1 });
-      
+
       await page.click('#inputOkBtn');
-      
+
       // 使用 waitForFunction 轮询检查标签是否创建成功（更可靠）
       await page.waitForFunction(async (tagName: string) => {
         const tags = await window.electronAPI.getAllTags();
         return tags.includes(tagName);
       }, testTagName, { timeout: 5000 });
-      
+
       await page.screenshot({ path: 'test-results/drag-drop/prompt-07-tag-created.png' });
-      
+
       // 关闭标签管理器
       await page.click('#closePromptTagManagerModal');
       await page.waitForSelector('#promptTagManagerModal', { state: 'hidden', timeout: 5000 });
       await page.screenshot({ path: 'test-results/drag-drop/prompt-08-manager-closed.png' });
-      
+
       await ensureTagFilterExpanded(page, 'promptTagFilterSection', 'promptTagFilterToggleBtn');
-      
+
       // 等待标签出现在筛选列表中（使用 waitForFunction 轮询检查）
       await page.waitForFunction((tagName: string) => {
         const tagElement = document.querySelector(`#promptTagFilterList .tag-filter-item[data-tag="${tagName}"]`);
         return tagElement !== null;
       }, testTagName, { timeout: 5000 });
-      
+
       const newTagElement = page.locator(`#promptTagFilterList .tag-filter-item[data-tag="${testTagName}"]`);
       await expect(newTagElement).toBeVisible({ timeout: 5000 });
 

@@ -39,6 +39,11 @@ cnpm run dist:win:nsis -> exe
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 需要输出中文版本的可复制的详细版本和简洁版本的 git commit 信息
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
 
+## 20260411
+
+标签管理界面, 搜索后删除一个, 页面刷新后, 没有根据搜索匹配, 给出修改方案
+将 测试1 所有非具体测试的方法都移入 electron-test.ts 以复用, 然后更改引用, 编辑而非重写
+
 ## 20260409
 
 -不同对话框方法使用了相同的按钮 ID -> 区分

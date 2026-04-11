@@ -1,6 +1,8 @@
-import { _electron as electron, ElectronApplication, Page } from '@playwright/test';
+import { _electron as electron, ElectronApplication, Page, expect } from '@playwright/test';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { Constants } from '../src/constants.ts';
+import type { IImage, IPrompt } from '../src/preload/index.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -123,4 +125,423 @@ export class ElectronTestHelper {
  */
 export function createElectronTest() {
   return new ElectronTestHelper();
+}
+
+// ========== 标签管理器测试辅助函数 ==========
+
+/**
+ * 生成唯一测试标签名
+ */
+export function generateTestTagName(prefix: string): string {
+  return `e2e_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+/**
+ * 进入图像面板并打开标签管理器
+ * Steps to enter target interface:
+ * 1. Click imageManagerBtn to switch to image panel
+ * 2. Wait for imagePanel to be visible
+ * 3. Click imageTagManagerBtn to open tag manager
+ * 4. Wait for imageTagManagerModal to be visible
+ */
+export async function enterImageTagManager(page: any) {
+  await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, { state: 'visible', timeout: 5000 });
+
+  await page.click(`#${Constants.Ids.IMAGE_TAG_MANAGER_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, { state: 'visible', timeout: 5000 });
+}
+
+/**
+ * 进入提示词面板并打开标签管理器
+ * Steps to enter target interface:
+ * 1. Click promptManagerBtn to switch to prompt panel
+ * 2. Wait for promptPanel to be visible
+ * 3. Click promptTagManagerBtn to open tag manager
+ * 4. Wait for promptTagManagerModal to be visible
+ */
+export async function enterPromptTagManager(page: any) {
+  await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, { state: 'visible', timeout: 5000 });
+
+  await page.click(`#${Constants.Ids.PROMPT_TAG_MANAGER_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, { state: 'visible', timeout: 5000 });
+}
+
+/**
+ * 关闭图像标签管理器
+ */
+export async function closeImageTagManager(page: any) {
+  await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 });
+}
+
+/**
+ * 关闭提示词标签管理器
+ */
+export async function closePromptTagManager(page: any) {
+  await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 });
+}
+
+/**
+ * 在图像标签管理器中创建标签
+ */
+export async function createImageTagInManager(page: any, tagName: string, groupId: string = ''): Promise<void> {
+  await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_IN_MANAGER_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, { state: 'visible', timeout: 5000 });
+
+  await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, tagName);
+
+  if (groupId) {
+    await page.selectOption(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`, groupId);
+  }
+
+  await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
+
+  // Wait for tag to be created via API
+  await page.waitForFunction(async (name: string) => {
+    const tags = await window.electronAPI.getImageTags();
+    return tags.includes(name);
+  }, tagName, { timeout: 5000 });
+}
+
+/**
+ * 在提示词标签管理器中创建标签
+ */
+export async function createPromptTagInManager(page: any, tagName: string, groupId: string = ''): Promise<void> {
+  await page.click(`#${Constants.Ids.ADD_PROMPT_TAG_IN_MANAGER_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, { state: 'visible', timeout: 5000 });
+
+  await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, tagName);
+
+  if (groupId) {
+    await page.selectOption(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`, groupId);
+  }
+
+  await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
+
+  // Wait for tag to be created via API
+  await page.waitForFunction(async (name: string) => {
+    const tags = await window.electronAPI.getAllTags();
+    return tags.includes(name);
+  }, tagName, { timeout: 5000 });
+}
+
+/**
+ * 在图像标签管理器中创建标签组
+ */
+export async function createImageTagGroup(page: any, groupName: string): Promise<number> {
+  await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_GROUP_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL}`, { state: 'visible', timeout: 5000 });
+
+  await page.fill(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_NAME}`, groupName);
+  await page.click(`#${Constants.Ids.SAVE_IMAGE_TAG_GROUP_BTN}`);
+
+  // Wait for group to be created via API
+  const groupId = await page.waitForFunction(async (name: string) => {
+    const groups = await window.electronAPI.getImageTagGroups();
+    const group = groups.find((g: { name: string; id: number }) => g.name === name);
+    return group?.id;
+  }, groupName, { timeout: 5000 });
+
+  return groupId;
+}
+
+/**
+ * 在提示词标签管理器中创建标签组
+ */
+export async function createPromptTagGroup(page: any, groupName: string): Promise<number> {
+  await page.click(`#${Constants.Ids.ADD_PROMPT_TAG_GROUP_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_MODAL}`, { state: 'visible', timeout: 5000 });
+
+  await page.fill(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_NAME}`, groupName);
+  await page.click(`#${Constants.Ids.SAVE_PROMPT_TAG_GROUP_BTN}`);
+
+  // Wait for group to be created via API
+  const groupId = await page.waitForFunction(async (name: string) => {
+    const groups = await window.electronAPI.getPromptTagGroups();
+    const group = groups.find((g: { name: string; id: number }) => g.name === name);
+    return group?.id;
+  }, groupName, { timeout: 5000 });
+
+  return groupId;
+}
+
+// ========== 主界面视图导航辅助函数 ==========
+
+/**
+ * 进入图像网格视图
+ * Steps to enter target interface:
+ * 1. Click imageManagerBtn to switch to image panel
+ * 2. Click imageGridViewBtn to ensure grid view
+ * 3. Wait for image-card elements to be visible
+ */
+export async function enterImageGridView(page: any, screenshotPath?: string) {
+  await page.click('#imageManagerBtn');
+  await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
+  await page.click('#imageGridViewBtn');
+
+  const firstCard = page.locator('.image-card').first();
+  await expect(firstCard).toBeVisible({ timeout: 5000 });
+
+  if (screenshotPath) {
+    await page.screenshot({ path: screenshotPath });
+  }
+
+  return firstCard;
+}
+
+/**
+ * 进入提示词网格视图
+ * Steps to enter target interface:
+ * 1. Click promptManagerBtn to switch to prompt panel
+ * 2. Click promptGridViewBtn to ensure grid view
+ * 3. Wait for prompt-card elements to be visible
+ */
+export async function enterPromptGridView(page: any, screenshotPath?: string) {
+  await page.click('#promptManagerBtn');
+  await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
+  await page.click('#promptGridViewBtn');
+
+  const firstCard = page.locator('.prompt-card').first();
+  await expect(firstCard).toBeVisible({ timeout: 5000 });
+
+  if (screenshotPath) {
+    await page.screenshot({ path: screenshotPath });
+  }
+
+  return firstCard;
+}
+
+/**
+ * 进入图像列表视图
+ * Steps to enter target interface:
+ * 1. Click imageManagerBtn to switch to image panel
+ * 2. Click imageListViewBtn to switch to list view
+ * 3. Wait for list-item--image elements to be visible
+ */
+export async function enterImageListView(page: any, screenshotPath?: string) {
+  await page.click('#imageManagerBtn');
+  await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
+  await page.click('#imageListViewBtn');
+
+  const firstItem = page.locator('.list-item--image').first();
+  await expect(firstItem).toBeVisible({ timeout: 5000 });
+
+  if (screenshotPath) {
+    await page.screenshot({ path: screenshotPath });
+  }
+
+  return firstItem;
+}
+
+/**
+ * 进入提示词列表视图
+ * Steps to enter target interface:
+ * 1. Click promptManagerBtn to switch to prompt panel
+ * 2. Click promptListViewBtn to switch to list view
+ * 3. Wait for list-item--prompt elements to be visible
+ */
+export async function enterPromptListView(page: any, screenshotPath?: string) {
+  await page.click('#promptManagerBtn');
+  await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
+  await page.click('#promptListViewBtn');
+
+  const firstItem = page.locator('.list-item--prompt').first();
+  await expect(firstItem).toBeVisible({ timeout: 5000 });
+
+  if (screenshotPath) {
+    await page.screenshot({ path: screenshotPath });
+  }
+
+  return firstItem;
+}
+
+// ========== 详情界面辅助函数 ==========
+
+/**
+ * 打开图像详情界面
+ * Steps:
+ * 1. Click first image card
+ * 2. Wait for imageDetailModal to show active class
+ */
+export async function openImageDetail(page: any, screenshotPath?: string) {
+  const firstCard = page.locator('.image-card').first();
+  await firstCard.click();
+
+  const detailModal = page.locator('#imageDetailModal');
+  await expect(detailModal).toHaveClass(/active/);
+
+  if (screenshotPath) {
+    await page.screenshot({ path: screenshotPath });
+  }
+
+  return detailModal;
+}
+
+/**
+ * 打开提示词详情界面
+ * Steps:
+ * 1. Click first prompt card
+ * 2. Wait for promptDetailModal to show active class
+ */
+export async function openPromptDetail(page: any, screenshotPath?: string) {
+  const firstCard = page.locator('.prompt-card').first();
+  await firstCard.click();
+
+  const detailModal = page.locator('#promptDetailModal');
+  await expect(detailModal).toHaveClass(/active/);
+
+  if (screenshotPath) {
+    await page.screenshot({ path: screenshotPath });
+  }
+
+  return detailModal;
+}
+
+/**
+ * 进入图像详情视图（带返回值）
+ * Steps:
+ * 1. Switch to image panel
+ * 2. Wait for image cards to load
+ * 3. Get first image ID
+ * 4. Click card to open detail
+ * 5. Wait for detail modal to show
+ */
+export async function enterImageDetailView(page: any, screenshotPath?: string) {
+  await page.click('#imageManagerBtn');
+  await page.waitForTimeout(500);
+
+  const firstCard = page.locator('.image-card').first();
+  await expect(firstCard).toBeVisible({ timeout: 5000 });
+
+  const firstImageId = await firstCard.getAttribute('data-id');
+  expect(firstImageId).toBeTruthy();
+
+  await firstCard.click();
+  await page.waitForTimeout(500);
+
+  const detailModal = page.locator('#imageDetailModal');
+  await expect(detailModal).toBeVisible({ timeout: 5000 });
+
+  if (screenshotPath) {
+    await page.screenshot({ path: screenshotPath });
+  }
+
+  return { firstImageId, firstCard };
+}
+
+/**
+ * 进入提示词详情视图（带返回值）
+ * Steps:
+ * 1. Switch to prompt panel
+ * 2. Wait for prompt cards to load
+ * 3. Get first prompt ID
+ * 4. Click card to open detail
+ * 5. Wait for detail modal to show
+ */
+export async function enterPromptDetailView(page: any, screenshotPath?: string) {
+  await page.click('#promptManagerBtn');
+  await page.waitForTimeout(500);
+
+  const firstCard = page.locator('.prompt-card').first();
+  await expect(firstCard).toBeVisible({ timeout: 5000 });
+
+  const firstPromptId = await firstCard.getAttribute('data-id');
+  expect(firstPromptId).toBeTruthy();
+
+  await firstCard.click();
+  await page.waitForTimeout(500);
+
+  const detailModal = page.locator('#promptDetailModal');
+  await expect(detailModal).toBeVisible({ timeout: 5000 });
+
+  if (screenshotPath) {
+    await page.screenshot({ path: screenshotPath });
+  }
+
+  return { firstPromptId, firstCard };
+}
+
+// ========== 数据库操作辅助函数 ==========
+
+/**
+ * 从数据库获取图像完整信息
+ */
+export async function getImageFromDatabase(page: any, imageId: string): Promise<IImage | null> {
+  return await page.evaluate(async (id: string) => {
+    try {
+      const image = await window.electronAPI.getImageById(id);
+      return image as IImage;
+    } catch (error) {
+      console.error('Failed to get image from database:', error);
+      return null;
+    }
+  }, imageId);
+}
+
+/**
+ * 从数据库获取提示词完整信息
+ */
+export async function getPromptFromDatabase(page: any, promptId: string): Promise<IPrompt | null> {
+  return await page.evaluate(async (id: string) => {
+    try {
+      const prompt = await window.electronAPI.getPromptById(id);
+      return prompt as IPrompt;
+    } catch (error) {
+      console.error('Failed to get prompt from database:', error);
+      return null;
+    }
+  }, promptId);
+}
+
+/**
+ * 获取第一个图像的ID
+ */
+export async function getFirstImageId(page: any): Promise<string> {
+  await page.click('#imageManagerBtn');
+  await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
+  await page.click('#imageGridViewBtn');
+
+  const firstCard = page.locator('.image-card').first();
+  await expect(firstCard).toBeVisible({ timeout: 5000 });
+
+  return await firstCard.getAttribute('data-id') || '';
+}
+
+/**
+ * 获取第一个提示词的ID
+ */
+export async function getFirstPromptId(page: any): Promise<string> {
+  await page.click('#promptManagerBtn');
+  await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
+  await page.click('#promptGridViewBtn');
+
+  const firstCard = page.locator('.prompt-card').first();
+  await expect(firstCard).toBeVisible({ timeout: 5000 });
+
+  return await firstCard.getAttribute('data-id') || '';
+}
+
+// ========== 标签筛选区域辅助函数 ==========
+
+/**
+ * 确保标签筛选区域展开
+ * @param page - Playwright page 对象
+ * @param filterSectionId - 标签筛选区域元素ID
+ * @param toggleBtnId - 切换按钮元素ID
+ */
+export async function ensureTagFilterExpanded(page: any, filterSectionId: string, toggleBtnId: string) {
+  const tagFilterSection = page.locator(`#${filterSectionId}`);
+  const isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) => el.classList.contains('collapsed'));
+
+  if (isCollapsed) {
+    await page.click(`#${toggleBtnId}`);
+    // Wait for collapsed class to be removed
+    await page.waitForFunction((id: string) => {
+      const el = document.getElementById(id);
+      return el && !el.classList.contains('collapsed');
+    }, filterSectionId, { timeout: 5000 });
+  }
 }

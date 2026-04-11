@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createElectronTest } from './electron-test.ts';
+import { createElectronTest, enterPromptDetailView, getPromptFromDatabase } from './electron-test.ts';
 import type { IElectronAPI, IPrompt } from '../src/preload/index.ts';
 
 declare global {
@@ -34,51 +34,6 @@ test.describe('提示词详情界面数据库字段读取', () => {
   test.afterEach(async () => {
     await electronTest.close();
   });
-
-  /**
-   * 进入提示词详情界面的辅助函数
-   */
-  async function enterPromptDetailView(page: any) {
-    // 1. 切换到提示词面板
-    await page.click('#promptManagerBtn');
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: 'test-results/prompt-detail/01-prompt-panel.png' });
-
-    // 2. 等待提示词卡片加载
-    const firstCard = page.locator('.prompt-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/prompt-detail/02-cards-loaded.png' });
-
-    // 3. 获取第一个提示词的ID
-    const firstPromptId = await firstCard.getAttribute('data-id');
-    expect(firstPromptId).toBeTruthy();
-
-    // 4. 点击卡片打开详情
-    await firstCard.click();
-    await page.waitForTimeout(500);
-
-    // 5. 等待详情模态框显示
-    const detailModal = page.locator('#promptDetailModal');
-    await expect(detailModal).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'test-results/prompt-detail/03-detail-opened.png' });
-
-    return { firstPromptId, firstCard };
-  }
-
-  /**
-   * 从数据库获取提示词完整信息
-   */
-  async function getPromptFromDatabase(page: any, promptId: string): Promise<IPrompt | null> {
-    return await page.evaluate(async (id: string) => {
-      try {
-        const prompt = await window.electronAPI.getPromptById(id);
-        return prompt as IPrompt;
-      } catch (error) {
-        console.error('Failed to get prompt from database:', error);
-        return null;
-      }
-    }, promptId);
-  }
 
   test('ID 字段正确显示', async () => {
     const page = electronTest.getPage();

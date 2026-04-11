@@ -6,16 +6,48 @@
 
 | 文件 | 测试内容 |
 |------|----------|
-| [1-shortcut-esc.spec.ts](./1-shortcut-esc.spec.ts) | ESC 键快捷键功能 |
-| [2-tag-drag-drop.spec.ts](./2-tag-drag-drop.spec.ts) | 标签拖拽功能 |
-| [3-image-detail-database-fields.spec.ts](./3-image-detail-database-fields.spec.ts) | 图像详情界面数据库字段读取 |
-| [4-prompt-detail-database-fields.spec.ts](./4-prompt-detail-database-fields.spec.ts) | 提示词详情界面数据库字段读取 |
-| [5-main-panel-refactor.spec.ts](./5-main-panel-refactor.spec.ts) | 主界面重构功能 |
-| [6-new-prompt-duplicate-prevention.spec.ts](./6-new-prompt-duplicate-prevention.spec.ts) | 新建提示词防重复提交 |
-| [7-main-card-multi-select.spec.ts](./7-main-card-multi-select.spec.ts) | 主界面卡片视图多选功能 |
-| [8-main-view-shift-select.spec.ts](./8-main-view-shift-select.spec.ts) | Shift 范围选择功能 |
+| [10-tag-manager-search-persist.spec.ts](./10-tag-manager-search-persist.spec.ts) | 标签管理器搜索状态保持功能 |
 | [9-tag-manager.spec.ts](./9-tag-manager.spec.ts) | 标签管理器功能（图像和提示词） |
-| [cleanup-test-tag-groups.ts](./cleanup-test-tag-groups.ts) | 清理测试产生的标签组工具 |
+| [8-main-view-shift-select.spec.ts](./8-main-view-shift-select.spec.ts) | Shift 范围选择功能 |
+| [7-main-card-multi-select.spec.ts](./7-main-card-multi-select.spec.ts) | 主界面卡片视图多选功能 |
+| [6-new-prompt-duplicate-prevention.spec.ts](./6-new-prompt-duplicate-prevention.spec.ts) | 新建提示词防重复提交 |
+| [5-main-panel-refactor.spec.ts](./5-main-panel-refactor.spec.ts) | 主界面重构功能 |
+| [4-prompt-detail-database-fields.spec.ts](./4-prompt-detail-database-fields.spec.ts) | 提示词详情界面数据库字段读取 |
+| [3-image-detail-database-fields.spec.ts](./3-image-detail-database-fields.spec.ts) | 图像详情界面数据库字段读取 |
+| [2-tag-drag-drop.spec.ts](./2-tag-drag-drop.spec.ts) | 标签拖拽功能 |
+| [1-shortcut-esc.spec.ts](./1-shortcut-esc.spec.ts) | ESC 键快捷键功能 |
+
+---
+
+## 详细说明
+
+### 10-tag-manager-search-persist.spec.ts
+
+**测试内容**：标签管理器搜索状态保持功能
+
+**涉及组件/管理器**：
+
+- `TagManager` - 标签管理
+- `ImageTagManager` - 图像标签管理
+- `PromptTagManager` - 提示词标签管理
+
+**测试项列表（共8个，按实际执行顺序）**：
+
+| 序号 | 测试描述 |
+|------|----------|
+| 1 | 图像标签管理 - 搜索后单个删除保持搜索状态 |
+| 2 | 图像标签管理 - 搜索后单个编辑保持搜索状态 |
+| 3 | 图像标签管理 - 搜索后批量删除保持搜索状态 |
+| 4 | 图像标签管理 - 搜索后批量移动到组保持搜索状态 |
+| 5 | 提示词标签管理 - 搜索后单个删除保持搜索状态 |
+| 6 | 提示词标签管理 - 搜索后单个编辑保持搜索状态 |
+| 7 | 提示词标签管理 - 搜索后批量删除保持搜索状态 |
+| 8 | 提示词标签管理 - 搜索后批量移动到组保持搜索状态 |
+
+**修改相关文件时需关注**：
+
+- 修改标签管理器批量操作后刷新逻辑时
+- 修改搜索状态保持功能时
 
 ---
 
@@ -24,193 +56,48 @@
 **测试内容**：标签管理器功能（图像和提示词）
 
 **涉及组件/管理器**：
+
 - `TagManager` - 标签管理
 - `ImageTagManager` - 图像标签管理
 - `PromptTagManager` - 提示词标签管理
 
-**测试场景**：
-1. **图像标签管理 - 非批量功能**
-   - 打开/关闭标签管理器
-   - 新建标签
-   - 编辑标签（重命名）
-   - 删除标签
-   - 排序标签
-   - 新建标签组
-   - 编辑标签组
-   - 删除标签组
-   - 搜索并批量删除 e2e 标签
-2. **图像标签管理 - 批量功能**
-   - 进入/退出批量模式
-   - 批量全选/反选标签
-   - 批量删除标签
-   - 批量移动到组
-3. **提示词标签管理 - 非批量功能**（同图像）
-4. **提示词标签管理 - 批量功能**（同图像）
+**测试项列表（共26个，按实际执行顺序）**：
+
+| 序号 | 测试描述 |
+|------|----------|
+| 1 | 图像标签管理 - 打开和关闭标签管理器 |
+| 2 | 图像标签管理 - 新建标签 |
+| 3 | 图像标签管理 - 编辑标签（重命名） |
+| 4 | 图像标签管理 - 删除标签 |
+| 5 | 图像标签管理 - 排序标签 |
+| 6 | 图像标签管理 - 新建标签组 |
+| 7 | 图像标签管理 - 编辑标签组 |
+| 8 | 图像标签管理 - 删除标签组 |
+| 9 | 图像标签管理 - 搜索并批量删除 e2e 标签 |
+| 10 | 图像标签管理 - 进入和退出批量模式 |
+| 11 | 图像标签管理 - 批量全选和反选 |
+| 12 | 图像标签管理 - 批量删除标签 |
+| 13 | 图像标签管理 - 批量移动到组 |
+| 14 | 提示词标签管理 - 打开和关闭标签管理器 |
+| 15 | 提示词标签管理 - 新建标签 |
+| 16 | 提示词标签管理 - 编辑标签（重命名） |
+| 17 | 提示词标签管理 - 删除标签 |
+| 18 | 提示词标签管理 - 排序标签 |
+| 19 | 提示词标签管理 - 新建标签组 |
+| 20 | 提示词标签管理 - 编辑标签组 |
+| 21 | 提示词标签管理 - 删除标签组 |
+| 22 | 提示词标签管理 - 搜索并批量删除 e2e 标签 |
+| 23 | 提示词标签管理 - 进入和退出批量模式 |
+| 24 | 提示词标签管理 - 批量全选和反选 |
+| 25 | 提示词标签管理 - 批量删除标签 |
+| 26 | 提示词标签管理 - 批量移动到组 |
 
 **修改相关文件时需关注**：
+
 - 修改标签管理器界面时
 - 修改标签 CRUD 操作时
 - 修改标签组管理功能时
 - 修改批量操作功能时
-
----
-
-### cleanup-test-tag-groups.ts
-
-**测试内容**：清理测试产生的标签组工具
-
-**用途**：
-- 删除 E2E 测试创建的以 "e2e_" 开头的标签组
-- 用于测试环境清理和数据恢复
-
-**使用方法**：
-```bash
-npx tsx e2e/cleanup-test-tag-groups.ts
-```
-
-**清理范围**：
-- 图像标签组（通过 `getImageTagGroups` / `deleteImageTagGroup`）
-- 提示词标签组（通过 `getPromptTagGroups` / `deletePromptTagGroup`）
-
-**修改相关文件时需关注**：
-- 修改标签组 API 时
-- 修改 Electron API 接口时
-
----
-
-## 详细说明
-
-### 1-shortcut-esc.spec.ts
-
-**测试内容**：ESC 键快捷键功能
-
-**涉及组件/管理器**：
-- `ShortcutManager` - 快捷键管理
-- `ImageDetailManager` - 图像详情
-- `PromptDetailManager` - 提示词详情
-- `StatisticsManager` - 统计模态框
-- `SettingsManager` - 设置模态框
-- `ContextStackManager` - 上下文栈管理
-
-**修改相关文件时需关注**：
-- 修改 ESC 快捷键行为时
-- 修改模态框关闭逻辑时
-- 修改上下文栈管理时
-
----
-
-### 2-tag-drag-drop.spec.ts
-
-**测试内容**：标签拖拽功能
-
-**涉及组件/管理器**：
-- `TagManager` - 标签管理
-- `ImageTagManager` - 图像标签管理
-- `PromptTagManager` - 提示词标签管理
-- `TagService` - 标签服务
-
-**修改相关文件时需关注**：
-- 修改标签拖拽逻辑时
-- 修改标签添加到图像/提示词的流程时
-
----
-
-### 3-image-detail-database-fields.spec.ts
-
-**测试内容**：图像详情界面数据库字段读取
-
-**涉及组件/管理器**：
-- `ImageDetailManager` - 图像详情管理
-- `ImagePanelManager` - 图像面板管理
-
-**测试的数据库字段**：
-- 图像基本信息：id, fileName, fileSize, width, height, createdAt, updatedAt, note, tags
-- 关联提示词信息：promptRefs (包含 title, content, contentTranslate, note, tags)
-
-**修改相关文件时需关注**：
-- 修改图像详情界面显示时
-- 修改图像数据库字段读取时
-
----
-
-### 4-prompt-detail-database-fields.spec.ts
-
-**测试内容**：提示词详情界面数据库字段读取
-
-**涉及组件/管理器**：
-- `PromptDetailManager` - 提示词详情管理
-- `PromptPanelManager` - 提示词面板管理
-
-**测试的数据库字段**：
-- 提示词基本信息：id, title, content, contentTranslate, note, isSafe, isFavorite, tags
-- 关联图像信息：images (通过 prompt_image_relations 关联)
-- 时间戳：createdAt, updatedAt
-
-**修改相关文件时需关注**：
-- 修改提示词详情界面显示时
-- 修改提示词数据库字段读取时
-
----
-
-### 5-main-panel-refactor.spec.ts
-
-**测试内容**：主界面重构功能
-
-**涉及组件/管理器**：
-- `ImagePanelManager` - 图像面板管理
-- `PromptPanelManager` - 提示词面板管理
-- `BatchToolbar` - 批量工具栏
-
-**测试场景**：
-1. 卡片收藏按钮功能（图像和提示词）
-2. 卡片复制按钮功能（图像和提示词）
-3. 列表视图按钮功能（图像和提示词）
-4. 标签筛选区域收起/展开切换（图像和提示词）
-5. 收藏状态在卡片和列表视图间同步（图像和提示词）
-
-**修改相关文件时需关注**：
-- 修改卡片收藏/复制功能时
-- 修改视图切换逻辑时
-- 修改标签筛选区域时
-
----
-
-### 6-new-prompt-duplicate-prevention.spec.ts
-
-**测试内容**：新建提示词防重复提交
-
-**涉及组件/管理器**：
-- `NewPromptManager` - 新建提示词管理
-- `DuplicatePrevention` - 重复预防工具
-
-**修改相关文件时需关注**：
-- 修改新建提示词防重复逻辑时
-- 修改快速点击处理逻辑时
-
----
-
-### 7-main-card-multi-select.spec.ts
-
-**测试内容**：主界面卡片视图多选功能
-
-**涉及组件/管理器**：
-- `ImagePanelManager` - 图像面板管理
-- `PromptPanelManager` - 提示词面板管理
-- `MultiSelectManager` - 多选管理
-- `BatchToolbar` - 批量工具栏
-
-**测试场景**：
-1. 复选框选中/取消选中（图像和提示词）
-2. 进入多选模式后复选框一直显示（图像和提示词）
-3. 批量工具栏按钮功能（反选、添加标签、收藏、删除、取消选择）（图像和提示词）
-4. Ctrl+A 全选（图像和提示词）
-5. 批量收藏功能（图像和提示词）
-6. 多选后切换视图保留选择状态（图像和提示词）
-
-**修改相关文件时需关注**：
-- 修改多选逻辑时
-- 修改批量操作功能时
-- 修改选择状态持久化时
 
 ---
 
@@ -219,18 +106,288 @@ npx tsx e2e/cleanup-test-tag-groups.ts
 **测试内容**：Shift 范围选择功能
 
 **涉及组件/管理器**：
+
 - `ImagePanelManager` - 图像面板管理
 - `PromptPanelManager` - 提示词面板管理
 - `ListNavigator` - 列表导航
 
-**测试场景**：
-1. 图像列表视图 - Shift+ 点击范围选择
-2. 提示词列表视图 - Shift+ 点击范围选择
+**测试项列表（共2个，按实际执行顺序）**：
+
+| 序号 | 测试描述 |
+|------|----------|
+| 1 | 图像列表视图 - Shift+ 点击范围选择 |
+| 2 | 提示词列表视图 - Shift+ 点击范围选择 |
 
 **前置条件**：
+
 - 数据库中至少有 5 张图像
 - 数据库中至少有 5 个提示词
 
 **修改相关文件时需关注**：
+
 - 修改 Shift 多选逻辑时
 - 修改列表视图范围选择时
+
+---
+
+### 7-main-card-multi-select.spec.ts
+
+**测试内容**：主界面卡片视图多选功能
+
+**涉及组件/管理器**：
+
+- `ImagePanelManager` - 图像面板管理
+- `PromptPanelManager` - 提示词面板管理
+- `MultiSelectManager` - 多选管理
+- `BatchToolbar` - 批量工具栏
+
+**测试项列表（共14个，按实际执行顺序）**：
+
+| 序号 | 测试描述 |
+|------|----------|
+| 1 | 图像复选框选中后进入多选模式 |
+| 2 | 图像多选模式下复选框一直显示 |
+| 3 | 图像批量工具栏 - 反选功能 |
+| 4 | 图像批量工具栏 - 取消选择功能 |
+| 5 | 图像 Ctrl+A 全选功能 |
+| 6 | 图像批量收藏功能 |
+| 7 | 图像多选后切换视图保留选择状态 |
+| 8 | 提示词复选框选中后进入多选模式 |
+| 9 | 提示词多选模式下复选框一直显示 |
+| 10 | 提示词批量工具栏 - 反选功能 |
+| 11 | 提示词批量工具栏 - 取消选择功能 |
+| 12 | 提示词 Ctrl+A 全选功能 |
+| 13 | 提示词批量收藏功能 |
+| 14 | 提示词多选后切换视图保留选择状态 |
+
+**修改相关文件时需关注**：
+
+- 修改多选逻辑时
+- 修改批量操作功能时
+- 修改选择状态持久化时
+
+---
+
+### 6-new-prompt-duplicate-prevention.spec.ts
+
+**测试内容**：新建提示词防重复提交
+
+**涉及组件/管理器**：
+
+- `NewPromptManager` - 新建提示词管理
+- `DuplicatePrevention` - 重复预防工具
+
+**测试项列表（共3个，按实际执行顺序）**：
+
+| 序号 | 测试描述 |
+|------|----------|
+| 1 | 快速点击完成按钮应该只创建一个提示词 |
+| 2 | 重复点击完成按钮时应该只执行一次保存 |
+| 3 | 空内容时不应该创建提示词 |
+
+**修改相关文件时需关注**：
+
+- 修改新建提示词防重复逻辑时
+- 修改快速点击处理逻辑时
+
+---
+
+### 5-main-panel-refactor.spec.ts
+
+**测试内容**：主界面重构功能
+
+**涉及组件/管理器**：
+
+- `ImagePanelManager` - 图像面板管理
+- `PromptPanelManager` - 提示词面板管理
+- `BatchToolbar` - 批量工具栏
+
+**测试项列表（共12个，按实际执行顺序）**：
+
+| 序号 | 测试描述 |
+|------|----------|
+| 1 | 图像卡片收藏按钮功能 |
+| 2 | 图像卡片复制按钮功能 |
+| 3 | 图像列表视图收藏按钮功能 |
+| 4 | 图像列表视图复制按钮功能 |
+| 5 | 图像标签筛选区域收起/展开切换 |
+| 6 | 图像收藏状态在卡片和列表视图间同步 |
+| 7 | 提示词卡片收藏按钮功能 |
+| 8 | 提示词卡片复制按钮功能 |
+| 9 | 提示词列表视图收藏按钮功能 |
+| 10 | 提示词列表视图复制按钮功能 |
+| 11 | 提示词标签筛选区域收起/展开切换 |
+| 12 | 提示词收藏状态在卡片和列表视图间同步 |
+
+**修改相关文件时需关注**：
+
+- 修改卡片收藏/复制功能时
+- 修改视图切换逻辑时
+- 修改标签筛选区域时
+
+---
+
+### 4-prompt-detail-database-fields.spec.ts
+
+**测试内容**：提示词详情界面数据库字段读取
+
+**涉及组件/管理器**：
+
+- `PromptDetailManager` - 提示词详情管理
+- `PromptPanelManager` - 提示词面板管理
+
+**测试的数据库字段**：
+
+- 提示词基本信息：id, title, content, contentTranslate, note, isSafe, isFavorite, tags
+- 关联图像信息：images (通过 prompt_image_relations 关联)
+- 时间戳：createdAt, updatedAt
+
+**测试项列表（共8个，按实际执行顺序）**：
+
+| 序号 | 测试描述 |
+|------|----------|
+| 1 | ID 字段正确显示 |
+| 2 | 标题 (title) 字段正确显示 |
+| 3 | 内容 (content) 字段正确显示 |
+| 4 | 翻译 (contentTranslate) 字段正确显示 |
+| 5 | 备注 (note) 字段正确显示 |
+| 6 | 标签 (tags) 字段正确显示 |
+| 7 | 关联图像 (images) 字段正确显示 |
+| 8 | 所有数据库字段一致性验证 |
+
+**修改相关文件时需关注**：
+
+- 修改提示词详情界面显示时
+- 修改提示词数据库字段读取时
+
+---
+
+### 3-image-detail-database-fields.spec.ts
+
+**测试内容**：图像详情界面数据库字段读取
+
+**涉及组件/管理器**：
+
+- `ImageDetailManager` - 图像详情管理
+- `ImagePanelManager` - 图像面板管理
+
+**测试的数据库字段**：
+
+- 图像基本信息：id, fileName, fileSize, width, height, createdAt, updatedAt, note, tags
+- 关联提示词信息：promptRefs (包含 title, content, contentTranslate, note, tags)
+
+**测试项列表（共10个，按实际执行顺序）**：
+
+| 序号 | 测试描述 |
+|------|----------|
+| 1 | 文件名 (fileName) 字段正确显示 |
+| 2 | 文件大小 (fileSize) 字段正确显示 |
+| 3 | 图像尺寸 (width/height) 字段正确显示 |
+| 4 | 上传时间 (createdAt) 字段正确显示 |
+| 5 | 更新时间 (updatedAt) 字段正确显示 |
+| 6 | 备注 (note) 字段正确显示 |
+| 7 | 图像标签 (tags) 字段正确显示 |
+| 8 | 关联提示词信息正确显示 |
+| 9 | 图像预览正确加载 |
+| 10 | 所有数据库字段一致性验证 |
+
+**修改相关文件时需关注**：
+
+- 修改图像详情界面显示时
+- 修改图像数据库字段读取时
+
+---
+
+### 2-tag-drag-drop.spec.ts
+
+**测试内容**：标签拖拽功能
+
+**涉及组件/管理器**：
+
+- `TagManager` - 标签管理
+- `ImageTagManager` - 图像标签管理
+- `PromptTagManager` - 提示词标签管理
+- `TagService` - 标签服务
+
+**测试项列表（共2个，按实际执行顺序）**：
+
+| 序号 | 测试描述 |
+|------|----------|
+| 1 | 图像标签拖拽 - 标签拖拽到图像卡片 - 展开状态 |
+| 2 | 提示词标签拖拽 - 标签拖拽到提示词卡片 - 展开状态 |
+
+**修改相关文件时需关注**：
+
+- 修改标签拖拽逻辑时
+- 修改标签添加到图像/提示词的流程时
+
+---
+
+### 1-shortcut-esc.spec.ts
+
+**测试内容**：ESC 键快捷键功能
+
+**涉及组件/管理器**：
+
+- `ShortcutManager` - 快捷键管理
+- `ImageDetailManager` - 图像详情
+- `PromptDetailManager` - 提示词详情
+- `StatisticsManager` - 统计模态框
+- `SettingsManager` - 设置模态框
+- `ContextStackManager` - 上下文栈管理
+
+**测试项列表（共16个，按实际执行顺序）**：
+
+| 序号 | 测试描述 |
+|------|----------|
+| 1 | 图像面板 - Esc 关闭统计视图 |
+| 2 | 提示词面板 - Esc 关闭统计视图 |
+| 3 | 图像面板 - Esc 关闭设置视图 |
+| 4 | 提示词面板 - Esc 关闭设置视图 |
+| 5 | 图像面板 - Esc 关闭图像详情视图 |
+| 6 | 提示词面板 - Esc 关闭提示词详情视图 |
+| 7 | 图像详情 - Esc 先退出批量模式，不关闭详情视图 |
+| 8 | 提示词详情 - Esc 先退出批量模式，不关闭详情视图 |
+| 9 | 图像面板 - Esc 清除批量选择 |
+| 10 | 提示词面板 - Esc 清除批量选择 |
+| 11 | Esc 关闭对话框 |
+| 12 | 图像回收站 - Esc 关闭回收站视图 |
+| 13 | 提示词回收站 - Esc 关闭回收站视图 |
+| 14 | Esc 关闭全屏查看器 |
+| 15 | 图像详情 - Esc 关闭标签自动完成下拉 |
+| 16 | 提示词详情 - Esc 关闭标签自动完成下拉 |
+
+**修改相关文件时需关注**：
+
+- 修改 ESC 快捷键行为时
+- 修改模态框关闭逻辑时
+- 修改上下文栈管理时
+
+---
+
+### cleanup-test-tag-groups.ts
+
+**测试内容**：清理测试产生的标签组工具
+
+**用途**：
+
+- 删除 E2E 测试创建的以 "e2e_" 开头的标签组
+- 用于测试环境清理和数据恢复
+
+**使用方法**：
+
+```bash
+npx tsx e2e/cleanup-test-tag-groups.ts
+```
+
+**清理范围**：
+
+- 图像标签组（通过 `getImageTagGroups` / `deleteImageTagGroup`）
+- 提示词标签组（通过 `getPromptTagGroups` / `deletePromptTagGroup`）
+
+**修改相关文件时需关注**：
+
+- 修改标签组 API 时
+- 修改 Electron API 接口时
+
+---
