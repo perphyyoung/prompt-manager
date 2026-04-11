@@ -105,7 +105,6 @@ export class BatchToolbar {
 
     // 调用关闭回调（仅在用户主动关闭时）
     if (triggerCancel) {
-      window.electronAPI.logDebug('BatchToolbar', 'calling onClose callback');
       this.onClose?.();
     }
   }

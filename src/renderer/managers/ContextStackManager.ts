@@ -39,18 +39,25 @@ export class ContextStackManager {
   private constructor() {}
 
   /**
+   * 获取堆栈ID列表的字符串表示（用于日志）
+   * @returns 格式化的堆栈ID列表字符串
+   */
+  private getStackIdsString(): string {
+    return this.stack.map(e => e.id).join(', ');
+  }
+
+  /**
    * 压栈 - 进入新的 UI 上下文
    * @param entry - 栈条目
    */
   push(entry: IContextStackEntry): void {
-    const stackTrace = new Error().stack?.split('\n').slice(2, 5).join(' | ');
     const titleStr = entry.title || '';
     const newId = `${entry.id}${titleStr}`;
 
     // 检查是否已在栈顶
     const currentTop = this.stack[this.stack.length - 1];
     if (currentTop?.id === entry.id) {
-      window.electronAPI.logWarn('ContextStackManager', `push ${newId} skipped, stack=[${this.stack.map(e => e.id).join(', ')}], caller=${stackTrace}`);
+      window.electronAPI.logWarn('ContextStackManager', `push ${newId} skipped, stack=[${this.getStackIdsString()}]`);
       return;
     }
 
@@ -66,7 +73,7 @@ export class ContextStackManager {
     }
 
     this.stack.push(entry);
-    window.electronAPI.logDebug('ContextStackManager', `push ${newId}, stack=[${this.stack.map(e => e.id).join(', ')}], caller=${stackTrace}`);
+    window.electronAPI.logDebug('ContextStackManager', `push ${newId}, stack=[${this.getStackIdsString()}]`);
   }
 
   /**
@@ -75,25 +82,22 @@ export class ContextStackManager {
    * @returns 是否成功出栈
    */
   pop(expectedId: ElementId): boolean {
-    const stackTrace = new Error().stack?.split('\n').slice(2, 5).join(' | ');
-    
     if (this.stack.length === 0) {
-      window.electronAPI.logWarn('ContextStackManager', `pop ${expectedId}: skipped (stack is empty), caller=${stackTrace}`);
+      window.electronAPI.logWarn('ContextStackManager', `pop ${expectedId}: skipped (stack is empty)`);
       return false;
     }
 
     const top = this.stack[this.stack.length - 1];
     if (top.id !== expectedId) {
       window.electronAPI.logError('ContextStackManager',
-        `pop: mismatch! expected=${expectedId}, actual=${top.id}, stack=[${this.stack.map(e => e.id).join(', ')}], caller=${stackTrace}`);
+        `pop: mismatch! expected=${expectedId}, actual=${top.id}, stack=[${this.getStackIdsString()}]`);
       return false;
     }
 
     const popped = this.stack.pop();
     const titleStr = popped?.title || '';
     const newId = `${popped?.id}${titleStr}`;
-    window.electronAPI.logDebug('ContextStackManager',
-      `pop: ${newId}, stack=[${this.stack.map(e => e.id).join(', ')}], caller=${stackTrace}`);
+    window.electronAPI.logDebug('ContextStackManager', `pop: ${newId}, stack=[${this.getStackIdsString()}]`);
 
     return true;
   }

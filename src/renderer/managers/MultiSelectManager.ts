@@ -255,7 +255,6 @@ export class MultiSelectManager {
    * 用于 exitBatchMode 中避免递归调用
    */
   hideToolbarWithoutCancel(): void {
-    window.electronAPI.logDebug('MultiSelectManager', 'hideToolbarWithoutCancel called');
     this.toolbar?.hide(false);
   }
 

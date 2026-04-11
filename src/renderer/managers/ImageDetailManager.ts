@@ -887,9 +887,7 @@ export class ImageDetailManager extends DetailViewManager {
    * @protected
    */
   protected toggleBatchMode(): void {
-    window.electronAPI.logDebug('ImageDetailManager', `toggleBatchMode called, current isBatchMode=${this.isBatchMode}`);
     super.toggleBatchMode();
-    window.electronAPI.logDebug('ImageDetailManager', `toggleBatchMode finished, new isBatchMode=${this.isBatchMode}`);
   }
 
   async close(): Promise<void> {
