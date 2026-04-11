@@ -1,4 +1,5 @@
 import { cacheManager } from '../../utils/index.ts';
+import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
 import type { IEventBus } from '../app.types.ts';
 import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig, UnifiedListRenderer, PromptListConfig } from './SharedComponents/index.ts';
@@ -538,20 +539,20 @@ export class PromptPanelManager extends PanelManagerBase {
 
       switch (sortBy) {
         case 'updatedAt':
-          valueA = a.updatedAt || 0;
-          valueB = b.updatedAt || 0;
+          valueA = timeToTimestamp(a.updatedAt);
+          valueB = timeToTimestamp(b.updatedAt);
           break;
         case 'createdAt':
-          valueA = a.createdAt || 0;
-          valueB = b.createdAt || 0;
+          valueA = timeToTimestamp(a.createdAt);
+          valueB = timeToTimestamp(b.createdAt);
           break;
         case 'title':
           valueA = (a.title || '').toLowerCase();
           valueB = (b.title || '').toLowerCase();
           break;
         default:
-          valueA = a.updatedAt || 0;
-          valueB = b.updatedAt || 0;
+          valueA = timeToTimestamp(a.updatedAt);
+          valueB = timeToTimestamp(b.updatedAt);
       }
 
       if (valueA < valueB) return -1 * order;

@@ -1,4 +1,5 @@
 import { cacheManager } from '../../utils/index.ts';
+import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
 import type { IEventBus } from '../app.types.ts';
 import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig, UnifiedListRenderer, ImageListConfig } from './SharedComponents/index.ts';
@@ -544,12 +545,12 @@ export class ImagePanelManager extends PanelManagerBase {
 
       switch (sortBy) {
         case 'updatedAt':
-          valueA = a.updatedAt || 0;
-          valueB = b.updatedAt || 0;
+          valueA = timeToTimestamp(a.updatedAt);
+          valueB = timeToTimestamp(b.updatedAt);
           break;
         case 'createdAt':
-          valueA = a.createdAt || 0;
-          valueB = b.createdAt || 0;
+          valueA = timeToTimestamp(a.createdAt);
+          valueB = timeToTimestamp(b.createdAt);
           break;
         case 'fileName':
           valueA = (a.fileName || '').toLowerCase();
@@ -568,8 +569,8 @@ export class ImagePanelManager extends PanelManagerBase {
           valueB = b.fileSize || 0;
           break;
         default:
-          valueA = a.updatedAt || 0;
-          valueB = b.updatedAt || 0;
+          valueA = timeToTimestamp(a.updatedAt);
+          valueB = timeToTimestamp(b.updatedAt);
       }
 
       if (valueA < valueB) return -1 * order;

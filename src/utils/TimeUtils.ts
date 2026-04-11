@@ -63,12 +63,28 @@ export function getFormattedYearMonth(): string {
   return `${year}${month}`;
 }
 
+/**
+ * 将时间字符串转换为时间戳（毫秒）
+ * 用于排序比较，处理本地时间格式（如 "2026/3/20 20:34:56"）
+ * @param timeStr - 时间字符串
+ * @returns 时间戳（毫秒），无效时间返回 0
+ * @example
+ * timeToTimestamp("2026/3/20 20:34:56")
+ * // 返回: 1710935696000
+ */
+export function timeToTimestamp(timeStr: string | undefined | null): number {
+  if (!timeStr) return 0;
+  const timestamp = new Date(timeStr).getTime();
+  return isNaN(timestamp) ? 0 : timestamp;
+}
+
 // 默认导出对象
 const TimeUtils = {
   localTime,
   getFormattedLocalTimeToSecond,
   getFormattedLocalDate,
-  getFormattedYearMonth
+  getFormattedYearMonth,
+  timeToTimestamp
 };
 
 export default TimeUtils;
