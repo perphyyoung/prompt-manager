@@ -30,9 +30,9 @@ export const DialogConfig: Record<string, IDialogTemplate> = {
     type: 'warning'
   },
   RELAUNCH_APP: {
-    title: '需要重启',
-    message: '设置已更改，需要重启应用才能生效。是否立即重启？',
-    type: 'info'
+    title: '确认重启',
+    message: '确定要立即重启应用吗？',
+    type: 'warning'
   },
   REMOVE_NEW_IMAGE: {
     title: '确认移除',
