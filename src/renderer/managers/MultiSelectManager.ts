@@ -273,7 +273,6 @@ export class MultiSelectManager {
       }
     } else {
       // 选择为空时自动隐藏，不触发取消回调（triggerCancel=false）
-      window.electronAPI.logDebug('MultiSelectManager', 'hiding toolbar because no selection');
       this.toolbar?.hide(false);
     }
   }

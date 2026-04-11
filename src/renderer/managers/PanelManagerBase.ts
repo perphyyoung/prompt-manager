@@ -795,8 +795,8 @@ export abstract class PanelManagerBase {
    */
   private getTagFilterSectionId(): string {
     return this.storagePrefix === 'prompt'
-      ? Constants.LocalStorageKey.PROMPT_TAG_FILTER_SECTION
-      : Constants.LocalStorageKey.IMAGE_TAG_FILTER_SECTION;
+      ? Constants.Ids.PROMPT_TAG_FILTER_SECTION
+      : Constants.Ids.IMAGE_TAG_FILTER_SECTION;
   }
 
   /**

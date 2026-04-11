@@ -545,3 +545,23 @@ export async function ensureTagFilterExpanded(page: any, filterSectionId: string
     }, filterSectionId, { timeout: 5000 });
   }
 }
+
+/**
+ * 确保标签筛选区域收起
+ * @param page - Playwright page 对象
+ * @param filterSectionId - 标签筛选区域元素ID
+ * @param toggleBtnId - 切换按钮元素ID
+ */
+export async function ensureTagFilterCollapsed(page: any, filterSectionId: string, toggleBtnId: string) {
+  const tagFilterSection = page.locator(`#${filterSectionId}`);
+  const isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) => el.classList.contains('collapsed'));
+
+  if (!isCollapsed) {
+    await page.click(`#${toggleBtnId}`);
+    // Wait for collapsed class to be added
+    await page.waitForFunction((id: string) => {
+      const el = document.getElementById(id);
+      return el && el.classList.contains('collapsed');
+    }, filterSectionId, { timeout: 5000 });
+  }
+}

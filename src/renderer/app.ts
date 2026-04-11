@@ -867,9 +867,9 @@ class PromptManager implements IApp {
    * @param mode - 视图模式 (grid, list, list-compact)
    */
   updatePromptViewButtons(mode: string) {
-    const gridBtn = document.getElementById('promptGridViewBtn');
-    const listBtn = document.getElementById('promptListViewBtn');
-    const compactBtn = document.getElementById('promptCompactViewBtn');
+    const gridBtn = document.getElementById(Constants.Ids.PROMPT_GRID_VIEW_BTN);
+    const listBtn = document.getElementById(Constants.Ids.PROMPT_LIST_VIEW_BTN);
+    const compactBtn = document.getElementById(Constants.Ids.PROMPT_COMPACT_VIEW_BTN);
     const promptGrid = document.getElementById('promptGrid');
     const promptList = document.getElementById('promptList');
     const cardSizeSlider = document.getElementById('promptCardSizeSlider');
@@ -903,9 +903,9 @@ class PromptManager implements IApp {
    * @param mode - 视图模式 (grid, list, list-compact)
    */
   updateImageViewButtons(mode: string) {
-    const gridBtn = document.getElementById('imageGridViewBtn');
-    const listBtn = document.getElementById('imageListViewBtn');
-    const compactBtn = document.getElementById('imageCompactViewBtn');
+    const gridBtn = document.getElementById(Constants.Ids.IMAGE_GRID_VIEW_BTN);
+    const listBtn = document.getElementById(Constants.Ids.IMAGE_LIST_VIEW_BTN);
+    const compactBtn = document.getElementById(Constants.Ids.IMAGE_COMPACT_VIEW_BTN);
     const imageGrid = document.getElementById('imageGrid');
     const imageList = document.getElementById('imageList');
     const imageCardSizeSlider = document.getElementById('imageCardSizeSlider');

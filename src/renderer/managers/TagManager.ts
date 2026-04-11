@@ -877,7 +877,6 @@ export abstract class TagManager {
    * 退出批量管理模式
    */
   exitBatchMode(): void {
-    window.electronAPI.logDebug('TagManager', `exitBatchMode called, isBatchModeActive=${this.isBatchModeActive}`);
     if (!this.isBatchModeActive) return;
 
     // 先设置标志，防止递归调用

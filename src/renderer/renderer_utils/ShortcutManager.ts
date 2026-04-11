@@ -161,7 +161,6 @@ export class ShortcutManager {
     }
 
     if (typeof element.close === 'function') {
-      window.electronAPI.logDebug('ShortcutManager', `Closing: ${id}`);
       element.close();
       e.preventDefault();
     } else {

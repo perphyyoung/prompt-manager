@@ -213,29 +213,29 @@ export class SearchSortManager {
    */
   private bindViewToggleEvents(): void {
     // 提示词视图
-    document.getElementById('promptGridViewBtn')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.PROMPT_GRID_VIEW_BTN)?.addEventListener('click', () => {
       this.app.promptPanelManager?.setViewMode('grid');
       this.app.updatePromptViewButtons?.('grid');
     });
-    document.getElementById('promptListViewBtn')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.PROMPT_LIST_VIEW_BTN)?.addEventListener('click', () => {
       this.app.promptPanelManager?.setViewMode('list');
       this.app.updatePromptViewButtons?.('list');
     });
-    document.getElementById('promptCompactViewBtn')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.PROMPT_COMPACT_VIEW_BTN)?.addEventListener('click', () => {
       this.app.promptPanelManager?.setViewMode('list-compact');
       this.app.updatePromptViewButtons?.('list-compact');
     });
 
     // 图像视图
-    document.getElementById('imageGridViewBtn')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.IMAGE_GRID_VIEW_BTN)?.addEventListener('click', () => {
       this.app.imagePanelManager?.setViewMode('grid');
       this.app.updateImageViewButtons?.('grid');
     });
-    document.getElementById('imageListViewBtn')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.IMAGE_LIST_VIEW_BTN)?.addEventListener('click', () => {
       this.app.imagePanelManager?.setViewMode('list');
       this.app.updateImageViewButtons?.('list');
     });
-    document.getElementById('imageCompactViewBtn')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.IMAGE_COMPACT_VIEW_BTN)?.addEventListener('click', () => {
       this.app.imagePanelManager?.setViewMode('list-compact');
       this.app.updateImageViewButtons?.('list-compact');
     });

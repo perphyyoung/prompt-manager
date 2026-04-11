@@ -94,14 +94,14 @@ export class ImagePanelManager extends PanelManagerBase {
    * 获取标签筛选收起/展开按钮 ID（实现基类抽象方法）
    */
   getTagFilterToggleBtnId(): string {
-    return Constants.LocalStorageKey.IMAGE_TAG_FILTER_TOGGLE_BTN;
+    return Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN;
   }
 
   /**
    * 获取标签管理器按钮 ID（实现基类抽象方法）
    */
   getTagManagerBtnId(): string {
-    return Constants.LocalStorageKey.IMAGE_TAG_MANAGER_BTN;
+    return Constants.Ids.IMAGE_TAG_MANAGER_BTN;
   }
 
   /**

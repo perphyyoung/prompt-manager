@@ -12,11 +12,10 @@ gen_params 默认值: model: 空字符串, 应该怎样写? 将默认值写为�
 提示词主界面和图像主界面, 是否也可以使用配置驱动模式, 与当前实现有何优劣
 图像引用计数 定期清理; 设计图像引用计数方案, 参考 database.js 中的建表语句, 结合 sqlite-optimization skills 分析
 警告的toast使用橙色, 单选组冲突, 显示时间, toast管理
-创建提示词时, toast 不是中文; 参考 DialogService, 实现统一管理的 toast
+参考 DialogService, 实现统一管理的 toast
 renderer\services\DialogService.js 设置相同的提示风格信息
 database optimize-database
 composes 是 CSS Modules 语法, 当前项目怎样引入
-备份代码位置 D:\develop\comfy-common\py-ele-prompt-bak\代码备份
 
 ## 常用
 
@@ -34,7 +33,7 @@ composes 是 CSS Modules 语法, 当前项目怎样引入
 按照真实逻辑测试, 如果测试失败, 仔细分析原因, 是测试代码问题, 还是真实逻辑问题; 测试的目的是找出真实逻辑的问题, 不是为了测试通过; 重新测试; 如果测试失败, 中断测试, 分析原因, 和我商量修改
 应用已关闭, 使用实际数据 e2e 测试
 `SKILL.md` 按照规范来, 先测试失败的, 不要浪费时间在已经通过的, 最后再统一测试
-cnpm run test:e2e -- e2e/new-prompt-duplicate-prevention.spec.ts --headed 2>&1 | head -60
+cnpm run test:e2e -- e2e/new-prompt-duplicate-prevention.spec.ts --grep ""
 cnpm run dist:win:nsis -> exe
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 需要输出中文版本的可复制的详细版本和简洁版本的 git commit 信息
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log

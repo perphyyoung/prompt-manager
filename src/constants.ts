@@ -152,18 +152,6 @@ export class Constants {
     PROMPT_TAG_FILTER_COLLAPSED: 'promptTagFilterCollapsed',
     IMAGE_TAG_FILTER_COLLAPSED: 'imageTagFilterCollapsed',
 
-    // 标签筛选区 section ID
-    PROMPT_TAG_FILTER_SECTION: 'promptTagFilterSection',
-    IMAGE_TAG_FILTER_SECTION: 'imageTagFilterSection',
-
-    // 标签筛选区 toggle 按钮 ID
-    PROMPT_TAG_FILTER_TOGGLE_BTN: 'promptTagFilterToggleBtn',
-    IMAGE_TAG_FILTER_TOGGLE_BTN: 'imageTagFilterToggleBtn',
-
-    // 标签管理器按钮 ID
-    PROMPT_TAG_MANAGER_BTN: 'promptTagManagerBtn',
-    IMAGE_TAG_MANAGER_BTN: 'imageTagManagerBtn',
-
     // 卡片信息是否可见
     CARDS_INFO_VISIBLE: 'cardsInfoVisible'
   });
@@ -258,6 +246,18 @@ export class Constants {
     IMAGE_MANAGER_BTN: 'imageManagerBtn',
     PROMPT_MANAGER_BTN: 'promptManagerBtn',
 
+    // 网格视图切换按钮
+    IMAGE_GRID_VIEW_BTN: 'imageGridViewBtn',
+    PROMPT_GRID_VIEW_BTN: 'promptGridViewBtn',
+
+    // 列表视图切换按钮
+    IMAGE_LIST_VIEW_BTN: 'imageListViewBtn',
+    PROMPT_LIST_VIEW_BTN: 'promptListViewBtn',
+
+    // 紧凑视图切换按钮
+    IMAGE_COMPACT_VIEW_BTN: 'imageCompactViewBtn',
+    PROMPT_COMPACT_VIEW_BTN: 'promptCompactViewBtn',
+
     // 标签管理器按钮
     IMAGE_TAG_MANAGER_BTN: 'imageTagManagerBtn',
     PROMPT_TAG_MANAGER_BTN: 'promptTagManagerBtn',
@@ -328,7 +328,15 @@ export class Constants {
     IMAGE_TAG_GROUP_EDIT_ID: 'imageTagGroupEditId',
     PROMPT_TAG_GROUP_EDIT_ID: 'promptTagGroupEditId',
     IMAGE_TAG_GROUP_EDIT_SORT_ORDER: 'imageTagGroupEditSortOrder',
-    PROMPT_TAG_GROUP_EDIT_SORT_ORDER: 'promptTagGroupEditSortOrder'
+    PROMPT_TAG_GROUP_EDIT_SORT_ORDER: 'promptTagGroupEditSortOrder',
+
+    // 标签筛选区 section ID
+    PROMPT_TAG_FILTER_SECTION: 'promptTagFilterSection',
+    IMAGE_TAG_FILTER_SECTION: 'imageTagFilterSection',
+
+    // 标签筛选区 toggle 按钮 ID
+    PROMPT_TAG_FILTER_TOGGLE_BTN: 'promptTagFilterToggleBtn',
+    IMAGE_TAG_FILTER_TOGGLE_BTN: 'imageTagFilterToggleBtn'
   } as const);
 }
 

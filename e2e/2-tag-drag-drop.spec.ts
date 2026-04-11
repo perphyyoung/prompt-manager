@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { createElectronTest, enterImageGridView, enterPromptGridView, ensureTagFilterExpanded } from './electron-test.ts';
+import { createElectronTest, enterImageGridView, enterPromptGridView, ensureTagFilterExpanded, ensureTagFilterCollapsed } from './electron-test.ts';
+import { Constants } from '../src/constants.ts';
 import type { IElectronAPI, IImage, IPrompt } from '../src/preload/index.ts';
 
 declare global {
@@ -31,8 +32,8 @@ test.describe('标签拖拽功能', () => {
     const page = electronTest.getPage();
 
     // 获取测试用图像 ID
-    await page.click('#imageManagerBtn');
-    await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
+    await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, { state: 'visible', timeout: 5000 });
     await page.click('#imageGridViewBtn');
     await page.waitForSelector('#imageGridViewBtn.active', { timeout: 5000 });
 
@@ -43,10 +44,10 @@ test.describe('标签拖拽功能', () => {
     testImageId = String(images.id);
 
     // 获取测试用提示词 ID
-    await page.click('#promptManagerBtn');
-    await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
-    await page.click('#promptGridViewBtn');
-    await page.waitForSelector('#promptGridViewBtn.active', { timeout: 5000 });
+    await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, { state: 'visible', timeout: 5000 });
+    await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}.active`, { timeout: 5000 });
 
     const prompts = await page.evaluate(async () => {
       const allPrompts = await window.electronAPI.getPrompts('date', 'desc');
@@ -61,6 +62,8 @@ test.describe('标签拖拽功能', () => {
 
   test.describe('图像标签拖拽', () => {
     test('标签拖拽到图像卡片 - 展开状态', async () => {
+      await electronTest.logTestStart('标签拖拽到图像卡片 - 展开状态');
+
       const page = electronTest.getPage();
 
       await enterImageGridView(page);
@@ -73,28 +76,28 @@ test.describe('标签拖拽功能', () => {
         return (image as IImage)?.tags || [];
       }, testImageId);
 
-      await ensureTagFilterExpanded(page, 'imageTagFilterSection', 'imageTagFilterToggleBtn');
+      await ensureTagFilterExpanded(page, Constants.Ids.IMAGE_TAG_FILTER_SECTION, Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN);
       await page.screenshot({ path: 'test-results/drag-drop/image-04-filter-expanded.png' });
 
       const testTagName = `e2e_img_tag_${Date.now()}`;
 
       // 打开图像标签管理器
-      await page.click('#imageTagManagerBtn');
-      await page.waitForSelector('#imageTagManagerModal', { state: 'visible', timeout: 5000 });
+      await page.click(`#${Constants.Ids.IMAGE_TAG_MANAGER_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, { state: 'visible', timeout: 5000 });
       await page.screenshot({ path: 'test-results/drag-drop/image-05-manager-opened.png' });
 
       // 新建标签
-      await page.click('#addImageTagInManagerBtn');
-      await page.waitForSelector('#inputModalField', { state: 'visible', timeout: 5000 });
+      await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_IN_MANAGER_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, { state: 'visible', timeout: 5000 });
       await page.screenshot({ path: 'test-results/drag-drop/image-06-input-dialog.png' });
 
-      const tagInputDialogInput = page.locator('#inputModalField');
+      const tagInputDialogInput = page.locator(`#${Constants.Ids.INPUT_MODAL_FIELD}`);
       await tagInputDialogInput.fill(testTagName);
 
-      const groupSelect = page.locator('#inputModalGroupSelect');
+      const groupSelect = page.locator(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`);
       await groupSelect.selectOption({ index: 1 });
 
-      await page.click('#inputOkBtn');
+      await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
 
       // 使用 waitForFunction 轮询检查标签是否创建成功（更可靠）
       await page.waitForFunction(async (tagName: string) => {
@@ -105,11 +108,11 @@ test.describe('标签拖拽功能', () => {
       await page.screenshot({ path: 'test-results/drag-drop/image-07-tag-created.png' });
 
       // 关闭标签管理器
-      await page.click('#closeImageTagManagerModal');
-      await page.waitForSelector('#imageTagManagerModal', { state: 'hidden', timeout: 5000 });
+      await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 });
       await page.screenshot({ path: 'test-results/drag-drop/image-08-manager-closed.png' });
 
-      await ensureTagFilterExpanded(page, 'imageTagFilterSection', 'imageTagFilterToggleBtn');
+      await ensureTagFilterExpanded(page, Constants.Ids.IMAGE_TAG_FILTER_SECTION, Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN);
 
       // 等待标签出现在筛选列表中（使用 waitForFunction 轮询检查）
       await page.waitForFunction((tagName: string) => {
@@ -146,8 +149,8 @@ test.describe('标签拖拽功能', () => {
       expect(newTags).toContain(testTagName);
 
       // 验证成功提示
-      await page.waitForSelector('#toastContainer:has-text("标签已添加")', { timeout: 5000 });
-      const toastContainer = page.locator('#toastContainer');
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已添加")`, { timeout: 5000 });
+      const toastContainer = page.locator(`#${Constants.Ids.TOAST_CONTAINER}`);
 
       // 第二次拖拽相同标签，应该提示"标签已存在"
       await newTagElement.hover();
@@ -158,14 +161,107 @@ test.describe('标签拖拽功能', () => {
       await page.mouse.up();
 
       // 等待提示消息更新
-      await page.waitForSelector('#toastContainer:has-text("该标签已存在")', { timeout: 5000 });
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`, { timeout: 5000 });
       const toastMessageAfterSecondDrop = await toastContainer.textContent();
       expect(toastMessageAfterSecondDrop).toContain('该标签已存在');
+    });
+
+    test('标签拖拽到图像卡片 - 收起状态', async () => {
+      const page = electronTest.getPage();
+
+      await electronTest.logTestStart('标签拖拽到图像卡片 - 收起状态');
+
+      await enterImageGridView(page);
+
+      const targetCard = page.locator(`.image-card[data-id="${testImageId}"]`);
+      await expect(targetCard).toBeVisible({ timeout: 5000 });
+
+      // 确保标签筛选区域收起
+      await ensureTagFilterCollapsed(page, Constants.Ids.IMAGE_TAG_FILTER_SECTION, Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN);
+      await page.screenshot({ path: 'test-results/drag-drop/image-collapsed-01-filter-collapsed.png' });
+
+      const testTagName = `e2e_img_tag_collapsed_${Date.now()}`;
+
+      // 打开图像标签管理器
+      await page.click(`#${Constants.Ids.IMAGE_TAG_MANAGER_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, { state: 'visible', timeout: 5000 });
+      await page.screenshot({ path: 'test-results/drag-drop/image-collapsed-02-manager-opened.png' });
+
+      // 新建标签到首位组
+      await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_IN_MANAGER_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, { state: 'visible', timeout: 5000 });
+      await page.screenshot({ path: 'test-results/drag-drop/image-collapsed-03-input-dialog.png' });
+
+      const tagInputDialogInput = page.locator(`#${Constants.Ids.INPUT_MODAL_FIELD}`);
+      await tagInputDialogInput.fill(testTagName);
+
+      // 选择第一个组（首位组）
+      const groupSelect = page.locator(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`);
+      await groupSelect.selectOption({ index: 1 });
+
+      await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
+
+      // 使用 waitForFunction 轮询检查标签是否创建成功
+      await page.waitForFunction(async (tagName: string) => {
+        const tags = await window.electronAPI.getAllTags();
+        return tags.includes(tagName);
+      }, testTagName, { timeout: 5000 });
+
+      await page.screenshot({ path: 'test-results/drag-drop/image-collapsed-04-tag-created.png' });
+
+      // 关闭标签管理器
+      await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 });
+      await page.screenshot({ path: 'test-results/drag-drop/image-collapsed-05-manager-closed.png' });
+
+      // 确保标签筛选区域仍处于收起状态
+      await ensureTagFilterCollapsed(page, Constants.Ids.IMAGE_TAG_FILTER_SECTION, Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN);
+
+      // 等待首位组的标签出现在 header tags 中（收起状态下只显示首位组标签）
+      await page.waitForFunction((tagName: string) => {
+        const tagElement = document.querySelector(`#imageTagFilterHeaderTags .tag-filter-item[data-tag="${tagName}"]`);
+        return tagElement !== null;
+      }, testTagName, { timeout: 5000 });
+
+      const newTagElement = page.locator(`#imageTagFilterHeaderTags .tag-filter-item[data-tag="${testTagName}"]`);
+      await expect(newTagElement).toBeVisible({ timeout: 5000 });
+
+      // 第一次拖拽 - 应该成功
+      await newTagElement.hover();
+      await expect(newTagElement).toBeVisible({ timeout: 5000 });
+      await page.mouse.down();
+      await targetCard.hover();
+      await expect(targetCard).toBeVisible({ timeout: 5000 });
+      await page.mouse.up();
+
+      // 验证标签已添加
+      await page.waitForFunction(async (params: { id: string; tag: string }) => {
+        const image = await window.electronAPI.getImageById(params.id);
+        return (image as IImage)?.tags?.includes(params.tag);
+      }, { id: testImageId, tag: testTagName }, { timeout: 5000 });
+
+      // 验证成功提示
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已添加")`, { timeout: 5000 });
+      await page.screenshot({ path: 'test-results/drag-drop/image-collapsed-06-first-drop-success.png' });
+
+      // 第二次拖拽相同标签 - 应该提示已存在
+      await newTagElement.hover();
+      await expect(newTagElement).toBeVisible({ timeout: 5000 });
+      await page.mouse.down();
+      await targetCard.hover();
+      await expect(targetCard).toBeVisible({ timeout: 5000 });
+      await page.mouse.up();
+
+      // 验证提示"该标签已存在"
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`, { timeout: 5000 });
+      await page.screenshot({ path: 'test-results/drag-drop/image-collapsed-07-second-drop-exists.png' });
     });
   });
 
   test.describe('提示词标签拖拽', () => {
     test('标签拖拽到提示词卡片 - 展开状态', async () => {
+      await electronTest.logTestStart('标签拖拽到提示词卡片 - 展开状态');
+
       const page = electronTest.getPage();
 
       await enterPromptGridView(page);
@@ -178,28 +274,28 @@ test.describe('标签拖拽功能', () => {
         return (prompt as IPrompt)?.tags || [];
       }, testPromptId);
 
-      await ensureTagFilterExpanded(page, 'promptTagFilterSection', 'promptTagFilterToggleBtn');
+      await ensureTagFilterExpanded(page, Constants.Ids.PROMPT_TAG_FILTER_SECTION, Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN);
       await page.screenshot({ path: 'test-results/drag-drop/prompt-04-filter-expanded.png' });
 
       const testTagName = `e2e_prompt_tag_${Date.now()}`;
 
       // 打开提示词标签管理器
-      await page.click('#promptTagManagerBtn');
-      await page.waitForSelector('#promptTagManagerModal', { state: 'visible', timeout: 5000 });
+      await page.click(`#${Constants.Ids.PROMPT_TAG_MANAGER_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, { state: 'visible', timeout: 5000 });
       await page.screenshot({ path: 'test-results/drag-drop/prompt-05-manager-opened.png' });
 
       // 新建标签
-      await page.click('#addPromptTagInManagerBtn');
-      await page.waitForSelector('#inputModalField', { state: 'visible', timeout: 5000 });
+      await page.click(`#${Constants.Ids.ADD_PROMPT_TAG_IN_MANAGER_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, { state: 'visible', timeout: 5000 });
       await page.screenshot({ path: 'test-results/drag-drop/prompt-06-input-dialog.png' });
 
-      const tagInputDialogInput = page.locator('#inputModalField');
+      const tagInputDialogInput = page.locator(`#${Constants.Ids.INPUT_MODAL_FIELD}`);
       await tagInputDialogInput.fill(testTagName);
 
-      const groupSelect = page.locator('#inputModalGroupSelect');
+      const groupSelect = page.locator(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`);
       await groupSelect.selectOption({ index: 1 });
 
-      await page.click('#inputOkBtn');
+      await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
 
       // 使用 waitForFunction 轮询检查标签是否创建成功（更可靠）
       await page.waitForFunction(async (tagName: string) => {
@@ -210,11 +306,11 @@ test.describe('标签拖拽功能', () => {
       await page.screenshot({ path: 'test-results/drag-drop/prompt-07-tag-created.png' });
 
       // 关闭标签管理器
-      await page.click('#closePromptTagManagerModal');
-      await page.waitForSelector('#promptTagManagerModal', { state: 'hidden', timeout: 5000 });
+      await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 });
       await page.screenshot({ path: 'test-results/drag-drop/prompt-08-manager-closed.png' });
 
-      await ensureTagFilterExpanded(page, 'promptTagFilterSection', 'promptTagFilterToggleBtn');
+      await ensureTagFilterExpanded(page, Constants.Ids.PROMPT_TAG_FILTER_SECTION, Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN);
 
       // 等待标签出现在筛选列表中（使用 waitForFunction 轮询检查）
       await page.waitForFunction((tagName: string) => {
@@ -251,8 +347,8 @@ test.describe('标签拖拽功能', () => {
       expect(newTags).toContain(testTagName);
 
       // 验证成功提示
-      await page.waitForSelector('#toastContainer:has-text("标签已添加")', { timeout: 5000 });
-      const toastContainer = page.locator('#toastContainer');
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已添加")`, { timeout: 5000 });
+      const toastContainer = page.locator(`#${Constants.Ids.TOAST_CONTAINER}`);
 
       // 第二次拖拽相同标签，应该提示"标签已存在"
       await newTagElement.hover();
@@ -263,9 +359,100 @@ test.describe('标签拖拽功能', () => {
       await page.mouse.up();
 
       // 等待提示消息更新
-      await page.waitForSelector('#toastContainer:has-text("该标签已存在")', { timeout: 5000 });
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`, { timeout: 5000 });
       const toastMessageAfterSecondDrop = await toastContainer.textContent();
       expect(toastMessageAfterSecondDrop).toContain('该标签已存在');
+    });
+
+    test('标签拖拽到提示词卡片 - 收起状态', async () => {
+      const page = electronTest.getPage();
+
+      await electronTest.logTestStart('标签拖拽到提示词卡片 - 收起状态');
+
+      await enterPromptGridView(page);
+
+      const targetCard = page.locator(`.prompt-card[data-id="${testPromptId}"]`);
+      await expect(targetCard).toBeVisible({ timeout: 5000 });
+
+      // 确保标签筛选区域收起
+      await ensureTagFilterCollapsed(page, Constants.Ids.PROMPT_TAG_FILTER_SECTION, Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN);
+      await page.screenshot({ path: 'test-results/drag-drop/prompt-collapsed-01-filter-collapsed.png' });
+
+      const testTagName = `e2e_prompt_tag_collapsed_${Date.now()}`;
+
+      // 打开提示词标签管理器
+      await page.click(`#${Constants.Ids.PROMPT_TAG_MANAGER_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, { state: 'visible', timeout: 5000 });
+      await page.screenshot({ path: 'test-results/drag-drop/prompt-collapsed-02-manager-opened.png' });
+
+      // 新建标签到首位组
+      await page.click(`#${Constants.Ids.ADD_PROMPT_TAG_IN_MANAGER_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, { state: 'visible', timeout: 5000 });
+      await page.screenshot({ path: 'test-results/drag-drop/prompt-collapsed-03-input-dialog.png' });
+
+      const tagInputDialogInput = page.locator(`#${Constants.Ids.INPUT_MODAL_FIELD}`);
+      await tagInputDialogInput.fill(testTagName);
+
+      // 选择第一个组（首位组）
+      const groupSelect = page.locator(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`);
+      await groupSelect.selectOption({ index: 1 });
+
+      await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
+
+      // 使用 waitForFunction 轮询检查标签是否创建成功
+      await page.waitForFunction(async (tagName: string) => {
+        const tags = await window.electronAPI.getAllTags();
+        return tags.includes(tagName);
+      }, testTagName, { timeout: 5000 });
+
+      await page.screenshot({ path: 'test-results/drag-drop/prompt-collapsed-04-tag-created.png' });
+
+      // 关闭标签管理器
+      await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 });
+      await page.screenshot({ path: 'test-results/drag-drop/prompt-collapsed-05-manager-closed.png' });
+
+      // 确保标签筛选区域仍处于收起状态
+      await ensureTagFilterCollapsed(page, Constants.Ids.PROMPT_TAG_FILTER_SECTION, Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN);
+
+      // 等待首位组的标签出现在 header tags 中（收起状态下只显示首位组标签）
+      await page.waitForFunction((tagName: string) => {
+        const tagElement = document.querySelector(`#promptTagFilterHeaderTags .tag-filter-item[data-tag="${tagName}"]`);
+        return tagElement !== null;
+      }, testTagName, { timeout: 5000 });
+
+      const newTagElement = page.locator(`#promptTagFilterHeaderTags .tag-filter-item[data-tag="${testTagName}"]`);
+      await expect(newTagElement).toBeVisible({ timeout: 5000 });
+
+      // 第一次拖拽 - 应该成功
+      await newTagElement.hover();
+      await expect(newTagElement).toBeVisible({ timeout: 5000 });
+      await page.mouse.down();
+      await targetCard.hover();
+      await expect(targetCard).toBeVisible({ timeout: 5000 });
+      await page.mouse.up();
+
+      // 验证标签已添加
+      await page.waitForFunction(async (params: { id: string; tag: string }) => {
+        const prompt = await window.electronAPI.getPromptById(params.id);
+        return (prompt as IPrompt)?.tags?.includes(params.tag);
+      }, { id: testPromptId, tag: testTagName }, { timeout: 5000 });
+
+      // 验证成功提示
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已添加")`, { timeout: 5000 });
+      await page.screenshot({ path: 'test-results/drag-drop/prompt-collapsed-06-first-drop-success.png' });
+
+      // 第二次拖拽相同标签 - 应该提示已存在
+      await newTagElement.hover();
+      await expect(newTagElement).toBeVisible({ timeout: 5000 });
+      await page.mouse.down();
+      await targetCard.hover();
+      await expect(targetCard).toBeVisible({ timeout: 5000 });
+      await page.mouse.up();
+
+      // 验证提示"该标签已存在"
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`, { timeout: 5000 });
+      await page.screenshot({ path: 'test-results/drag-drop/prompt-collapsed-07-second-drop-exists.png' });
     });
   });
 });

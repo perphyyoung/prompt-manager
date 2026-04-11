@@ -53,8 +53,24 @@
 ## 6. 标签筛选区域辅助函数
 
 - `ensureTagFilterExpanded()` - 确保标签筛选区域展开
+- `ensureTagFilterCollapsed()` - 确保标签筛选区域收起
 
 **使用方法**：
+
+```typescript
+// 确保标签筛选区域展开
+await ensureTagFilterExpanded(page, Constants.Ids.IMAGE_TAG_FILTER_SECTION, Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN);
+
+// 确保标签筛选区域收起
+await ensureTagFilterCollapsed(page, Constants.Ids.IMAGE_TAG_FILTER_SECTION, Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN);
+```
+
+**使用场景**：
+
+- 展开状态测试：使用 `ensureTagFilterExpanded()`，标签显示在筛选列表中
+- 收起状态测试：使用 `ensureTagFilterCollapsed()`，只有首位组标签显示在 header 中
+
+**修改相关文件时需关注**
 
 ```typescript
 import { createElectronTest, enterImageGridView, getImageFromDatabase } from './electron-test.ts';

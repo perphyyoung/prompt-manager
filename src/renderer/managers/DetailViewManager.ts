@@ -235,11 +235,10 @@ export class DetailViewManager {
   async close(): Promise<void> {
     // 防止重复执行
     if (this.isClosing) {
-      window.electronAPI.logDebug('DetailViewManager', `close skipped (already closing), modalId=${this.modalId}`);
+      window.electronAPI.logWarn('DetailViewManager', `close skipped (already closing), modalId=${this.modalId}`);
       return;
     }
     this.isClosing = true;
-    window.electronAPI.logDebug('DetailViewManager', `close called, modalId=${this.modalId}`);
 
     try {
       // 保存所有变更
@@ -256,11 +255,9 @@ export class DetailViewManager {
       contextStack.pop(this.modalId as ElementId);
 
       // 清理
-      window.electronAPI.logDebug('DetailViewManager', 'close: calling cleanup');
       this.cleanup();
     } finally {
       this.isClosing = false;
-      window.electronAPI.logDebug('DetailViewManager', 'close finished');
     }
   }
 
@@ -317,7 +314,6 @@ export class DetailViewManager {
    * 清理资源
    */
   cleanup(): void {
-    window.electronAPI.logDebug('DetailViewManager', `cleanup called, modalId=${this.modalId}`);
     if (this.saveManager) {
       (this.saveManager as { destroy: () => void }).destroy();
       this.saveManager = null;
@@ -331,10 +327,8 @@ export class DetailViewManager {
       this.navigator = null;
     }
     // 清理批量标签管理资源（销毁工具栏）
-    window.electronAPI.logDebug('DetailViewManager', 'cleanup: calling cleanupBatchTagManager');
     this.cleanupBatchTagManager();
     this.currentItem = null;
-    window.electronAPI.logDebug('DetailViewManager', 'cleanup finished');
   }
 
   /**
@@ -447,8 +441,6 @@ export class DetailViewManager {
    * @protected
    */
   protected initBatchTagManager(config: IBatchTagManagerConfig, tagManager: ISimpleTagManager): void {
-    window.electronAPI.logDebug('DetailViewManager', `initBatchTagManager called, current isBatchMode=${this.isBatchMode}`);
-
     this.batchTagConfig = config;
     this.simpleTagManager = tagManager;
 
@@ -459,7 +451,6 @@ export class DetailViewManager {
 
     // 重置批量模式
     if (this.isBatchMode) {
-      window.electronAPI.logDebug('DetailViewManager', 'initBatchTagManager: exiting batch mode');
       this.exitBatchMode();
     }
 
@@ -469,8 +460,6 @@ export class DetailViewManager {
       onAction: (action) => this.handleBatchToolbarAction(action),
       onClose: () => this.exitBatchMode()
     });
-
-    window.electronAPI.logDebug('DetailViewManager', 'initBatchTagManager finished, batch mode reset');
 
     // 设置渲染回调
     tagManager.onRender = () => {
