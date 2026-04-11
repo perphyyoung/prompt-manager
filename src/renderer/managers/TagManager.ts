@@ -2,11 +2,46 @@ import { TagService } from './TagService.ts';
 import { TagUI } from './TagUI.ts';
 import { Constants, ElementId } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
-import { ITagService } from '../../types/entities.ts';
+import { ITagService, IDialogTemplate, IDialogContext } from '../../types/entities.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { focusInput } from '../renderer_utils/index.ts';
 import { MultiSelectManager } from './MultiSelectManager.ts';
 import { immediateDebounce } from '../../utils/debounce.ts';
+
+/**
+ * 批量操作配置接口
+ * 用于定义批量操作的具体行为和参数
+ */
+interface IBatchOperationConfig<TInput = any, TResult = any> {
+  // 操作名称（用于日志和提示）
+  operationName: string;
+
+  // 是否需要确认对话框
+  requiresConfirmation?: boolean;
+  confirmConfig?: IDialogTemplate;
+  confirmData?: (selectedIds: string[]) => IDialogContext;
+
+  // 是否需要输入对话框
+  requiresInput?: boolean;
+  inputConfig?: {
+    title: string;
+    placeholder?: string;
+    options?: Array<{ value: string; label: string }>;
+    defaultValue?: string;
+  };
+
+  // 执行操作的核心逻辑
+  execute: (selectedIds: string[], input?: TInput) => Promise<TResult>;
+
+  // 成功提示消息
+  successMessage: (result: TResult, selectedCount: number) => string;
+
+  // 错误提示消息
+  errorMessage: string;
+
+  // 是否需要在操作后退出批量模式
+  exitBatchMode?: boolean;
+}
 
 /**
  * 标签管理器元素 ID 配置
@@ -753,6 +788,79 @@ export abstract class TagManager {
   // ========== 批量管理功能 ==========
 
   /**
+   * 执行批量操作的通用方法
+   * 封装批量操作的通用流程：验证、确认、执行、刷新
+   * @param config - 批量操作配置
+   */
+  private async executeBatchOperation<TInput, TResult>(
+    config: IBatchOperationConfig<TInput, TResult>
+  ): Promise<void> {
+    const selectedIds = Array.from(this.multiSelectManager.selectedIds);
+
+    // 检查是否有选中项
+    if (selectedIds.length === 0) {
+      this.app.showToast(`请先选择要${config.operationName}的标签`, 'warning');
+      return;
+    }
+
+    // 显示确认对话框
+    if (config.requiresConfirmation && config.confirmConfig) {
+      const confirmData = config.confirmData ? config.confirmData(selectedIds) : undefined;
+      const confirmed = await DialogService.showConfirmDialogByConfig(
+        config.confirmConfig,
+        confirmData
+      );
+      if (!confirmed) return;
+    }
+
+    // 显示输入/选择对话框
+    let input: TInput | undefined;
+    if (config.requiresInput && config.inputConfig) {
+      if (config.inputConfig.options) {
+        // 选择对话框
+        const result = await DialogService.showSelectDialog({
+          title: config.inputConfig.title,
+          options: config.inputConfig.options,
+          defaultValue: config.inputConfig.defaultValue
+        });
+        if (result === null) return;
+        input = result as TInput;
+      } else {
+        // 输入对话框
+        const result = await DialogService.showInputDialog({
+          title: config.inputConfig.title,
+          placeholder: config.inputConfig.placeholder,
+          defaultValue: config.inputConfig.defaultValue
+        });
+        if (!result) return;
+        input = result.value as TInput;
+      }
+    }
+
+    // 执行操作
+    try {
+      const result = await config.execute(selectedIds, input);
+      this.app.showToast(
+        config.successMessage(result, selectedIds.length),
+        'success'
+      );
+
+      // 退出批量模式并刷新
+      if (config.exitBatchMode !== false) {
+        this.exitBatchMode();
+        await this.refreshAfterTagChange();
+      }
+    } catch (error) {
+      window.electronAPI.logError(
+        'TagManager.ts',
+        `Failed to batch ${config.operationName} tags:`,
+        error
+      );
+      this.app.showToast(config.errorMessage, 'error');
+    }
+  }
+
+  /**
    * 切换批量管理模式
    */
   toggleBatchMode(): void {
@@ -822,85 +930,64 @@ export abstract class TagManager {
 
   /**
    * 批量删除标签
+   * 使用通用批量操作模板方法
    */
   private async batchDeleteTags(): Promise<void> {
     window.electronAPI.logDebug('TagManager', 'batchDeleteTags called');
-    const selectedIds = Array.from(this.multiSelectManager.selectedIds);
-    window.electronAPI.logDebug('TagManager', `batchDeleteTags: selectedIds.length=${selectedIds.length}`);
-    if (selectedIds.length === 0) {
-      this.app.showToast('请先选择要删除的标签', 'warning');
-      return;
-    }
 
-    const confirmed = await DialogService.showConfirmDialogByConfig(
-      DialogConfig.BATCH_DELETE_TAGS,
-      { count: selectedIds.length }
-    );
-
-    if (!confirmed) {
-      window.electronAPI.logDebug('TagManager', 'batchDeleteTags: user cancelled');
-      return;
-    }
-
-    window.electronAPI.logDebug('TagManager', `batchDeleteTags: deleting ${selectedIds.length} tags`);
-    try {
-      const result = await this.service.deleteTags(selectedIds);
-      window.electronAPI.logDebug('TagManager', `batchDeleteTags: deleted ${result.deleted} tags`);
-
-      this.app.showToast(`已删除 ${result.deleted} 个标签`, 'success');
-      this.exitBatchMode();
-      await this.refreshAfterTagChange();
-    } catch (error) {
-      window.electronAPI.logError('TagManager.ts', 'Failed to batch delete tags:', error);
-      this.app.showToast('批量删除失败', 'error');
-    }
+    await this.executeBatchOperation({
+      operationName: '删除',
+      requiresConfirmation: true,
+      confirmConfig: DialogConfig.BATCH_DELETE_TAGS,
+      confirmData: (selectedIds) => ({ count: selectedIds.length }),
+      execute: async (selectedIds) => {
+        window.electronAPI.logDebug('TagManager', `batchDeleteTags: deleting ${selectedIds.length} tags`);
+        const result = await this.service.deleteTags(selectedIds);
+        window.electronAPI.logDebug('TagManager', `batchDeleteTags: deleted ${result.deleted} tags`);
+        return result;
+      },
+      successMessage: (result) => `已删除 ${result.deleted} 个标签`,
+      errorMessage: '批量删除失败'
+    });
   }
 
   /**
    * 批量移动标签到组
+   * 使用通用批量操作模板方法
    */
   private async batchMoveToGroup(): Promise<void> {
-    const selectedIds = Array.from(this.multiSelectManager.selectedIds);
-    if (selectedIds.length === 0) {
-      this.app.showToast('请先选择要移动的标签', 'warning');
-      return;
-    }
-
     const groups = await this.service.getTagGroups();
-
     const options = [
       { value: '', label: '未分组' },
       ...groups.map(g => ({ value: String(g.id), label: g.name }))
     ];
 
-    const result = await DialogService.showSelectDialog({
-      title: `将 ${selectedIds.length} 个标签移动到`,
-      options,
-      defaultValue: ''
-    });
+    await this.executeBatchOperation<string, { successCount: number }>({
+      operationName: '移动',
+      requiresInput: true,
+      inputConfig: {
+        title: '将标签移动到',
+        options,
+        defaultValue: ''
+      },
+      execute: async (selectedIds, groupId) => {
+        const targetGroupId = !groupId || groupId === '' ? null : parseInt(groupId, 10);
+        let successCount = 0;
 
-    if (result === null) return;
-
-    const groupId = result === '' ? null : parseInt(result, 10);
-
-    try {
-      let successCount = 0;
-      for (const tag of selectedIds) {
-        try {
-          await this.service.assignTagToGroup(tag, groupId);
-          successCount++;
-        } catch (error) {
-          window.electronAPI.logError('TagManager.ts', `Failed to move tag ${tag}:`, error);
+        for (const tag of selectedIds) {
+          try {
+            await this.service.assignTagToGroup(tag, targetGroupId);
+            successCount++;
+          } catch (error) {
+            window.electronAPI.logError('TagManager.ts', `Failed to move tag ${tag}:`, error);
+          }
         }
-      }
 
-      this.app.showToast(`已移动 ${successCount} 个标签`, 'success');
-      this.exitBatchMode();
-      await this.refreshAfterTagChange();
-    } catch (error) {
-      window.electronAPI.logError('TagManager.ts', 'Failed to batch move tags:', error);
-      this.app.showToast('批量移动失败', 'error');
-    }
+        return { successCount };
+      },
+      successMessage: (result) => `已移动 ${result.successCount} 个标签`,
+      errorMessage: '批量移动失败'
+    });
   }
 
   /**
