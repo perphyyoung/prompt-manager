@@ -326,12 +326,6 @@ export abstract class TagManager {
       const container = document.getElementById(this.elements.containerId);
       if (!container?.contains(target)) return;
       
-      const tagName = target.closest('.tag-delete-btn')?.getAttribute('data-tag') || 
-                      target.closest('.tag-edit-btn')?.getAttribute('data-tag') ||
-                      target.closest('.tag-manager-item')?.getAttribute('data-tag') || 'unknown';
-      const stackTrace = new Error().stack?.split('\n').slice(2, 5).join(' | ');
-      window.electronAPI.logDebug('TagManager', `click event on tag=${tagName}, target=${target.className || target.tagName}, isTrusted=${e.isTrusted}, path=${stackTrace}`);
-
       // 批量模式下的标签项选择（单击选择）
       if (this.isBatchModeActive) {
         const tagItem = target.closest('.tag-manager-item[data-tag]');
@@ -932,17 +926,13 @@ export abstract class TagManager {
    * 使用通用批量操作模板方法
    */
   private async batchDeleteTags(): Promise<void> {
-    window.electronAPI.logDebug('TagManager', 'batchDeleteTags called');
-
     await this.executeBatchOperation({
       operationName: '删除',
       requiresConfirmation: true,
       confirmConfig: DialogConfig.BATCH_DELETE_TAGS,
       confirmData: (selectedIds) => ({ count: selectedIds.length }),
       execute: async (selectedIds) => {
-        window.electronAPI.logDebug('TagManager', `batchDeleteTags: deleting ${selectedIds.length} tags`);
         const result = await this.service.deleteTags(selectedIds);
-        window.electronAPI.logDebug('TagManager', `batchDeleteTags: deleted ${result.deleted} tags`);
         return result;
       },
       successMessage: (result) => `已删除 ${result.deleted} 个标签`,

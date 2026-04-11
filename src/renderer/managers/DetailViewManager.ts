@@ -203,7 +203,6 @@ export class DetailViewManager {
       close: () => {
         // 如果被其他视图覆盖，退出批量模式
         if (this.isBatchMode) {
-          window.electronAPI.logDebug('DetailViewManager', `close on push: ${this.modalId}`);
           this.exitBatchMode();
         }
       }
@@ -569,10 +568,7 @@ export class DetailViewManager {
    * @protected
    */
   protected toggleBatchMode(): void {
-    window.electronAPI.logDebug('DetailViewManager', `toggleBatchMode start, isBatchMode=${this.isBatchMode}, has editableTagList=${!!this.editableTagList}, has batchTagConfig=${!!this.batchTagConfig}`);
-
     if (!this.editableTagList || !this.batchTagConfig) {
-      window.electronAPI.logDebug('DetailViewManager', 'toggleBatchMode early return: missing editableTagList or batchTagConfig');
       return;
     }
 
@@ -581,16 +577,12 @@ export class DetailViewManager {
     } else {
       this.enterBatchMode();
     }
-
-    window.electronAPI.logDebug('DetailViewManager', `toggleBatchMode end, isBatchMode=${this.isBatchMode}`);
   }
 
   /**
    * 进入批量模式
    */
   private enterBatchMode(): void {
-    window.electronAPI.logDebug('DetailViewManager', 'Entering batch mode');
-
     this.isBatchMode = true;
     this.editableTagList?.enterBatchMode();
     this.batchToolbar?.show(0);
@@ -607,8 +599,6 @@ export class DetailViewManager {
    * 退出批量模式
    */
   private exitBatchMode(): void {
-    window.electronAPI.logDebug('DetailViewManager', 'Exiting batch mode');
-
     this.isBatchMode = false;
     this.editableTagList?.exitBatchMode();
     this.batchToolbar?.hide();
@@ -626,8 +616,6 @@ export class DetailViewManager {
    * @protected
    */
   protected cleanupBatchTagManager(): void {
-    window.electronAPI.logDebug('DetailViewManager', `cleanupBatchTagManager called, isBatchMode=${this.isBatchMode}`);
-
     // 退出批量模式
     if (this.isBatchMode) {
       this.exitBatchMode();
@@ -649,8 +637,6 @@ export class DetailViewManager {
     this.editableTagList = null;
     this.simpleTagManager = null;
     this.batchTagConfig = null;
-
-    window.electronAPI.logDebug('DetailViewManager', 'cleanupBatchTagManager finished');
   }
 }
 

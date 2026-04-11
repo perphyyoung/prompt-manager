@@ -346,8 +346,6 @@ export class DialogService {
       return window.confirm(msg);
     }
 
-    window.electronAPI.logDebug('DialogService', `showConfirmDialogByConfig called: ${title}, stack:\n${stackTrace}`);
-
     return new Promise((resolve) => {
       _confirmCallback = resolve;
 
