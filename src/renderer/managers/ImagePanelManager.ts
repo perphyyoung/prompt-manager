@@ -107,8 +107,8 @@ export class ImagePanelManager extends PanelManagerBase {
   /**
    * 打开标签管理器模态框（实现基类抽象方法）
    */
-  protected openTagManagerModal(): void {
-    this.app.openImageTagManagerModal?.();
+  protected async openTagManagerModal(): Promise<void> {
+    await this.app.openImageTagManagerModal?.();
   }
 
   /**

@@ -178,13 +178,13 @@ export abstract class PanelManagerBase {
    * 绑定标签管理器事件
    */
   protected bindTagManagerEvents(): void {
-    document.getElementById(this.getTagManagerBtnId())?.addEventListener('click', () => this.openTagManagerModal());
+    document.getElementById(this.getTagManagerBtnId())?.addEventListener('click', async () => await this.openTagManagerModal());
   }
 
   /**
    * 打开标签管理器模态框（子类实现）
    */
-  protected abstract openTagManagerModal(): void;
+  protected abstract openTagManagerModal(): Promise<void>;
 
   /**
    * 绑定标签筛选收起/展开按钮事件

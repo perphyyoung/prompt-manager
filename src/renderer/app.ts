@@ -851,15 +851,15 @@ class PromptManager implements IApp {
    */
   async openPromptTagManagerModal() {
     this.promptTagManager?.openManager();
-    await this.promptTagManager?.render();
+    await this.promptTagManager?.renderTagList();
   }
 
   /**
    * 打开图像标签管理器模态框
    */
-  openImageTagManagerModal() {
+  async openImageTagManagerModal() {
     this.imageTagManager?.openManager();
-    this.imageTagManager?.render();
+    await this.imageTagManager?.renderTagList();
   }
 
   /**
