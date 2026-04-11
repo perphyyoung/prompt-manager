@@ -301,25 +301,29 @@ test.describe('标签管理功能', () => {
       await electronTest.logTestStart('搜索并批量删除 e2e 标签');
       await enterImageTagManager(page);
 
-      // Create multiple e2e test tags
-      const testTagName1 = generateTestTagName('img_e2e');
-      const testTagName2 = generateTestTagName('img_e2e');
+      // Create multiple e2e test tags with specific keyword
+      const searchKeyword = 'img_e2e_batch';
+      const testTagName1 = generateTestTagName(searchKeyword);
+      const testTagName2 = generateTestTagName(searchKeyword);
+      // CRITICAL: Create control group that does NOT match search keyword
+      const controlTagName = generateTestTagName('control_not_deleted');
       await createImageTagInManager(page, testTagName1);
       await createImageTagInManager(page, testTagName2);
+      await createImageTagInManager(page, controlTagName);
 
-      // Search for e2e tags
-      await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, 'e2e');
+      // Search for specific keyword (not just 'e2e')
+      await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
       await page.screenshot({ path: 'test-results/tag-manager/image-e2e-search-input.png' });
 
-      // Wait for search results to update - verify only e2e tags are visible
+      // Wait for search results to update - verify only matching tags are visible
       await page.waitForFunction(
-        (containerId: string) => {
-          const items = document.querySelectorAll(`#${containerId} .tag-manager-item`);
+        (params: { containerId: string; keyword: string }) => {
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
           return items.length >= 2 && Array.from(items).every(item =>
-            item.getAttribute('data-tag')?.includes('e2e')
+            item.getAttribute('data-tag')?.includes(params.keyword)
           );
         },
-        Constants.Ids.IMAGE_TAG_GROUP_CARDS,
+        { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, keyword: searchKeyword },
         { timeout: 5000 }
       );
 
@@ -341,7 +345,16 @@ test.describe('标签管理功能', () => {
       const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_TAG_BATCH_TOOLBAR}`);
       await expect(batchToolbar).toBeVisible({ timeout: 5000 });
 
-      // Verify all checkboxes are checked
+      // CRITICAL: Verify all selected tags contain search keyword before delete
+      const selectedTags = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll('.tag-batch-checkbox:checked'))
+          .map(cb => cb.getAttribute('data-tag'));
+      });
+      const unsafeTags = selectedTags.filter(tag => !tag?.includes(searchKeyword));
+      if (unsafeTags.length > 0) {
+        throw new Error(`安全错误：试图删除非目标标签: ${unsafeTags.join(', ')}`);
+      }
+
       const checkedCount = await page.evaluate((containerId: string) => {
         const checkboxes = document.querySelectorAll(`#${containerId} .tag-batch-checkbox`);
         return Array.from(checkboxes).filter((cb) => (cb as HTMLInputElement).checked).length;
@@ -375,6 +388,18 @@ test.describe('标签管理功能', () => {
 
       // Verify toast message
       await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("已删除")`, { timeout: 5000 });
+
+      // CRITICAL: Verify control group still exists
+      await page.click(`#${Constants.Ids.CLEAR_IMAGE_TAG_MANAGER_SEARCH_BTN}`);
+      await page.waitForFunction(
+        (params: { containerId: string; tagName: string }) => {
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+          return Array.from(items).some(item => item.getAttribute('data-tag') === params.tagName);
+        },
+        { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, tagName: controlTagName },
+        { timeout: 5000 }
+      );
+      await expect(page.locator(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${controlTagName}"]`)).toBeVisible({ timeout: 5000 });
 
       await closeImageTagManager(page);
     });
