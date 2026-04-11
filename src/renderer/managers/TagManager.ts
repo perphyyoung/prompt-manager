@@ -615,28 +615,49 @@ export abstract class TagManager {
     if (!result || !result.value || !result.value.trim()) return;
 
     const newTag = result.value.trim();
-    const selectedGroupId = result.groupId;
+    // groupId: null 表示用户选择"未分组"，undefined 表示对话框未显示分组选择
+    // 当对话框未显示分组选择时，默认为未分组（null），与拖拽到未分组卡片的行为一致
+    const selectedGroupId = result.groupId ?? null;
 
-    if (newTag === oldTag) return;
+    // 检查标签名是否改变
+    const isTagNameChanged = newTag !== oldTag;
+    // 检查标签组是否改变
+    const isGroupChanged = selectedGroupId !== currentGroupId;
 
-    if (allTags.includes(newTag)) {
+    // 如果标签名和标签组都没有改变，直接返回
+    if (!isTagNameChanged && !isGroupChanged) return;
+
+    // 如果标签名改变，检查是否已存在
+    if (isTagNameChanged && allTags.includes(newTag)) {
       this.app.showToast('标签名已存在，请使用其他名称', 'error');
       return;
     }
 
-    const groupIdToAssign = selectedGroupId !== currentGroupId ? selectedGroupId : undefined;
-    await this.renameTag(oldTag, newTag, groupIdToAssign);
+    // 场景 A: 只改标签名
+    if (isTagNameChanged && !isGroupChanged) {
+      await this.renameTag(oldTag, newTag);
+      return;
+    }
+
+    // 场景 B: 只改标签组（与拖拽逻辑一致）
+    if (!isTagNameChanged && isGroupChanged) {
+      await this.assignTagToGroup(oldTag, selectedGroupId);
+      return;
+    }
+
+    // 场景 C: 同时改标签名和标签组
+    if (isTagNameChanged && isGroupChanged) {
+      await this.renameTag(oldTag, newTag);
+      await this.assignTagToGroup(newTag, selectedGroupId);
+    }
   }
 
   /**
    * 重命名标签
    */
-  private async renameTag(oldTag: string, newTag: string, groupId?: number | null): Promise<void> {
+  private async renameTag(oldTag: string, newTag: string): Promise<void> {
     try {
       await this.service.renameTag(oldTag, newTag);
-      if (groupId !== undefined) {
-        await this.service.assignTagToGroup(newTag, groupId);
-      }
       this.app.showToast('标签已重命名', 'success');
       await this.refreshAfterTagChange();
     } catch (error) {
