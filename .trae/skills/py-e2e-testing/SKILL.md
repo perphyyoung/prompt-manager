@@ -124,6 +124,177 @@ These rules are **ABSOLUTE REQUIREMENTS** - no exceptions allowed:
    const firstCard = await enterImageGridView(page);
    ```
 
+7. Safe Delete Patterns (MUST FOLLOW)
+
+When implementing ANY delete operations in E2E tests, you MUST follow these patterns to prevent accidental deletion of non-test data.
+
+### 7.1 Safe Single Delete Pattern
+
+For deleting a single item by clicking its delete button:
+
+```typescript
+// ✅ CORRECT: Safe single delete pattern
+const testTagName = generateTestTagName('single_delete');
+
+// Create test data
+await createImageTagInManager(page, testTagName);
+
+// Search to filter and locate the specific tag
+await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, testTagName);
+
+// CRITICAL: Verify search returns exactly 1 result and matches our tag
+await page.waitForFunction(
+  (params: { containerId: string; tagName: string }) => {
+    const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+    // Must be exactly 1 item AND it must be our test tag
+    return items.length === 1 && 
+           items[0].getAttribute('data-tag') === params.tagName;
+  },
+  { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, tagName: testTagName },
+  { timeout: 5000 }
+);
+
+// Click delete button on the SPECIFIC tag
+const deleteBtn = page.locator(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${testTagName}"] .tag-delete-btn`);
+await deleteBtn.click();
+
+// Confirm deletion
+await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, { state: 'visible', timeout: 5000 });
+await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
+
+// Verify deletion via API
+await page.waitForFunction(async (name: string) => {
+  const tags = await window.electronAPI.getImageTags();
+  return !tags.includes(name);
+}, testTagName, { timeout: 5000 });
+```
+
+### 7.2 Safe Batch Delete Pattern
+
+For batch deleting multiple items:
+
+```typescript
+// ✅ CORRECT: Safe batch delete pattern
+const searchKeyword = 'persist_test';  // Use specific test prefix
+const tagName1 = generateTestTagName(searchKeyword);  // e2e_persist_test_xxx
+const tagName2 = generateTestTagName(searchKeyword);
+const otherTagName = generateTestTagName('other');  // Control group (not matching search)
+
+// Create test data
+await createImageTagInManager(page, tagName1);
+await createImageTagInManager(page, tagName2);
+await createImageTagInManager(page, otherTagName);  // Will NOT be deleted
+
+// Search with specific keyword
+await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
+
+// CRITICAL: Wait for search to filter AND verify all visible items match search
+await page.waitForFunction(
+  (params: { containerId: string; keyword: string }) => {
+    const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+    // Must verify: 1) expected count, 2) ALL items contain search keyword
+    return items.length >= 2 && Array.from(items).every(item =>
+      item.getAttribute('data-tag')?.includes(params.keyword)
+    );
+  },
+  { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, keyword: searchKeyword },
+  { timeout: 5000 }
+);
+
+// Enter batch mode and select all
+await page.click(`#${Constants.Ids.BATCH_MANAGE_IMAGE_TAGS_BTN}`);
+await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-batch-checkbox`, { state: 'visible', timeout: 5000 });
+
+const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_TAG_BATCH_TOOLBAR}`);
+await batchToolbar.locator('.batch-action-select-all').click();
+
+// CRITICAL: Verify selected items before delete
+await page.waitForFunction(async (keyword: string) => {
+  const checkedBoxes = document.querySelectorAll('.tag-batch-checkbox:checked');
+  const selectedTags = Array.from(checkedBoxes).map(cb => cb.getAttribute('data-tag'));
+  // Safety check: all selected tags must contain search keyword
+  return selectedTags.every(tag => tag?.includes(keyword));
+}, searchKeyword, { timeout: 5000 });
+
+// Execute delete
+await batchToolbar.locator('.batch-action-delete').click();
+await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, { state: 'visible', timeout: 5000 });
+await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
+
+// Verify deletion via API
+await page.waitForFunction(async (names: string[]) => {
+  const tags = await window.electronAPI.getImageTags();
+  return !tags.includes(names[0]) && !tags.includes(names[1]);
+}, [tagName1, tagName2], { timeout: 5000 });
+
+// CRITICAL: Verify control group (otherTagName) still exists
+await page.click(`#${Constants.Ids.CLEAR_IMAGE_TAG_MANAGER_SEARCH_BTN}`);
+await page.waitForFunction(
+  (params: { containerId: string; tagName: string }) => {
+    const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+    return Array.from(items).some(item => item.getAttribute('data-tag') === params.tagName);
+  },
+  { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, tagName: otherTagName },
+  { timeout: 5000 }
+);
+await expect(page.locator(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${otherTagName}"]`)).toBeVisible({ timeout: 5000 });
+```
+
+### 7.3 Critical Safety Requirements
+
+**⚠️ WARNING: Skipping any of these steps may result in data loss!**
+
+1. **Use specific search keywords**: Create tags with unique test prefixes (e.g., `persist_test`, `e2e_drag_drop`)
+   - NEVER use broad keywords like `'e2e'` alone
+   - Use timestamp or UUID to ensure uniqueness: `e2e_test_${Date.now()}`
+
+2. **Create control group**: **MANDATORY** - Always create at least one tag that does NOT match the search keyword
+   - This is your safety net to verify filtering worked correctly
+   - Without control group, you cannot detect if filtering failed
+
+3. **Verify search filtering**: Wait for search to complete AND verify ALL visible items contain the search keyword
+   - Check both count AND content
+   - Use `.every()` to ensure ALL items match
+
+4. **Verify selection before delete**: Double-check that all selected items match the search criteria
+   - Query selected checkboxes and verify their data-tag attributes
+   - Throw error if any non-matching tag is selected
+
+5. **Verify control group survives**: After deletion, clear search and verify the control group tag still exists
+   - This confirms only intended items were deleted
+   - If control group is missing, the test has a bug
+
+### 7.4 Anti-patterns (NEVER DO THIS)
+
+```typescript
+// ❌ WRONG: Dangerous batch delete - may delete all data
+await searchInput.fill('e2e');  // Too broad, may match everything
+await page.waitForFunction(() => {
+  const items = document.querySelectorAll('.tag-manager-item');
+  return items.length >= 0;  // Always true, no actual verification!
+});
+await page.click('.batch-action-select-all');  // May select ALL tags
+await page.click('.batch-action-delete');  // DANGER: Deletes everything!
+
+// ❌ WRONG: No control group - cannot verify safety
+const testTag = generateTestTagName('test');
+await createImageTagInManager(page, testTag);
+await searchInput.fill('test');
+await page.click('.batch-action-select-all');
+await page.click('.batch-action-delete');  // If filtering failed, deletes everything!
+
+// ❌ WRONG: Not verifying selection before delete
+await searchInput.fill(searchKeyword);
+await page.click('.batch-action-select-all');
+// No verification of what was selected!
+await page.click('.batch-action-delete');
+```
+
+**Reference Implementations:**
+
+- Single delete: `e2e/9-tag-manager.spec.ts` (删除标签测试)
+- Batch delete with control group: `e2e/10-tag-manager-search-persist.spec.ts`
+
 ## Prohibited Behaviors
 
 - Do not write tests without understanding the code
