@@ -15,6 +15,7 @@ Handle ESC key to close nested UI contexts in the correct order using ContextSta
 // src/managers/ContextStackManager.ts
 export interface IContextStackEntry {
   id: string;
+  title?: string;
   state: {
     isBatchToolbarVisible: boolean;
   };
@@ -91,6 +92,7 @@ function openModal(): void {
 
   const entry: IContextStackEntry = {
     id: 'myModal',
+    title: 'uniqueTitle', // 用于区分同一 ID 的不同实例
     state: { isBatchToolbarVisible: false },
     close: () => {
       modal.classList.remove('active');
@@ -103,6 +105,16 @@ function openModal(): void {
   (modal as any).close = entry.close;
 }
 ```
+
+## Title 字段说明
+
+`title` 字段用于区分同一 `id` 的不同实例，实现复用：
+
+| 场景 | id | title | 用途 |
+|------|-----|-------|------|
+| 详情弹窗 A | `'detailModal'` | `'prompt-123'` | 显示提示词 123 的详情 |
+| 详情弹窗 B | `'detailModal'` | `'prompt-456'` | 显示提示词 456 的详情 |
+| 普通弹窗 | `'myModal'` | `undefined` | 无需区分实例 |
 
 ## How It Works
 
@@ -125,13 +137,16 @@ function openModal(): void {
 ```typescript
 class DetailModal {
   private isBatchMode = false;
+  private itemId: string = '';
 
-  open(): void {
+  open(itemId: string): void {
+    this.itemId = itemId;
     const modal = document.getElementById('detailModal');
     modal.classList.add('active');
 
     contextStack.push({
       id: 'detailModal',
+      title: itemId, // 使用 itemId 区分不同实例
       state: { isBatchToolbarVisible: this.isBatchMode },
       close: () => {
         // Clean up batch mode if active
@@ -149,12 +164,12 @@ class DetailModal {
   enterBatchMode(): void {
     this.isBatchMode = true;
     // Update stack state
-    const entry = contextStack.getStack().find(e => e.id === 'detailModal');
+    const entry = contextStack.getStack().find(e => e.id === 'detailModal' && e.title === this.itemId);
     if (entry) entry.state.isBatchToolbarVisible = true;
   }
 
   close(): void {
-    const entry = contextStack.getStack().find(e => e.id === 'detailModal');
+    const entry = contextStack.getStack().find(e => e.id === 'detailModal' && e.title === this.itemId);
     entry?.close();
   }
 }
