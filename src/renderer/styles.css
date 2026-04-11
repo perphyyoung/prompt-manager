@@ -4321,17 +4321,40 @@ body * {
 .tag-group-card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border-color);
   margin-bottom: 10px;
 }
 
+.tag-group-card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.tag-group-card-header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.tag-group-card-header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+}
+
 .tag-group-card-name {
   font-weight: 600;
   color: var(--text-primary);
   font-size: var(--font-size-base);
-  max-width: 120px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4346,24 +4369,16 @@ body * {
   font-weight: 600;
 }
 
-.tag-group-card-type {
-  font-size: 12px;
-  color: var(--text-secondary);
-  background: var(--bg-color);
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-}
-
 .tag-group-card-actions {
-  margin-left: auto;
   display: flex;
   gap: 4px;
 }
 
-/* 标签组卡片内容区 - 磁贴矩阵布局 */
+/* 标签组卡片内容区 - 紧凑网格布局 */
 .tag-group-card-content {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 8px;
   padding: 12px;
 }
@@ -4626,15 +4641,16 @@ body * {
 /* 紧凑药丸式标签项 */
 .tag-manager-item {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 8px 14px;
+  justify-content: flex-start;
+  padding: 8px 10px 8px 14px;
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 20px;
   transition: all 0.2s ease;
-  min-width: 80px;
+  min-width: 0;
+  max-width: 100%;
   z-index: 1;
 }
 
@@ -4682,10 +4698,12 @@ body * {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100px;
+  white-space: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
   transition: opacity 0.2s ease;
 }
 
