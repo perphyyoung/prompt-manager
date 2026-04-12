@@ -155,21 +155,6 @@ export class DelaySaveStrategy extends UploadStrategy {
   }
 
   /**
-   * 设为首张（重排文件顺序）
-   * @param index - 文件索引
-   * @returns 处理结果
-   */
-  setFirst(index: number): UploadResult {
-    if (index <= 0 || index >= this.selectedFilePaths.length) {
-      return { success: false, filePaths: [...this.selectedFilePaths] };
-    }
-
-    const item = this.selectedFilePaths.splice(index, 1)[0];
-    this.selectedFilePaths.unshift(item);
-    return { success: true, filePaths: [...this.selectedFilePaths] };
-  }
-
-  /**
    * 获取当前选择的文件路径
    * @returns 文件路径数组
    */
@@ -260,21 +245,6 @@ export class DirectSaveStrategy extends UploadStrategy {
       }
     }
     return { success: false, message: 'Invalid index' };
-  }
-
-  /**
-   * 设为首张（重排图像顺序）
-   * @param index - 图像索引
-   * @returns 处理结果
-   */
-  setFirst(index: number): UploadResult {
-    if (index <= 0 || index >= this.savedImages.length) {
-      return { success: false, images: [...this.savedImages] };
-    }
-
-    const item = this.savedImages.splice(index, 1)[0];
-    this.savedImages.unshift(item);
-    return { success: true, images: [...this.savedImages] };
   }
 
   /**

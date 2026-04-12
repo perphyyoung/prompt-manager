@@ -693,25 +693,33 @@ export class PromptDetailManager extends DetailViewManager {
   async handleSetFirst(index: number): Promise<void> {
     const app = this.app as unknown as IApp;
 
-    const result = this.uploadStrategy.setFirst(index) as IImageOperationResult;
-    if (result.success) {
-      // 更新缓存
-      app.currentImagesCache.clear();
-      result.images.forEach(img => {
-        app.currentImagesCache.set(String(img.id), img);
-      });
+    // 从缓存获取当前图像列表
+    const images = Array.from(app.currentImagesCache.values());
 
-      // 保存到数据库
-      const promptIdInput = document.getElementById('promptDetailId') as HTMLInputElement | null;
-      const promptId = promptIdInput?.value;
-      if (promptId) {
-        const updatedImages = Array.from(app.currentImagesCache.values());
-        await this.savePromptField('images', updatedImages);
-      }
-
-      // 重新渲染
-      await this.renderImagePreviews();
+    // 验证索引有效性
+    if (index <= 0 || index >= images.length) {
+      return;
     }
+
+    // 重排图像顺序：将指定索引的图像移到首位
+    const item = images.splice(index, 1)[0];
+    images.unshift(item);
+
+    // 更新缓存
+    app.currentImagesCache.clear();
+    images.forEach(img => {
+      app.currentImagesCache.set(String(img.id), img);
+    });
+
+    // 保存到数据库
+    const promptIdInput = document.getElementById('promptDetailId') as HTMLInputElement | null;
+    const promptId = promptIdInput?.value;
+    if (promptId) {
+      await this.savePromptField('images', images);
+    }
+
+    // 重新渲染
+    await this.renderImagePreviews();
   }
 
   /**

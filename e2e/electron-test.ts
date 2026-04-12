@@ -565,3 +565,102 @@ export async function ensureTagFilterCollapsed(page: any, filterSectionId: strin
     }, filterSectionId, { timeout: 5000 });
   }
 }
+
+// ========== 提示词详情测试辅助函数 ==========
+
+/**
+ * 获取当前显示的图像ID列表
+ * @param page - Playwright page 对象
+ * @returns 图像ID数组
+ */
+export async function getDisplayedImageIds(page: Page): Promise<string[]> {
+  return await page.evaluate(() => {
+    const items = document.querySelectorAll('#imagePreviewList .image-preview-item');
+    return Array.from(items).map(item => item.getAttribute('data-image-id') || '');
+  });
+}
+
+/**
+ * 右键点击图像并选择"设为首张"
+ * @param page - Playwright page 对象
+ * @param imageId - 图像ID
+ */
+export async function rightClickAndSetAsFirst(page: Page, imageId: string): Promise<void> {
+  // 右键点击图像
+  const imageItem = page.locator(`#imagePreviewList .image-preview-item[data-image-id="${imageId}"]`);
+  await imageItem.click({ button: 'right' });
+
+  // 等待右键菜单显示
+  await page.waitForSelector('.context-menu', { state: 'visible', timeout: 5000 });
+
+  // 点击"设为首张"菜单项
+  await page.click('.context-menu-item[data-item-id="setAsFirst"]');
+
+  // 等待菜单消失
+  await page.waitForSelector('.context-menu', { state: 'hidden', timeout: 5000 });
+}
+
+/**
+ * 获取所有提示词列表
+ * @param page - Playwright page 对象
+ * @returns 提示词数组
+ */
+export async function getAllPrompts(page: Page): Promise<IPrompt[]> {
+  return await page.evaluate(async () => {
+    return await window.electronAPI.getPrompts('updatedAt', 'desc');
+  });
+}
+
+/**
+ * 查找具有指定图像数量范围的提示词
+ * @param page - Playwright page 对象
+ * @param minCount - 最小图像数量（包含）
+ * @param maxCount - 最大图像数量（包含），-1表示无上限
+ * @returns 符合条件的提示词ID，找不到则返回null
+ */
+export async function findPromptWithImageCount(
+  page: Page,
+  minCount: number,
+  maxCount: number = -1
+): Promise<string | null> {
+  const prompts = await getAllPrompts(page);
+
+  for (const prompt of prompts) {
+    const imageCount = prompt.images?.length || 0;
+    const withinMin = imageCount >= minCount;
+    const withinMax = maxCount === -1 || imageCount <= maxCount;
+
+    if (withinMin && withinMax) {
+      return prompt.id;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * 打开指定提示词的详情界面
+ * @param page - Playwright page 对象
+ * @param promptId - 提示词ID
+ */
+export async function openPromptDetailById(page: Page, promptId: string): Promise<void> {
+  // 确保在提示词面板
+  await page.click('#promptManagerBtn');
+  await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
+
+  // 点击指定提示词卡片
+  const promptCard = page.locator(`.prompt-card[data-id="${promptId}"]`);
+  await promptCard.click();
+
+  // 等待详情模态框显示
+  await page.waitForSelector('#promptDetailModal', { state: 'visible', timeout: 5000 });
+
+  // 等待图像预览列表加载完成（显式等待，而非固定等待）
+  await page.waitForFunction(
+    () => {
+      const imageList = document.querySelector('#imagePreviewList');
+      return imageList !== null;
+    },
+    { timeout: 5000 }
+  );
+}

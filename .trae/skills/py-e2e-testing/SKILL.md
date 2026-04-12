@@ -41,23 +41,15 @@ These rules are **ABSOLUTE REQUIREMENTS** - no exceptions allowed:
    - This helps quickly identify which test is running in logs
    - Use `window.electronAPI.logInfo()` as specified in Rule 1
 
-   **Recommended: Create a helper function for reuse**
+   **Use ElectronTestHelper's logTestStart method**
 
    ```typescript
-   /**
-    * 记录测试开始日志
-    * @param page - Playwright page instance
-    * @param testName - 测试名称
-    */
-   async function logTestStart(page: any, testName: string): Promise<void> {
-     await page.evaluate((name: string) => {
-       window.electronAPI.logInfo('E2E-Test', `Starting test: ${name}`);
-     }, testName);
-   }
+   import { createElectronTest } from './electron-test.ts';
 
-   // Usage in test
-   test('should create new prompt', async ({ page }) => {
-     await logTestStart(page, 'Create new prompt');
+   const electronTest = createElectronTest();
+
+   test('should create new prompt', async () => {
+     await electronTest.logTestStart('Create new prompt');
      // ... test code
    });
    ```

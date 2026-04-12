@@ -55,6 +55,14 @@
 - `ensureTagFilterExpanded()` - 确保标签筛选区域展开
 - `ensureTagFilterCollapsed()` - 确保标签筛选区域收起
 
+## 7. 提示词详情测试辅助函数
+
+- `getDisplayedImageIds()` - 获取当前显示的图像ID列表
+- `rightClickAndSetAsFirst()` - 右键点击图像并选择"设为首张"
+- `getAllPrompts()` - 获取所有提示词列表
+- `findPromptWithImageCount()` - 查找具有指定图像数量范围的提示词
+- `openPromptDetailById()` - 打开指定提示词的详情界面
+
 **使用方法**：
 
 ```typescript

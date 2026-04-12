@@ -902,13 +902,14 @@ async function getPromptById(id: string): Promise<Prompt | null> {
 
   const prompt = mapRowToPrompt(row);
 
-  // 获取关联的图像
+  // 获取关联的图像，按sort_order排序以保持顺序
   const imagesSql = `
     SELECT i.id, i.file_name as fileName,
            i.relative_path as relativePath, i.thumbnail_path as thumbnailPath
     FROM images i
     JOIN prompt_image_relations pir ON i.id = pir.image_id
     WHERE pir.prompt_id = ? AND i.is_deleted = 0
+    ORDER BY pir.sort_order ASC
   `;
   const images = await all<ImageRef>(imagesSql, [id]);
   prompt.images = images || [];

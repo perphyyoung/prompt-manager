@@ -51,7 +51,6 @@ export class ImageContextMenuManager {
     this.menuElement.style.display = 'none';
     this.menuElement.innerHTML = `
       <div class="context-menu-item" data-item-id="setAsFirst">
-        <span class="context-menu-icon">⭐</span>
         <span class="context-menu-label">设为首张</span>
       </div>
     `;
