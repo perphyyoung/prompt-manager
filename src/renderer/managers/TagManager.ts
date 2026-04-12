@@ -592,6 +592,14 @@ export abstract class TagManager {
   private _safeRenameTag: ((tag: string) => void) | null = null;
 
   private async _doRenameTag(oldTag: string): Promise<void> {
+    await this._doRenameTagWithValues(oldTag, oldTag, null);
+  }
+
+  private async _doRenameTagWithValues(
+    oldTag: string,
+    defaultTagValue: string,
+    defaultGroupIdValue: number | null
+  ): Promise<void> {
     const groups = await this.service.getTagGroups();
     const allTags = await this.service.getTags();
 
@@ -603,13 +611,17 @@ export abstract class TagManager {
       }
     }
 
+    // 使用传入的默认值，如果没有则使用原始值
+    const initialTagValue = defaultTagValue !== oldTag ? defaultTagValue : oldTag;
+    const initialGroupId = defaultGroupIdValue !== null ? defaultGroupIdValue : currentGroupId;
+
     const result = await DialogService.showInputDialog({
       title: '重命名标签',
       placeholder: '请输入新标签名:',
-      defaultValue: oldTag,
+      defaultValue: initialTagValue,
       showGroupSelect: true,
       groups: groups,
-      defaultGroupId: currentGroupId
+      defaultGroupId: initialGroupId
     });
 
     if (!result || !result.value || !result.value.trim()) return;
@@ -630,6 +642,8 @@ export abstract class TagManager {
     // 如果标签名改变，检查是否已存在
     if (isTagNameChanged && allTags.includes(newTag)) {
       this.app.showToast('标签名已存在，请使用其他名称', 'error');
+      // 重新打开对话框，保留用户输入
+      await this._doRenameTagWithValues(oldTag, newTag, selectedGroupId);
       return;
     }
 
@@ -764,12 +778,15 @@ export abstract class TagManager {
 
     if (Constants.ALL_SPECIAL_TAGS.includes(trimmedTag)) {
       this.app.showToast(`"${trimmedTag}" 是系统保留标签，不能使用`, 'error');
+      // 重新打开对话框，保留用户输入
       await this.addTagInManagerWithDialog(trimmedTag, result.groupId);
       return;
     }
 
     if (allTags.includes(trimmedTag)) {
       this.app.showToast('标签已存在', 'error');
+      // 重新打开对话框，保留用户输入
+      await this.addTagInManagerWithDialog(trimmedTag, result.groupId);
       return;
     }
 
@@ -782,6 +799,8 @@ export abstract class TagManager {
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to create tag:', error);
       this.app.showToast('创建标签失败: ' + (error as Error).message, 'error');
+      // 重新打开对话框，保留用户输入
+      await this.addTagInManagerWithDialog(trimmedTag, result.groupId);
     }
   }
 
@@ -1151,6 +1170,19 @@ export abstract class TagManager {
       return;
     }
 
+    // 前端检查：标签组名称是否已存在
+    const groups = await this.service.getTagGroups();
+    const existingGroup = groups.find((g: any) => g.name === name);
+    if (existingGroup) {
+      // 如果是编辑模式，且找到的是当前正在编辑的组，则允许保存
+      const isEditingCurrentGroup = groupIdStr && String(existingGroup.id) === groupIdStr;
+      if (!isEditingCurrentGroup) {
+        this.app.showToast('该标签组名称已存在，请使用其他名称', 'error');
+        // 不关闭对话框，让用户修改
+        return;
+      }
+    }
+
     try {
       if (groupIdStr) {
         const groupId = parseInt(groupIdStr, 10);
@@ -1164,15 +1196,8 @@ export abstract class TagManager {
       this.app.showToast(groupIdStr ? '标签组已更新' : '标签组已创建', 'success');
     } catch (error: any) {
       window.electronAPI?.logError('TagManager.ts', 'Failed to save tag group:', error);
-      if (error.message?.includes('DUPLICATE_NAME')) {
-        this.closeGroupEdit();
-        await DialogService.showConfirmDialogByConfig(
-          { ...DialogConfig.TAG_GROUP_DUPLICATE_NAME, type: 'info' },
-          { name }
-        );
-      } else {
-        this.app.showToast('保存失败: ' + error.message, 'error');
-      }
+      this.app.showToast('保存失败，请稍后重试', 'error');
+      // 不关闭对话框，让用户修改后重试
     }
   }
 
