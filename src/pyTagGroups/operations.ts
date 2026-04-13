@@ -25,10 +25,12 @@ import { createDataAccess } from './dataAccess.ts';
 
 // ========== 缓存操作 ==========
 
-function getCacheKey(type: DataType, isGroup: boolean = false): string {
-  return isGroup
-    ? `${type}TagGroups`
-    : `${type}Tags`;
+function getTagsCacheKey(type: DataType): string {
+  return `${type}Tags`;
+}
+
+function getTagGroupsCacheKey(type: DataType): string {
+  return `${type}TagGroups`;
 }
 
 function getFromCache<T>(key: string): T | null {
@@ -51,6 +53,15 @@ function clearCache(key: string): void {
   }
 }
 
+/**
+ * 清除指定类型的标签缓存
+ * @param type - 数据类型
+ */
+export function clearTagsCache(type: DataType): void {
+  clearCache(getTagsCacheKey(type));
+  clearCache(getTagGroupsCacheKey(type));
+}
+
 // ========== 标签操作 ==========
 
 /**
@@ -60,7 +71,7 @@ function clearCache(key: string): void {
  * @throws 数据库操作失败时抛出异常
  */
 export async function getTags(type: DataType): Promise<TagName[]> {
-  const cacheKey = getCacheKey(type);
+  const cacheKey = getTagsCacheKey(type);
   const cached = getFromCache<TagName[]>(cacheKey);
   if (cached) {
     return cached;
@@ -122,8 +133,8 @@ export async function createTags(
 
   // 清除缓存
   if (result.created.length > 0 || result.errors.length > 0) {
-    clearCache(getCacheKey(type));
-    clearCache(getCacheKey(type, true));
+    clearCache(getTagsCacheKey(type));
+    clearCache(getTagGroupsCacheKey(type));
   }
 
   result.success = result.errors.length === 0;
@@ -155,8 +166,8 @@ export async function renameTag(
   const dataAccess = createDataAccess(type);
   await dataAccess.renameTag(oldName, trimmedNewName);
 
-  clearCache(getCacheKey(type));
-  clearCache(getCacheKey(type, true));
+  clearCache(getTagsCacheKey(type));
+  clearCache(getTagGroupsCacheKey(type));
 }
 
 /**
@@ -204,8 +215,8 @@ export async function deleteTags(
   }
 
   if (result.deleted > 0) {
-    clearCache(getCacheKey(type));
-    clearCache(getCacheKey(type, true));
+    clearCache(getTagsCacheKey(type));
+    clearCache(getTagGroupsCacheKey(type));
   }
 
   return result;
@@ -226,7 +237,7 @@ export async function assignTagToGroup(
   const dataAccess = createDataAccess(type);
   await dataAccess.assignTagToGroup(tag, groupId);
 
-  clearCache(getCacheKey(type, true));
+  clearCache(getTagGroupsCacheKey(type));
 }
 
 /**
@@ -253,7 +264,7 @@ export async function getItemsByTag(
  * @throws 数据库操作失败时抛出异常
  */
 export async function getTagGroups(type: DataType): Promise<TagGroup[]> {
-  const cacheKey = getCacheKey(type, true);
+  const cacheKey = getTagGroupsCacheKey(type);
   const cached = getFromCache<TagGroup[]>(cacheKey);
   if (cached) {
     return cached;
@@ -302,7 +313,7 @@ export async function createTagGroup(
   const dataAccess = createDataAccess(type);
   const result = await dataAccess.createTagGroup(trimmedName, sortOrder);
 
-  clearCache(getCacheKey(type, true));
+  clearCache(getTagGroupsCacheKey(type));
   return result;
 }
 
@@ -321,7 +332,7 @@ export async function updateTagGroup(
   const dataAccess = createDataAccess(type);
   await dataAccess.updateTagGroup(id, attrs);
 
-  clearCache(getCacheKey(type, true));
+  clearCache(getTagGroupsCacheKey(type));
 }
 
 /**
@@ -337,5 +348,5 @@ export async function deleteTagGroup(
   const dataAccess = createDataAccess(type);
   await dataAccess.deleteTagGroup(id);
 
-  clearCache(getCacheKey(type, true));
+  clearCache(getTagGroupsCacheKey(type));
 }

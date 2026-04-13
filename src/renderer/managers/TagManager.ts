@@ -6,7 +6,7 @@ import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { focusInput } from '../renderer_utils/index.ts';
 import { MultiSelectManager } from './MultiSelectManager.ts';
 import { immediateDebounce } from '../../utils/debounce.ts';
-import { PyTagGroups, TagOperationResult, TagGroup, TagExistsError, InvalidTagNameError, TagOperationError } from '../../pyTagGroups/index.ts';
+import { PyTagGroups, TagOperationResult, TagGroup, TagExistsError, InvalidTagNameError, TagOperationError, clearTagsCache } from '../../pyTagGroups/index.ts';
 import { groupTagsByGroup } from '../../pyTagGroups/utils.ts';
 
 /**
@@ -1342,6 +1342,10 @@ export abstract class TagManager {
     promptManager: TagManager | null,
     imageManager: TagManager | null
   ): Promise<void> {
+    // 清除标签缓存，确保获取最新的同步结果
+    clearTagsCache('prompt');
+    clearTagsCache('image');
+
     // 刷新标签列表
     await Promise.all([promptManager?.renderTagListFromSearchInput(), imageManager?.renderTagListFromSearchInput()]);
   }

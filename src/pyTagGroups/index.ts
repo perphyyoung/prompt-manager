@@ -75,6 +75,7 @@ export {
   createTagGroup,
   updateTagGroup,
   deleteTagGroup,
+  clearTagsCache,
 } from './operations.ts';
 
 // 数据访问层（高级使用，按需导出）

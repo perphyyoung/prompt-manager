@@ -40,6 +40,10 @@ npx tsx e2e/cleanup-test-tag-groups.ts
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 需要输出中文版本的可复制的详细版本和简洁版本的 git commit 信息
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
 
+## 20260413
+
+标签管理界面, 同步标签后, 新标签没有出现, 排查
+
 ## 20260412
 
 要删除的核心文件已经移动到 `managers\bak` , 用于功能对比;继续修改, 不需要中间层

@@ -64,6 +64,7 @@ This project is indexed by GitNexus as **prompt-manager**. Use the GitNexus MCP 
 ## Self-Check Before Finishing
 
 Before completing any code modification task, verify:
+
 1. `gitnexus_impact` was run for all modified symbols
 2. No HIGH/CRITICAL risk warnings were ignored
 3. `gitnexus_detect_changes()` confirms changes match expected scope
