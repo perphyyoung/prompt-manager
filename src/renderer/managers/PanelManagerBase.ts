@@ -1,16 +1,17 @@
 import { HtmlUtils } from '../../utils/index.ts';
-import { cacheManager, CacheManager } from '../../utils/CacheManager.ts';
+import { cacheManager } from '../../utils/CacheManager.ts';
 import { LRUCache } from '../../utils/LRUCache.ts';
 import { TagUI } from './TagUI.ts';
-import { TagService } from './TagService.ts';
-import { TopGroupManager } from './TopGroupManager.ts';
+import { TopGroupManager } from '../../pyTagGroups/TopGroupManager.ts';
 import { ITagWithGroup, ITagGroup, IImage, IPrompt } from '../../types/entities.ts';
 import { IEventStrategy, EventContext } from './Strategies/IEventStrategy.ts';
-import { MultiSelectManager, IToolbarConfig, IBatchOperationHandler } from './MultiSelectManager.ts';
-import { MultiSelectConfig, IBatchOperationConfig } from '../config/MultiSelectConfig.ts';
+import { MultiSelectManager, IBatchOperationHandler } from './MultiSelectManager.ts';
+import { MultiSelectConfig } from '../config/MultiSelectConfig.ts';
 import { DialogService } from '../services/index.ts';
 import type { IDialogTemplate } from '../../types/entities.ts';
 import { Constants, Events } from '../../constants.ts';
+import { PyTagGroups, TagOperationResult, TagGroup } from '../../pyTagGroups/index.ts';
+import { buildTagsWithGroupInfo } from '../../pyTagGroups/utils.ts';
 
 // 卡片大小限制常量
 const MIN_CARD_SIZE = 100;
@@ -337,7 +338,7 @@ export abstract class PanelManagerBase {
    * @abstract
    * @returns 项目类型
    */
-  getItemType(): string {
+  getItemType(): 'prompt' | 'image' {
     throw new Error('getItemType() must be implemented by subclass');
   }
 
@@ -909,8 +910,10 @@ export abstract class PanelManagerBase {
 
       // 获取所有标签和标签组
       const tags = await this.getAllTags();
-      const tagService = TagService.getInstance(this.getItemType());
-      const groups = await tagService.getTagGroups();
+      const pyTagGroups = PyTagGroups.getInstance(this.getItemType());
+      const groups = await pyTagGroups.getGroups();
+
+
 
       // 计算标签计数
       const tagCounts = this.calculateTagCounts(tags);
@@ -922,7 +925,7 @@ export abstract class PanelManagerBase {
       const specialTags = this.calculateSpecialTagCounts(visibleItems);
 
       // 构建标签与组的映射
-      const tagsWithGroup = tagService.buildTagsWithGroup(tags, groups);
+      const tagsWithGroup = buildTagsWithGroupInfo(tags, groups);
 
       // 对标签进行排序
       const sortedTagsWithGroup = this.sortTagsForFilter(tagsWithGroup, tagCounts);
@@ -1071,9 +1074,9 @@ export abstract class PanelManagerBase {
           const groupId = (item as HTMLElement).closest('.tag-filter-group')?.getAttribute('data-group-id');
 
           // 获取标签所属的组信息
-          const tagService = TagService.getInstance(this.getItemType());
-          const groups = await tagService.getTagGroups();
-          const group = groups.find((g: { id: number }) => String(g.id) === String(groupId));
+          const pyTagGroups = PyTagGroups.getInstance(this.getItemType());
+          const groups = await pyTagGroups.getGroups();
+          const group = groups.find((g: TagGroup) => String(g.id) === String(groupId));
 
           if ((e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey) {
             // Ctrl/Cmd + 点击：多选模式
@@ -1145,7 +1148,7 @@ export abstract class PanelManagerBase {
       tagCounts,
       selectedTags: this.selectedTags,
       dragType: this.getTagDragType(),
-      onTagClick: (tag: string, isTopGroupTag: boolean, _isSingleSelectGroup: boolean, event: MouseEvent) => {
+      onTagClick: (tag: string, isTopGroupTag: boolean, event: MouseEvent) => {
         const isCtrlPressed = event && (event.ctrlKey || event.metaKey);
 
         if (isCtrlPressed) {
@@ -1549,17 +1552,21 @@ export abstract class PanelManagerBase {
 
     // 确定类型
     const type = this.storagePrefix === 'prompt' ? 'prompt' : 'image';
-    const tagService = TagService.getInstance(type);
+    const pyTagGroups = PyTagGroups.getInstance(type);
 
-    // 验证并添加标签（自动从缓存获取标签组）
-    const result = await tagService.validateTagAddition(item.tags || [], tagName);
+    // 使用 create 创建标签（如果不存在）并验证
+    const creationResult = await pyTagGroups.create(tagName) as TagOperationResult;
 
-    if (!result.valid) {
-      throw new Error(result.error);
+    if (creationResult.errors.length > 0) {
+      throw new Error(creationResult.errors[0].error);
     }
 
-    // 更新项目标签
-    const newTags = result.newTags || [];
+    // 标签已存在或新创建，合并到项目
+    const currentTags = item.tags || [];
+    if (currentTags.includes(tagName)) {
+      throw new Error('该标签已存在');
+    }
+    const newTags = [...currentTags, tagName];
     await updateApi(item.id, { tags: newTags });
     item.tags = newTags;
 

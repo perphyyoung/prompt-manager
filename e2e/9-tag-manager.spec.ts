@@ -87,8 +87,8 @@ test.describe('标签管理功能', () => {
       const tagElement = page.locator(`.tag-manager-item[data-tag="${testTagName}"]`);
       await expect(tagElement).toBeVisible({ timeout: 5000 });
 
-      // Verify toast message
-      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已创建")`, { timeout: 5000 });
+      // Verify toast message - 匹配 "成功创建 X 个标签"
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("成功创建")`, { timeout: 5000 });
 
       await closeImageTagManager(page);
     });
@@ -170,7 +170,7 @@ test.describe('标签管理功能', () => {
       // Verify tag is removed
       await expect(tagItem).not.toBeVisible({ timeout: 5000 });
 
-      // Verify toast message
+      // Verify toast message - 匹配 "图像标签已删除" 或 "提示词标签已删除"
       await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已删除")`, { timeout: 5000 });
 
       await closeImageTagManager(page);
@@ -640,8 +640,8 @@ test.describe('标签管理功能', () => {
       const tagElement = page.locator(`.tag-manager-item[data-tag="${testTagName}"]`);
       await expect(tagElement).toBeVisible({ timeout: 5000 });
 
-      // Verify toast message
-      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已创建")`, { timeout: 5000 });
+      // Verify toast message - 匹配 "成功创建 X 个标签"
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("成功创建")`, { timeout: 5000 });
 
       await closePromptTagManager(page);
     });

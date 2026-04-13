@@ -35,8 +35,16 @@ composes 是 CSS Modules 语法, 当前项目怎样引入
 `SKILL.md` 按照规范来, 先测试失败的, 不要浪费时间在已经通过的, 最后再统一测试
 cnpm run test:e2e -- e2e/new-prompt-duplicate-prevention.spec.ts --grep ""
 cnpm run dist:win:nsis -> exe
+npx tsc --noEmit; npm run build
+npx tsx e2e/cleanup-test-tag-groups.ts
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 需要输出中文版本的可复制的详细版本和简洁版本的 git commit 信息
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
+
+## 20260412
+
+要删除的核心文件已经移动到 `managers\bak` , 用于功能对比;继续修改, 不需要中间层
+那就自己实现一个标签库, 标签的增删改查提供统一的入口, 不要像现在分散在各个地方; 结合 gitnexus 分析当前标签和标签组管理的核心功能(对话框和缓存不是标签的核心), 给出功能列表; 结合 refactor skill, 给出重构方案; 这是一个重大的重构计划, 务必详细设计
+标签管理界面, 新建标签的逻辑, 和 详情界面新建标签的逻辑不一致; 标签管理界面能否复用 详情界面批量建立标签的逻辑; 结合 refactor skill 给出方案 -> 统一实现为批量
 
 ## 20260411
 

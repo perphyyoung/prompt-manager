@@ -1,12 +1,13 @@
-import { TagService } from './TagService.ts';
 import { TagUI } from './TagUI.ts';
 import { Constants, ElementId } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
-import { ITagService, IDialogTemplate, IDialogContext } from '../../types/entities.ts';
+import { IDialogTemplate, IDialogContext } from '../../types/entities.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { focusInput } from '../renderer_utils/index.ts';
 import { MultiSelectManager } from './MultiSelectManager.ts';
 import { immediateDebounce } from '../../utils/debounce.ts';
+import { PyTagGroups, TagOperationResult, TagGroup, TagExistsError, InvalidTagNameError, TagOperationError } from '../../pyTagGroups/index.ts';
+import { groupTagsByGroup } from '../../pyTagGroups/utils.ts';
 
 /**
  * 批量操作配置接口
@@ -77,7 +78,7 @@ export abstract class TagManager {
   type: string;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
-  service: ITagService;
+  pyTagGroups: PyTagGroups;
   protected app: any;
   protected ui: TagUI;
   protected eventBus: any;
@@ -95,10 +96,10 @@ export abstract class TagManager {
   protected lastSearchTerm: string = '';
   protected isBatchModeActive: boolean = false;
 
-  constructor(type: string, app: any) {
+  constructor(type: 'prompt' | 'image', app: any) {
     this.type = type;
     this.app = app;
-    this.service = TagService.getInstance(type);
+    this.pyTagGroups = PyTagGroups.getInstance(type);
     this.ui = new TagUI(type);
     // eventBus 通过 app 访问
     this.selectedTagGroup = null;
@@ -194,12 +195,14 @@ export abstract class TagManager {
         this.lastSearchTerm = searchTerm;
       }
 
-      const tags = await this.service.getTags();
-      const groups = await this.service.getTagGroups();
+      const tags = await this.pyTagGroups.getAllTags();
+      const groups = await this.pyTagGroups.getGroups();
       const container = document.getElementById(this.containerId);
       const emptyState = document.getElementById(this.emptyStateId);
 
-      if (!container) return;
+      if (!container) {
+        return;
+      }
 
       const tagCounts = this.calculateTagCounts(tags);
 
@@ -223,7 +226,7 @@ export abstract class TagManager {
       if (emptyState) emptyState.style.display = 'none';
 
       const sortedTags = this.sortTags(filteredTags, tagCounts);
-      const { groupedTags, ungroupedTags } = this.service.groupTagsByGroup(sortedTags, groups);
+      const { grouped: groupedTags, ungrouped: ungroupedTags } = groupTagsByGroup(sortedTags, groups);
 
       const html = this.ui.generateRegistryHtml(groups, groupedTags, ungroupedTags, tagCounts, searchTerm, this.isBatchModeActive, this.multiSelectManager.selectedIds);
       container.innerHTML = html;
@@ -249,28 +252,13 @@ export abstract class TagManager {
   }
 
   /**
-   * 添加标签
-   */
-  async addTag(tag: string): Promise<void> {
-    try {
-      await this.service.addTag(tag);
-      this.app.showToast('标签已添加', 'success');
-      await this.renderTagList();
-      await this.syncPanelWithTagChanges();
-    } catch (error) {
-      window.electronAPI.logError('TagManager.ts', 'Failed to add tag:', error);
-      this.app.showToast('添加标签失败', 'error');
-    }
-  }
-
-  /**
    * 删除标签
    */
   private _isDeletingTag: boolean = false;
   async deleteTag(tag: string): Promise<void> {
     if (this._isDeletingTag) return;
     this._isDeletingTag = true;
-    
+
     try {
       const confirmed = await DialogService.showConfirmDialogByConfig(
         DialogConfig.DELETE_TAG,
@@ -278,9 +266,15 @@ export abstract class TagManager {
       );
       if (!confirmed) return;
 
-      await this.service.deleteTag(tag);
+      const result = await this.pyTagGroups.delete(tag);
       this.app.showToast(`${this.getTypeLabel()}标签已删除`);
       await this.refreshAfterTagChange();
+
+      // 显示部分失败的警告
+      if (result.errors.length > 0) {
+        window.electronAPI.logError('TagManager.ts', 'Some tags failed to delete:', result.errors);
+        this.app.showToast(`${result.errors.length} 个标签删除失败`, 'warning');
+      }
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to delete tag:', error);
       this.app.showToast('删除失败: ' + (error as Error).message, 'error');
@@ -294,12 +288,22 @@ export abstract class TagManager {
    */
   async updateTag(oldTag: string, newTag: string): Promise<void> {
     try {
-      await this.service.renameTag(oldTag, newTag);
+      await this.pyTagGroups.rename(oldTag, newTag);
       this.app.showToast('标签已更新', 'success');
       await this.refreshAfterTagChange();
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to update tag:', error);
-      this.app.showToast('更新标签失败: ' + (error as Error).message, 'error');
+
+      // 根据错误类型显示不同的提示
+      if (error instanceof TagExistsError) {
+        this.app.showToast(`标签 "${newTag}" 已存在，请选择其他名称`, 'warning');
+      } else if (error instanceof InvalidTagNameError) {
+        this.app.showToast('标签名无效: ' + (error as Error).message, 'warning');
+      } else if (error instanceof TagOperationError) {
+        this.app.showToast('操作失败: ' + (error as Error).message, 'error');
+      } else {
+        this.app.showToast('更新标签失败: ' + (error as Error).message, 'error');
+      }
     }
   }
 
@@ -307,7 +311,7 @@ export abstract class TagManager {
    * 获取所有标签
    */
   async getTags(): Promise<string[]> {
-    return await this.service.getTags();
+    return await this.pyTagGroups.getAllTags();
   }
 
   /**
@@ -368,7 +372,8 @@ export abstract class TagManager {
       if (groupEditBtn && !this._isOperationInProgress) {
         e.stopPropagation();
         this._isOperationInProgress = true;
-        const groupId = parseInt((groupEditBtn as HTMLElement).dataset.id || '0');
+        const datasetId = (groupEditBtn as HTMLElement).dataset.id;
+        const groupId = parseInt(datasetId || '0');
         this.openGroupEdit(groupId);
         this._isOperationInProgress = false;
         return;
@@ -600,8 +605,8 @@ export abstract class TagManager {
     defaultTagValue: string,
     defaultGroupIdValue: number | null
   ): Promise<void> {
-    const groups = await this.service.getTagGroups();
-    const allTags = await this.service.getTags();
+    const groups = await this.pyTagGroups.getGroups();
+    const allTags = await this.pyTagGroups.getAllTags();
 
     let currentGroupId: number | null = null;
     for (const group of groups) {
@@ -671,12 +676,22 @@ export abstract class TagManager {
    */
   private async renameTag(oldTag: string, newTag: string): Promise<void> {
     try {
-      await this.service.renameTag(oldTag, newTag);
+      await this.pyTagGroups.rename(oldTag, newTag);
       this.app.showToast('标签已重命名', 'success');
       await this.refreshAfterTagChange();
     } catch (error) {
       window.electronAPI.logError('TagManager.ts', 'Failed to rename tag:', error);
-      this.app.showToast('重命名标签失败: ' + (error as Error).message, 'error');
+
+      // 根据错误类型显示不同的提示
+      if (error instanceof TagExistsError) {
+        this.app.showToast(`标签 "${newTag}" 已存在，请选择其他名称`, 'warning');
+      } else if (error instanceof InvalidTagNameError) {
+        this.app.showToast('标签名无效: ' + (error as Error).message, 'warning');
+      } else if (error instanceof TagOperationError) {
+        this.app.showToast('操作失败: ' + (error as Error).message, 'error');
+      } else {
+        this.app.showToast('重命名标签失败: ' + (error as Error).message, 'error');
+      }
     }
   }
 
@@ -688,7 +703,7 @@ export abstract class TagManager {
     if (!confirmed) return;
 
     try {
-      await this.service.deleteGroup(groupId);
+      await this.pyTagGroups.deleteGroup(groupId);
       this.app.showToast('标签组已删除');
       await this.renderTagListFromSearchInput();
     } catch (error) {
@@ -702,7 +717,7 @@ export abstract class TagManager {
    */
   private async assignTagToGroup(tagName: string, groupId: number | null): Promise<void> {
     try {
-      await this.service.assignTagToGroup(tagName, groupId);
+      await this.pyTagGroups.assignToGroup(tagName, groupId);
       this.app.showToast('标签组已更新');
       await this.refreshAfterTagChange();
     } catch (error) {
@@ -737,14 +752,14 @@ export abstract class TagManager {
    */
   private async pinTagGroupToTop(groupId: number): Promise<void> {
     try {
-      const groups = await this.service.getTagGroups();
-      const sortedGroups = groups.sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      const groups = await this.pyTagGroups.getGroups();
+      const sortedGroups = groups.sort((a: TagGroup, b: TagGroup) => (a.sortOrder || 0) - (b.sortOrder || 0));
       const firstSortOrder = sortedGroups[0]?.sortOrder || 0;
       const newSortOrder = firstSortOrder - 1;
 
-      const group = groups.find((g: any) => String(g.id) === String(groupId));
+      const group = groups.find((g: TagGroup) => String(g.id) === String(groupId));
       if (group) {
-        await this.service.updateGroup(groupId, {
+        await this.pyTagGroups.updateGroup(groupId, {
           name: group.name,
           sortOrder: newSortOrder
         });
@@ -759,49 +774,52 @@ export abstract class TagManager {
 
   /**
    * 在标签管理界面新建标签
+   * 支持批量创建，用逗号或空格分隔多个标签
    */
   private async addTagInManagerWithDialog(defaultValue: string = '', defaultGroupId: number | null = null): Promise<void> {
-    const groups = await this.service.getTagGroups();
-    const allTags = await this.service.getTags();
+    const groups = await this.pyTagGroups.getGroups();
 
     const result = await DialogService.showInputDialog({
       title: `新建${this.getTypeLabel()}标签`,
-      placeholder: '请输入标签名称',
+      placeholder: '请输入标签名称（支持批量，用逗号或空格分隔）',
       defaultValue: defaultValue,
       showGroupSelect: true,
       groups: groups,
       defaultGroupId: defaultGroupId
     });
-    if (!result || !result.value || !result.value.trim()) return;
-
-    const trimmedTag = result.value.trim();
-
-    if (Constants.ALL_SPECIAL_TAGS.includes(trimmedTag)) {
-      this.app.showToast(`"${trimmedTag}" 是系统保留标签，不能使用`, 'error');
-      // 重新打开对话框，保留用户输入
-      await this.addTagInManagerWithDialog(trimmedTag, result.groupId);
+    if (!result?.value?.trim()) {
       return;
     }
 
-    if (allTags.includes(trimmedTag)) {
-      this.app.showToast('标签已存在', 'error');
-      // 重新打开对话框，保留用户输入
-      await this.addTagInManagerWithDialog(trimmedTag, result.groupId);
+    const creationResult = await this.pyTagGroups.create(result.value, {
+      defaultGroupId: result.groupId ?? null
+    }) as TagOperationResult;
+
+    if (creationResult.created.length > 0) {
+      this.app.showToast(`成功创建 ${creationResult.created.length} 个标签`, 'success');
+    }
+
+    if (creationResult.skipped.length > 0) {
+      this.app.showToast(`${creationResult.skipped.length} 个标签已存在`, 'warning');
+      // 如果所有标签都被跳过（已存在），重新打开对话框保留输入
+      if (creationResult.created.length === 0 && creationResult.errors.length === 0) {
+        const skippedTags = creationResult.skipped.join(', ');
+        await this.addTagInManagerWithDialog(skippedTags, result.groupId);
+        return;
+      }
+    }
+
+    if (creationResult.errors.length > 0) {
+      const errorMsg = creationResult.errors.map((e: { tag: string; error: string }) => e.error).join(', ');
+      this.app.showToast(errorMsg, 'error');
+      const failedTags = creationResult.errors.map((e: { tag: string; error: string }) => e.tag).join(', ');
+      await this.addTagInManagerWithDialog(failedTags, result.groupId);
       return;
     }
 
-    try {
-      await this.service.addTag(trimmedTag);
-      await this.service.assignTagToGroup(trimmedTag, result.groupId || null);
-      this.app.showToast('标签已创建', 'success');
-      await this.renderTagList();
-      await this.syncPanelWithTagChanges();
-    } catch (error) {
-      window.electronAPI.logError('TagManager.ts', 'Failed to create tag:', error);
-      this.app.showToast('创建标签失败: ' + (error as Error).message, 'error');
-      // 重新打开对话框，保留用户输入
-      await this.addTagInManagerWithDialog(trimmedTag, result.groupId);
-    }
+    // 强制刷新标签列表（清除缓存后重新获取）
+    await this.renderTagList();
+    await this.syncPanelWithTagChanges();
   }
 
   /**
@@ -972,10 +990,22 @@ export abstract class TagManager {
       confirmConfig: DialogConfig.BATCH_DELETE_TAGS,
       confirmData: (selectedIds) => ({ count: selectedIds.length }),
       execute: async (selectedIds) => {
-        const result = await this.service.deleteTags(selectedIds);
+        const result = await this.pyTagGroups.delete(selectedIds);
+
+        // 记录错误详情
+        if (result.errors.length > 0) {
+          window.electronAPI.logError('TagManager.ts', 'Some tags failed to delete:', result.errors);
+        }
+
         return result;
       },
-      successMessage: (result) => `已删除 ${result.deleted} 个标签`,
+      successMessage: (result) => {
+        const errorCount = result.errors.length;
+        if (errorCount > 0) {
+          return `已删除 ${result.deleted} 个标签，${errorCount} 个失败`;
+        }
+        return `已删除 ${result.deleted} 个标签`;
+      },
       errorMessage: '批量删除失败'
     });
   }
@@ -985,13 +1015,13 @@ export abstract class TagManager {
    * 使用通用批量操作模板方法
    */
   private async batchMoveToGroup(): Promise<void> {
-    const groups = await this.service.getTagGroups();
+    const groups = await this.pyTagGroups.getGroups();
     const options = [
       { value: '', label: '未分组' },
       ...groups.map(g => ({ value: String(g.id), label: g.name }))
     ];
 
-    await this.executeBatchOperation<string, { successCount: number }>({
+    await this.executeBatchOperation<string, { successCount: number; errorCount: number; errors: Array<{ tag: string; error: string }> }>({
       operationName: '移动',
       requiresInput: true,
       inputConfig: {
@@ -1002,19 +1032,27 @@ export abstract class TagManager {
       execute: async (selectedIds, groupId) => {
         const targetGroupId = !groupId || groupId === '' ? null : parseInt(groupId, 10);
         let successCount = 0;
+        const errors: Array<{ tag: string; error: string }> = [];
 
         for (const tag of selectedIds) {
           try {
-            await this.service.assignTagToGroup(tag, targetGroupId);
+            await this.pyTagGroups.assignToGroup(tag, targetGroupId);
             successCount++;
           } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : '未知错误';
             window.electronAPI.logError('TagManager.ts', `Failed to move tag ${tag}:`, error);
+            errors.push({ tag, error: errorMessage });
           }
         }
 
-        return { successCount };
+        return { successCount, errorCount: errors.length, errors };
       },
-      successMessage: (result) => `已移动 ${result.successCount} 个标签`,
+      successMessage: (result) => {
+        if (result.errorCount > 0) {
+          return `已移动 ${result.successCount} 个标签，${result.errorCount} 个失败`;
+        }
+        return `已移动 ${result.successCount} 个标签`;
+      },
       errorMessage: '批量移动失败'
     });
   }
@@ -1100,6 +1138,9 @@ export abstract class TagManager {
       modal.classList.remove('active');
     }
     contextStack.pop(this.elements.modalId as ElementId);
+
+    // 关闭管理器后刷新面板标签筛选器
+    this.syncPanelWithTagChanges();
   }
 
   /**
@@ -1129,8 +1170,8 @@ export abstract class TagManager {
     if (sortOrderInput) sortOrderInput.value = '0';
 
     if (groupId) {
-      const groups = await this.service.getTagGroups();
-      const group = groups.find((g: any) => String(g.id) === String(groupId));
+      const groups = await this.pyTagGroups.getGroups();
+      const group = groups.find((g: TagGroup) => String(g.id) === String(groupId));
       if (group && nameInput && sortOrderInput) {
         nameInput.value = group.name || '';
         sortOrderInput.value = String(group.sortOrder || '0');
@@ -1171,8 +1212,8 @@ export abstract class TagManager {
     }
 
     // 前端检查：标签组名称是否已存在
-    const groups = await this.service.getTagGroups();
-    const existingGroup = groups.find((g: any) => g.name === name);
+    const groups = await this.pyTagGroups.getGroups();
+    const existingGroup = groups.find((g: TagGroup) => g.name === name);
     if (existingGroup) {
       // 如果是编辑模式，且找到的是当前正在编辑的组，则允许保存
       const isEditingCurrentGroup = groupIdStr && String(existingGroup.id) === groupIdStr;
@@ -1186,9 +1227,9 @@ export abstract class TagManager {
     try {
       if (groupIdStr) {
         const groupId = parseInt(groupIdStr, 10);
-        await this.service.updateGroup(groupId, { name, sortOrder });
+        await this.pyTagGroups.updateGroup(groupId, { name, sortOrder });
       } else {
-        await this.service.createGroup(name, sortOrder);
+        await this.pyTagGroups.createGroup(name, sortOrder);
       }
       await this.renderTagListFromSearchInput();
 
@@ -1301,15 +1342,7 @@ export abstract class TagManager {
     promptManager: TagManager | null,
     imageManager: TagManager | null
   ): Promise<void> {
-    // 清除标签缓存并刷新
-    if (result.promptToImage.tags && result.promptToImage.tags.length > 0) {
-      imageManager?.service._clearCache(imageManager.service.cacheKey);
-      imageManager?.service._clearCache(imageManager.service.cacheKeyGroups);
-    }
-    if (result.imageToPrompt.tags && result.imageToPrompt.tags.length > 0) {
-      promptManager?.service._clearCache(promptManager.service.cacheKey);
-      promptManager?.service._clearCache(promptManager.service.cacheKeyGroups);
-    }
+    // 刷新标签列表
     await Promise.all([promptManager?.renderTagListFromSearchInput(), imageManager?.renderTagListFromSearchInput()]);
   }
 

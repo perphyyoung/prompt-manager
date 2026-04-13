@@ -14,12 +14,6 @@ export {
 // 标签自动完成服务
 export { TagAutocomplete } from './TagAutocomplete.ts';
 
-// 标签 API
-export { TagApi, type TagGroup, type TagInfo, type TagGroupUpdates } from './TagApi.ts';
-export { TagIpcService } from './TagIpcService.ts';
-export { ElectronTagApi } from './ElectronTagApi.ts';
-export { MockTagApi } from './MockTagApi.ts';
-
 // 数据清空 API
 export { DataClearApi } from './DataClearApi.ts';
 export { DataClearIpcService } from './DataClearIpcService.ts';

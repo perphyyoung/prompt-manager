@@ -1,17 +1,15 @@
+/**
+ * 图像标签管理器
+ * 管理图像标签的注册、分组、排序、CRUD 操作
+ */
 import { TagManager, ITagManagerElements } from './TagManager.ts';
 import { Constants, ElementId } from '../../constants.ts';
 
-/**
- * 图像标签管理器
- */
 export class ImageTagManager extends TagManager {
   constructor(app: any) {
     super('image', app);
   }
 
-  /**
-   * 获取图像标签管理器的元素配置
-   */
   protected getElementsConfig(): ITagManagerElements {
     return {
       modalId: Constants.Ids.IMAGE_TAG_MANAGER_MODAL,
@@ -33,16 +31,11 @@ export class ImageTagManager extends TagManager {
       groupEditTypeInputId: Constants.Ids.IMAGE_TAG_GROUP_EDIT_TYPE,
       groupEditIdInputId: Constants.Ids.IMAGE_TAG_GROUP_EDIT_ID,
       groupEditNameInputId: Constants.Ids.IMAGE_TAG_GROUP_EDIT_NAME,
-      groupEditSortOrderInputId: Constants.Ids.IMAGE_TAG_GROUP_EDIT_SORT_ORDER
+      groupEditSortOrderInputId: Constants.Ids.IMAGE_TAG_GROUP_EDIT_SORT_ORDER,
     };
   }
 
-  /**
-   * 获取图像面板管理器
-   */
   protected getPanelManager(): any {
     return this.app.imagePanelManager;
   }
 }
-
-export default ImageTagManager;

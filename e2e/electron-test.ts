@@ -239,11 +239,16 @@ export async function createImageTagGroup(page: any, groupName: string): Promise
   await page.click(`#${Constants.Ids.SAVE_IMAGE_TAG_GROUP_BTN}`);
 
   // Wait for group to be created via API
-  const groupId = await page.waitForFunction(async (name: string) => {
+  const groupIdHandle = await page.waitForFunction(async (name: string) => {
     const groups = await window.electronAPI.getImageTagGroups();
     const group = groups.find((g: { name: string; id: number }) => g.name === name);
     return group?.id;
   }, groupName, { timeout: 5000 });
+
+  const groupId = await groupIdHandle.jsonValue();
+
+  // Wait for modal to close
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL}`, { state: 'hidden', timeout: 5000 });
 
   return groupId;
 }
@@ -259,11 +264,16 @@ export async function createPromptTagGroup(page: any, groupName: string): Promis
   await page.click(`#${Constants.Ids.SAVE_PROMPT_TAG_GROUP_BTN}`);
 
   // Wait for group to be created via API
-  const groupId = await page.waitForFunction(async (name: string) => {
+  const groupIdHandle = await page.waitForFunction(async (name: string) => {
     const groups = await window.electronAPI.getPromptTagGroups();
     const group = groups.find((g: { name: string; id: number }) => g.name === name);
     return group?.id;
   }, groupName, { timeout: 5000 });
+
+  const groupId = await groupIdHandle.jsonValue();
+
+  // Wait for modal to close
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_MODAL}`, { state: 'hidden', timeout: 5000 });
 
   return groupId;
 }

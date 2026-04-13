@@ -1,4 +1,4 @@
-import { TagService } from '../managers/TagService.ts';
+import { PyTagGroups, TagOperationResult } from '../../pyTagGroups/index.ts';
 import { CacheManager } from '../../utils/CacheManager.ts';
 import { LRUCache } from '../../utils/LRUCache.ts';
 
@@ -52,49 +52,31 @@ interface BatchAddTagsOptions {
   itemName: string;
 }
 
-interface TagValidationResult {
-  valid: boolean;
-  error?: string;
-  newTags: string[];
-  hasViolation?: boolean;
-  violationGroup?: string;
-}
-
 async function processBatchAddTags(
   ids: string[],
   tagInput: string,
   options: BatchAddTagsOptions
 ): Promise<void> {
-  const { getItemById, updateItem, type, itemName } = options;
-  const tagService = TagService.getInstance(type);
+  const { getItemById, updateItem, type } = options;
+  const pyTagGroups = PyTagGroups.getInstance(type);
 
-  const tagNames = tagInput.split(',').map(t => t.trim()).filter(t => t);
-  const uniqueTags = [...new Set(tagNames)];
+  const creationResult = await pyTagGroups.create(tagInput) as TagOperationResult;
 
-  if (uniqueTags.length === 0) return;
+  if (creationResult.errors.length > 0) {
+    throw new Error(creationResult.errors.map((e: { error: string }) => e.error).join(', '));
+  }
+
+  const tagsToAdd = creationResult.created;
+  if (tagsToAdd.length === 0) return;
 
   for (const id of ids) {
     const item = await getItemById(id);
     if (!item) continue;
 
     const currentItemTags = item.tags || [];
-    const currentTagsCopy = [...currentItemTags];
+    const newTags = [...new Set([...currentItemTags, ...tagsToAdd])];
 
-    for (const tagName of uniqueTags) {
-      if (currentTagsCopy.includes(tagName)) continue;
-
-      const result = await tagService.validateTagAddition(currentTagsCopy, tagName) as TagValidationResult;
-
-      if (!result.valid) {
-        if (result.error === '该标签已存在') continue;
-        throw new Error(result.error);
-      }
-
-      const finalTags = result.newTags.filter((t: string) => t && t.trim());
-      await updateItem(id, { tags: finalTags });
-      currentTagsCopy.length = 0;
-      currentTagsCopy.push(...finalTags);
-    }
+    await updateItem(id, { tags: newTags });
   }
 }
 
@@ -140,17 +122,12 @@ export const MultiSelectConfig: Record<'prompt' | 'image', IMultiSelectConfig> =
         errorMsg: '批量添加标签失败'
       },
       favorite: {
-        api: 'updatePrompt',
-        event: 'promptFavoriteChanged',
-        processItems: async (ids: string[], _input: null, _api: string) => {
-          for (const id of ids) {
-            const prompt = await window.electronAPI.getPromptById(id);
-            if (!prompt) continue;
-            const newFavoriteStatus = (prompt as { isFavorite?: number }).isFavorite ? 0 : 1;
-            await window.electronAPI.updatePrompt(id, { isFavorite: newFavoriteStatus });
-          }
+        api: 'batchFavoritePrompts',
+        event: 'promptsFavorited',
+        processItems: async (ids: string[]) => {
+          await window.electronAPI.batchFavoritePrompts(ids);
         },
-        successMsg: (count: number) => `${count} 个提示词已切换收藏状态`,
+        successMsg: (count: number) => `${count} 个提示词已收藏`,
         errorMsg: '批量收藏失败'
       }
     }
@@ -175,7 +152,7 @@ export const MultiSelectConfig: Record<'prompt' | 'image', IMultiSelectConfig> =
         confirm: true,
         clearSelection: true,
         reloadData: true,
-        successMsg: (count: number) => `${count} 张图像已删除`,
+        successMsg: (count: number) => `${count} 个图像已删除`,
         errorMsg: '批量删除失败'
       },
       addTag: {
@@ -192,25 +169,18 @@ export const MultiSelectConfig: Record<'prompt' | 'image', IMultiSelectConfig> =
             itemName: '图像'
           });
         },
-        successMsg: (count: number) => `${count} 张图像已添加标签`,
+        successMsg: (count: number) => `${count} 个图像已添加标签`,
         errorMsg: '批量添加标签失败'
       },
       favorite: {
-        api: 'updateImage',
-        event: 'imageFavoriteChanged',
-        processItems: async (ids: string[], _input: null, _api: string) => {
-          for (const id of ids) {
-            const image = await window.electronAPI.getImageById(id);
-            if (!image) continue;
-            const newFavoriteStatus = (image as { isFavorite?: number }).isFavorite ? 0 : 1;
-            await window.electronAPI.updateImage(id, { isFavorite: newFavoriteStatus });
-          }
+        api: 'batchFavoriteImages',
+        event: 'imagesFavorited',
+        processItems: async (ids: string[]) => {
+          await window.electronAPI.batchFavoriteImages(ids);
         },
-        successMsg: (count: number) => `${count} 张图像已切换收藏状态`,
+        successMsg: (count: number) => `${count} 个图像已收藏`,
         errorMsg: '批量收藏失败'
       }
     }
   }
 };
-
-export default MultiSelectConfig;

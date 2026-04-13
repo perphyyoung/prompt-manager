@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { TopGroupManager } from '../src/renderer/managers/TopGroupManager';
-import { TagInfo, SpecialTagInfo } from '../src/renderer/types/TagTypes';
-import { TagUI } from '../src/renderer/managers/TagUI';
+import { TopGroupManager } from '../../src/pyTagGroups/TopGroupManager';
+import { TagInfo, SpecialTagInfo } from '../../src/pyTagGroups/types';
+import { TagUI } from '../../src/renderer/managers/TagUI';
 
 describe('TopGroupManager', () => {
   describe('sortTagsWithGroupPriority', () => {

@@ -692,6 +692,16 @@ ipcMain.handle('soft-delete-prompts', async (event, ids) => {
   }
 });
 
+// 批量切换提示词收藏状态
+ipcMain.handle('batch-favorite-prompts', async (event, ids) => {
+  try {
+    return await db.batchFavoritePrompts(ids);
+  } catch (error) {
+    logError('Main', 'Batch favorite prompts error:', error);
+    throw error;
+  }
+});
+
 // 检查标题是否已存在
 ipcMain.handle('is-title-exists', async (event, title, excludeId) => {
   return await db.isTitleExists(title, excludeId);
@@ -845,6 +855,16 @@ ipcMain.handle('soft-delete-images', async (event, ids) => {
   }
 });
 
+// 批量切换图像收藏状态
+ipcMain.handle('batch-favorite-images', async (event, ids) => {
+  try {
+    return await db.batchFavoriteImages(ids);
+  } catch (error) {
+    logError('Main', 'Batch favorite images error:', error);
+    throw error;
+  }
+});
+
 // 重启应用
 ipcMain.handle('relaunch-app', async (event, oldDataDir) => {
   await relaunchApp(oldDataDir);
@@ -906,6 +926,27 @@ ipcMain.handle('delete-prompt-tags', async (event, tags) => {
     return { ...result, tags: remainingTags };
   } catch (error) {
     logError('Main', 'Batch delete prompt tags error:', error);
+    throw error;
+  }
+});
+
+// 获取使用指定标签的提示词列表
+ipcMain.handle('get-prompts-by-tag', async (event, tagName) => {
+  try {
+    return await db.getPromptsByTag(tagName);
+  } catch (error) {
+    logError('Main', 'Get prompts by tag error:', error);
+    throw error;
+  }
+});
+
+// 从提示词中移除标签
+ipcMain.handle('remove-tag-from-prompt', async (event, promptId, tagName) => {
+  try {
+    await db.removeTagFromPrompt(promptId, tagName);
+    return true;
+  } catch (error) {
+    logError('Main', 'Remove tag from prompt error:', error);
     throw error;
   }
 });
@@ -1312,6 +1353,27 @@ ipcMain.handle('delete-image-tags', async (event, tags) => {
     return result;
   } catch (error) {
     logError('Main', 'Batch delete image tags error:', error);
+    throw error;
+  }
+});
+
+// 获取使用指定标签的图像列表
+ipcMain.handle('get-images-by-tag', async (event, tagName) => {
+  try {
+    return await db.getImagesByTag(tagName);
+  } catch (error) {
+    logError('Main', 'Get images by tag error:', error);
+    throw error;
+  }
+});
+
+// 从图像中移除标签
+ipcMain.handle('remove-tag-from-image', async (event, imageId, tagName) => {
+  try {
+    await db.removeTagFromImage(imageId, tagName);
+    return true;
+  } catch (error) {
+    logError('Main', 'Remove tag from image error:', error);
     throw error;
   }
 });

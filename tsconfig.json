@@ -25,5 +25,5 @@
     "types": ["node", "@playwright/test"]
   },
   "include": ["src/**/*", "tests/**/*", "e2e/**/*"],
-  "exclude": ["node_modules", "out", "dist"]
+  "exclude": ["node_modules", "out", "dist", "bak"]
 }

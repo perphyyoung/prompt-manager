@@ -7,7 +7,7 @@ import { Constants, Events } from '../constants.ts';
 import { DialogService, DialogConfig } from './services/index.ts';
 import {
   PromptPanelManager, ImagePanelManager,
-  PromptTagManager, ImageTagManager, TagManager, TrashManager, ImageFullscreenManager,
+  TagManager, PromptTagManager, ImageTagManager, TrashManager, ImageFullscreenManager,
   PromptDetailManager, ImageDetailManager,
   ToastManager, NavigationManager,
   SearchSortManager, ToolbarManager,

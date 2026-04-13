@@ -1,6 +1,6 @@
 import { Constants } from '../../constants.ts';
 import { HtmlUtils } from '../../utils/index.ts';
-import { TopGroupManager } from './TopGroupManager.ts';
+import { TopGroupManager } from '../../pyTagGroups/TopGroupManager.ts';
 import { ITagWithGroup, ITagGroup } from '../../types/entities.ts';
 
 interface TagCountInfo {
@@ -21,7 +21,7 @@ interface FilterHeaderOptions {
   sortedTagsWithGroup: ITagWithGroup[];
   tagCounts?: Record<string, number>;
   selectedTags: Set<string> | string[];
-  onTagClick?: (tag: string, isTopGroupTag: boolean, isSingleSelectGroup: boolean, event: MouseEvent) => void;
+  onTagClick?: (tag: string, isTopGroupTag: boolean, event: MouseEvent) => void;
   topGroupInfo?: unknown;
   dragType?: string | null;
 }
@@ -292,6 +292,7 @@ export class TagUI {
         const visibleTags = isTopGroup
           ? groupData.tags
           : groupData.tags.filter(({ count }) => count > 0);
+        
         if (visibleTags.length === 0) return;
 
         html += `<div class="tag-filter-group" data-group-id="${group.id}">`;
@@ -364,23 +365,17 @@ export class TagUI {
       Constants.ALL_SPECIAL_TAGS
     );
 
-    // 获取首位组信息用于返回
-    const groupMap = TopGroupManager.buildGroupMap(sortedTagsWithGroup, tagCounts);
-    const topGroup = TopGroupManager.getTopGroup(groupMap);
-
-    const currentTopGroupInfo = topGroupInfo || topGroup;
-
     // 渲染 HTML
     if (tagsToShow.length === 0) {
       headerTagsEl.innerHTML = '<span class="tag-filter-empty">暂无标签</span>';
     } else {
-      headerTagsEl.innerHTML = tagsToShow.map(({ tag, count, className, isSpecial, isTopGroup, isSingleSelect }) => {
+      headerTagsEl.innerHTML = tagsToShow.map(({ tag, count, className, isSpecial, isTopGroup }) => {
         // 特殊标签不允许拖拽，普通标签允许拖拽
         const draggableAttr = (!isSpecial && dragType) ? 'draggable="true"' : '';
         const dragTypeAttr = (!isSpecial && dragType) ? `data-drag-type="${dragType}"` : '';
 
         return `
-          <button class="tag-filter-item ${className || ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="${isSpecial}" data-is-top-group="${isTopGroup || false}" data-is-single-select="${isSingleSelect || false}" ${draggableAttr} ${dragTypeAttr}>
+          <button class="tag-filter-item ${className || ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="${isSpecial}" data-is-top-group="${isTopGroup || false}" ${draggableAttr} ${dragTypeAttr}>
             <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
             <span class="tag-badge">${count || 0}</span>
           </button>
@@ -402,9 +397,8 @@ export class TagUI {
           }
           const tag = (el as HTMLElement).dataset.tag;
           const isTopGroupTag = (el as HTMLElement).dataset.isTopGroup === 'true';
-          const isSingleSelectGroup = (el as HTMLElement).dataset.isSingleSelect === 'true';
           if (tag) {
-            onTagClick(tag, isTopGroupTag, isSingleSelectGroup, e as MouseEvent);
+            onTagClick(tag, isTopGroupTag, e as MouseEvent);
           }
         });
       });

@@ -73,6 +73,7 @@ interface IElectronAPI {
   updatePrompt: (id: string, updates: Partial<IPrompt>) => Promise<void>;
   softDeletePrompt: (id: string) => Promise<void>;
   softDeletePrompts: (ids: string[]) => Promise<{ success: boolean; deleted: number }>;
+  batchFavoritePrompts: (ids: string[]) => Promise<{ success: boolean; updated: number }>;
   searchPrompts: (query: string) => Promise<IPrompt[]>;
 
   // 剪贴板
@@ -122,6 +123,8 @@ interface IElectronAPI {
   deletePromptTag: (tag: string) => Promise<void>;
   deletePromptTags: (tags: string[]) => Promise<{ success: boolean; deleted: number; tags: string[] }>;
   renamePromptTag: (oldTag: string, newTag: string) => Promise<void>;
+  getPromptsByTag: (tagName: string) => Promise<string[]>;
+  removeTagFromPrompt: (promptId: string, tagName: string) => Promise<boolean>;
 
   // 图像标签组管理
   getImageTagGroups: () => Promise<ITagGroup[]>;
@@ -138,11 +141,14 @@ interface IElectronAPI {
   renameImageTag: (oldTag: string, newTag: string) => Promise<void>;
   deleteImageTag: (tag: string) => Promise<void>;
   deleteImageTags: (tags: string[]) => Promise<{ success: boolean; deleted: number }>;
+  getImagesByTag: (tagName: string) => Promise<string[]>;
+  removeTagFromImage: (imageId: string, tagName: string) => Promise<boolean>;
 
   // 图像回收站
   getImageTrash: () => Promise<Array<IImage & { deletedAt: string; type: string }>>;
   softDeleteImage: (id: string) => Promise<void>;
   softDeleteImages: (ids: string[]) => Promise<{ success: boolean; deleted: number }>;
+  batchFavoriteImages: (ids: string[]) => Promise<{ success: boolean; updated: number }>;
   restoreImageFromTrash: (id: string) => Promise<void>;
   restoreAllImages: () => Promise<void>;
   permanentDeleteImage: (id: string) => Promise<boolean>;
@@ -222,6 +228,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updatePrompt: (id: string, updates: Partial<IPrompt>) => ipcRenderer.invoke('update-prompt', id, updates),
   softDeletePrompt: (id: string) => ipcRenderer.invoke('soft-delete-prompt', id),
   softDeletePrompts: (ids: string[]) => ipcRenderer.invoke('soft-delete-prompts', ids),
+  batchFavoritePrompts: (ids: string[]) => ipcRenderer.invoke('batch-favorite-prompts', ids),
   searchPrompts: (query: string) => ipcRenderer.invoke('search-prompts', query),
 
   // ==================== 剪贴板 ====================
@@ -271,6 +278,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deletePromptTag: (tag: string) => ipcRenderer.invoke('delete-prompt-tag', tag),
   deletePromptTags: (tags: string[]) => ipcRenderer.invoke('delete-prompt-tags', tags),
   renamePromptTag: (oldTag: string, newTag: string) => ipcRenderer.invoke('rename-prompt-tag', oldTag, newTag),
+  getPromptsByTag: (tagName: string) => ipcRenderer.invoke('get-prompts-by-tag', tagName),
+  removeTagFromPrompt: (promptId: string, tagName: string) => ipcRenderer.invoke('remove-tag-from-prompt', promptId, tagName),
 
   // 图像标签组管理
   getImageTagGroups: () => ipcRenderer.invoke('get-image-tag-groups'),
@@ -287,11 +296,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   renameImageTag: (oldTag: string, newTag: string) => ipcRenderer.invoke('rename-image-tag', oldTag, newTag),
   deleteImageTag: (tag: string) => ipcRenderer.invoke('delete-image-tag', tag),
   deleteImageTags: (tags: string[]) => ipcRenderer.invoke('delete-image-tags', tags),
+  getImagesByTag: (tagName: string) => ipcRenderer.invoke('get-images-by-tag', tagName),
+  removeTagFromImage: (imageId: string, tagName: string) => ipcRenderer.invoke('remove-tag-from-image', imageId, tagName),
 
   // ==================== 图像回收站 ====================
   getImageTrash: () => ipcRenderer.invoke('get-image-trash'),
   softDeleteImage: (id: string) => ipcRenderer.invoke('soft-delete-image', id),
   softDeleteImages: (ids: string[]) => ipcRenderer.invoke('soft-delete-images', ids),
+  batchFavoriteImages: (ids: string[]) => ipcRenderer.invoke('batch-favorite-images', ids),
   restoreImageFromTrash: (id: string) => ipcRenderer.invoke('restore-image-from-trash', id),
   restoreAllImages: () => ipcRenderer.invoke('restore-all-images'),
   permanentDeleteImage: (id: string) => ipcRenderer.invoke('permanent-delete-image', id),

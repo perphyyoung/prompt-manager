@@ -5,16 +5,11 @@ export { PanelManagerBase } from './PanelManagerBase.ts';
 export { PromptPanelManager } from './PromptPanelManager.ts';
 export { ImagePanelManager } from './ImagePanelManager.ts';
 
-// 标签系统重构后的导出
-export { TagService } from './TagService.ts';
+// 标签系统使用 PyTagGroups
 export { TagManager, type ITagManagerElements } from './TagManager.ts';
 export { PromptTagManager } from './PromptTagManager.ts';
 export { ImageTagManager } from './ImageTagManager.ts';
 export { TagUI } from './TagUI.ts';
-
-// 保留编辑界面专用标签管理器
-export { SimpleTagManager } from './SimpleTagManager.ts';
-export { SimpleTagManagerFactory } from './SimpleTagManagerFactory.ts';
 
 export { TrashManager } from './TrashManager.ts';
 

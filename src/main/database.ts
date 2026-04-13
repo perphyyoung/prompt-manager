@@ -1584,6 +1584,82 @@ async function addPromptTags(promptId: string, tagNames: string[]): Promise<void
   }
 }
 
+/**
+ * 获取使用指定标签的提示词列表
+ * @param tagName - 标签名称
+ * @returns 提示词ID列表
+ */
+async function getPromptsByTag(tagName: string): Promise<string[]> {
+  const sql = `
+    SELECT DISTINCT p.id
+    FROM prompts p
+    JOIN prompt_tag_relations ptr ON p.id = ptr.prompt_id
+    JOIN prompt_tags pt ON ptr.tag_id = pt.id
+    WHERE pt.name = ? AND p.is_deleted = 0
+  `;
+
+  const rows = await all<{ id: string }>(sql, [tagName]);
+  return rows.map(row => row.id);
+}
+
+/**
+ * 获取使用指定标签的图像列表
+ * @param tagName - 标签名称
+ * @returns 图像ID列表
+ */
+async function getImagesByTag(tagName: string): Promise<string[]> {
+  const sql = `
+    SELECT DISTINCT i.id
+    FROM images i
+    JOIN image_tag_relations itr ON i.id = itr.image_id
+    JOIN image_tags it ON itr.tag_id = it.id
+    WHERE it.name = ? AND i.is_deleted = 0
+  `;
+
+  const rows = await all<{ id: string }>(sql, [tagName]);
+  return rows.map(row => row.id);
+}
+
+/**
+ * 从提示词中移除标签
+ * @param promptId - 提示词ID
+ * @param tagName - 标签名称
+ */
+async function removeTagFromPrompt(promptId: string, tagName: string): Promise<void> {
+  // 获取标签ID
+  const tagRow = await get<{ id: number }>(
+    'SELECT id FROM prompt_tags WHERE name = ?',
+    [tagName]
+  );
+
+  if (tagRow) {
+    await run(
+      'DELETE FROM prompt_tag_relations WHERE prompt_id = ? AND tag_id = ?',
+      [promptId, tagRow.id]
+    );
+  }
+}
+
+/**
+ * 从图像中移除标签
+ * @param imageId - 图像ID
+ * @param tagName - 标签名称
+ */
+async function removeTagFromImage(imageId: string, tagName: string): Promise<void> {
+  // 获取标签ID
+  const tagRow = await get<{ id: number }>(
+    'SELECT id FROM image_tags WHERE name = ?',
+    [tagName]
+  );
+
+  if (tagRow) {
+    await run(
+      'DELETE FROM image_tag_relations WHERE image_id = ? AND tag_id = ?',
+      [imageId, tagRow.id]
+    );
+  }
+}
+
 // ==================== 图像操作 ====================
 
 /**
@@ -2768,6 +2844,74 @@ async function clearAllData(dataDir: string): Promise<string> {
   }
 }
 
+/**
+ * 批量切换提示词收藏状态
+ * 每个提示词的收藏状态会被切换（收藏->取消收藏，未收藏->收藏）
+ * @param ids - 提示词ID数组
+ * @returns 更新结果
+ */
+async function batchFavoritePrompts(ids: string[]): Promise<{ success: boolean; updated: number }> {
+  if (ids.length === 0) return { success: true, updated: 0 };
+
+  const now = localTime();
+
+  return runInTransaction(async () => {
+    // 先获取当前收藏状态
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = await all<{ id: string; is_favorite: number }>(
+      `SELECT id, is_favorite FROM prompts WHERE id IN (${placeholders})`,
+      [...ids]
+    );
+
+    // 批量更新：切换收藏状态
+    let updatedCount = 0;
+    for (const row of rows) {
+      const newStatus = row.is_favorite ? 0 : 1;
+      const result = await run(
+        'UPDATE prompts SET is_favorite = ?, updated_at = ? WHERE id = ?',
+        [newStatus, now, row.id]
+      );
+      updatedCount += result.changes || 0;
+    }
+
+    return { success: true, updated: updatedCount };
+  });
+}
+
+/**
+ * 批量切换图像收藏状态
+ * 每个图像的收藏状态会被切换（收藏->取消收藏，未收藏->收藏）
+ * @param ids - 图像ID数组
+ * @returns 更新结果
+ */
+async function batchFavoriteImages(ids: string[]): Promise<{ success: boolean; updated: number }> {
+  if (ids.length === 0) return { success: true, updated: 0 };
+
+  const now = localTime();
+
+  return runInTransaction(async () => {
+    // 先获取当前收藏状态
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = await all<{ id: string; is_favorite: number }>(
+      `SELECT id, is_favorite FROM images WHERE id IN (${placeholders})`,
+      [...ids]
+    );
+
+    // 批量更新：切换收藏状态
+    let updatedCount = 0;
+    for (const row of rows) {
+      const newStatus = row.is_favorite ? 0 : 1;
+      const result = await run(
+        'UPDATE images SET is_favorite = ?, updated_at = ? WHERE id = ?',
+        [newStatus, now, row.id]
+      );
+      updatedCount += result.changes || 0;
+    }
+
+    return { success: true, updated: updatedCount };
+  });
+}
+
 export {
   initDatabase,
   closeDatabase,
@@ -2801,6 +2945,8 @@ export {
   deletePromptTag,
   deletePromptTags,
   updatePromptTagGroupByTagName,
+  getPromptsByTag,
+  removeTagFromPrompt,
   // 通用标签操作
   renameTag,
   checkTagGroupNameDuplicate,
@@ -2837,6 +2983,8 @@ export {
   deleteImageTag,
   deleteImageTags,
   assignImageTagToBelongGroup,
+  getImagesByTag,
+  removeTagFromImage,
   // 共享标签
   getAllTags,
   // 标签同步
@@ -2847,5 +2995,8 @@ export {
   // 统计
   getStatistics,
   // 数据库维护
-  optimizeDatabase
+  optimizeDatabase,
+  // 批量收藏
+  batchFavoritePrompts,
+  batchFavoriteImages
 };

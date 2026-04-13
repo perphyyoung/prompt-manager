@@ -7,10 +7,10 @@ import { validateTitle, cacheManager } from '../../utils/index.ts';
 import { SaveManager, PromptSaveStrategy } from '../renderer_utils/index.ts';
 import { Constants, Events } from '../../constants.ts';
 import { DirectSaveStrategy, TagAutocomplete } from '../services/index.ts';
-import { SimpleTagManagerFactory } from './SimpleTagManagerFactory.ts';
 import { ImageContextMenuManager } from './ImageContextMenuManager.ts';
 import { IPrompt, IImage } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
+import { PyTagGroups, TagOperationResult, TagDeleteResult, TagExistsError, InvalidTagNameError, TagOperationError } from '../../pyTagGroups/index.ts';
 
 // 扩展 IPrompt 接口以包含更多字段
 interface IPromptExtended extends IPrompt {
@@ -74,6 +74,8 @@ export class PromptDetailManager extends DetailViewManager {
   private returnToManager: DetailViewManager | null = null;
   private returnToItem: unknown = null;
   private imageContextMenuManager: ImageContextMenuManager | null = null;
+  private pyTagGroups: PyTagGroups;
+  private currentTags: string[] = [];
 
   /**
    * @param options - 配置选项
@@ -86,6 +88,7 @@ export class PromptDetailManager extends DetailViewManager {
     });
 
     this.tagManager = options.tagRegistry;
+    this.pyTagGroups = PyTagGroups.getInstance('prompt');
 
     // 图像上传策略（直接保存，适合频繁操作）
     this.uploadStrategy = new DirectSaveStrategy(this.app as unknown as { eventBus: { emit: (event: string, data?: unknown) => void }; [key: string]: unknown });
@@ -223,13 +226,69 @@ export class PromptDetailManager extends DetailViewManager {
    */
   private initTagManager(prompt: IPromptExtended): void {
     const app = this.app as unknown as IApp;
+    this.currentTags = [...(prompt.tags || [])];
 
-    // 使用工厂创建新的标签管理器
-    const simpleTagManager = SimpleTagManagerFactory.createForPrompt(
-      prompt,
-      app.promptPanelManager,
-      (msg: string, type: string) => app.showToast(msg, type)
-    );
+    const simpleTagManager: ISimpleTagManager = {
+      getTags: () => this.currentTags,
+      setTags: (tags: string[]) => {
+        this.currentTags = tags;
+      },
+      removeTag: async (tagName: string) => {
+        try {
+          const result = await this.pyTagGroups.delete(tagName) as TagDeleteResult;
+          if (result.errors.length === 0) {
+            this.currentTags = this.currentTags.filter(t => t !== tagName);
+            app.eventBus.emit(Events.PROMPTS_CHANGED);
+          }
+          return result.errors.length === 0;
+        } catch (error) {
+          app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+          return false;
+        }
+      },
+      removeTags: async (tagNames: string[]) => {
+        try {
+          const result = await this.pyTagGroups.delete(tagNames) as TagDeleteResult;
+          if (result.errors.length === 0) {
+            for (const tagName of tagNames) {
+              this.currentTags = this.currentTags.filter(t => t !== tagName);
+            }
+            app.eventBus.emit(Events.PROMPTS_CHANGED);
+          }
+          return { success: result.errors.length === 0, deleted: result.deleted };
+        } catch (error) {
+          app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+          return { success: false, deleted: 0 };
+        }
+      },
+      addTags: async (tagNames: string[]) => {
+        try {
+          const result = await this.pyTagGroups.create(tagNames) as TagOperationResult;
+          if (result.success) {
+            for (const tagName of result.created || []) {
+              if (!this.currentTags.includes(tagName)) {
+                this.currentTags.push(tagName);
+              }
+            }
+            app.eventBus.emit(Events.PROMPTS_CHANGED);
+          }
+          return { success: result.success, added: result.created?.length || 0 };
+        } catch (error) {
+          // 根据错误类型显示不同的提示
+          if (error instanceof TagExistsError) {
+            app.showToast('标签已存在', 'warning');
+          } else if (error instanceof InvalidTagNameError) {
+            app.showToast('标签名无效: ' + (error as Error).message, 'warning');
+          } else if (error instanceof TagOperationError) {
+            app.showToast('操作失败: ' + (error as Error).message, 'error');
+          } else {
+            app.showToast(`添加标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+          }
+          return { success: false, added: 0 };
+        }
+      },
+      onRender: null
+    };
 
     // 使用基类的批量标签管理功能
     this.initBatchTagManager(
@@ -239,11 +298,11 @@ export class PromptDetailManager extends DetailViewManager {
         inputAreaId: 'promptDetailTagInputArea',
         batchBtnId: 'promptDetailBatchTagBtn'
       },
-      simpleTagManager as ISimpleTagManager
+      simpleTagManager
     );
 
-    // 设置初始标签
-    simpleTagManager.setTags(prompt.tags || []);
+    // 触发渲染
+    simpleTagManager.onRender?.();
 
     // 绑定标签输入事件
     this.bindTagInputEvents();
@@ -265,32 +324,64 @@ export class PromptDetailManager extends DetailViewManager {
     this.tagAutocomplete = new TagAutocomplete({
       inputId: 'promptDetailTagsInput',
       dropdownId: Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE,
-      getTags: () => window.electronAPI.getAllTags(),
       onSelect: async (tagName: string) => {
         try {
-          await this.simpleTagManager?.addTag?.(tagName);
-          return true;
+          const result = await this.pyTagGroups.create([tagName]) as TagOperationResult;
+          if (result.success) {
+            for (const tag of result.created || []) {
+              if (!this.currentTags.includes(tag)) {
+                this.currentTags.push(tag);
+              }
+            }
+            app.eventBus.emit(Events.PROMPTS_CHANGED);
+          }
+          return result.success;
         } catch (error) {
           window.electronAPI.logError('PromptDetailManager.ts', 'Failed to add tag:', error);
-          app.showToast(error instanceof Error ? error.message : '添加标签失败', 'error');
+
+          // 根据错误类型显示不同的提示
+          if (error instanceof TagExistsError) {
+            app.showToast('标签已存在', 'warning');
+          } else if (error instanceof InvalidTagNameError) {
+            app.showToast('标签名无效: ' + (error as Error).message, 'warning');
+          } else if (error instanceof TagOperationError) {
+            app.showToast('操作失败: ' + (error as Error).message, 'error');
+          } else {
+            app.showToast(error instanceof Error ? error.message : '添加标签失败', 'error');
+          }
           return false;
         }
       },
       onBatchAdd: async (tagNames: string[]) => {
         try {
-          if (tagNames.length === 1) {
-            await this.simpleTagManager?.addTag?.(tagNames[0]);
-          } else {
-            await this.simpleTagManager?.addTags?.(tagNames);
+          const result = await this.pyTagGroups.create(tagNames) as TagOperationResult;
+          if (result.success) {
+            for (const tag of result.created || []) {
+              if (!this.currentTags.includes(tag)) {
+                this.currentTags.push(tag);
+              }
+            }
+            app.eventBus.emit(Events.PROMPTS_CHANGED);
           }
-          return true;
+          return result.success;
         } catch (error) {
           window.electronAPI.logError('PromptDetailManager.ts', 'Failed to add tags:', error);
-          app.showToast(error instanceof Error ? error.message : '添加标签失败', 'error');
+
+          // 根据错误类型显示不同的提示
+          if (error instanceof TagExistsError) {
+            app.showToast('标签已存在', 'warning');
+          } else if (error instanceof InvalidTagNameError) {
+            app.showToast('标签名无效: ' + (error as Error).message, 'warning');
+          } else if (error instanceof TagOperationError) {
+            app.showToast('操作失败: ' + (error as Error).message, 'error');
+          } else {
+            app.showToast(error instanceof Error ? error.message : '添加标签失败', 'error');
+          }
           return false;
         }
       },
-      containerSelector: '.prompt-tag-input-area'
+      containerSelector: '.prompt-tag-input-area',
+      type: 'prompt'
     });
 
     this.tagAutocomplete.init();
@@ -480,6 +571,9 @@ export class PromptDetailManager extends DetailViewManager {
   async updateView(prompt: IPromptExtended): Promise<void> {
     // 更新当前提示词
     this.currentItem = prompt as unknown as { id: string | number; [key: string]: unknown };
+
+    // 更新当前标签
+    this.currentTags = [...(prompt.tags || [])];
 
     // 填充表单数据
     this.fillFormData(prompt);

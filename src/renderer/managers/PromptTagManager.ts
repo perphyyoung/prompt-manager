@@ -1,17 +1,15 @@
+/**
+ * 提示词标签管理器
+ * 管理提示词标签的注册、分组、排序、CRUD 操作
+ */
 import { TagManager, ITagManagerElements } from './TagManager.ts';
 import { Constants, ElementId } from '../../constants.ts';
 
-/**
- * 提示词标签管理器
- */
 export class PromptTagManager extends TagManager {
   constructor(app: any) {
     super('prompt', app);
   }
 
-  /**
-   * 获取提示词标签管理器的元素配置
-   */
   protected getElementsConfig(): ITagManagerElements {
     return {
       modalId: Constants.Ids.PROMPT_TAG_MANAGER_MODAL,
@@ -33,16 +31,11 @@ export class PromptTagManager extends TagManager {
       groupEditTypeInputId: Constants.Ids.PROMPT_TAG_GROUP_EDIT_TYPE,
       groupEditIdInputId: Constants.Ids.PROMPT_TAG_GROUP_EDIT_ID,
       groupEditNameInputId: Constants.Ids.PROMPT_TAG_GROUP_EDIT_NAME,
-      groupEditSortOrderInputId: Constants.Ids.PROMPT_TAG_GROUP_EDIT_SORT_ORDER
+      groupEditSortOrderInputId: Constants.Ids.PROMPT_TAG_GROUP_EDIT_SORT_ORDER,
     };
   }
 
-  /**
-   * 获取提示词面板管理器
-   */
   protected getPanelManager(): any {
     return this.app.promptPanelManager;
   }
 }
-
-export default PromptTagManager;

@@ -5,11 +5,11 @@
 import { DetailViewManager, ISimpleTagManager } from './DetailViewManager.ts';
 import { HtmlUtils, validateFileName, isSameId, cacheManager } from '../../utils/index.ts';
 import { SaveManager, ImageSaveStrategy } from '../renderer_utils/index.ts';
-import { SimpleTagManagerFactory } from './SimpleTagManagerFactory.ts';
 import { Constants, Events } from '../../constants.ts';
 import { TagAutocomplete, DialogService, DialogConfig } from '../services/index.ts';
 import { IImage, IPrompt } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
+import { PyTagGroups, TagOperationResult, TagDeleteResult } from '../../pyTagGroups/index.ts';
 
 // 扩展 IImage 接口
 interface IImageExtended extends IImage {
@@ -75,6 +75,8 @@ export class ImageDetailManager extends DetailViewManager {
   private returnToOptions: IOpenOptions = {};
   private currentDetailPromptId: string | null = null;
   private currentDetailPromptRefs: IPrompt[] = [];
+  private pyTagGroups: PyTagGroups;
+  private currentTags: string[] = [];
 
   constructor(options: IImageDetailManagerOptions) {
     super({
@@ -84,6 +86,7 @@ export class ImageDetailManager extends DetailViewManager {
     });
 
     this.tagManager = options.tagRegistry;
+    this.pyTagGroups = PyTagGroups.getInstance('image');
   }
 
   /**
@@ -260,13 +263,60 @@ export class ImageDetailManager extends DetailViewManager {
    */
   private initTagManager(image: IImageExtended): void {
     const app = this.app as unknown as IApp;
+    this.currentTags = [...(image.tags || [])];
 
-    // 使用工厂创建新的标签管理器
-    const simpleTagManager = SimpleTagManagerFactory.createForImage(
-      image as { id: string | number; tags?: string[]; [key: string]: unknown },
-      app.imagePanelManager,
-      (msg: string, type: string) => app.showToast(msg, type)
-    );
+    const simpleTagManager: ISimpleTagManager = {
+      getTags: () => this.currentTags,
+      setTags: (tags: string[]) => {
+        this.currentTags = tags;
+      },
+      removeTag: async (tagName: string) => {
+        try {
+          const result = await this.pyTagGroups.delete(tagName) as TagDeleteResult;
+          if (result.errors.length === 0) {
+            this.currentTags = this.currentTags.filter(t => t !== tagName);
+            app.eventBus.emit(Events.IMAGES_CHANGED);
+          }
+          return result.errors.length === 0;
+        } catch (error) {
+          app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+          return false;
+        }
+      },
+      removeTags: async (tagNames: string[]) => {
+        try {
+          const result = await this.pyTagGroups.delete(tagNames) as TagDeleteResult;
+          if (result.errors.length === 0) {
+            for (const tagName of tagNames) {
+              this.currentTags = this.currentTags.filter(t => t !== tagName);
+            }
+            app.eventBus.emit(Events.IMAGES_CHANGED);
+          }
+          return { success: result.errors.length === 0, deleted: result.deleted };
+        } catch (error) {
+          app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+          return { success: false, deleted: 0 };
+        }
+      },
+      addTags: async (tagNames: string[]) => {
+        try {
+          const result = await this.pyTagGroups.create(tagNames) as TagOperationResult;
+          if (result.success) {
+            for (const tagName of result.created || []) {
+              if (!this.currentTags.includes(tagName)) {
+                this.currentTags.push(tagName);
+              }
+            }
+            app.eventBus.emit(Events.IMAGES_CHANGED);
+          }
+          return { success: result.success, added: result.created?.length || 0 };
+        } catch (error) {
+          app.showToast(`添加标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+          return { success: false, added: 0 };
+        }
+      },
+      onRender: null
+    };
 
     // 使用基类的批量标签管理功能
     this.initBatchTagManager(
@@ -276,11 +326,11 @@ export class ImageDetailManager extends DetailViewManager {
         inputAreaId: 'imageDetailTagInputArea',
         batchBtnId: 'imageDetailBatchTagBtn'
       },
-      simpleTagManager as ISimpleTagManager
+      simpleTagManager
     );
 
-    // 设置初始标签
-    simpleTagManager.setTags(image.tags || []);
+    // 触发渲染
+    simpleTagManager.onRender?.();
 
     // 绑定标签输入事件
     this.bindTagInputEvents();
@@ -302,11 +352,18 @@ export class ImageDetailManager extends DetailViewManager {
     this.tagAutocomplete = new TagAutocomplete({
       inputId: 'imageDetailTagInput',
       dropdownId: Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE,
-      getTags: () => window.electronAPI.getAllTags(),
       onSelect: async (tagName: string) => {
         try {
-          await this.simpleTagManager?.addTag?.(tagName);
-          return true;
+          const result = await this.pyTagGroups.create([tagName]) as TagOperationResult;
+          if (result.success) {
+            for (const tag of result.created || []) {
+              if (!this.currentTags.includes(tag)) {
+                this.currentTags.push(tag);
+              }
+            }
+            app.eventBus.emit(Events.IMAGES_CHANGED);
+          }
+          return result.success;
         } catch (error) {
           window.electronAPI.logError('ImageDetailManager.ts', 'Failed to add tag:', error);
           app.showToast(error instanceof Error ? error.message : '添加标签失败', 'error');
@@ -315,19 +372,24 @@ export class ImageDetailManager extends DetailViewManager {
       },
       onBatchAdd: async (tagNames: string[]) => {
         try {
-          if (tagNames.length === 1) {
-            await this.simpleTagManager?.addTag?.(tagNames[0]);
-          } else {
-            await this.simpleTagManager?.addTags?.(tagNames);
+          const result = await this.pyTagGroups.create(tagNames) as TagOperationResult;
+          if (result.success) {
+            for (const tag of result.created || []) {
+              if (!this.currentTags.includes(tag)) {
+                this.currentTags.push(tag);
+              }
+            }
+            app.eventBus.emit(Events.IMAGES_CHANGED);
           }
-          return true;
+          return result.success;
         } catch (error) {
           window.electronAPI.logError('ImageDetailManager.ts', 'Failed to add tags:', error);
           app.showToast(error instanceof Error ? error.message : '添加标签失败', 'error');
           return false;
         }
       },
-      containerSelector: '.image-tag-input-area'
+      containerSelector: '.image-tag-input-area',
+      type: 'image'
     });
 
     this.tagAutocomplete.init();
@@ -758,6 +820,9 @@ export class ImageDetailManager extends DetailViewManager {
 
     // 更新当前图像
     this.currentItem = item;
+
+    // 更新当前标签
+    this.currentTags = [...(image.tags || [])];
 
     // 重置 isFromDetailJump，因为导航到新图像后不再是"从详情跳转"状态
     app.isFromDetailJump = false;

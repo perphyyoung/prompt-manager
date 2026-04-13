@@ -1,6 +1,7 @@
 # Custom files
 py-data*/
 *.diff
+bak/*
 *.db
 tmp.md
 test-results/*

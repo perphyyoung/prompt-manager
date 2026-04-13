@@ -405,19 +405,17 @@ test.describe('Esc 键快捷键功能', () => {
       await enterImageGridView(page);
       await openImageDetail(page);
 
+      // 创建一个专门的测试标签用于自动完成测试
+      const testTagName = 'zz_esc_test_' + Date.now();
+      await page.evaluate(async (tagName) => {
+        await window.electronAPI.addImageTag(tagName);
+      }, testTagName);
+
+      // 使用测试标签的前缀触发自动完成
       const tagInput = page.locator('#imageDetailTagInput');
       await tagInput.click();
+      await tagInput.fill('zz_esc');
 
-      const tagPrefix = await page.evaluate(() => {
-        const cache = (window as unknown as { tagCache?: Map<string, unknown> }).tagCache;
-        if (cache && cache.size > 0) {
-          const firstTag = Array.from(cache.keys())[0];
-          return firstTag.slice(0, 1);
-        }
-        return 'a';
-      });
-
-      await tagInput.fill(tagPrefix);
       await page.waitForSelector('#imageDetailTagAutocomplete.active', { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/image-autocomplete-open.png' });
 
@@ -445,19 +443,17 @@ test.describe('Esc 键快捷键功能', () => {
       await enterPromptGridView(page);
       await openPromptDetail(page);
 
+      // 创建一个专门的测试标签用于自动完成测试
+      const testTagName = 'zz_esc_test_' + Date.now();
+      await page.evaluate(async (tagName) => {
+        await window.electronAPI.addPromptTag(tagName);
+      }, testTagName);
+
+      // 使用测试标签的前缀触发自动完成
       const tagInput = page.locator('#promptDetailTagsInput');
       await tagInput.click();
+      await tagInput.fill('zz_esc');
 
-      const tagPrefix = await page.evaluate(() => {
-        const cache = (window as unknown as { tagCache?: Map<string, unknown> }).tagCache;
-        if (cache && cache.size > 0) {
-          const firstTag = Array.from(cache.keys())[0];
-          return firstTag.slice(0, 1);
-        }
-        return 'a';
-      });
-
-      await tagInput.fill(tagPrefix);
       await page.waitForSelector('#promptDetailTagAutocomplete.active', { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/prompt-autocomplete-open.png' });
 

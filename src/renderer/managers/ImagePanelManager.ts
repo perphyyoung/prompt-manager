@@ -202,7 +202,7 @@ export class ImagePanelManager extends PanelManagerBase {
   /**
    * 获取项目类型标识（实现基类抽象方法）
    */
-  getItemType(): string {
+  getItemType(): 'prompt' | 'image' {
     return 'image';
   }
 
