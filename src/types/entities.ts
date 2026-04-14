@@ -68,44 +68,6 @@ export interface IExportOrphanFilesResult {
   exportPath: string;
 }
 
-/** 标签创建选项 */
-export interface ITagCreationOptions {
-  /** 是否检查标签已存在（默认 true） */
-  checkExists?: boolean;
-  /** 默认标签组 ID */
-  defaultGroupId?: number | null;
-}
-
-/** 标签创建结果 */
-export interface ITagCreationResult {
-  success: boolean;
-  created: string[];
-  skipped: string[];
-  errors: Array<{ tag: string; error: string }>;
-}
-
-/** TagService 接口定义 */
-export interface ITagService {
-  cacheKey: string;
-  cacheKeyGroups: string;
-  _clearCache(key: string): void;
-  getTags(): Promise<string[]>;
-  getTagGroups(): Promise<{ id: number; name: string; sortOrder: number; tags: string[] }[]>;
-  addTag(tag: string): Promise<unknown>;
-  deleteTag(tag: string): Promise<unknown>;
-  deleteTags(tags: string[]): Promise<{ success: boolean; deleted: number }>;
-  renameTag(oldTag: string, newTag: string): Promise<unknown>;
-  assignTagToGroup(tag: string, groupId: number | null): Promise<unknown>;
-  createGroup(name: string, sortOrder: number): Promise<unknown>;
-  updateGroup(groupId: number, attrs: Record<string, unknown>): Promise<unknown>;
-  deleteGroup(groupId: number): Promise<unknown>;
-  getSpecialTagChecks(): Map<string, (item: Record<string, unknown>) => boolean>;
-  groupTagsByGroup(tags: string[], groups: { id: number; name: string; sortOrder: number; tags: string[] }[]): { groupedTags: Record<number, string[]>; ungroupedTags: string[] };
-  createTags(tagInput: string, options?: ITagCreationOptions): Promise<ITagCreationResult>;
-  parseTagInput(input: string): string[];
-  getAutocompleteSuggestions(input: string, excludeTags?: string[]): Promise<string[]>;
-}
-
 /** 带组的标签接口 */
 export interface ITagWithGroup {
   name: string;
@@ -120,9 +82,6 @@ export interface ITagGroup {
   name: string;
   sortOrder?: number;
 }
-
-/** 标签管理器类型 */
-export type TagManagerType = 'prompt' | 'image';
 
 // ==================== 对话框类型 ====================
 

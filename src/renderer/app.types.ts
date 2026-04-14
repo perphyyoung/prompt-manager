@@ -1,10 +1,10 @@
 import type { LRUCache } from '../utils/LRUCache.ts';
-import type { ITagService, IPrompt, IImage } from '../types/entities.ts';
+import type { IPrompt, IImage } from '../types/entities.ts';
 import type { DialogService } from './services/DialogService.ts';
 import type { MultiSelectManager } from './managers/MultiSelectManager.ts';
 
 // 重新导出类型
-export type { ITagService, IPrompt, IImage };
+export type { IPrompt, IImage };
 
 /**
  * 面板管理器接口
