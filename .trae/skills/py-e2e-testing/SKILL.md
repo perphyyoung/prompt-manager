@@ -26,30 +26,18 @@ These rules are **ABSOLUTE REQUIREMENTS** - no exceptions allowed:
    - Logs will be written to `./pm.log`
    - Use logs for debugging instead of `console.log` in production tests
 
-2. **Log test item description before each test**
+2. **Log test item description in Chinese before each test**
 
-   ```typescript
-   // ✅ CORRECT: Use Electron log API to log test description
-   test('should create new prompt', async ({ page }) => {
-     await page.evaluate(() => {
-       window.electronAPI.logInfo('E2E-Test', 'Starting test: Create new prompt - Verifies prompt creation flow');
-     });
-     // ... test code
-   });
-   ```
-
-   - This helps quickly identify which test is running in logs
-   - Use `window.electronAPI.logInfo()` as specified in Rule 1
-
-   **Use ElectronTestHelper's logTestStart method**
+   - Use ElectronTestHelper's logTestStart method
+   - 所有描述都用中文
 
    ```typescript
    import { createElectronTest } from './electron-test.ts';
 
    const electronTest = createElectronTest();
 
-   test('should create new prompt', async () => {
-     await electronTest.logTestStart('Create new prompt');
+   test('应该创建新提示词', async () => {
+     await electronTest.logTestStart('创建新提示词');
      // ... test code
    });
    ```
