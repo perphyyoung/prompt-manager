@@ -4,8 +4,7 @@ import { EditableTagList } from '../components/index.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { BatchToolbar, IBatchToolbarConfig } from '../components/BatchToolbar.ts';
-import type { IClosableElement } from '../../types/entities.ts';
-
+import type { IClosableElement, IDetailTagManager, IBatchTagManagerConfig } from '../../types/entities.ts';
 interface DetailViewManagerOptions {
   app: {
     constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean };
@@ -17,25 +16,6 @@ interface DetailViewManagerOptions {
   };
   modalId: string;
   closeBtnId: string;
-}
-
-// 简单标签管理器接口
-export interface ISimpleTagManager {
-  getTags: () => string[];
-  setTags: (tags: string[]) => void;
-  removeTag: (tagName: string) => Promise<void> | Promise<boolean>;
-  removeTags: (tagNames: string[]) => Promise<{ success: boolean; deleted: number }>;
-  addTag?: (tagName: string) => Promise<{ success: boolean }>;
-  addTags?: (tagNames: string[]) => Promise<{ success: boolean; added: number }>;
-  onRender?: ((tags?: string[]) => void) | null;
-}
-
-// 批量标签管理配置
-interface IBatchTagManagerConfig {
-  toolbarId: string;
-  containerId: string;
-  inputAreaId: string;
-  batchBtnId: string;
 }
 
 interface NavButtons {
@@ -73,7 +53,7 @@ export class DetailViewManager {
 
   // 批量标签管理
   protected editableTagList: EditableTagList | null = null;
-  protected simpleTagManager: ISimpleTagManager | null = null;
+  protected detailTagManager: IDetailTagManager | null = null;
   protected isBatchMode: boolean = false;
   protected batchTagConfig: IBatchTagManagerConfig | null = null;
   protected batchBtnHandler: (() => void) | null = null;
@@ -104,7 +84,7 @@ export class DetailViewManager {
 
     // 批量标签管理
     this.editableTagList = null;
-    this.simpleTagManager = null;
+    this.detailTagManager = null;
     this.isBatchMode = false;
     this.batchTagConfig = null;
 
@@ -431,23 +411,63 @@ export class DetailViewManager {
     throw new Error('updateView() method must be implemented by subclass');
   }
 
-  // ==================== 批量标签管理通用方法 ====================
+  // ==================== 标签管理通用方法 ====================
 
   /**
-   * 初始化批量标签管理
+   * 初始化详情标签管理器（总的初始化方法）
    * @param config - 批量标签管理配置
-   * @param tagManager - 简单标签管理器
+   * @param detailTagManager - 详情界面标签管理器
    * @protected
    */
-  protected initBatchTagManager(config: IBatchTagManagerConfig, tagManager: ISimpleTagManager): void {
+  protected initDetailTagManager(config: IBatchTagManagerConfig, detailTagManager: IDetailTagManager): void {
     this.batchTagConfig = config;
-    this.simpleTagManager = tagManager;
+    this.detailTagManager = detailTagManager;
 
+    // 初始化标签渲染器
+    this.initTagRenderer(config, detailTagManager);
+
+    // 初始化批量标签管理
+    this.initBatchTagManager(config, detailTagManager);
+  }
+
+  /**
+   * 初始化标签渲染器
+   * @param config - 批量标签管理配置
+   * @param detailTagManager - 详情界面标签管理器
+   * @protected
+   */
+  protected initTagRenderer(config: IBatchTagManagerConfig, detailTagManager: IDetailTagManager): void {
     // 清理旧的标签列表组件
     if (this.editableTagList) {
       this.editableTagList = null;
     }
 
+    // 设置渲染回调
+    detailTagManager.onRender = () => {
+      if (!this.editableTagList) {
+        this.editableTagList = new EditableTagList({
+          containerId: config.containerId,
+          tagManager: detailTagManager as { getTags: () => string[] },
+          onRemove: async (tagName: string) => {
+            await detailTagManager.removeTag(tagName);
+          }
+        });
+        // 设置选择变更回调
+        this.editableTagList.setOnSelectionChange((selectedTags) => {
+          this.batchToolbar?.updateCount(selectedTags.size);
+        });
+      }
+      this.editableTagList.renderWithInit();
+    };
+  }
+
+  /**
+   * 初始化批量标签管理
+   * @param config - 批量标签管理配置
+   * @param detailTagManager - 详情界面标签管理器
+   * @protected
+   */
+  protected initBatchTagManager(config: IBatchTagManagerConfig, detailTagManager: IDetailTagManager): void {
     // 重置批量模式
     if (this.isBatchMode) {
       this.exitBatchMode();
@@ -459,24 +479,6 @@ export class DetailViewManager {
       onAction: (action) => this.handleBatchToolbarAction(action),
       onClose: () => this.exitBatchMode()
     });
-
-    // 设置渲染回调
-    tagManager.onRender = () => {
-      if (!this.editableTagList) {
-        this.editableTagList = new EditableTagList({
-          containerId: config.containerId,
-          tagManager: tagManager as { getTags: () => string[] },
-          onRemove: async (tagName: string) => {
-            await tagManager.removeTag(tagName);
-          }
-        });
-        // 设置选择变更回调
-        this.editableTagList.setOnSelectionChange((selectedTags) => {
-          this.batchToolbar?.updateCount(selectedTags.size);
-        });
-      }
-      this.editableTagList.renderWithInit();
-    };
 
     // 绑定批量管理按钮事件
     this.bindBatchTagBtnEvent();
@@ -532,7 +534,7 @@ export class DetailViewManager {
         { count: selectedTags.size }
       );
       if (confirmed) {
-        const result = await this.simpleTagManager?.removeTags(Array.from(selectedTags));
+        const result = await this.detailTagManager?.removeTags(Array.from(selectedTags));
         if (result?.success) {
           app.showToast(`已删除 ${result.deleted} 个标签`, 'success');
         }
@@ -635,7 +637,7 @@ export class DetailViewManager {
 
     this.batchBtnHandler = null;
     this.editableTagList = null;
-    this.simpleTagManager = null;
+    this.detailTagManager = null;
     this.batchTagConfig = null;
   }
 }

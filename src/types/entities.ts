@@ -124,80 +124,6 @@ export interface ITagGroup {
 /** 标签管理器类型 */
 export type TagManagerType = 'prompt' | 'image';
 
-/** TagRegistry 接口定义 */
-export interface ITagRegistry {
-  /** 渲染标签管理器 */
-  render(searchTerm?: string): Promise<void>;
-
-  /** 刷新标签数据 */
-  refresh(): Promise<void>;
-
-  /** 添加标签 */
-  addTag(tag: string): Promise<void>;
-
-  /** 删除标签 */
-  deleteTag(tag: string): Promise<void>;
-
-  /** 更新标签 */
-  updateTag(oldTag: string, newTag: string): Promise<void>;
-
-  /** 获取所有标签 */
-  getTags(): Promise<string[]>;
-
-  /** 绑定事件 */
-  bindEvents(container: HTMLElement): void;
-
-  /** 在管理器中添加标签 */
-  addTagInManager(): void;
-
-  /** 切换批量管理模式 */
-  toggleBatchMode(): void;
-
-  /** 隐藏批量工具栏 */
-  hideBatchToolbar(): void;
-
-  /** 类型 */
-  type: string;
-
-  /** 排序字段 */
-  sortBy: string;
-
-  /** 排序顺序 */
-  sortOrder: 'asc' | 'desc';
-
-  /** 服务实例 */
-  service: ITagService;
-
-  // ========== 标签管理器模态框控制 ==========
-  /** 打开标签管理器模态框 */
-  openManager(type: TagManagerType): void;
-
-  /** 关闭标签管理器模态框 */
-  closeManager(type: TagManagerType): void;
-
-  /** 检查标签管理器模态框是否活动 */
-  isManagerActive(type?: TagManagerType): boolean;
-
-  /** 关闭所有标签管理器模态框 */
-  closeAllManagers(): void;
-
-  // ========== 标签组编辑模态框控制 ==========
-  /** 打开标签组编辑模态框 */
-  openGroupEdit(type: TagManagerType, groupId?: number | null): Promise<void>;
-
-  /** 关闭标签组编辑模态框 */
-  closeGroupEdit(): void;
-
-  /** 保存标签组 */
-  saveGroupEdit(): Promise<void>;
-
-  /** 绑定标签管理器事件 */
-  bindManagerEvents(type: TagManagerType): void;
-
-  /** 初始化模态框事件 */
-  initModals(): void;
-}
-
 // ==================== 对话框类型 ====================
 
 /** 对话框类型 */
@@ -245,4 +171,22 @@ export interface IDialogContext {
 /** 可关闭元素接口 - 扩展 HTMLElement 添加 close 方法供 ShortcutManager 调用 */
 export interface IClosableElement extends HTMLElement {
   close?: () => void;
+}
+
+/** 详情界面标签操作管理器 */
+export interface IDetailTagManager {
+  getTags: () => string[];
+  setTags: (tags: string[]) => void;
+  removeTag: (tagName: string) => Promise<boolean>;
+  removeTags: (tagNames: string[]) => Promise<{ success: boolean; deleted: number }>;
+  addTags: (tagNames: string[]) => Promise<{ success: boolean; added: number }>;
+  onRender?: (tags?: string[]) => void;
+}
+
+/** 批量标签管理配置 */
+export interface IBatchTagManagerConfig {
+  toolbarId: string;
+  containerId: string;
+  inputAreaId: string;
+  batchBtnId: string;
 }

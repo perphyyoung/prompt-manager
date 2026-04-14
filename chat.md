@@ -40,8 +40,14 @@ npx tsx e2e/cleanup-test-tag-groups.ts
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 需要输出中文版本的可复制的详细版本和简洁版本的 git commit 信息
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
 
+## 20260414
+
+`13-tag-input-methods.spec.ts` 根据该测试脚本, 编写 测试类 用于测试数据整个生命周期, 包括生成和清理, 以及各种工具函数; 需要设计良好的结构, 方便后续拓展的其他测试数据; 先给出方案, 需要讨论
+
 ## 20260413
 
+详情界面的 标签输入框支持哪些方式? 直接回车, 还有什么? 编写 e2e 测试并自动验证
+详情界面, 添加标签不能回车添加, 根因
 标签管理界面, 同步标签后, 新标签没有出现, 排查
 
 ## 20260412

@@ -190,39 +190,44 @@ export class TagAutocomplete {
    * @private
    */
   private handleKeydown(e: KeyboardEvent): void {
-    if (!this.dropdown || !this.dropdown.classList.contains('active')) return;
+    // 下拉框激活时处理导航和选择
+    if (this.dropdown?.classList.contains('active')) {
+      const items = this.dropdown.querySelectorAll('.tag-autocomplete-item');
+      const activeItem = this.dropdown.querySelector('.tag-autocomplete-item.active');
+      let currentIndex = Array.from(items).indexOf(activeItem as Element);
 
-    const items = this.dropdown.querySelectorAll('.tag-autocomplete-item');
-    const activeItem = this.dropdown.querySelector('.tag-autocomplete-item.active');
-    let currentIndex = Array.from(items).indexOf(activeItem as Element);
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        currentIndex = Math.min(currentIndex + 1, items.length - 1);
-        this.setActiveItem(currentIndex);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        currentIndex = Math.max(currentIndex - 1, 0);
-        this.setActiveItem(currentIndex);
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (activeItem) {
-          const tag = (activeItem as HTMLElement).dataset.tag;
-          if (tag) {
-            this.selectTag(tag);
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          currentIndex = Math.min(currentIndex + 1, items.length - 1);
+          this.setActiveItem(currentIndex);
+          return;
+        case 'ArrowUp':
+          e.preventDefault();
+          currentIndex = Math.max(currentIndex - 1, 0);
+          this.setActiveItem(currentIndex);
+          return;
+        case 'Enter':
+          e.preventDefault();
+          if (activeItem) {
+            const tag = (activeItem as HTMLElement).dataset.tag;
+            if (tag) {
+              this.selectTag(tag);
+              return;
+            }
           }
-        } else if (this.input?.value.trim()) {
-          // 如果没有选中项，尝试批量添加输入的内容
-          this.handleBatchAdd();
-        }
-        break;
-      case 'Escape':
-        e.stopPropagation();
-        this.hideDropdown();
-        break;
+          break;
+        case 'Escape':
+          e.stopPropagation();
+          this.hideDropdown();
+          return;
+      }
+    }
+
+    // 下拉框未激活时，回车添加输入的内容
+    if (e.key === 'Enter' && this.input?.value.trim()) {
+      e.preventDefault();
+      this.handleBatchAdd();
     }
   }
 

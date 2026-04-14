@@ -458,9 +458,9 @@
                   <button type="button" id="promptDetailBatchTagBtn" class="btn btn-sm btn-outline">批量管理</button>
                 </div>
               </div>
-              <div id="promptDetailTags" class="edit-tags-list"></div>
+              <div id="{{PROMPT_DETAIL_TAGS_CONTAINER}}" class="edit-tags-list"></div>
               <div class="prompt-tag-input-area" id="promptDetailTagInputArea">
-                <input type="text" id="promptDetailTagsInput" placeholder="输入标签，按回车添加" autocomplete="off">
+                <input type="text" id="{{PROMPT_DETAIL_TAGS_INPUT}}" placeholder="输入标签，按回车添加" autocomplete="off">
                 <div id="promptDetailTagAutocomplete" class="autocomplete-dropdown"></div>
               </div>
             </div>
@@ -643,9 +643,9 @@
                     <button type="button" id="imageDetailBatchTagBtn" class="btn btn-sm btn-outline">批量管理</button>
                   </div>
                 </div>
-                <div id="imageDetailImageTags" class="tags-list">-</div>
+                <div id="{{IMAGE_DETAIL_TAGS_CONTAINER}}" class="tags-list">-</div>
                 <div class="image-tag-input-area" id="imageDetailTagInputArea">
-                  <input type="text" id="imageDetailTagInput" placeholder="输入标签，按回车添加" autocomplete="off">
+                  <input type="text" id="{{IMAGE_DETAIL_TAG_INPUT}}" placeholder="输入标签，按回车添加" autocomplete="off">
                   <div id="imageDetailTagAutocomplete" class="autocomplete-dropdown"></div>
                 </div>
               </div>

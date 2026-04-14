@@ -2,7 +2,8 @@
  * 提示词详情管理器
  * 负责管理提示词详情模态框
  */
-import { DetailViewManager, ISimpleTagManager } from './DetailViewManager.ts';
+import { DetailViewManager } from './DetailViewManager.ts';
+import type { IDetailTagManager } from '../../types/entities.ts';
 import { validateTitle, cacheManager } from '../../utils/index.ts';
 import { SaveManager, PromptSaveStrategy } from '../renderer_utils/index.ts';
 import { Constants, Events } from '../../constants.ts';
@@ -10,7 +11,7 @@ import { DirectSaveStrategy, TagAutocomplete } from '../services/index.ts';
 import { ImageContextMenuManager } from './ImageContextMenuManager.ts';
 import { IPrompt, IImage } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
-import { PyTagGroups, TagOperationResult, TagDeleteResult, TagExistsError, InvalidTagNameError, TagOperationError } from '../../pyTagGroups/index.ts';
+import { PyTagGroups, TagOperationResult, TagDeleteResult, TagExistsError, InvalidTagNameError, TagOperationError, linkTags } from '../../pyTagGroups/index.ts';
 
 // 扩展 IPrompt 接口以包含更多字段
 interface IPromptExtended extends IPrompt {
@@ -228,7 +229,7 @@ export class PromptDetailManager extends DetailViewManager {
     const app = this.app as unknown as IApp;
     this.currentTags = [...(prompt.tags || [])];
 
-    const simpleTagManager: ISimpleTagManager = {
+    const detailTagManager: IDetailTagManager = {
       getTags: () => this.currentTags,
       setTags: (tags: string[]) => {
         this.currentTags = tags;
@@ -263,13 +264,23 @@ export class PromptDetailManager extends DetailViewManager {
       },
       addTags: async (tagNames: string[]) => {
         try {
-          const result = await this.pyTagGroups.create(tagNames) as TagOperationResult;
+          const currentItem = this.currentItem as unknown as IPromptExtended;
+          const result = await linkTags({
+            tagNames,
+            type: 'prompt',
+            itemId: currentItem?.id
+          });
+
           if (result.success) {
-            for (const tagName of result.created || []) {
+            // 添加新创建的标签和已存在的标签（skipped）到本地状态
+            const allTagsToAdd = [...result.created, ...result.skipped];
+            for (const tagName of allTagsToAdd) {
               if (!this.currentTags.includes(tagName)) {
                 this.currentTags.push(tagName);
               }
             }
+            // 触发重新渲染
+            detailTagManager.onRender?.();
             app.eventBus.emit(Events.PROMPTS_CHANGED);
           }
           return { success: result.success, added: result.created?.length || 0 };
@@ -287,22 +298,22 @@ export class PromptDetailManager extends DetailViewManager {
           return { success: false, added: 0 };
         }
       },
-      onRender: null
+      onRender: undefined
     };
 
-    // 使用基类的批量标签管理功能
-    this.initBatchTagManager(
+    // 使用基类的标签管理功能
+    this.initDetailTagManager(
       {
         toolbarId: 'promptDetailBatchToolbar',
-        containerId: 'promptDetailTags',
+        containerId: Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER,
         inputAreaId: 'promptDetailTagInputArea',
         batchBtnId: 'promptDetailBatchTagBtn'
       },
-      simpleTagManager
+      detailTagManager
     );
 
     // 触发渲染
-    simpleTagManager.onRender?.();
+    detailTagManager.onRender?.();
 
     // 绑定标签输入事件
     this.bindTagInputEvents();
@@ -322,17 +333,27 @@ export class PromptDetailManager extends DetailViewManager {
 
     // 创建新的自动完成组件
     this.tagAutocomplete = new TagAutocomplete({
-      inputId: 'promptDetailTagsInput',
+      inputId: Constants.Ids.PROMPT_DETAIL_TAGS_INPUT,
       dropdownId: Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE,
       onSelect: async (tagName: string) => {
         try {
-          const result = await this.pyTagGroups.create([tagName]) as TagOperationResult;
+          const currentItem = this.currentItem as unknown as IPromptExtended;
+          const result = await linkTags({
+            tagNames: [tagName],
+            type: 'prompt',
+            itemId: currentItem?.id
+          });
+
           if (result.success) {
-            for (const tag of result.created || []) {
+            // 添加新创建的标签和已存在的标签（skipped）到本地状态
+            const allTagsToAdd = [...result.created, ...result.skipped];
+            for (const tag of allTagsToAdd) {
               if (!this.currentTags.includes(tag)) {
                 this.currentTags.push(tag);
               }
             }
+            // 触发重新渲染
+            this.detailTagManager?.onRender?.();
             app.eventBus.emit(Events.PROMPTS_CHANGED);
           }
           return result.success;
@@ -354,13 +375,23 @@ export class PromptDetailManager extends DetailViewManager {
       },
       onBatchAdd: async (tagNames: string[]) => {
         try {
-          const result = await this.pyTagGroups.create(tagNames) as TagOperationResult;
+          const currentItem = this.currentItem as unknown as IPromptExtended;
+          const result = await linkTags({
+            tagNames,
+            type: 'prompt',
+            itemId: currentItem?.id
+          });
+
           if (result.success) {
-            for (const tag of result.created || []) {
+            // 添加新创建的标签和已存在的标签（skipped）到本地状态
+            const allTagsToAdd = [...result.created, ...result.skipped];
+            for (const tag of allTagsToAdd) {
               if (!this.currentTags.includes(tag)) {
                 this.currentTags.push(tag);
               }
             }
+            // 触发重新渲染
+            this.detailTagManager?.onRender?.();
             app.eventBus.emit(Events.PROMPTS_CHANGED);
           }
           return result.success;

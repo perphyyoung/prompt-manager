@@ -226,6 +226,14 @@ export class Constants {
     PROMPT_DETAIL_TAG_AUTOCOMPLETE: 'promptDetailTagAutocomplete',
     IMAGE_DETAIL_TAG_AUTOCOMPLETE: 'imageDetailTagAutocomplete',
 
+    // 提示词详情标签相关
+    PROMPT_DETAIL_TAGS_CONTAINER: 'promptDetailTagsContainer',
+    PROMPT_DETAIL_TAGS_INPUT: 'promptDetailTagsInput',
+
+    // 图像详情标签相关
+    IMAGE_DETAIL_TAGS_CONTAINER: 'imageDetailTagsContainer',
+    IMAGE_DETAIL_TAG_INPUT: 'imageDetailTagInput',
+
     // 工具栏按钮
     REFRESH_DATA_BTN: 'refreshDataBtn',
     RELAUNCH_BTN: 'relaunchBtn',

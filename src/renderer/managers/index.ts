@@ -7,6 +7,7 @@ export { ImagePanelManager } from './ImagePanelManager.ts';
 
 // 标签系统使用 PyTagGroups
 export { TagManager, type ITagManagerElements } from './TagManager.ts';
+export { type IDetailTagManager as IDetailTagOps, type IBatchTagManagerConfig } from '../../types/entities.ts';
 export { PromptTagManager } from './PromptTagManager.ts';
 export { ImageTagManager } from './ImageTagManager.ts';
 export { TagUI } from './TagUI.ts';

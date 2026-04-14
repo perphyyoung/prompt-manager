@@ -20,7 +20,7 @@ import {
 import eventBus from '../utils/EventBus.ts';
 import { HtmlUtils, isSameId, cacheManager } from '../utils/index.ts';
 import { HoverTooltipManager, ShortcutManager, SaveManager, PromptSaveStrategy } from './renderer_utils/index.ts';
-import type { ITagRegistry, IPrompt, IImage } from '../types/entities.ts';
+import type { IPrompt, IImage } from '../types/entities.ts';
 import type {
   IApp,
   IPanelManager,

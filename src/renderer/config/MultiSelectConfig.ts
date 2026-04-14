@@ -1,4 +1,4 @@
-import { PyTagGroups, TagOperationResult } from '../../pyTagGroups/index.ts';
+import { addTagsToItems, parseTagInput } from '../../pyTagGroups/index.ts';
 import { CacheManager } from '../../utils/CacheManager.ts';
 import { LRUCache } from '../../utils/LRUCache.ts';
 
@@ -57,26 +57,17 @@ async function processBatchAddTags(
   tagInput: string,
   options: BatchAddTagsOptions
 ): Promise<void> {
-  const { getItemById, updateItem, type } = options;
-  const pyTagGroups = PyTagGroups.getInstance(type);
+  const { type } = options;
 
-  const creationResult = await pyTagGroups.create(tagInput) as TagOperationResult;
+  // 解析标签输入
+  const tagNames = parseTagInput(tagInput);
+  if (tagNames.length === 0) return;
 
-  if (creationResult.errors.length > 0) {
-    throw new Error(creationResult.errors.map((e: { error: string }) => e.error).join(', '));
-  }
+  // 使用 addTagsToItems 统一处理创建和关联
+  const result = await addTagsToItems(tagNames, type, ids);
 
-  const tagsToAdd = creationResult.created;
-  if (tagsToAdd.length === 0) return;
-
-  for (const id of ids) {
-    const item = await getItemById(id);
-    if (!item) continue;
-
-    const currentItemTags = item.tags || [];
-    const newTags = [...new Set([...currentItemTags, ...tagsToAdd])];
-
-    await updateItem(id, { tags: newTags });
+  if (result.errors.length > 0) {
+    throw new Error(result.errors.map((e: { error: string }) => e.error).join(', '));
   }
 }
 

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { Constants } from '../src/constants.ts';
 import { createElectronTest, enterImageGridView, enterPromptGridView, openImageDetail, openPromptDetail } from './electron-test.ts';
 import type { IElectronAPI } from '../src/preload/index.ts';
 
@@ -412,7 +413,7 @@ test.describe('Esc 键快捷键功能', () => {
       }, testTagName);
 
       // 使用测试标签的前缀触发自动完成
-      const tagInput = page.locator('#imageDetailTagInput');
+      const tagInput = page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`);
       await tagInput.click();
       await tagInput.fill('zz_esc');
 
@@ -450,7 +451,7 @@ test.describe('Esc 键快捷键功能', () => {
       }, testTagName);
 
       // 使用测试标签的前缀触发自动完成
-      const tagInput = page.locator('#promptDetailTagsInput');
+      const tagInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`);
       await tagInput.click();
       await tagInput.fill('zz_esc');
 

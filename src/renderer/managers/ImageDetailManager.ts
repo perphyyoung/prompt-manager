@@ -2,14 +2,15 @@
  * 图像详情管理器
  * 负责管理图像详情模态框
  */
-import { DetailViewManager, ISimpleTagManager } from './DetailViewManager.ts';
+import { DetailViewManager } from './DetailViewManager.ts';
+import type { IDetailTagManager } from '../../types/entities.ts';
 import { HtmlUtils, validateFileName, isSameId, cacheManager } from '../../utils/index.ts';
 import { SaveManager, ImageSaveStrategy } from '../renderer_utils/index.ts';
 import { Constants, Events } from '../../constants.ts';
 import { TagAutocomplete, DialogService, DialogConfig } from '../services/index.ts';
 import { IImage, IPrompt } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
-import { PyTagGroups, TagOperationResult, TagDeleteResult } from '../../pyTagGroups/index.ts';
+import { PyTagGroups, TagOperationResult, TagDeleteResult, linkTags } from '../../pyTagGroups/index.ts';
 
 // 扩展 IImage 接口
 interface IImageExtended extends IImage {
@@ -265,7 +266,7 @@ export class ImageDetailManager extends DetailViewManager {
     const app = this.app as unknown as IApp;
     this.currentTags = [...(image.tags || [])];
 
-    const simpleTagManager: ISimpleTagManager = {
+    const detailTagManager: IDetailTagManager = {
       getTags: () => this.currentTags,
       setTags: (tags: string[]) => {
         this.currentTags = tags;
@@ -300,13 +301,23 @@ export class ImageDetailManager extends DetailViewManager {
       },
       addTags: async (tagNames: string[]) => {
         try {
-          const result = await this.pyTagGroups.create(tagNames) as TagOperationResult;
+          const currentItem = this.currentItem as unknown as IImageExtended;
+          const result = await linkTags({
+            tagNames,
+            type: 'image',
+            itemId: currentItem?.id
+          });
+
           if (result.success) {
-            for (const tagName of result.created || []) {
+            // 添加新创建的标签和已存在的标签（skipped）到本地状态
+            const allTagsToAdd = [...result.created, ...result.skipped];
+            for (const tagName of allTagsToAdd) {
               if (!this.currentTags.includes(tagName)) {
                 this.currentTags.push(tagName);
               }
             }
+            // 触发重新渲染
+            detailTagManager.onRender?.();
             app.eventBus.emit(Events.IMAGES_CHANGED);
           }
           return { success: result.success, added: result.created?.length || 0 };
@@ -315,22 +326,22 @@ export class ImageDetailManager extends DetailViewManager {
           return { success: false, added: 0 };
         }
       },
-      onRender: null
+      onRender: undefined
     };
 
-    // 使用基类的批量标签管理功能
-    this.initBatchTagManager(
+    // 使用基类的标签管理功能
+    this.initDetailTagManager(
       {
         toolbarId: 'imageDetailBatchToolbar',
-        containerId: 'imageDetailImageTags',
+        containerId: Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER,
         inputAreaId: 'imageDetailTagInputArea',
         batchBtnId: 'imageDetailBatchTagBtn'
       },
-      simpleTagManager
+      detailTagManager
     );
 
     // 触发渲染
-    simpleTagManager.onRender?.();
+    detailTagManager.onRender?.();
 
     // 绑定标签输入事件
     this.bindTagInputEvents();
@@ -350,17 +361,30 @@ export class ImageDetailManager extends DetailViewManager {
 
     // 创建新的自动完成组件
     this.tagAutocomplete = new TagAutocomplete({
-      inputId: 'imageDetailTagInput',
+      inputId: Constants.Ids.IMAGE_DETAIL_TAG_INPUT,
       dropdownId: Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE,
       onSelect: async (tagName: string) => {
         try {
-          const result = await this.pyTagGroups.create([tagName]) as TagOperationResult;
+          const currentItem = this.currentItem as unknown as IImageExtended;
+          window.electronAPI.logInfo('ImageDetailManager.ts', 'onSelect called', { tagName, itemId: currentItem?.id });
+          const result = await linkTags({
+            tagNames: [tagName],
+            type: 'image',
+            itemId: currentItem?.id
+          });
+          window.electronAPI.logInfo('ImageDetailManager.ts', 'linkTags result', { success: result.success, created: result.created, skipped: result.skipped });
+
           if (result.success) {
-            for (const tag of result.created || []) {
+            // 添加新创建的标签和已存在的标签（skipped）到本地状态
+            const allTagsToAdd = [...result.created, ...result.skipped];
+            window.electronAPI.logInfo('ImageDetailManager.ts', 'Adding tags to currentTags', { allTagsToAdd, currentTags: this.currentTags });
+            for (const tag of allTagsToAdd) {
               if (!this.currentTags.includes(tag)) {
                 this.currentTags.push(tag);
               }
             }
+            // 触发重新渲染
+            this.detailTagManager?.onRender?.();
             app.eventBus.emit(Events.IMAGES_CHANGED);
           }
           return result.success;
@@ -372,13 +396,23 @@ export class ImageDetailManager extends DetailViewManager {
       },
       onBatchAdd: async (tagNames: string[]) => {
         try {
-          const result = await this.pyTagGroups.create(tagNames) as TagOperationResult;
+          const currentItem = this.currentItem as unknown as IImageExtended;
+          const result = await linkTags({
+            tagNames,
+            type: 'image',
+            itemId: currentItem?.id
+          });
+
           if (result.success) {
-            for (const tag of result.created || []) {
+            // 添加新创建的标签和已存在的标签（skipped）到本地状态
+            const allTagsToAdd = [...result.created, ...result.skipped];
+            for (const tag of allTagsToAdd) {
               if (!this.currentTags.includes(tag)) {
                 this.currentTags.push(tag);
               }
             }
+            // 触发重新渲染
+            this.detailTagManager?.onRender?.();
             app.eventBus.emit(Events.IMAGES_CHANGED);
           }
           return result.success;

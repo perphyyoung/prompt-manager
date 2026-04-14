@@ -10,7 +10,7 @@ import { MultiSelectConfig } from '../config/MultiSelectConfig.ts';
 import { DialogService } from '../services/index.ts';
 import type { IDialogTemplate } from '../../types/entities.ts';
 import { Constants, Events } from '../../constants.ts';
-import { PyTagGroups, TagOperationResult, TagGroup } from '../../pyTagGroups/index.ts';
+import { PyTagGroups, TagOperationResult, TagGroup, linkTags } from '../../pyTagGroups/index.ts';
 import { buildTagsWithGroupInfo } from '../../pyTagGroups/utils.ts';
 
 // 卡片大小限制常量
@@ -1550,26 +1550,28 @@ export abstract class PanelManagerBase {
       throw new Error('项目不存在');
     }
 
-    // 确定类型
-    const type = this.storagePrefix === 'prompt' ? 'prompt' : 'image';
-    const pyTagGroups = PyTagGroups.getInstance(type);
-
-    // 使用 create 创建标签（如果不存在）并验证
-    const creationResult = await pyTagGroups.create(tagName) as TagOperationResult;
-
-    if (creationResult.errors.length > 0) {
-      throw new Error(creationResult.errors[0].error);
-    }
-
-    // 标签已存在或新创建，合并到项目
+    // 检查标签是否已存在
     const currentTags = item.tags || [];
     if (currentTags.includes(tagName)) {
       throw new Error('该标签已存在');
     }
-    const newTags = [...currentTags, tagName];
-    await updateApi(item.id, { tags: newTags });
-    item.tags = newTags;
 
+    // 确定类型
+    const type = this.storagePrefix === 'prompt' ? 'prompt' : 'image';
+
+    // 使用 linkTags 统一处理创建和关联
+    const result = await linkTags({
+      tagNames: [tagName],
+      type,
+      itemId: item.id
+    });
+
+    if (result.errors.length > 0) {
+      throw new Error(result.errors[0].error);
+    }
+
+    // 更新本地状态
+    item.tags = [...currentTags, tagName];
     await this.refreshAfterUpdate();
     return true;
   }

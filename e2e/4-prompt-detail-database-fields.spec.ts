@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { Constants } from '../src/constants.ts';
 import { createElectronTest, enterPromptDetailView, getPromptFromDatabase } from './electron-test.ts';
 import type { IElectronAPI, IPrompt } from '../src/preload/index.ts';
 
@@ -129,19 +130,19 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 验证标签容器存在
-    const tagsContainer = page.locator('#promptDetailTags');
+    const tagsContainer = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER}`);
     await expect(tagsContainer).toBeVisible();
 
     // 获取显示的标签（去除删除按钮文本）
-    const displayedTags = await page.evaluate(() => {
-      const container = document.getElementById('promptDetailTags');
+    const displayedTags = await page.evaluate((containerId) => {
+      const container = document.getElementById(containerId);
       if (!container) return [];
       return Array.from(container.querySelectorAll('.tag-editable'))
         .map(el => {
           const text = el.textContent || '';
           return text.replace(/[\s×]+$/, '').trim();
         });
-    });
+    }, Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER);
 
     // 验证标签数量匹配
     const dbTags = dbPrompt!.tags || [];
@@ -189,7 +190,7 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 收集所有界面显示的值
-    const uiValues = await page.evaluate(() => {
+    const uiValues = await page.evaluate((containerId) => {
       const getValue = (id: string): string => {
         const el = document.getElementById(id);
         if (!el) return '';
@@ -200,7 +201,7 @@ test.describe('提示词详情界面数据库字段读取', () => {
       };
 
       const getTags = (): string[] => {
-        const container = document.getElementById('promptDetailTags');
+        const container = document.getElementById(containerId);
         if (!container) return [];
         return Array.from(container.querySelectorAll('.tag-editable'))
           .map(el => {
@@ -222,7 +223,7 @@ test.describe('提示词详情界面数据库字段读取', () => {
         tags: getTags(),
         imageCount: getImageCount()
       };
-    });
+    }, Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER);
 
     // 验证所有字段一致性
     expect(uiValues.id).toBe(dbPrompt!.id);

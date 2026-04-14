@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { Constants } from '../src/constants.ts';
 import { createElectronTest, enterImageDetailView, getImageFromDatabase } from './electron-test.ts';
 import type { IElectronAPI, IImage } from '../src/preload/index.ts';
 
@@ -178,12 +179,12 @@ test.describe('图像详情界面数据库字段读取', () => {
     expect(dbImage).toBeTruthy();
 
     // 验证标签容器存在
-    const tagsContainer = page.locator('#imageDetailImageTags');
+    const tagsContainer = page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER}`);
     await expect(tagsContainer).toBeVisible();
 
     // 获取显示的标签（使用更精确的选择器，只获取标签文本部分）
-    const displayedTags = await page.evaluate(() => {
-      const container = document.getElementById('imageDetailImageTags');
+    const displayedTags = await page.evaluate((containerId) => {
+      const container = document.getElementById(containerId);
       if (!container) return [];
       // 只获取标签文本，排除删除按钮
       return Array.from(container.querySelectorAll('.tag-editable'))
@@ -193,7 +194,7 @@ test.describe('图像详情界面数据库字段读取', () => {
           // 去除末尾的 '×' 和空白字符
           return text.replace(/[\s×]+$/, '').trim();
         });
-    });
+    }, Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER);
 
     // 验证标签数量匹配
     const dbTags = dbImage!.tags || [];
@@ -311,7 +312,7 @@ test.describe('图像详情界面数据库字段读取', () => {
     expect(dbImage).toBeTruthy();
 
     // 收集所有界面显示的值
-    const uiValues = await page.evaluate(() => {
+    const uiValues = await page.evaluate((containerId) => {
       const getValue = (id: string): string => {
         const el = document.getElementById(id);
         if (!el) return '';
@@ -322,7 +323,7 @@ test.describe('图像详情界面数据库字段读取', () => {
       };
 
       const getTags = (): string[] => {
-        const container = document.getElementById('imageDetailImageTags');
+        const container = document.getElementById(containerId);
         if (!container) return [];
         return Array.from(container.querySelectorAll('.tag-editable'))
           .map(el => {
@@ -341,7 +342,7 @@ test.describe('图像详情界面数据库字段读取', () => {
         updatedAt: getValue('imageDetailUpdatedAt'),
         tags: getTags()
       };
-    });
+    }, Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER);
 
     // 验证所有字段一致性（不包含 isSafe，因为它是特殊标签）
     expect(uiValues.fileName).toBe(dbImage!.fileName || '');
