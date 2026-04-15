@@ -6,6 +6,9 @@
 
 | 文件 | 测试内容 |
 |------|----------|
+| [15-tagservice-advanced.spec.ts](./15-tagservice-advanced.spec.ts) | TagService 高级功能测试 |
+| [14-tagservice-operations.spec.ts](./14-tagservice-operations.spec.ts) | TagService 基础操作测试 |
+| [13-tag-input-methods.spec.ts](./13-tag-input-methods.spec.ts) | 详情界面标签输入方式测试 |
 | [12-tag-manager-dialog-retry.spec.ts](./12-tag-manager-dialog-retry.spec.ts) | 标签管理对话框失败重试功能 |
 | [11-prompt-detail-set-first-image.spec.ts](./11-prompt-detail-set-first-image.spec.ts) | 提示词详情"设为首张"功能 |
 | [10-tag-manager-search-persist.spec.ts](./10-tag-manager-search-persist.spec.ts) | 标签管理器搜索状态保持功能 |
@@ -22,6 +25,118 @@
 ---
 
 ## 详细说明
+
+### 15-tagservice-advanced.spec.ts
+
+**测试内容**：TagService 高级功能测试
+
+**涉及组件/管理器**：
+
+- `TagService` - 标签服务
+- `ImageDetailManager` - 图像详情管理
+- `PromptDetailManager` - 提示词详情管理
+- `ImageTagManager` - 图像标签管理
+- `PromptTagManager` - 提示词标签管理
+
+**测试的数据库字段**：
+
+- 图像/提示词时间戳：updatedAt（验证标签操作触发更新时间更新）
+
+**测试项列表（共14个，按实际执行顺序）**：
+
+| 序号 | 测试描述 |
+|------|----------|
+| 1 | 图像详情界面 - 删除已关联的标签（unlinkTagFromItem） |
+| 2 | 提示词详情界面 - 删除已关联的标签（unlinkTagFromItem） |
+| 3 | 图像标签 - 检查标签是否存在（模拟 tagExists） |
+| 4 | 提示词标签 - 检查标签是否存在（模拟 tagExists） |
+| 5 | 图像标签组 - 获取组内所有标签（模拟 getTagsByGroup） |
+| 6 | 提示词标签组 - 获取组内所有标签（模拟 getTagsByGroup） |
+| 7 | 图像标签 - 解析多种分隔符的输入（parseTagInput） |
+| 8 | 提示词标签 - 解析多种分隔符的输入（parseTagInput） |
+| 9 | 图像标签 - 解析中文逗号分隔（parseTagInput） |
+| 10 | 提示词标签 - 解析中文逗号分隔（parseTagInput） |
+| 11 | 图像 - 添加标签时 updated_at 更新 |
+| 12 | 提示词 - 添加标签时 updated_at 更新 |
+| 13 | 图像 - 批量添加标签时 updated_at 更新 |
+| 14 | 提示词 - 批量添加标签时 updated_at 更新 |
+
+**修改相关文件时需关注**：
+
+- 修改 TagService.unlinkTagFromItem 方法时
+- 修改标签存在检查逻辑时
+- 修改标签输入解析逻辑（parseTagInput）时
+- 修改标签操作触发 updated_at 更新逻辑时
+
+---
+
+### 14-tagservice-operations.spec.ts
+
+**测试内容**：TagService 基础操作测试
+
+**涉及组件/管理器**：
+
+- `TagService` - 标签服务
+- `ImageTagManager` - 图像标签管理
+- `PromptTagManager` - 提示词标签管理
+
+**测试项列表（共14个，按实际执行顺序）**：
+
+| 序号 | 测试描述 |
+|------|----------|
+| 1 | 图像标签组 - 创建、编辑、删除完整流程 |
+| 2 | 提示词标签组 - 创建、编辑、删除完整流程 |
+| 3 | 图像标签 - 创建并分配到组 |
+| 4 | 提示词标签 - 创建并分配到组 |
+| 5 | 图像标签 - 重命名标签 |
+| 6 | 提示词标签 - 重命名标签 |
+| 7 | 图像标签管理器 - 搜索标签 |
+| 8 | 提示词标签管理器 - 搜索标签 |
+| 9 | 图像标签 - 批量删除 |
+| 10 | 提示词标签 - 批量删除 |
+
+**修改相关文件时需关注**：
+
+- 修改标签组 CRUD 操作时
+- 修改标签分配/重命名逻辑时
+- 修改标签搜索功能时
+- 修改批量标签操作时
+
+---
+
+### 13-tag-input-methods.spec.ts
+
+**测试内容**：详情界面标签输入方式测试
+
+**涉及组件/管理器**：
+
+- `ImageDetailManager` - 图像详情管理
+- `PromptDetailManager` - 提示词详情管理
+- `TagAutocomplete` - 标签自动完成组件
+
+**测试项列表（共10个，按实际执行顺序）**：
+
+| 序号 | 测试描述 |
+|------|----------|
+| 1 | 图像详情界面 - 直接回车添加单个标签（无下拉建议） |
+| 2 | 图像详情界面 - 点击下拉建议项添加标签 |
+| 3 | 图像详情界面 - 使用键盘导航选择下拉建议并回车添加 |
+| 4 | 图像详情界面 - 批量添加多个标签（使用空格分隔） |
+| 5 | 图像详情界面 - 下拉框激活时回车添加当前输入（无选中项） |
+| 6 | 提示词详情界面 - 直接回车添加单个标签（无下拉建议） |
+| 7 | 提示词详情界面 - 点击下拉建议项添加标签 |
+| 8 | 提示词详情界面 - 使用键盘导航选择下拉建议并回车添加 |
+| 9 | 提示词详情界面 - 批量添加多个标签（使用逗号分隔） |
+| 10 | 提示词详情界面 - 下拉框激活时回车添加当前输入（无选中项） |
+
+**修改相关文件时需关注**：
+
+- 修改标签输入框行为时
+- 修改标签自动完成下拉逻辑时
+- 修改标签批量添加功能时
+- 修改键盘导航选择标签时
+
+---
 
 ### 12-tag-manager-dialog-retry.spec.ts
 
