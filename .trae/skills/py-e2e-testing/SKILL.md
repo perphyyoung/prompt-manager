@@ -1,34 +1,34 @@
 ---
 name: py-e2e-testing
-description: Use when writing or debugging E2E tests with Playwright. Symptoms include flaky tests, race conditions, timing dependencies, or need to verify UI interactions through screenshots and state checks.
+description: 在编写或调试 Playwright E2E 测试时使用。症状包括：测试不稳定、竞态条件、时间依赖性问题，或需要通过截图和状态检查验证 UI 交互。
 ---
 
-# E2E Testing Standards
+# E2E 测试规范
 
-## MUST FOLLOW - Critical Rules
+## 必须遵守 - 关键规则
 
-These rules are **ABSOLUTE REQUIREMENTS** - no exceptions allowed:
+这些规则是**绝对要求** - 不允许例外：
 
-1. **Use Electron log API for test logging**
-   - Use `window.electronAPI.logInfo()` to record test logs to `pm.log`
-   - Example:
+1. **使用 Electron 日志 API 进行测试日志记录**
+   - 使用 `window.electronAPI.logInfo()` 将测试日志记录到 `pm.log`
+   - 示例：
 
      ```typescript
      await page.evaluate((params) => {
-       window.electronAPI.logInfo('E2E-Test', 'Test operation', {
+       window.electronAPI.logInfo('E2E-Test', '测试操作', {
          param1: params.value1,
          param2: params.value2
        });
-       // ... test logic
+       // ... 测试逻辑
      }, testData);
      ```
 
-   - Logs will be written to `./pm.log`
-   - Use logs for debugging instead of `console.log` in production tests
+   - 日志将写入 `./pm.log`
+   - 使用日志进行调试，而不是在生产测试中使用 `console.log`
 
-2. **Log test item description in Chinese before each test**
+2. **在每个测试前用中文记录测试项描述**
 
-   - Use ElectronTestHelper's logTestStart method
+   - 使用 ElectronTestHelper 的 logTestStart 方法
    - 所有描述都用中文
 
    ```typescript
@@ -38,64 +38,64 @@ These rules are **ABSOLUTE REQUIREMENTS** - no exceptions allowed:
 
    test('应该创建新提示词', async () => {
      await electronTest.logTestStart('创建新提示词');
-     // ... test code
+     // ... 测试代码
    });
    ```
 
-3. **ALWAYS use Constants.Ids for DOM element selectors**
+3. **始终使用 Constants.Ids 进行 DOM 元素选择**
 
    ```typescript
-   // ❌ WRONG: Hardcoded ID - prone to errors when source changes
+   // ❌ 错误：硬编码 ID - 源代码变更时容易出错
    await page.click('#selectModalOkBtn');
 
-   // ✅ CORRECT: Use Constants.Ids - ensures consistency with source code
+   // ✅ 正确：使用 Constants.Ids - 确保与源代码一致
    await page.click(`#${Constants.Ids.SELECT_MODAL_OK_BTN}`);
    ```
 
-   - Source code uses `Constants.Ids.Xxx` for type safety
-   - Test code must use the same constants to maintain consistency
-   - If the constant doesn't exist, check `src/constants.ts` and use the actual ID defined there
-   - **For `waitForFunction` and `page.evaluate`**: Pass constants as parameters since they run in browser context
+   - 源代码使用 `Constants.Ids.Xxx` 进行类型安全
+   - 测试代码必须使用相同的常量以保持一致性
+   - 如果常量不存在，请检查 `src/constants.ts` 并使用其中定义的实际 ID
+   - **对于 `waitForFunction` 和 `page.evaluate`**：将常量作为参数传递，因为它们在浏览器上下文中运行
 
      ```typescript
-     // ❌ WRONG: Constants not available in browser context
+     // ❌ 错误：浏览器上下文中无法使用 Constants
      await page.waitForFunction(() => {
        const items = document.querySelectorAll(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item`);
        return items.length > 0;
      });
 
-     // ✅ CORRECT: Pass constant value as parameter
+     // ✅ 正确：将常量值作为参数传递
      await page.waitForFunction(
        (containerId: string) => {
          const items = document.querySelectorAll(`#${containerId} .tag-manager-item`);
          return items.length > 0;
        },
-       Constants.Ids.IMAGE_TAG_GROUP_CARDS  // Pass constant as parameter
+       Constants.Ids.IMAGE_TAG_GROUP_CARDS  // 将常量作为参数传递
      );
      ```
 
-4. **NEVER delete non-test data in E2E tests**
-   - Always create test data first, then delete only the test data
-   - Use search + select pattern to target only test-created items
+4. **绝不在 E2E 测试中删除非测试数据**
+   - 始终先创建测试数据，然后仅删除测试数据
+   - 使用搜索 + 选择模式来仅定位测试创建的项目
 
-5. **NEVER use `waitForTimeout` for waiting**
-   - Use explicit conditions instead (waitForSelector, waitForFunction, etc.)
-   - See "Reliable Verification" section below for correct patterns
+5. **绝不使用 `waitForTimeout` 进行等待**
+   - 改用显式条件（waitForSelector、waitForFunction 等）
+   - 参见下方的"可靠验证"部分了解正确模式
 
-6. **Use shared helper functions from `e2e/electron-test.ts`**
-   - Import and reuse existing helper functions instead of duplicating code
-   - Available helper categories:
-     - **ElectronTestHelper class**: `launch()`, `close()`, `getPage()`, `waitForSelector()`, `click()`, `getText()`, `exists()`, `wait()`, `screenshot()`, `logTestStart()`
-     - **Tag Manager helpers**: `enterImageTagManager()`, `enterPromptTagManager()`, `createImageTagInManager()`, `createPromptTagInManager()`, `createImageTagGroup()`, `createPromptTagGroup()`, etc.
-     - **View Navigation helpers**: `enterImageGridView()`, `enterPromptGridView()`, `enterImageListView()`, `enterPromptListView()`
-     - **Detail View helpers**: `openImageDetail()`, `openPromptDetail()`, `enterImageDetailView()`, `enterPromptDetailView()`
-     - **Database helpers**: `getImageFromDatabase()`, `getPromptFromDatabase()`, `getFirstImageId()`, `getFirstPromptId()`
-     - **Tag Filter helpers**: `ensureTagFilterExpanded()`
-   - See full documentation: [e2e-测试共享辅助函数库.md](e2e-测试共享辅助函数库.md)
-   - **When adding new shared functions**: First add to `e2e/electron-test.ts`, then update `e2e-测试共享辅助函数库.md`
+6. **使用 `e2e/electron-test.ts` 中的共享辅助函数**
+   - 导入并重用现有的辅助函数，而不是重复代码
+   - 可用的辅助函数类别：
+     - **ElectronTestHelper 类**：`launch()`、`close()`、`getPage()`、`waitForSelector()`、`click()`、`getText()`、`exists()`、`wait()`、`screenshot()`、`logTestStart()`
+     - **标签管理器辅助函数**：`enterImageTagManager()`、`enterPromptTagManager()`、`createImageTagInManager()`、`createPromptTagInManager()`、`createImageTagGroup()`、`createPromptTagGroup()` 等
+     - **视图导航辅助函数**：`enterImageGridView()`、`enterPromptGridView()`、`enterImageListView()`、`enterPromptListView()`
+     - **详情视图辅助函数**：`openImageDetail()`、`openPromptDetail()`、`enterImageDetailView()`、`enterPromptDetailView()`
+     - **数据库辅助函数**：`getImageFromDatabase()`、`getPromptFromDatabase()`、`getFirstImageId()`、`getFirstPromptId()`
+     - **标签筛选辅助函数**：`ensureTagFilterExpanded()`
+   - 完整文档参见：[e2e-测试共享辅助函数库.md](e2e-测试共享辅助函数库.md)
+   - **添加新的共享函数时**：首先添加到 `e2e/electron-test.ts`，然后更新 `e2e-测试共享辅助函数库.md`
 
    ```typescript
-   // ✅ CORRECT: Import and reuse helper functions
+   // ✅ 正确：导入并重用辅助函数
    import { createElectronTest, enterImageGridView, getImageFromDatabase } from './electron-test.ts';
 
    const electronTest = createElectronTest();
@@ -104,75 +104,114 @@ These rules are **ABSOLUTE REQUIREMENTS** - no exceptions allowed:
    const firstCard = await enterImageGridView(page);
    ```
 
-7. Safe Delete Patterns (MUST FOLLOW)
+7. **使用 ElectronTestHelper 进行测试数据生成和清理**
 
-When implementing ANY delete operations in E2E tests, you MUST follow these patterns to prevent accidental deletion of non-test data.
+   - `ElectronTestHelper` 已集成测试数据管理功能，无需额外导入
+   - 使用 `generateTagName()` 生成带有 `e2e_` 前缀的唯一测试标签名
+   - 使用 `createImageTag()` / `createPromptTag()` 创建测试标签
+   - 在 `afterEach` 中使用 `cleanupAndReset()` 清理测试数据, 并返回图像主界面
 
-### 7.1 Safe Single Delete Pattern
+   ```typescript
+   // ✅ 正确：使用 ElectronTestHelper 进行测试数据管理
+   import { createElectronTest } from './electron-test.ts';
 
-For deleting a single item by clicking its delete button:
+   const electronTest = createElectronTest();
+
+   test.afterEach(async () => {
+     await electronTest.cleanupAndReset();
+   });
+
+   test('应该创建标签', async () => {
+     const tagName = electronTest.generateTagName('test_suffix');
+     await electronTest.createImageTag(tagName);
+     // ... 测试逻辑
+   });
+   ```
+
+   - 优点：
+     - 一致的 `e2e_` 前缀，便于识别和清理
+     - 带时间戳的唯一名称防止冲突
+     - 集中式清理防止测试之间的数据污染
+     - 无需额外导入，简化测试代码
+
+8. 安全删除模式（必须遵守）
+
+在 E2E 测试中实现任何删除操作时，必须遵循这些模式以防止意外删除非测试数据。
+
+### 8.1 安全单个删除模式
+
+通过点击删除按钮删除单个项目时（使用 ElectronTestHelper）：
 
 ```typescript
-// ✅ CORRECT: Safe single delete pattern
-const testTagName = generateTestTagName('single_delete');
+// ✅ 正确：安全单个删除模式
+import { createElectronTest } from './electron-test.ts';
 
-// Create test data
-await createImageTagInManager(page, testTagName);
+const electronTest = createElectronTest();
+const testTagName = electronTest.generateTagName('single_delete');
 
-// Search to filter and locate the specific tag
+// 创建测试数据
+await electronTest.createImageTag('single_delete');
+
+// 搜索以筛选和定位特定标签
 await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, testTagName);
 
-// CRITICAL: Verify search returns exactly 1 result and matches our tag
+// 关键：验证搜索返回恰好 1 个结果且与我们的标签匹配
 await page.waitForFunction(
   (params: { containerId: string; tagName: string }) => {
     const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
-    // Must be exactly 1 item AND it must be our test tag
-    return items.length === 1 && 
+    // 必须是恰好 1 个项目 AND 它必须是我们的测试标签
+    return items.length === 1 &&
            items[0].getAttribute('data-tag') === params.tagName;
   },
   { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, tagName: testTagName },
   { timeout: 5000 }
 );
 
-// Click delete button on the SPECIFIC tag
+// 点击特定标签的删除按钮
 const deleteBtn = page.locator(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${testTagName}"] .tag-delete-btn`);
 await deleteBtn.click();
 
-// Confirm deletion
+// 确认删除
 await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, { state: 'visible', timeout: 5000 });
 await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
-// Verify deletion via API
+// 通过 API 验证删除
 await page.waitForFunction(async (name: string) => {
   const tags = await window.electronAPI.getImageTags();
   return !tags.includes(name);
 }, testTagName, { timeout: 5000 });
+
+// 注意：如果使用 test.afterEach 的 cleanupAndReset()，则不需要手动删除
+// 这里的删除操作仅用于测试删除功能本身
 ```
 
-### 7.2 Safe Batch Delete Pattern
+### 8.2 安全批量删除模式
 
-For batch deleting multiple items:
+批量删除多个项目时（使用 ElectronTestHelper）：
 
 ```typescript
-// ✅ CORRECT: Safe batch delete pattern
-const searchKeyword = 'persist_test';  // Use specific test prefix
-const tagName1 = generateTestTagName(searchKeyword);  // e2e_persist_test_xxx
-const tagName2 = generateTestTagName(searchKeyword);
-const otherTagName = generateTestTagName('other');  // Control group (not matching search)
+// ✅ 正确：安全批量删除模式
+import { createElectronTest } from './electron-test.ts';
 
-// Create test data
-await createImageTagInManager(page, tagName1);
-await createImageTagInManager(page, tagName2);
-await createImageTagInManager(page, otherTagName);  // Will NOT be deleted
+const electronTest = createElectronTest();
+const searchKeyword = 'persist_test';  // 使用特定的测试前缀
+const tagName1 = electronTest.generateTagName(searchKeyword);  // e2e_persist_test_xxx
+const tagName2 = electronTest.generateTagName(searchKeyword);
+const otherTagName = electronTest.generateTagName('other');  // 对照组（不匹配搜索）
 
-// Search with specific keyword
+// 创建测试数据
+await electronTest.createImageTag(tagName1);
+await electronTest.createImageTag(tagName2);
+await electronTest.createImageTag(otherTagName);  // 不会被删除
+
+// 使用特定关键词搜索
 await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
-// CRITICAL: Wait for search to filter AND verify all visible items match search
+// 关键：等待搜索筛选完成 AND 验证所有可见项目都匹配搜索
 await page.waitForFunction(
   (params: { containerId: string; keyword: string }) => {
     const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
-    // Must verify: 1) expected count, 2) ALL items contain search keyword
+    // 必须验证：1) 预期数量，2) 所有项目都包含搜索关键词
     return items.length >= 2 && Array.from(items).every(item =>
       item.getAttribute('data-tag')?.includes(params.keyword)
     );
@@ -181,33 +220,33 @@ await page.waitForFunction(
   { timeout: 5000 }
 );
 
-// Enter batch mode and select all
+// 进入批量模式并全选
 await page.click(`#${Constants.Ids.BATCH_MANAGE_IMAGE_TAGS_BTN}`);
 await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-batch-checkbox`, { state: 'visible', timeout: 5000 });
 
 const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_TAG_BATCH_TOOLBAR}`);
 await batchToolbar.locator('.batch-action-select-all').click();
 
-// CRITICAL: Verify selected items before delete
+// 关键：删除前验证选中的项目
 await page.waitForFunction(async (keyword: string) => {
   const checkedBoxes = document.querySelectorAll('.tag-batch-checkbox:checked');
   const selectedTags = Array.from(checkedBoxes).map(cb => cb.getAttribute('data-tag'));
-  // Safety check: all selected tags must contain search keyword
+  // 安全检查：所有选中的标签必须包含搜索关键词
   return selectedTags.every(tag => tag?.includes(keyword));
 }, searchKeyword, { timeout: 5000 });
 
-// Execute delete
+// 执行删除
 await batchToolbar.locator('.batch-action-delete').click();
 await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, { state: 'visible', timeout: 5000 });
 await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
-// Verify deletion via API
+// 通过 API 验证删除
 await page.waitForFunction(async (names: string[]) => {
   const tags = await window.electronAPI.getImageTags();
   return !tags.includes(names[0]) && !tags.includes(names[1]);
 }, [tagName1, tagName2], { timeout: 5000 });
 
-// CRITICAL: Verify control group (otherTagName) still exists
+// 关键：验证对照组（otherTagName）仍然存在
 await page.click(`#${Constants.Ids.CLEAR_IMAGE_TAG_MANAGER_SEARCH_BTN}`);
 await page.waitForFunction(
   (params: { containerId: string; tagName: string }) => {
@@ -220,118 +259,118 @@ await page.waitForFunction(
 await expect(page.locator(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${otherTagName}"]`)).toBeVisible({ timeout: 5000 });
 ```
 
-### 7.3 Critical Safety Requirements
+### 8.3 关键安全要求
 
-**⚠️ WARNING: Skipping any of these steps may result in data loss!**
+**⚠️ 警告：跳过任何这些步骤可能导致数据丢失！**
 
-1. **Use specific search keywords**: Create tags with unique test prefixes (e.g., `persist_test`, `e2e_drag_drop`)
-   - NEVER use broad keywords like `'e2e'` alone
-   - Use timestamp or UUID to ensure uniqueness: `e2e_test_${Date.now()}`
+1. **使用特定的搜索关键词**：使用唯一的测试前缀创建标签（例如 `persist_test`、`e2e_drag_drop`）
+   - 绝不使用宽泛的关键词如 `'e2e'` 单独使用
+   - 使用时间戳或 UUID 确保唯一性：`e2e_test_${Date.now()}`
 
-2. **Create control group**: **MANDATORY** - Always create at least one tag that does NOT match the search keyword
-   - This is your safety net to verify filtering worked correctly
-   - Without control group, you cannot detect if filtering failed
+2. **创建对照组**：**强制** - 始终创建至少一个不匹配搜索关键词的标签
+   - 这是验证筛选是否正确工作的安全网
+   - 没有对照组，你无法检测筛选是否失败
 
-3. **Verify search filtering**: Wait for search to complete AND verify ALL visible items contain the search keyword
-   - Check both count AND content
-   - Use `.every()` to ensure ALL items match
+3. **验证搜索筛选**：等待搜索完成 AND 验证所有可见项目都包含搜索关键词
+   - 检查数量和内容
+   - 使用 `.every()` 确保所有项目都匹配
 
-4. **Verify selection before delete**: Double-check that all selected items match the search criteria
-   - Query selected checkboxes and verify their data-tag attributes
-   - Throw error if any non-matching tag is selected
+4. **删除前验证选择**：仔细检查所有选中的项目是否符合搜索条件
+   - 查询选中的复选框并验证其 data-tag 属性
+   - 如果选中了任何不匹配的标签则抛出错误
 
-5. **Verify control group survives**: After deletion, clear search and verify the control group tag still exists
-   - This confirms only intended items were deleted
-   - If control group is missing, the test has a bug
+5. **验证对照组存活**：删除后，清除搜索并验证对照组标签仍然存在
+   - 这确认了仅删除了预期的项目
+   - 如果对照组丢失，说明测试有 bug
 
-### 7.4 Anti-patterns (NEVER DO THIS)
+### 8.4 反模式（绝不要这样做）
 
 ```typescript
-// ❌ WRONG: Dangerous batch delete - may delete all data
-await searchInput.fill('e2e');  // Too broad, may match everything
+// ❌ 错误：危险的批量删除 - 可能删除所有数据
+await searchInput.fill('e2e');  // 太宽泛，可能匹配所有内容
 await page.waitForFunction(() => {
   const items = document.querySelectorAll('.tag-manager-item');
-  return items.length >= 0;  // Always true, no actual verification!
+  return items.length >= 0;  // 始终为真，没有实际验证！
 });
-await page.click('.batch-action-select-all');  // May select ALL tags
-await page.click('.batch-action-delete');  // DANGER: Deletes everything!
+await page.click('.batch-action-select-all');  // 可能选中所有标签
+await page.click('.batch-action-delete');  // 危险：删除所有内容！
 
-// ❌ WRONG: No control group - cannot verify safety
-const testTag = generateTestTagName('test');
-await createImageTagInManager(page, testTag);
+// ❌ 错误：没有对照组 - 无法验证安全性
+const tagName = electronTest.generateTagName('test');
+await electronTest.createImageTag('test');
 await searchInput.fill('test');
 await page.click('.batch-action-select-all');
-await page.click('.batch-action-delete');  // If filtering failed, deletes everything!
+await page.click('.batch-action-delete');  // 如果筛选失败，删除所有内容！
 
-// ❌ WRONG: Not verifying selection before delete
+// ❌ 错误：删除前不验证选择了什么
 await searchInput.fill(searchKeyword);
 await page.click('.batch-action-select-all');
-// No verification of what was selected!
+// 不验证选择了什么！
 await page.click('.batch-action-delete');
 ```
 
-**Reference Implementations:**
+**参考实现：**
 
-- Single delete: `e2e/9-tag-manager.spec.ts` (删除标签测试)
-- Batch delete with control group: `e2e/10-tag-manager-search-persist.spec.ts`
+- 单个删除：`e2e/9-tag-manager.spec.ts`（删除标签测试）
+- 带对照组的批量删除：`e2e/10-tag-manager-search-persist.spec.ts`
 
-## Prohibited Behaviors
+## 禁止行为
 
-- Do not write tests without understanding the code
-- Do not assert without screenshots
-- Do not only look at the last screenshot
-- Do not assume page state without verification
-- Do not skip automated test verification
+- 禁止使用弃用方法
+- 禁止在没有理解代码的情况下编写测试
+- 禁止在没有截图的情况下进行断言
+- 禁止在没有验证的情况下假设页面状态
+- 禁止跳过自动化测试验证
 
 ---
 
-## Mandatory Process for Writing E2E Tests
+## 编写 E2E 测试的强制流程
 
-### Phase 1: Understand the Code (Must Complete First)
+### 阶段 1：理解代码（必须首先完成）
 
-Before writing any test code, you must:
+在编写任何测试代码之前，你必须：
 
-1. **Find page navigation logic**
-   - Search for relevant Manager files
-   - Understand how pages open/close
-   - Confirm when active class is added
+1. **找到页面导航逻辑**
+   - 搜索相关的 Manager 文件
+   - 理解页面如何打开/关闭
+   - 确认何时添加 active 类
 
-2. **Confirm DOM element IDs**
-   - Check HTML template files
-   - Confirm IDs for buttons, input fields
-   - Confirm basis for state determination
+2. **确认 DOM 元素 ID**
+   - 检查 HTML 模板文件
+   - 确认按钮、输入框的 ID
+   - 确认状态判断的依据
 
-3. **Understand business logic**
-   - What buttons display under what conditions
-   - Prerequisites for page navigation
-   - Completion indicators for async operations
+3. **理解业务逻辑**
+   - 什么条件下显示什么按钮
+   - 页面导航的前提条件
+   - 异步操作的完成指示器
 
-### Phase 2: Write Tests
+### 阶段 2：编写测试
 
-1. **Take screenshots after each key operation**
+1. **在每个关键操作后截图**
 
    ```typescript
    await page.screenshot({ path: `test-results/debug-${stepName}.png` });
    ```
 
-2. **Verify page state**
-   - Do not assume page has switched
-   - Use waitForSelector to verify key elements
-   - Set reasonable timeouts (1000ms)
+2. **验证页面状态**
+   - 不要假设页面已经切换
+   - 使用 waitForSelector 验证关键元素
+   - 设置合理的超时（1000ms）
 
-3. **Navigate to target interface according to actual logic**
-   - Do not assume the test starts at the target interface
-   - Explicitly write steps to enter the target interface in test comments
-   - Use helper functions to encapsulate navigation logic
-   - Example:
+3. **按照实际逻辑导航到目标界面**
+   - 不要假设测试从目标界面开始
+   - 在测试注释中显式编写进入目标界面的步骤
+   - 使用辅助函数封装导航逻辑
+   - 示例：
 
      ```typescript
      /**
-      * Enter image grid view helper function
-      * Steps to enter target interface:
-      * 1. Click #imageManagerBtn to switch to image panel
-      * 2. Click #imageGridViewBtn to ensure grid view
-      * 3. Wait for .image-card elements to be visible
+      * 进入图像网格视图辅助函数
+      * 进入目标界面的步骤：
+      * 1. 点击 #imageManagerBtn 切换到图像面板
+      * 2. 点击 #imageGridViewBtn 确保网格视图
+      * 3. 等待 .image-card 元素可见
       */
      async function enterImageGridView(page: any) {
        await page.click('#imageManagerBtn');
@@ -344,212 +383,212 @@ Before writing any test code, you must:
      }
      ```
 
-4. **Execute step by step**
-   - One operation at a time
-   - Verify success before next step
-   - Check screenshots to locate issues on failure
+4. **一步一步执行**
+   - 一次一个操作
+   - 在进行下一步之前验证成功
+   - 失败时检查截图以定位问题
 
-5. **Add explicit type annotations**
-   - All `.evaluate()` callbacks must have explicit parameter types
-   - Example:
+5. **添加显式类型注解**
+   - 所有 `.evaluate()` 回调必须有显式参数类型
+   - 示例：
 
      ```typescript
-     // ❌ Wrong: implicit 'any' type
+     // ❌ 错误：隐式 'any' 类型
      await element.evaluate(el => el.classList.contains('active'));
 
-     // ✅ Correct: explicit HTMLElement type
+     // ✅ 正确：显式 HTMLElement 类型
      await element.evaluate((el: HTMLElement) => el.classList.contains('active'));
      ```
 
-6. **Run type checking before testing**
-   - Verify test file passes TypeScript type checking BEFORE running tests:
+6. **测试前运行类型检查**
+   - 在运行测试之前验证测试文件通过 TypeScript 类型检查：
 
      ```bash
-     npx tsc --noEmit e2e/<test-file>.spec.ts
+     npx tsc --noEmit e2e/<test文件>.spec.ts
      ```
 
-   - Fix all type errors first
-   - This ensures test script correctness before execution
+   - 首先修复所有类型错误
+   - 这确保在执行之前测试脚本的正确性
 
-7. **Type check after every modification**
-   - After making ANY changes to test code:
-     1. Run `npx tsc --noEmit` to verify type correctness
-     2. Only run tests after type checking passes
-   - Workflow:
+7. **每次修改后进行类型检查**
+   - 在对测试代码进行任何更改后：
+     1. 运行 `npx tsc --noEmit` 验证类型正确性
+     2. 仅在类型检查通过后运行测试
+   - 工作流程：
 
      ```plain
-     Modify code → Type check → Fix errors (if any) → Run tests
+     修改代码 → 类型检查 → 修复错误（如有）→ 运行测试
      ```
 
-   - This prevents wasting time running tests with type errors
+   - 这防止浪费时间运行带有类型错误的测试
 
-### Phase 3: Automated Test Verification
+### 阶段 3：自动化测试验证
 
-After writing E2E tests, you must run automated verification:
+编写 E2E 测试后，必须运行自动化验证：
 
-1. **Run failed tests first** (when debugging)
-   - Use `--grep` to run only the failed test:
+1. **首先运行失败的测试**（调试时）
+   - 使用 `--grep` 仅运行失败的测试：
 
      ```bash
-     npx playwright test e2e/<test-file>.spec.ts --grep "Test Name" --reporter=list
+     npx playwright test e2e/<测试文件>.spec.ts --grep "测试名称" --reporter=list
      ```
 
-   - Fix the issue and verify it passes
-   - Then run all tests to ensure no regressions
+   - 修复问题并验证通过
+   - 然后运行所有测试以确保没有回归
 
-2. **Run all tests** (after fixes or initial write)
+2. **运行所有测试**（修复后或初始编写后）
 
    ```bash
-   npx playwright test e2e/<test-file>.spec.ts --reporter=list
+   npx playwright test e2e/<测试文件>.spec.ts --reporter=list
    ```
 
-3. **Verify all tests pass**
-   - All tests should show "✓" (passed)
-   - No "✘" (failed) or "−" (skipped) without reason
-   - Check test duration is reasonable (< 30s per test)
+3. **验证所有测试通过**
+   - 所有测试应显示 "✓"（通过）
+   - 没有 "✘"（失败）或 "−"（跳过）无理由
+   - 检查测试持续时间是否合理（< 30s 每个测试）
 
-4. **Handle test failures**
-   - Review error messages
-   - Check screenshots in `test-results/` directory
-   - Fix issues in code or test, not workarounds
-   - Re-run until all pass
+4. **处理测试失败**
+   - 查看错误消息
+   - 检查 `test-results/` 目录中的截图
+   - 修复代码或测试中的问题，而不是变通方案
+   - 重新运行直到全部通过
 
-5. **Document test results**
-   - Report total passed/failed count
-   - List any skipped tests with reasons
-   - Note any fixes made during verification
+5. **记录测试结果**
+   - 报告通过/失败总数
+   - 列出任何跳过的测试及原因
+   - 记录验证过程中所做的任何修复
 
-### Phase 4: Debug (When Tests Fail)
+### 阶段 4：调试（当测试失败时）
 
-When automated verification reveals failures:
+当自动化验证显示失败时：
 
-1. **Review all screenshots**
-   - Not just the last one
-   - Trace the entire flow
+1. **查看所有截图**
+   - 不只是最后一张
+   - 追踪整个流程
 
-2. **Analyze failure causes**
-   - What page does the screenshot show?
-   - Does the expected element exist?
-   - Does the state match expectations?
+2. **分析失败原因**
+   - 截图显示什么页面？
+   - 预期元素是否存在？
+   - 状态是否符合预期？
 
-3. **Re-examine the code - DO NOT GUESS**
-   - When tests fail, you MUST re-examine the relevant source code
-   - Do not assume "it might be X" and apply workarounds
-   - Go back to Phase 1: read the actual implementation code
-   - Verify DOM structure, field names, data flow
-   - Only fix after understanding the real cause
-   - **If thinking process contains words like "可能", "maybe", "probably", "should be", or similar uncertain terms, STOP and re-examine the code. DO NOT proceed with assumptions - verify actual code behavior first.**
+3. **重新检查代码 - 不要猜测**
+   - 当测试失败时，必须重新检查相关源代码
+   - 不要假设"可能是 X"并应用变通方案
+   - 回到阶段 1：阅读实际实现代码
+   - 验证 DOM 结构、字段名称、数据流
+   - 仅在理解真正原因后进行修复
+   - **如果思考过程包含"可能"、"maybe"、"probably"、"should be"或类似不确定的词语，停止并重新检查代码。不要基于假设继续 - 首先验证实际代码行为。**
 
-4. **Fix and re-verify**
-   - Fix the root cause in code or test
-   - Return to Phase 3 to re-run verification
-   - Do not proceed until all tests pass
+4. **修复并重新验证**
+   - 修复代码或测试中的根本原因
+   - 返回阶段 3 重新运行验证
+   - 直到所有测试通过才继续
 
-### Phase 5: Test Preparation (Before Running Tests)
+### 阶段 5：测试准备（运行测试前）
 
-Before running E2E tests, prepare the environment:
+运行 E2E 测试前，准备环境：
 
-1. **Clear pm.log file (not delete)**
-   - Empty the contents of `pm.log` file instead of deleting it
-   - This ensures a clean log for debugging while keeping the file handle
-   - Example:
+1. **清除 pm.log 文件（不要删除）**
+   - 清空 `pm.log` 文件的内容而不是删除它
+   - 这确保调试时有干净的日志，同时保持文件句柄
+   - 示例：
 
      ```powershell
      # Windows PowerShell
      Clear-Content pm.log
      ```
 
-2. **Verify build is up to date**
-   - Run `npx tsc --noEmit; npm run build` to ensure no type error and latest code is compiled
-   - Check for any build errors before testing
+2. **验证构建是最新的**
+   - 运行 `npx tsc --noEmit; npm run build` 确保没有类型错误且最新代码已编译
+   - 测试前检查是否有任何构建错误
 
-## Reliable Verification (NO Arbitrary Wait Times)
+## 可靠验证（无任意等待时间）
 
-**NEVER extend wait times as a fix for flaky tests.** This masks real issues and slows down tests.
+**绝不要通过延长等待时间来修复不稳定的测试。** 这会掩盖真正的问题并减慢测试速度。
 
-### The Wrong Way (Prohibited)
+### 错误的方式（禁止）
 
 ```typescript
-// ❌ WRONG: Extending wait time without understanding why
-await page.waitForTimeout(2000); // Was 500ms, increased because "it might help"
+// ❌ 错误：不理解原因的情况下延长等待时间
+await page.waitForTimeout(2000); // 原来是 500ms，增加是因为"可能有帮助"
 ```
 
-### The Right Way (Required)
+### 正确的方式（要求）
 
-Use explicit wait conditions based on code research:
+使用基于代码研究的显式等待条件：
 
 ```typescript
-// ✅ CORRECT: Use waitForFunction to poll for state change
-// Best for: API calls, data persistence, async operations
+// ✅ 正确：使用 waitForFunction 轮询状态变化
+// 最适合：API 调用、数据持久化、异步操作
 await page.waitForFunction(async (tagName: string) => {
   const tags = await window.electronAPI.getAllTags();
   return tags.includes(tagName);
 }, testTagName, { timeout: 5000 });
 
-// ✅ CORRECT: Use waitForSelector with state
-// Best for: Modal dialogs, panels, visibility changes
+// ✅ 正确：使用带状态的 waitForSelector
+// 最适合：模态框、面板、可见性变化
 await page.waitForSelector('#imageTagManagerModal', { state: 'hidden', timeout: 5000 });
 
-// ✅ CORRECT: Use expect with toBeVisible
-// Best for: Elements that should appear after operation
+// ✅ 正确：使用带 toBeVisible 的 expect
+// 最适合：操作后应该出现的元素
 await expect(page.locator('.tag-filter-item[data-tag="newTag"]')).toBeVisible({ timeout: 5000 });
 
-// ✅ CORRECT: Use waitForSelector with has-text
-// Best for: Toast messages, notifications
+// ✅ 正确：使用带 has-text 的 waitForSelector
+// 最适合：Toast 消息、通知
 await page.waitForSelector('#toastContainer:has-text("标签已创建")', { timeout: 5000 });
 ```
 
-### Choosing the Right Method
+### 选择正确的方法
 
-| Scenario | Recommended Method | Why |
+| 场景 | 推荐方法 | 原因 |
 |----------|-------------------|-----|
-| API call completion | `waitForFunction` | Polls until condition met, no arbitrary delays |
-| Modal open/close | `waitForSelector` with state | Waits for specific DOM state |
-| Element visibility | `expect().toBeVisible()` | Playwright's built-in retry |
-| Text content | `waitForSelector` with `:has-text` | Waits for specific text to appear |
-| Navigation complete | `waitForURL` or `waitForLoadState` | Playwright's navigation helpers |
+| API 调用完成 | `waitForFunction` | 轮询直到条件满足，无任意延迟 |
+| 模态框打开/关闭 | 带状态的 `waitForSelector` | 等待特定 DOM 状态 |
+| 元素可见性 | `expect().toBeVisible()` | Playwright 的内置重试 |
+| 文本内容 | 带 `:has-text` 的 `waitForSelector` | 等待特定文本出现 |
+| 导航完成 | `waitForURL` 或 `waitForLoadState` | Playwright 的导航辅助函数 |
 
-### When Tests Fail
+### 当测试失败时
 
-1. **DO NOT** increase `waitForTimeout` values
-2. **DO** examine the actual code to understand:
-   - What event signals operation completion?
-   - What DOM change indicates success?
-   - What API can verify the state change?
-3. **DO** use explicit wait conditions based on code research
-4. **DO** verify the fix works reliably across multiple runs
+1. **禁止** 增加 `waitForTimeout` 值
+2. **要** 检查实际代码以理解：
+   - 什么事件表示操作完成？
+   - 什么 DOM 变化表示成功？
+   - 什么 API 可以验证状态变化？
+3. **要** 使用基于代码研究的显式等待条件
+4. **要** 验证修复在多次运行中可靠工作
 
-## Special Cases
+## 特殊情况
 
-### Testing Duplicate Submission Prevention / Debounce
+### 测试重复提交预防 / 防抖
 
-When testing duplicate submission prevention or debounce functionality, use `page.evaluate` for rapid operations and verify through API.
+测试重复提交预防或防抖功能时，使用 `page.evaluate` 进行快速操作并通过 API 验证。
 
-**See detailed guide:** [Duplicate Submission Prevention](testing-techniques.md#duplicate-submission-prevention)
+**参见详细指南：** [重复提交预防](testing-techniques.md#duplicate-submission-prevention)
 
 ---
 
-## Testing Techniques Reference
+## 测试技术参考
 
-For specific testing techniques and best practices, see **[testing-techniques.md](testing-techniques.md)**:
+有关特定的测试技术和最佳实践，参见 **[testing-techniques.md](testing-techniques.md)**：
 
-- **[Drag and Drop Operations](testing-techniques.md#drag-and-drop-operations)** - Step-by-step mouse operations for reliable drag and drop
-- **[Duplicate Submission Prevention](testing-techniques.md#duplicate-submission-prevention)** - Testing debounce and duplicate prevention
-- **[Database State Verification](testing-techniques.md#database-state-verification)** - Verifying data through API
-- **[Reliable Waiting Strategies](testing-techniques.md#reliable-waiting-strategies)** - Explicit wait conditions instead of arbitrary delays
+- **[拖放操作](testing-techniques.md#drag-and-drop-operations)** - 用于可靠拖放的逐步鼠标操作
+- **[重复提交预防](testing-techniques.md#duplicate-submission-prevention)** - 测试防抖和重复预防
+- **[数据库状态验证](testing-techniques.md#database-state-verification)** - 通过 API 验证数据
+- **[可靠等待策略](testing-techniques.md#reliable-waiting-strategies)** - 显式等待条件而非任意延迟
 
-## Test Cleanup (After All Tests Pass)
+## 测试清理（所有测试通过后）
 
-After all tests pass, clean up debugging code:
+所有测试通过后，清理调试代码：
 
-1. **Remove unnecessary test logic**
-   - Simplify complex workarounds that were only for debugging
-   - Keep only the essential test assertions
+1. **移除不必要的测试逻辑**
+   - 简化仅为调试而存在的复杂变通方案
+   - 仅保留基本的测试断言
 
-2. **Re-run full test suite**
-   - Ensure cleanup didn't break any tests
-   - Verify all tests still pass after cleanup
+2. **重新运行完整测试套件**
+   - 确保清理没有破坏任何测试
+   - 验证清理后所有测试仍然通过
 
-3. **Final type checking verification**
-   - Run `npx tsc --noEmit` on the entire project
-   - Ensure no type errors remain
+3. **最终类型检查验证**
+   - 在整个项目上运行 `npx tsc --noEmit`
+   - 确保没有类型错误残留

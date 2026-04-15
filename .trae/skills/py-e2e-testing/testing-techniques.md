@@ -1,62 +1,62 @@
-# Playwright E2E Testing Techniques
+# Playwright E2E 测试技术
 
-Detailed techniques for common E2E testing scenarios.
+常见 E2E 测试场景的详细技术说明。
 
 ---
 
-## Drag and Drop Operations
+## 拖放操作
 
-For HTML5 drag and drop testing, use step-by-step mouse operations for better reliability.
+对于 HTML5 拖放测试，使用逐步鼠标操作以获得更好的可靠性。
 
-### Recommended Approach (Most Reliable)
+### 推荐方法（最可靠）
 
 ```typescript
-// Step 1: Hover over the source element and verify it's ready
+// 步骤 1：悬停在源元素上并验证它已准备就绪
 await sourceElement.hover();
 await expect(sourceElement).toBeVisible({ timeout: 5000 });
 
-// Step 2: Press mouse button (start drag)
+// 步骤 2：按下鼠标按钮（开始拖动）
 await page.mouse.down();
 
-// Step 3: Move to target element and verify it's ready
+// 步骤 3：移动到目标元素并验证它已准备就绪
 await targetElement.hover();
 await expect(targetElement).toBeVisible({ timeout: 5000 });
 
-// Step 4: Release mouse button (complete drop)
+// 步骤 4：释放鼠标按钮（完成放置）
 await page.mouse.up();
 
-// Step 5: Verify drop result using explicit condition
+// 步骤 5：使用显式条件验证放置结果
 await page.waitForFunction(async (tagName: string) => {
   const tags = await window.electronAPI.getAllTags();
   return tags.includes(tagName);
 }, testTagName, { timeout: 5000 });
 ```
 
-### Why This Works Better Than `dragTo()`
+### 为什么这比 `dragTo()` 更好
 
-- Better simulates real user behavior
-- Triggers correct event sequence: `mousedown` → `mousemove` → `mouseup`
-- Works with complex drag-and-drop libraries
-- Uses explicit verification instead of arbitrary delays
+- 更好地模拟真实用户行为
+- 触发正确的事件序列：`mousedown` → `mousemove` → `mouseup`
+- 适用于复杂的拖放库
+- 使用显式验证而非任意延迟
 
-### Alternative Using `dragTo()` (Simpler but Less Reliable)
+### 使用 `dragTo()` 的替代方法（更简单但不太可靠）
 
 ```typescript
 await sourceElement.dragTo(targetElement);
 ```
 
-### Tips for Successful Drag and Drop
+### 成功拖放的技巧
 
-1. **Verify elements are visible and ready** - Use `expect().toBeVisible()` before operations
-2. **Check for overlapping elements** - They might block the drop
-3. **Take screenshots after each step** - For debugging failures
-4. **Use explicit result verification** - Don't rely on `waitForTimeout`
-5. **If `dragTo()` fails, use step-by-step mouse operations** - More control and reliability
+1. **验证元素可见且准备就绪** - 在操作前使用 `expect().toBeVisible()`
+2. **检查重叠元素** - 它们可能会阻止放置
+3. **在每个步骤后截图** - 用于调试失败
+4. **使用显式结果验证** - 不要依赖 `waitForTimeout`
+5. **如果 `dragTo()` 失败，使用逐步鼠标操作** - 更多控制和可靠性
 
-### Example: Tag Drag to Card
+### 示例：标签拖到卡片
 
 ```typescript
-// Find a tag that doesn't exist on the target card
+// 找到一个不存在于目标卡片上的标签
 const allTags = page.locator('#imageTagFilterList .tag-filter-item');
 const totalTags = await allTags.count();
 
@@ -81,7 +81,7 @@ if (!tagName) {
   return;
 }
 
-// Execute drag and drop
+// 执行拖放
 await firstTag.hover();
 await expect(firstTag).toBeVisible({ timeout: 5000 });
 
@@ -92,13 +92,13 @@ await expect(firstCard).toBeVisible({ timeout: 5000 });
 
 await page.mouse.up();
 
-// Verify the tag was added using explicit condition
+// 使用显式条件验证标签已添加
 await page.waitForFunction(async (id: string, tag: string) => {
   const image = await window.electronAPI.getImageById(id);
   return (image as IImage)?.tags?.includes(tag);
 }, imageId, tagName, { timeout: 5000 });
 
-// Final verification
+// 最终验证
 const newTags = await page.evaluate(async (id) => {
   const image = await window.electronAPI.getImageById(id as string);
   return (image as IImage)?.tags || [];
@@ -110,61 +110,61 @@ expect(newTags).toContain(tagName);
 
 ---
 
-## Duplicate Submission Prevention
+## 重复提交预防
 
-When testing duplicate submission prevention or debounce functionality:
+测试重复提交预防或防抖功能时：
 
-### Use page.evaluate for Rapid Operations
+### 使用 page.evaluate 进行快速操作
 
 ```typescript
-// Wrong: Playwright waits for element stability, may miss timing
+// 错误：Playwright 等待元素稳定，可能错过时机
 await doneButton.click();
 await doneButton.click();
 
-// Correct: Trigger multiple clicks rapidly in browser
+// 正确：在浏览器中快速触发多次点击
 await page.evaluate(() => {
   const btn = document.getElementById('doneBtn');
   for (let i = 0; i < 5; i++) btn?.click();
 });
 ```
 
-### Verification Strategy
+### 验证策略
 
-- Verify final state (e.g., database record count)
-- Do not rely on intermediate state screenshots
-- Verify through API that only one record was created
+- 验证最终状态（例如，数据库记录数）
+- 不要依赖中间状态截图
+- 通过 API 验证仅创建了一条记录
 
-### Example
+### 示例
 
 ```typescript
-// Trigger rapid clicks
+// 触发快速点击
 await page.evaluate(() => {
   const btn = document.getElementById('submitBtn');
   for (let i = 0; i < 5; i++) btn?.click();
 });
 
-// Wait for operation completion using explicit condition
+// 使用显式条件等待操作完成
 await page.waitForFunction(async () => {
   const records = await window.electronAPI.getRecords();
   return records.length > 0;
 }, { timeout: 5000 });
 
-// Verify only one record was created
+// 验证仅创建了一条记录
 const count = await page.evaluate(async () => {
   const records = await window.electronAPI.getRecords();
   return records.length;
 });
 
-expect(count).toBe(1); // Should be 1, not 5
+expect(count).toBe(1); // 应该是 1，不是 5
 ```
 
 ---
 
-## Database State Verification
+## 数据库状态验证
 
-E2E tests should verify database state through API, not just UI.
+E2E 测试应该通过 API 验证数据库状态，而不仅仅是 UI。
 
-### Example
+### 示例
 
 ```typescript
 const count = await page.evaluate(async () => {
@@ -174,39 +174,39 @@ const count = await page.evaluate(async () => {
 expect(count).toBe(expectedCount);
 ```
 
-### Best Practices
+### 最佳实践
 
-1. **Use API calls** - More reliable than UI assertions
-2. **Verify data integrity** - Check actual database state
-3. **Don't rely solely on UI** - UI might not reflect true state immediately
-4. **Use waitForFunction for async operations** - Poll until condition is met
+1. **使用 API 调用** - 比 UI 断言更可靠
+2. **验证数据完整性** - 检查实际数据库状态
+3. **不要仅依赖 UI** - UI 可能不会立即反映真实状态
+4. **对异步操作使用 waitForFunction** - 轮询直到条件满足
 
 ---
 
-## Reliable Waiting Strategies
+## 可靠的等待策略
 
-**NEVER use `waitForTimeout()` for waiting in tests.** It creates flaky tests and slows execution.
+**绝不要在测试中使用 `waitForTimeout()` 进行等待。** 这会创建不稳定的测试并减慢执行速度。
 
-### Use Explicit Conditions Instead
+### 改用显式条件
 
-| Scenario | Recommended Method | Example |
+| 场景 | 推荐方法 | 示例 |
 |----------|-------------------|---------|
-| API call completion | `waitForFunction` | `await page.waitForFunction(async () => { ... }, { timeout: 5000 })` |
-| Modal open/close | `waitForSelector` with state | `await page.waitForSelector('#modal', { state: 'hidden', timeout: 5000 })` |
-| Element visibility | `expect().toBeVisible()` | `await expect(page.locator('.item')).toBeVisible({ timeout: 5000 })` |
-| Text content | `waitForSelector` with `:has-text` | `await page.waitForSelector('#toast:has-text("Done")', { timeout: 5000 })` |
-| Navigation complete | `waitForURL` or `waitForLoadState` | `await page.waitForURL('/dashboard', { timeout: 5000 })` |
+| API 调用完成 | `waitForFunction` | `await page.waitForFunction(async () => { ... }, { timeout: 5000 })` |
+| 模态框打开/关闭 | 带状态的 `waitForSelector` | `await page.waitForSelector('#modal', { state: 'hidden', timeout: 5000 })` |
+| 元素可见性 | `expect().toBeVisible()` | `await expect(page.locator('.item')).toBeVisible({ timeout: 5000 })` |
+| 文本内容 | 带 `:has-text` 的 `waitForSelector` | `await page.waitForSelector('#toast:has-text("完成")', { timeout: 5000 })` |
+| 导航完成 | `waitForURL` 或 `waitForLoadState` | `await page.waitForURL('/dashboard', { timeout: 5000 })` |
 
-### Examples
+### 示例
 
-#### Waiting for API Operation
+#### 等待 API 操作
 
 ```typescript
-// Wrong: Arbitrary delay
+// 错误：任意延迟
 await page.click('#createTag');
 await page.waitForTimeout(2000);
 
-// Correct: Poll until condition is met
+// 正确：轮询直到条件满足
 await page.click('#createTag');
 await page.waitForFunction(async (tagName: string) => {
   const tags = await window.electronAPI.getAllTags();
@@ -214,50 +214,50 @@ await page.waitForFunction(async (tagName: string) => {
 }, testTagName, { timeout: 5000 });
 ```
 
-#### Waiting for Modal to Close
+#### 等待模态框关闭
 
 ```typescript
-// Wrong: Arbitrary delay
+// 错误：任意延迟
 await page.click('#closeModal');
 await page.waitForTimeout(1000);
 
-// Correct: Wait for specific state
+// 正确：等待特定状态
 await page.click('#closeModal');
 await page.waitForSelector('#modalId', { state: 'hidden', timeout: 5000 });
 ```
 
-#### Waiting for Element to Appear
+#### 等待元素出现
 
 ```typescript
-// Wrong: Arbitrary delay
+// 错误：任意延迟
 await page.click('#loadData');
 await page.waitForTimeout(3000);
 const item = page.locator('.data-item');
 
-// Correct: Wait for element with timeout
+// 正确：带超时等待元素
 await page.click('#loadData');
 const item = page.locator('.data-item');
 await expect(item).toBeVisible({ timeout: 5000 });
 ```
 
-#### Waiting for Text Content
+#### 等待文本内容
 
 ```typescript
-// Wrong: Arbitrary delay
+// 错误：任意延迟
 await page.click('#save');
 await page.waitForTimeout(2000);
 const toastText = await page.locator('#toast').textContent();
-expect(toastText).toContain('Saved');
+expect(toastText).toContain('已保存');
 
-// Correct: Wait for specific text
+// 正确：等待特定文本
 await page.click('#save');
-await page.waitForSelector('#toast:has-text("Saved")', { timeout: 5000 });
+await page.waitForSelector('#toast:has-text("已保存")', { timeout: 5000 });
 ```
 
 ---
 
-## References
+## 参考
 
-- [Playwright Official Documentation](https://playwright.dev)
+- [Playwright 官方文档](https://playwright.dev)
 - [Playwright API: Locator.dragTo()](https://playwright.dev/docs/api/class-locator#locator-drag-to)
-- [HTML5 Drag and Drop API](https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API)
+- [HTML5 拖放 API](https://developer.mozilla.org/zh-CN/docs/Web/API/HTML_Drag_and_Drop_API)
