@@ -40,6 +40,10 @@ npx tsx e2e/cleanup-test-tag-groups.ts
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 需要输出中文版本的可复制的详细版本和简洁版本的 git commit 信息
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
 
+## 20260415
+
+详情界面, 添加标签没有更新 updated_at, 排查; 现在添加标签的入口有几个, 给出重构方案
+
 ## 20260414
 
 `13-tag-input-methods.spec.ts` 根据该测试脚本, 编写 测试类 用于测试数据整个生命周期, 包括生成和清理, 以及各种工具函数; 需要设计良好的结构, 方便后续拓展的其他测试数据; 先给出方案, 需要讨论

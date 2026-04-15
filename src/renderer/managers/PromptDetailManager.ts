@@ -7,11 +7,12 @@ import type { IDetailTagManager } from '../../types/entities.ts';
 import { validateTitle, cacheManager } from '../../utils/index.ts';
 import { SaveManager, PromptSaveStrategy } from '../renderer_utils/index.ts';
 import { Constants, Events } from '../../constants.ts';
-import { DirectSaveStrategy, TagAutocomplete } from '../services/index.ts';
+import { DirectSaveStrategy, TagAutocomplete, DialogService, DialogConfig } from '../services/index.ts';
 import { ImageContextMenuManager } from './ImageContextMenuManager.ts';
 import { IPrompt, IImage } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
-import { PyTagGroups, TagOperationResult, TagDeleteResult, TagExistsError, InvalidTagNameError, TagOperationError, linkTags } from '../../pyTagGroups/index.ts';
+import { TagOperationResult, TagDeleteResult, TagExistsError, InvalidTagNameError, TagOperationError } from '../../pyTagGroups/index.ts';
+import { TagService } from '../services/index.ts';
 
 // 扩展 IPrompt 接口以包含更多字段
 interface IPromptExtended extends IPrompt {
@@ -75,7 +76,6 @@ export class PromptDetailManager extends DetailViewManager {
   private returnToManager: DetailViewManager | null = null;
   private returnToItem: unknown = null;
   private imageContextMenuManager: ImageContextMenuManager | null = null;
-  private pyTagGroups: PyTagGroups;
   private currentTags: string[] = [];
 
   /**
@@ -89,7 +89,6 @@ export class PromptDetailManager extends DetailViewManager {
     });
 
     this.tagManager = options.tagRegistry;
-    this.pyTagGroups = PyTagGroups.getInstance('prompt');
 
     // 图像上传策略（直接保存，适合频繁操作）
     this.uploadStrategy = new DirectSaveStrategy(this.app as unknown as { eventBus: { emit: (event: string, data?: unknown) => void }; [key: string]: unknown });
@@ -236,12 +235,26 @@ export class PromptDetailManager extends DetailViewManager {
       },
       removeTag: async (tagName: string) => {
         try {
-          const result = await this.pyTagGroups.delete(tagName) as TagDeleteResult;
-          if (result.errors.length === 0) {
+          // 显示确认对话框
+          const confirmed = await DialogService.showConfirmDialogByConfig(
+            DialogConfig.DELETE_TAG,
+            { name: tagName }
+          );
+          if (!confirmed) return false;
+
+          const tagService = TagService.getInstance();
+          const currentItem = this.currentItem as unknown as IPromptExtended;
+          // 使用 unlinkTagFromItem 解除标签与项目的关联（会更新 updated_at）
+          const success = await tagService.unlinkTagFromItem({
+            type: 'prompt',
+            itemId: currentItem?.id,
+            tagName
+          });
+          if (success) {
             this.currentTags = this.currentTags.filter(t => t !== tagName);
             app.eventBus.emit(Events.PROMPTS_CHANGED);
           }
-          return result.errors.length === 0;
+          return success;
         } catch (error) {
           app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
           return false;
@@ -249,7 +262,8 @@ export class PromptDetailManager extends DetailViewManager {
       },
       removeTags: async (tagNames: string[]) => {
         try {
-          const result = await this.pyTagGroups.delete(tagNames) as TagDeleteResult;
+          const tagService = TagService.getInstance();
+          const result = await tagService.removeTags({ tagNames, type: 'prompt' });
           if (result.errors.length === 0) {
             for (const tagName of tagNames) {
               this.currentTags = this.currentTags.filter(t => t !== tagName);
@@ -265,7 +279,8 @@ export class PromptDetailManager extends DetailViewManager {
       addTags: async (tagNames: string[]) => {
         try {
           const currentItem = this.currentItem as unknown as IPromptExtended;
-          const result = await linkTags({
+          const tagService = TagService.getInstance();
+          const result = await tagService.linkTagsToItem({
             tagNames,
             type: 'prompt',
             itemId: currentItem?.id
@@ -338,7 +353,8 @@ export class PromptDetailManager extends DetailViewManager {
       onSelect: async (tagName: string) => {
         try {
           const currentItem = this.currentItem as unknown as IPromptExtended;
-          const result = await linkTags({
+          const tagService = TagService.getInstance();
+          const result = await tagService.linkTagsToItem({
             tagNames: [tagName],
             type: 'prompt',
             itemId: currentItem?.id
@@ -376,7 +392,8 @@ export class PromptDetailManager extends DetailViewManager {
       onBatchAdd: async (tagNames: string[]) => {
         try {
           const currentItem = this.currentItem as unknown as IPromptExtended;
-          const result = await linkTags({
+          const tagService = TagService.getInstance();
+          const result = await tagService.linkTagsToItem({
             tagNames,
             type: 'prompt',
             itemId: currentItem?.id
@@ -680,6 +697,12 @@ export class PromptDetailManager extends DetailViewManager {
    */
   private initImageContextMenu(): void {
     const app = this.app as unknown as IApp;
+
+    // 如果已存在右键菜单管理器，先销毁旧的以避免重复创建DOM元素
+    if (this.imageContextMenuManager) {
+      this.imageContextMenuManager.destroy();
+      this.imageContextMenuManager = null;
+    }
 
     // 创建右键菜单管理器
     this.imageContextMenuManager = new ImageContextMenuManager({

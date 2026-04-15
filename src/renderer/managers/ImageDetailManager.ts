@@ -7,10 +7,10 @@ import type { IDetailTagManager } from '../../types/entities.ts';
 import { HtmlUtils, validateFileName, isSameId, cacheManager } from '../../utils/index.ts';
 import { SaveManager, ImageSaveStrategy } from '../renderer_utils/index.ts';
 import { Constants, Events } from '../../constants.ts';
-import { TagAutocomplete, DialogService, DialogConfig } from '../services/index.ts';
+import { TagAutocomplete, DialogService, DialogConfig, TagService } from '../services/index.ts';
 import { IImage, IPrompt } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
-import { PyTagGroups, TagOperationResult, TagDeleteResult, linkTags } from '../../pyTagGroups/index.ts';
+import { TagOperationResult } from '../../pyTagGroups/index.ts';
 
 // 扩展 IImage 接口
 interface IImageExtended extends IImage {
@@ -76,7 +76,6 @@ export class ImageDetailManager extends DetailViewManager {
   private returnToOptions: IOpenOptions = {};
   private currentDetailPromptId: string | null = null;
   private currentDetailPromptRefs: IPrompt[] = [];
-  private pyTagGroups: PyTagGroups;
   private currentTags: string[] = [];
 
   constructor(options: IImageDetailManagerOptions) {
@@ -87,7 +86,6 @@ export class ImageDetailManager extends DetailViewManager {
     });
 
     this.tagManager = options.tagRegistry;
-    this.pyTagGroups = PyTagGroups.getInstance('image');
   }
 
   /**
@@ -273,12 +271,26 @@ export class ImageDetailManager extends DetailViewManager {
       },
       removeTag: async (tagName: string) => {
         try {
-          const result = await this.pyTagGroups.delete(tagName) as TagDeleteResult;
-          if (result.errors.length === 0) {
+          // 显示确认对话框
+          const confirmed = await DialogService.showConfirmDialogByConfig(
+            DialogConfig.DELETE_TAG,
+            { name: tagName }
+          );
+          if (!confirmed) return false;
+
+          const tagService = TagService.getInstance();
+          // 使用 unlinkTagFromItem 解除标签与项目的关联（会更新 updated_at）
+          const currentImage = this.currentItem as IImageExtended;
+          const success = await tagService.unlinkTagFromItem({
+            type: 'image',
+            itemId: currentImage?.id,
+            tagName
+          });
+          if (success) {
             this.currentTags = this.currentTags.filter(t => t !== tagName);
             app.eventBus.emit(Events.IMAGES_CHANGED);
           }
-          return result.errors.length === 0;
+          return success;
         } catch (error) {
           app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
           return false;
@@ -286,7 +298,8 @@ export class ImageDetailManager extends DetailViewManager {
       },
       removeTags: async (tagNames: string[]) => {
         try {
-          const result = await this.pyTagGroups.delete(tagNames) as TagDeleteResult;
+          const tagService = TagService.getInstance();
+          const result = await tagService.removeTags({ tagNames, type: 'image' });
           if (result.errors.length === 0) {
             for (const tagName of tagNames) {
               this.currentTags = this.currentTags.filter(t => t !== tagName);
@@ -302,7 +315,8 @@ export class ImageDetailManager extends DetailViewManager {
       addTags: async (tagNames: string[]) => {
         try {
           const currentItem = this.currentItem as unknown as IImageExtended;
-          const result = await linkTags({
+          const tagService = TagService.getInstance();
+          const result = await tagService.linkTagsToItem({
             tagNames,
             type: 'image',
             itemId: currentItem?.id
@@ -367,12 +381,13 @@ export class ImageDetailManager extends DetailViewManager {
         try {
           const currentItem = this.currentItem as unknown as IImageExtended;
           window.electronAPI.logInfo('ImageDetailManager.ts', 'onSelect called', { tagName, itemId: currentItem?.id });
-          const result = await linkTags({
+          const tagService = TagService.getInstance();
+          const result = await tagService.linkTagsToItem({
             tagNames: [tagName],
             type: 'image',
             itemId: currentItem?.id
           });
-          window.electronAPI.logInfo('ImageDetailManager.ts', 'linkTags result', { success: result.success, created: result.created, skipped: result.skipped });
+          window.electronAPI.logInfo('ImageDetailManager.ts', 'linkTagsToItem result', { success: result.success, created: result.created, skipped: result.skipped });
 
           if (result.success) {
             // 添加新创建的标签和已存在的标签（skipped）到本地状态
@@ -397,7 +412,8 @@ export class ImageDetailManager extends DetailViewManager {
       onBatchAdd: async (tagNames: string[]) => {
         try {
           const currentItem = this.currentItem as unknown as IImageExtended;
-          const result = await linkTags({
+          const tagService = TagService.getInstance();
+          const result = await tagService.linkTagsToItem({
             tagNames,
             type: 'image',
             itemId: currentItem?.id

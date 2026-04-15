@@ -6,8 +6,9 @@ import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { focusInput } from '../renderer_utils/index.ts';
 import { MultiSelectManager } from './MultiSelectManager.ts';
 import { immediateDebounce } from '../../utils/debounce.ts';
-import { PyTagGroups, TagOperationResult, TagGroup, TagExistsError, InvalidTagNameError, TagOperationError, clearTagsCache } from '../../pyTagGroups/index.ts';
+import { TagOperationResult, TagGroup, TagExistsError, InvalidTagNameError, TagOperationError, clearTagsCache, DataType } from '../../pyTagGroups/index.ts';
 import { groupTagsByGroup } from '../../pyTagGroups/utils.ts';
+import { TagService } from '../services/index.ts';
 
 
 /**
@@ -79,7 +80,7 @@ export abstract class TagManager {
   type: string;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
-  pyTagGroups: PyTagGroups;
+  protected tagService: TagService;
   protected app: any;
   protected ui: TagUI;
   protected eventBus: any;
@@ -100,7 +101,7 @@ export abstract class TagManager {
   constructor(type: 'prompt' | 'image', app: any) {
     this.type = type;
     this.app = app;
-    this.pyTagGroups = PyTagGroups.getInstance(type);
+    this.tagService = TagService.getInstance();
     this.ui = new TagUI(type);
     // eventBus 通过 app 访问
     this.selectedTagGroup = null;
@@ -172,6 +173,13 @@ export abstract class TagManager {
   }
 
   /**
+   * 获取数据类型（用于 TagService）
+   */
+  protected getDataType(): DataType {
+    return this.type as DataType;
+  }
+
+  /**
    * 获取面板管理器（由子类实现）
    */
   protected abstract getPanelManager(): any;
@@ -196,8 +204,8 @@ export abstract class TagManager {
         this.lastSearchTerm = searchTerm;
       }
 
-      const tags = await this.pyTagGroups.getAllTags();
-      const groups = await this.pyTagGroups.getGroups();
+      const tags = await this.tagService.getTags(this.getDataType());
+      const groups = await this.tagService.getTagGroups(this.getDataType());
       const container = document.getElementById(this.containerId);
       const emptyState = document.getElementById(this.emptyStateId);
 
@@ -267,7 +275,7 @@ export abstract class TagManager {
       );
       if (!confirmed) return;
 
-      const result = await this.pyTagGroups.delete(tag);
+      const result = await this.tagService.removeTags({ tagNames: [tag], type: this.getDataType() });
       this.app.showToast(`${this.getTypeLabel()}标签已删除`);
       await this.refreshAfterTagChange();
 
@@ -289,7 +297,7 @@ export abstract class TagManager {
    */
   async updateTag(oldTag: string, newTag: string): Promise<void> {
     try {
-      await this.pyTagGroups.rename(oldTag, newTag);
+      await this.tagService.renameTag({ type: this.getDataType(), oldName: oldTag, newName: newTag });
       this.app.showToast('标签已更新', 'success');
       await this.refreshAfterTagChange();
     } catch (error) {
@@ -312,7 +320,7 @@ export abstract class TagManager {
    * 获取所有标签
    */
   async getTags(): Promise<string[]> {
-    return await this.pyTagGroups.getAllTags();
+    return await this.tagService.getTags(this.getDataType());
   }
 
   /**
@@ -606,8 +614,8 @@ export abstract class TagManager {
     defaultTagValue: string,
     defaultGroupIdValue: number | null
   ): Promise<void> {
-    const groups = await this.pyTagGroups.getGroups();
-    const allTags = await this.pyTagGroups.getAllTags();
+    const groups = await this.tagService.getTagGroups(this.getDataType());
+    const allTags = await this.tagService.getTags(this.getDataType());
 
     let currentGroupId: number | null = null;
     for (const group of groups) {
@@ -677,7 +685,7 @@ export abstract class TagManager {
    */
   private async renameTag(oldTag: string, newTag: string): Promise<void> {
     try {
-      await this.pyTagGroups.rename(oldTag, newTag);
+      await this.tagService.renameTag({ type: this.getDataType(), oldName: oldTag, newName: newTag });
       this.app.showToast('标签已重命名', 'success');
       await this.refreshAfterTagChange();
     } catch (error) {
@@ -704,7 +712,7 @@ export abstract class TagManager {
     if (!confirmed) return;
 
     try {
-      await this.pyTagGroups.deleteGroup(groupId);
+      await this.tagService.deleteTagGroup({ type: this.getDataType(), id: groupId });
       this.app.showToast('标签组已删除');
       await this.renderTagListFromSearchInput();
     } catch (error) {
@@ -718,7 +726,7 @@ export abstract class TagManager {
    */
   private async assignTagToGroup(tagName: string, groupId: number | null): Promise<void> {
     try {
-      await this.pyTagGroups.assignToGroup(tagName, groupId);
+      await this.tagService.assignTagToGroup({ type: this.getDataType(), tagName, groupId });
       this.app.showToast('标签组已更新');
       await this.refreshAfterTagChange();
     } catch (error) {
@@ -753,17 +761,17 @@ export abstract class TagManager {
    */
   private async pinTagGroupToTop(groupId: number): Promise<void> {
     try {
-      const groups = await this.pyTagGroups.getGroups();
+      const groups = await this.tagService.getTagGroups(this.getDataType());
       const sortedGroups = groups.sort((a: TagGroup, b: TagGroup) => (a.sortOrder || 0) - (b.sortOrder || 0));
       const firstSortOrder = sortedGroups[0]?.sortOrder || 0;
       const newSortOrder = firstSortOrder - 1;
 
       const group = groups.find((g: TagGroup) => String(g.id) === String(groupId));
       if (group) {
-        await this.pyTagGroups.updateGroup(groupId, {
+        await this.tagService.updateTagGroup({ type: this.getDataType(), id: groupId, attrs: {
           name: group.name,
           sortOrder: newSortOrder
-        });
+        } });
         this.app.showToast('标签组已固定到首位', 'success');
         await this.refreshAfterTagChange();
       }
@@ -778,7 +786,7 @@ export abstract class TagManager {
    * 支持批量创建，用逗号或空格分隔多个标签
    */
   private async addTagInManagerWithDialog(defaultValue: string = '', defaultGroupId: number | null = null): Promise<void> {
-    const groups = await this.pyTagGroups.getGroups();
+    const groups = await this.tagService.getTagGroups(this.getDataType());
 
     const result = await DialogService.showInputDialog({
       title: `新建${this.getTypeLabel()}标签`,
@@ -791,10 +799,11 @@ export abstract class TagManager {
     if (!result?.value?.trim()) {
       return;
     }
-
-    const creationResult = await this.pyTagGroups.create(result.value, {
+    const creationResult = await this.tagService.createTags({
+      tagNames: result.value,
+      type: this.getDataType(),
       defaultGroupId: result.groupId ?? null
-    }) as TagOperationResult;
+    });
 
     if (creationResult.created.length > 0) {
       this.app.showToast(`成功创建 ${creationResult.created.length} 个标签`, 'success');
@@ -991,7 +1000,7 @@ export abstract class TagManager {
       confirmConfig: DialogConfig.BATCH_DELETE_TAGS,
       confirmData: (selectedIds) => ({ count: selectedIds.length }),
       execute: async (selectedIds) => {
-        const result = await this.pyTagGroups.delete(selectedIds);
+        const result = await this.tagService.removeTags({ tagNames: selectedIds, type: this.getDataType() });
 
         // 记录错误详情
         if (result.errors.length > 0) {
@@ -1016,7 +1025,7 @@ export abstract class TagManager {
    * 使用通用批量操作模板方法
    */
   private async batchMoveToGroup(): Promise<void> {
-    const groups = await this.pyTagGroups.getGroups();
+    const groups = await this.tagService.getTagGroups(this.getDataType());
     const options = [
       { value: '', label: '未分组' },
       ...groups.map(g => ({ value: String(g.id), label: g.name }))
@@ -1037,7 +1046,7 @@ export abstract class TagManager {
 
         for (const tag of selectedIds) {
           try {
-            await this.pyTagGroups.assignToGroup(tag, targetGroupId);
+            await this.tagService.assignTagToGroup({ type: this.getDataType(), tagName: tag, groupId: targetGroupId });
             successCount++;
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : '未知错误';
@@ -1171,7 +1180,7 @@ export abstract class TagManager {
     if (sortOrderInput) sortOrderInput.value = '0';
 
     if (groupId) {
-      const groups = await this.pyTagGroups.getGroups();
+      const groups = await this.tagService.getTagGroups(this.getDataType());
       const group = groups.find((g: TagGroup) => String(g.id) === String(groupId));
       if (group && nameInput && sortOrderInput) {
         nameInput.value = group.name || '';
@@ -1213,7 +1222,7 @@ export abstract class TagManager {
     }
 
     // 前端检查：标签组名称是否已存在
-    const groups = await this.pyTagGroups.getGroups();
+    const groups = await this.tagService.getTagGroups(this.getDataType());
     const existingGroup = groups.find((g: TagGroup) => g.name === name);
     if (existingGroup) {
       // 如果是编辑模式，且找到的是当前正在编辑的组，则允许保存
@@ -1228,9 +1237,9 @@ export abstract class TagManager {
     try {
       if (groupIdStr) {
         const groupId = parseInt(groupIdStr, 10);
-        await this.pyTagGroups.updateGroup(groupId, { name, sortOrder });
+        await this.tagService.updateTagGroup({ type: this.getDataType(), id: groupId, attrs: { name, sortOrder } });
       } else {
-        await this.pyTagGroups.createGroup(name, sortOrder);
+        await this.tagService.createTagGroup({ type: this.getDataType(), name, sortOrder });
       }
       await this.renderTagListFromSearchInput();
 

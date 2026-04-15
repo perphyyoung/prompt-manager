@@ -1,4 +1,5 @@
-import { addTagsToItems, parseTagInput } from '../../pyTagGroups/index.ts';
+import { parseTagInput } from '../../pyTagGroups/index.ts';
+import { TagService } from '../services/index.ts';
 import { CacheManager } from '../../utils/CacheManager.ts';
 import { LRUCache } from '../../utils/LRUCache.ts';
 
@@ -63,8 +64,13 @@ async function processBatchAddTags(
   const tagNames = parseTagInput(tagInput);
   if (tagNames.length === 0) return;
 
-  // 使用 addTagsToItems 统一处理创建和关联
-  const result = await addTagsToItems(tagNames, type, ids);
+  // 使用 TagService 统一处理创建和关联
+  const tagService = TagService.getInstance();
+  const result = await tagService.batchLinkTags({
+    tagNames,
+    type,
+    itemIds: ids
+  });
 
   if (result.errors.length > 0) {
     throw new Error(result.errors.map((e: { error: string }) => e.error).join(', '));

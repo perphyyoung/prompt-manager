@@ -10,7 +10,7 @@ import { MultiSelectConfig } from '../config/MultiSelectConfig.ts';
 import { DialogService } from '../services/index.ts';
 import type { IDialogTemplate } from '../../types/entities.ts';
 import { Constants, Events } from '../../constants.ts';
-import { PyTagGroups, TagOperationResult, TagGroup, linkTags } from '../../pyTagGroups/index.ts';
+import { TagService } from '../services/index.ts';
 import { buildTagsWithGroupInfo } from '../../pyTagGroups/utils.ts';
 
 // 卡片大小限制常量
@@ -910,8 +910,8 @@ export abstract class PanelManagerBase {
 
       // 获取所有标签和标签组
       const tags = await this.getAllTags();
-      const pyTagGroups = PyTagGroups.getInstance(this.getItemType());
-      const groups = await pyTagGroups.getGroups();
+      const tagService = TagService.getInstance();
+      const groups = await tagService.getTagGroups(this.getItemType());
 
 
 
@@ -1074,9 +1074,9 @@ export abstract class PanelManagerBase {
           const groupId = (item as HTMLElement).closest('.tag-filter-group')?.getAttribute('data-group-id');
 
           // 获取标签所属的组信息
-          const pyTagGroups = PyTagGroups.getInstance(this.getItemType());
-          const groups = await pyTagGroups.getGroups();
-          const group = groups.find((g: TagGroup) => String(g.id) === String(groupId));
+          const tagService = TagService.getInstance();
+          const groups = await tagService.getTagGroups(this.getItemType());
+          const group = groups.find((g) => String(g.id) === String(groupId));
 
           if ((e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey) {
             // Ctrl/Cmd + 点击：多选模式
@@ -1559,10 +1559,11 @@ export abstract class PanelManagerBase {
     // 确定类型
     const type = this.storagePrefix === 'prompt' ? 'prompt' : 'image';
 
-    // 使用 linkTags 统一处理创建和关联
-    const result = await linkTags({
+    // 使用 TagService 统一处理创建和关联
+    const tagService = TagService.getInstance();
+    const result = await tagService.linkTagsToItem({
       tagNames: [tagName],
-      type,
+      type: type as 'prompt' | 'image',
       itemId: item.id
     });
 

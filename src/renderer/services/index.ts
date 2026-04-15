@@ -14,6 +14,21 @@ export {
 // 标签自动完成服务
 export { TagAutocomplete } from './TagAutocomplete.ts';
 
+// TagService 标签业务服务
+export { TagService, tagService } from './TagService.ts';
+export type {
+  CreateTagsOptions,
+  LinkTagsOptions,
+  RemoveTagsOptions,
+  UnlinkTagOptions,
+  LinkTagsResult,
+  RenameTagOptions,
+  CreateTagGroupOptions,
+  UpdateTagGroupOptions,
+  DeleteTagGroupOptions,
+  AssignTagToGroupOptions
+} from './TagService.ts';
+
 // 数据清空 API
 export { DataClearApi } from './DataClearApi.ts';
 export { DataClearIpcService } from './DataClearIpcService.ts';

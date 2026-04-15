@@ -1582,6 +1582,10 @@ async function addPromptTags(promptId: string, tagNames: string[]): Promise<void
       }
     }
   }
+
+  // 更新提示词的 updated_at
+  const now = localTime();
+  await run('UPDATE prompts SET updated_at = ? WHERE id = ?', [now, promptId]);
 }
 
 /**
@@ -1637,6 +1641,13 @@ async function removeTagFromPrompt(promptId: string, tagName: string): Promise<v
       'DELETE FROM prompt_tag_relations WHERE prompt_id = ? AND tag_id = ?',
       [promptId, tagRow.id]
     );
+
+    // 更新提示词的 updated_at 字段
+    const now = localTime();
+    await run(
+      'UPDATE prompts SET updated_at = ? WHERE id = ?',
+      [now, promptId]
+    );
   }
 }
 
@@ -1656,6 +1667,13 @@ async function removeTagFromImage(imageId: string, tagName: string): Promise<voi
     await run(
       'DELETE FROM image_tag_relations WHERE image_id = ? AND tag_id = ?',
       [imageId, tagRow.id]
+    );
+
+    // 更新图像的 updated_at 字段
+    const now = localTime();
+    await run(
+      'UPDATE images SET updated_at = ? WHERE id = ?',
+      [now, imageId]
     );
   }
 }
@@ -2519,6 +2537,10 @@ async function addImageTags(imageId: string, tagNames: string[]): Promise<void> 
       }
     }
   }
+
+  // 更新图像的 updated_at
+  const now = localTime();
+  await run('UPDATE images SET updated_at = ? WHERE id = ?', [now, imageId]);
 }
 
 /**

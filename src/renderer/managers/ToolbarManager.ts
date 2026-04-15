@@ -12,12 +12,14 @@ interface IApp {
   promptPanelManager: {
     loadData: () => Promise<unknown[]>;
     renderView: () => Promise<void>;
+    renderTagFilters: () => Promise<void>;
     clearTagFilter: () => void;
     toggleTagFilterState: () => Promise<void>;
   } | null;
   imagePanelManager: {
     loadData: () => Promise<unknown[]>;
     renderView: () => Promise<void>;
+    renderTagFilters: () => Promise<void>;
     clearTagFilter: () => void;
     toggleTagFilterState: () => Promise<void>;
   } | null;
@@ -106,10 +108,12 @@ export class ToolbarManager {
       if (this.app.promptPanelManager) {
         await this.app.promptPanelManager.loadData();
         await this.app.promptPanelManager.renderView();
+        await this.app.promptPanelManager.renderTagFilters();
       }
       if (this.app.imagePanelManager) {
         await this.app.imagePanelManager.loadData();
         await this.app.imagePanelManager.renderView();
+        await this.app.imagePanelManager.renderTagFilters();
       }
 
       this.app.showToast?.('数据已刷新', 'success');

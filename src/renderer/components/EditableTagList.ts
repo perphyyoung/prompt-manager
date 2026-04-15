@@ -10,7 +10,7 @@ interface TagManager {
 interface EditableTagListOptions {
   containerId: string;
   tagManager: TagManager;
-  onRemove?: (tagName: string) => Promise<void> | void;
+  onRemove?: (tagName: string) => Promise<boolean> | boolean;
   filterTags?: string[];
 }
 
@@ -21,7 +21,7 @@ interface EditableTagListOptions {
 export class EditableTagList {
   private containerId: string;
   private tagManager: TagManager;
-  private onRemove?: (tagName: string) => Promise<void> | void;
+  private onRemove?: (tagName: string) => Promise<boolean> | boolean;
   private filterTags: string[];
   private _initialized: boolean;
   private isBatchMode: boolean;
@@ -149,7 +149,11 @@ export class EditableTagList {
       if (tagElement && this.onRemove) {
         const tagName = tagElement.dataset.tag;
         if (tagName) {
-          await this.onRemove(tagName);
+          const success = await this.onRemove(tagName);
+          // 删除成功后重新渲染
+          if (success) {
+            this.render();
+          }
         }
       }
     });

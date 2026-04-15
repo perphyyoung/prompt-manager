@@ -7,7 +7,7 @@ import { contextStack, IContextStackEntry } from '../managers/ContextStackManage
 import { Constants } from '../../constants.ts';
 import type { ElementId } from '../../constants.ts';
 import type { IClosableElement } from '../../types/entities.ts';
-import { PyTagGroups } from '../../pyTagGroups/index.ts';
+import { TagService } from './TagService.ts';
 
 // 配置选项接口
 interface TagAutocompleteOptions {
@@ -28,7 +28,7 @@ export class TagAutocomplete {
   private containerSelector?: string;
   private type: 'image' | 'prompt';
   private excludeTags?: string[];
-  private pyTagGroups: PyTagGroups;
+  private tagService: TagService;
 
   private input: HTMLInputElement | null = null;
   private dropdown: HTMLElement | null = null;
@@ -48,7 +48,7 @@ export class TagAutocomplete {
     this.containerSelector = options.containerSelector;
     this.type = options.type;
     this.excludeTags = options.excludeTags;
-    this.pyTagGroups = PyTagGroups.getInstance(this.type);
+    this.tagService = TagService.getInstance();
   }
 
   /**
@@ -135,7 +135,7 @@ export class TagAutocomplete {
     }
 
     try {
-      const suggestions = await this.pyTagGroups.search(value, this.excludeTags);
+      const suggestions = await this.tagService.searchTags(this.type, value, this.excludeTags);
 
       if (suggestions.length === 0) {
         this.hideDropdown();

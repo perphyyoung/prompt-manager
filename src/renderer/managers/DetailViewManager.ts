@@ -449,7 +449,7 @@ export class DetailViewManager {
           containerId: config.containerId,
           tagManager: detailTagManager as { getTags: () => string[] },
           onRemove: async (tagName: string) => {
-            await detailTagManager.removeTag(tagName);
+            return await detailTagManager.removeTag(tagName);
           }
         });
         // 设置选择变更回调
