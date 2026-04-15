@@ -156,24 +156,46 @@ export class ElectronTestHelper {
   }
 
   /**
-   * 批量创建图像标签
+   * 批量创建图像标签（仅创建标签，不关联到图像）
    * @param count - 标签数量
    * @param prefix - 标签名前缀
-   * @param groupId - 可选，标签组ID，指定后将所有标签分配到该组
    * @returns 创建的标签名数组
    */
-  async createImageTags(count: number, prefix: string, groupId?: number): Promise<string[]> {
+  async createImageTags(count: number, prefix: string): Promise<string[]> {
     const page = this.getPage();
     const tagNames = this.generateTagNames(count, prefix);
-    await page.evaluate(async (params: { tags: string[]; groupId?: number }) => {
-      await window.electronAPI.addImageTags('', params.tags);
-      if (params.groupId !== undefined) {
-        for (const tag of params.tags) {
-          await window.electronAPI.assignImageTagToBelongGroup(tag, params.groupId);
-        }
+    await page.evaluate(async (tags: string[]) => {
+      for (const tag of tags) {
+        await window.electronAPI.addImageTag(tag);
+      }
+    }, tagNames);
+    return tagNames;
+  }
+
+  /**
+   * 将标签关联到图像
+   * @param imageId - 图像ID
+   * @param tagNames - 标签名数组
+   */
+  async linkTagsToImage(imageId: string, tagNames: string[]): Promise<void> {
+    const page = this.getPage();
+    await page.evaluate(async (params: { imageId: string; tags: string[] }) => {
+      await window.electronAPI.addImageTags(params.imageId, params.tags);
+    }, { imageId, tags: tagNames });
+  }
+
+  /**
+   * 将图像标签分配到指定组
+   * @param tagNames - 标签名数组
+   * @param groupId - 标签组ID
+   */
+  async assignImageTagsToGroup(tagNames: string[], groupId: number): Promise<void> {
+    const page = this.getPage();
+    await page.evaluate(async (params: { tags: string[]; groupId: number }) => {
+      for (const tag of params.tags) {
+        await window.electronAPI.assignImageTagToBelongGroup(tag, params.groupId);
       }
     }, { tags: tagNames, groupId });
-    return tagNames;
   }
 
   /**
@@ -195,24 +217,46 @@ export class ElectronTestHelper {
   }
 
   /**
-   * 批量创建提示词标签
+   * 批量创建提示词标签（仅创建标签，不关联到提示词）
    * @param count - 标签数量
    * @param prefix - 标签名前缀
-   * @param groupId - 可选，标签组ID，指定后将所有标签分配到该组
    * @returns 创建的标签名数组
    */
-  async createPromptTags(count: number, prefix: string, groupId?: number): Promise<string[]> {
+  async createPromptTags(count: number, prefix: string): Promise<string[]> {
     const page = this.getPage();
     const tagNames = this.generateTagNames(count, prefix);
-    await page.evaluate(async (params: { tags: string[]; groupId?: number }) => {
-      await window.electronAPI.addPromptTags('', params.tags);
-      if (params.groupId !== undefined) {
-        for (const tag of params.tags) {
-          await window.electronAPI.assignPromptTagToBelongGroup(tag, params.groupId);
-        }
+    await page.evaluate(async (tags: string[]) => {
+      for (const tag of tags) {
+        await window.electronAPI.addPromptTag(tag);
+      }
+    }, tagNames);
+    return tagNames;
+  }
+
+  /**
+   * 将标签关联到提示词
+   * @param promptId - 提示词ID
+   * @param tagNames - 标签名数组
+   */
+  async linkTagsToPrompt(promptId: string, tagNames: string[]): Promise<void> {
+    const page = this.getPage();
+    await page.evaluate(async (params: { promptId: string; tags: string[] }) => {
+      await window.electronAPI.addPromptTags(params.promptId, params.tags);
+    }, { promptId, tags: tagNames });
+  }
+
+  /**
+   * 将提示词标签分配到指定组
+   * @param tagNames - 标签名数组
+   * @param groupId - 标签组ID
+   */
+  async assignPromptTagsToGroup(tagNames: string[], groupId: number): Promise<void> {
+    const page = this.getPage();
+    await page.evaluate(async (params: { tags: string[]; groupId: number }) => {
+      for (const tag of params.tags) {
+        await window.electronAPI.assignPromptTagToBelongGroup(tag, params.groupId);
       }
     }, { tags: tagNames, groupId });
-    return tagNames;
   }
 
   /**
@@ -699,10 +743,11 @@ export async function openPromptDetail(page: any, screenshotPath?: string) {
  * 进入图像详情视图（带返回值）
  * Steps:
  * 1. Switch to image panel
- * 2. Wait for image cards to load
- * 3. Get first image ID
- * 4. Click card to open detail
- * 5. Wait for detail modal to show
+ * 2. Switch to grid view (ensure cards are visible)
+ * 3. Wait for image cards to load
+ * 4. Get first image ID
+ * 5. Click card to open detail
+ * 6. Wait for detail modal to show
  */
 export async function enterImageDetailView(page: any, screenshotPath?: string) {
   // 检查是否已经在图像面板，如果不在则切换
@@ -712,6 +757,10 @@ export async function enterImageDetailView(page: any, screenshotPath?: string) {
     await page.click('#imageManagerBtn');
     await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
   }
+
+  // 确保切换到网格视图（点击网格视图按钮）
+  await page.click('#imageGridViewBtn');
+  await page.waitForSelector('#imageGridViewBtn.active', { state: 'visible', timeout: 5000 });
 
   // 确保图像网格已加载
   await page.waitForSelector('.image-card', { state: 'visible', timeout: 5000 });
@@ -747,10 +796,11 @@ export async function enterImageDetailView(page: any, screenshotPath?: string) {
  * 进入提示词详情视图（带返回值）
  * Steps:
  * 1. Switch to prompt panel
- * 2. Wait for prompt cards to load
- * 3. Get first prompt ID
- * 4. Click card to open detail
- * 5. Wait for detail modal to show
+ * 2. Switch to grid view (ensure cards are visible)
+ * 3. Wait for prompt cards to load
+ * 4. Get first prompt ID
+ * 5. Click card to open detail
+ * 6. Wait for detail modal to show
  */
 export async function enterPromptDetailView(page: any, screenshotPath?: string) {
   // 检查是否已经在提示词面板，如果不在则切换
@@ -760,6 +810,10 @@ export async function enterPromptDetailView(page: any, screenshotPath?: string) 
     await page.click('#promptManagerBtn');
     await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
   }
+
+  // 确保切换到网格视图（点击网格视图按钮）
+  await page.click('#promptGridViewBtn');
+  await page.waitForSelector('#promptGridViewBtn.active', { state: 'visible', timeout: 5000 });
 
   // 确保提示词网格已加载
   await page.waitForSelector('.prompt-card', { state: 'visible', timeout: 5000 });
