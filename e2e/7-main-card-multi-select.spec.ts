@@ -23,11 +23,15 @@ declare global {
 test.describe('主界面卡片视图多选功能', () => {
   const electronTest = createElectronTest();
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await electronTest.launch();
   });
 
   test.afterEach(async () => {
+    await electronTest.cleanupAndReset();
+  });
+
+  test.afterAll(async () => {
     await electronTest.close();
   });
 
@@ -191,24 +195,46 @@ test.describe('主界面卡片视图多选功能', () => {
     test('图像批量收藏功能', async () => {
       await electronTest.logTestStart('图像批量收藏功能 - 验证批量收藏按钮切换图像收藏状态');
       const page = electronTest.getPage();
+
+      // 先清除可能遗留的选择状态
+      await page.keyboard.press('Escape');
+      // 等待批量工具栏消失（如果存在）
+      const batchToolbarBefore = page.locator(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`);
+      await batchToolbarBefore.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+
       await enterImageGridView(page);
 
+      // 获取第一个图像的ID和当前收藏状态
       const firstCard = page.locator('.image-card').first();
-      await firstCard.hover();
-      await firstCard.locator('.card-checkbox').click();
-
-      await page.waitForSelector(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`, { state: 'visible' });
-
       const firstImageId = await firstCard.getAttribute('data-id');
+
+      // 记录当前收藏状态（受上一个测试影响）
       const originalFavoriteStatus = await page.evaluate(async (id: string) => {
         const image = await window.electronAPI.getImageById(id);
         return (image as IImage)?.isFavorite || false;
       }, firstImageId as string);
 
+      await firstCard.hover();
+      await firstCard.locator('.card-checkbox').click();
+
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`, { state: 'visible' });
+
       const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`);
       await batchToolbar.locator('[data-action="Favorite"]').click();
+
+      // 等待批量工具栏消失（操作完成后会清除选择）
+      await expect(batchToolbar).not.toBeVisible();
+
+      // 等待收藏操作完成 - 使用 waitForFunction 检查状态变化
+      await page.waitForFunction(async (args: { id: string; originalStatus: number | boolean }) => {
+        const image = await window.electronAPI.getImageById(args.id);
+        const currentStatus = image?.isFavorite || false;
+        return currentStatus !== (args.originalStatus as boolean);
+      }, { id: firstImageId as string, originalStatus: originalFavoriteStatus }, { timeout: 5000 });
+
       await page.screenshot({ path: 'test-results/multi-select/image-batch-favorite.png' });
 
+      // 验证状态已切换
       const newFavoriteStatus = await page.evaluate(async (id: string) => {
         const image = await window.electronAPI.getImageById(id);
         return (image as IImage)?.isFavorite || false;
@@ -408,6 +434,15 @@ test.describe('主界面卡片视图多选功能', () => {
     test('提示词批量收藏功能', async () => {
       await electronTest.logTestStart('提示词批量收藏功能 - 验证批量收藏按钮切换提示词收藏状态');
       const page = electronTest.getPage();
+
+      // 先切换到提示词面板，再清除可能遗留的选择状态
+      await page.click('#promptManagerBtn');
+      await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
+      await page.keyboard.press('Escape');
+      // 等待批量工具栏消失（如果存在）
+      const batchToolbarBefore = page.locator(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`);
+      await batchToolbarBefore.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+
       await enterPromptGridView(page);
 
       const firstCard = page.locator('.prompt-card').first();
@@ -417,6 +452,8 @@ test.describe('主界面卡片视图多选功能', () => {
       await page.waitForSelector(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`, { state: 'visible' });
 
       const firstPromptId = await firstCard.getAttribute('data-id');
+
+      // 记录当前收藏状态（受上一个测试影响）
       const originalFavoriteStatus = await page.evaluate(async (id: string) => {
         const prompts = await window.electronAPI.getPrompts('updatedAt', 'desc');
         const prompt = prompts.find((p: IPrompt) => String(p.id) === id);
@@ -425,8 +462,21 @@ test.describe('主界面卡片视图多选功能', () => {
 
       const batchToolbar = page.locator(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`);
       await batchToolbar.locator('[data-action="Favorite"]').click();
+
+      // 等待批量工具栏消失（操作完成后会清除选择）
+      await expect(batchToolbar).not.toBeVisible();
+
+      // 等待收藏操作完成 - 使用 waitForFunction 检查状态变化
+      await page.waitForFunction(async (args: { id: string; originalStatus: number | boolean }) => {
+        const prompts = await window.electronAPI.getPrompts('updatedAt', 'desc');
+        const prompt = prompts.find((p: IPrompt) => String(p.id) === args.id);
+        const currentStatus = prompt?.isFavorite || false;
+        return currentStatus !== (args.originalStatus as boolean);
+      }, { id: firstPromptId as string, originalStatus: originalFavoriteStatus }, { timeout: 5000 });
+
       await page.screenshot({ path: 'test-results/multi-select/prompt-batch-favorite.png' });
 
+      // 验证状态已切换
       const newFavoriteStatus = await page.evaluate(async (id: string) => {
         const prompts = await window.electronAPI.getPrompts('updatedAt', 'desc');
         const prompt = prompts.find((p: IPrompt) => String(p.id) === id);

@@ -12,11 +12,16 @@ declare global {
 test.describe('Esc 键快捷键功能', () => {
   const electronTest = createElectronTest();
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await electronTest.launch();
   });
 
   test.afterEach(async () => {
+    // 清理测试数据，关闭所有模态框，回到图像主界面
+    await electronTest.cleanupAndReset();
+  });
+
+  test.afterAll(async () => {
     await electronTest.close();
   });
 
@@ -406,16 +411,13 @@ test.describe('Esc 键快捷键功能', () => {
       await enterImageGridView(page);
       await openImageDetail(page);
 
-      // 创建一个专门的测试标签用于自动完成测试
-      const testTagName = 'zz_esc_test_' + Date.now();
-      await page.evaluate(async (tagName) => {
-        await window.electronAPI.addImageTag(tagName);
-      }, testTagName);
+      // 创建测试标签
+      const testTagName = await electronTest.createImageTag('esc_autocomplete');
 
       // 使用测试标签的前缀触发自动完成
       const tagInput = page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`);
       await tagInput.click();
-      await tagInput.fill('zz_esc');
+      await tagInput.fill('e2e');
 
       await page.waitForSelector('#imageDetailTagAutocomplete.active', { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/image-autocomplete-open.png' });
@@ -444,16 +446,13 @@ test.describe('Esc 键快捷键功能', () => {
       await enterPromptGridView(page);
       await openPromptDetail(page);
 
-      // 创建一个专门的测试标签用于自动完成测试
-      const testTagName = 'zz_esc_test_' + Date.now();
-      await page.evaluate(async (tagName) => {
-        await window.electronAPI.addPromptTag(tagName);
-      }, testTagName);
+      // 创建测试标签
+      const testTagName = await electronTest.createPromptTag('esc_autocomplete');
 
       // 使用测试标签的前缀触发自动完成
       const tagInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`);
       await tagInput.click();
-      await tagInput.fill('zz_esc');
+      await tagInput.fill('e2e');
 
       await page.waitForSelector('#promptDetailTagAutocomplete.active', { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/prompt-autocomplete-open.png' });

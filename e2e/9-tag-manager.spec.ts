@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
   createElectronTest,
-  generateTestTagName,
   enterImageTagManager,
   enterPromptTagManager,
   closeImageTagManager,
@@ -53,6 +52,10 @@ test.describe('标签管理功能', () => {
     await electronTest.close();
   });
 
+  test.afterEach(async () => {
+    await electronTest.cleanupAndReset();
+  });
+
   test.describe('图像标签管理 - 非批量功能', () => {
     test('打开和关闭标签管理器', async () => {
       const page = electronTest.getPage();
@@ -80,7 +83,7 @@ test.describe('标签管理功能', () => {
       await electronTest.logTestStart('新建标签');
       await enterImageTagManager(page);
 
-      const testTagName = generateTestTagName('img_tag');
+      const testTagName = electronTest.generateTagName('img_tag');
       await createImageTagInManager(page, testTagName);
 
       // Verify tag appears in the list
@@ -99,7 +102,7 @@ test.describe('标签管理功能', () => {
       await enterImageTagManager(page);
 
       // Create a test tag first
-      const originalTagName = generateTestTagName('img_edit');
+      const originalTagName = electronTest.generateTagName('img_edit');
       await createImageTagInManager(page, originalTagName);
 
       // Click edit button on the tag (限定在图像标签组卡片容器内)
@@ -114,7 +117,7 @@ test.describe('标签管理功能', () => {
       await page.screenshot({ path: 'test-results/tag-manager/image-edit-dialog.png' });
 
       // Rename the tag
-      const newTagName = generateTestTagName('img_renamed');
+      const newTagName = electronTest.generateTagName('img_renamed');
       await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, newTagName);
       await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
 
@@ -142,7 +145,7 @@ test.describe('标签管理功能', () => {
       await enterImageTagManager(page);
 
       // Create a test tag first
-      const testTagName = generateTestTagName('img_delete');
+      const testTagName = electronTest.generateTagName('img_delete');
       await createImageTagInManager(page, testTagName);
 
       // Click delete button on the tag
@@ -201,7 +204,7 @@ test.describe('标签管理功能', () => {
       await electronTest.logTestStart('新建标签组');
       await enterImageTagManager(page);
 
-      const groupName = generateTestTagName('img_group');
+      const groupName = electronTest.generateTagName('img_group');
       const groupId = await createImageTagGroup(page, groupName);
 
       expect(groupId).toBeTruthy();
@@ -222,7 +225,7 @@ test.describe('标签管理功能', () => {
       await enterImageTagManager(page);
 
       // Create a test group first
-      const originalGroupName = generateTestTagName('img_group_edit');
+      const originalGroupName = electronTest.generateTagName('img_group_edit');
       const groupId = await createImageTagGroup(page, originalGroupName);
 
       // Click edit button on the group
@@ -235,7 +238,7 @@ test.describe('标签管理功能', () => {
       await page.screenshot({ path: 'test-results/tag-manager/image-group-edit-dialog.png' });
 
       // Rename the group
-      const newGroupName = generateTestTagName('img_group_renamed');
+      const newGroupName = electronTest.generateTagName('img_group_renamed');
       await page.fill(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_NAME}`, newGroupName);
       await page.click(`#${Constants.Ids.SAVE_IMAGE_TAG_GROUP_BTN}`);
 
@@ -264,7 +267,7 @@ test.describe('标签管理功能', () => {
       await enterImageTagManager(page);
 
       // Create a test group first
-      const groupName = generateTestTagName('img_group_delete');
+      const groupName = electronTest.generateTagName('img_group_delete');
       const groupId = await createImageTagGroup(page, groupName);
 
       // Click delete button on the group
@@ -303,10 +306,10 @@ test.describe('标签管理功能', () => {
 
       // Create multiple e2e test tags with specific keyword
       const searchKeyword = 'img_e2e_batch';
-      const testTagName1 = generateTestTagName(searchKeyword);
-      const testTagName2 = generateTestTagName(searchKeyword);
+      const testTagName1 = electronTest.generateTagName(searchKeyword);
+      const testTagName2 = electronTest.generateTagName(searchKeyword);
       // CRITICAL: Create control group that does NOT match search keyword
-      const controlTagName = generateTestTagName('control_not_deleted');
+      const controlTagName = electronTest.generateTagName('control_not_deleted');
       await createImageTagInManager(page, testTagName1);
       await createImageTagInManager(page, testTagName2);
       await createImageTagInManager(page, controlTagName);
@@ -448,8 +451,8 @@ test.describe('标签管理功能', () => {
       await enterImageTagManager(page);
 
       // Create some test tags first
-      const tagName1 = generateTestTagName('img_batch1');
-      const tagName2 = generateTestTagName('img_batch2');
+      const tagName1 = electronTest.generateTagName('img_batch1');
+      const tagName2 = electronTest.generateTagName('img_batch2');
       await createImageTagInManager(page, tagName1);
       await createImageTagInManager(page, tagName2);
 
@@ -494,7 +497,7 @@ test.describe('标签管理功能', () => {
       await enterImageTagManager(page);
 
       // Create a test tag
-      const tagName = generateTestTagName('img_del');
+      const tagName = electronTest.generateTagName('img_del');
       await createImageTagInManager(page, tagName);
 
       // Enter batch mode
@@ -554,12 +557,12 @@ test.describe('标签管理功能', () => {
       await enterImageTagManager(page);
 
       // Create a test group
-      const groupName = generateTestTagName('img_move_group');
+      const groupName = electronTest.generateTagName('img_move_group');
       const groupId = await createImageTagGroup(page, groupName);
 
       // Create test tags
-      const tagName1 = generateTestTagName('img_move1');
-      const tagName2 = generateTestTagName('img_move2');
+      const tagName1 = electronTest.generateTagName('img_move1');
+      const tagName2 = electronTest.generateTagName('img_move2');
       await createImageTagInManager(page, tagName1);
       await createImageTagInManager(page, tagName2);
 
@@ -633,7 +636,7 @@ test.describe('标签管理功能', () => {
       await electronTest.logTestStart('新建标签（提示词）');
       await enterPromptTagManager(page);
 
-      const testTagName = generateTestTagName('prompt_tag');
+      const testTagName = electronTest.generateTagName('prompt_tag');
       await createPromptTagInManager(page, testTagName);
 
       // Verify tag appears in the list
@@ -652,7 +655,7 @@ test.describe('标签管理功能', () => {
       await enterPromptTagManager(page);
 
       // Create a test tag first
-      const originalTagName = generateTestTagName('prompt_edit');
+      const originalTagName = electronTest.generateTagName('prompt_edit');
       await createPromptTagInManager(page, originalTagName);
 
       // Click edit button on the tag (限定在提示词标签组卡片容器内)
@@ -667,7 +670,7 @@ test.describe('标签管理功能', () => {
       await page.screenshot({ path: 'test-results/tag-manager/prompt-edit-dialog.png' });
 
       // Rename the tag
-      const newTagName = generateTestTagName('prompt_renamed');
+      const newTagName = electronTest.generateTagName('prompt_renamed');
       await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, newTagName);
       await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
 
@@ -695,7 +698,7 @@ test.describe('标签管理功能', () => {
       await enterPromptTagManager(page);
 
       // Create a test tag first
-      const testTagName = generateTestTagName('prompt_delete');
+      const testTagName = electronTest.generateTagName('prompt_delete');
       await createPromptTagInManager(page, testTagName);
 
       // Click delete button on the tag
@@ -754,7 +757,7 @@ test.describe('标签管理功能', () => {
       await electronTest.logTestStart('新建标签组（提示词）');
       await enterPromptTagManager(page);
 
-      const groupName = generateTestTagName('prompt_group');
+      const groupName = electronTest.generateTagName('prompt_group');
       const groupId = await createPromptTagGroup(page, groupName);
 
       expect(groupId).toBeTruthy();
@@ -775,7 +778,7 @@ test.describe('标签管理功能', () => {
       await enterPromptTagManager(page);
 
       // Create a test group first
-      const originalGroupName = generateTestTagName('prompt_group_edit');
+      const originalGroupName = electronTest.generateTagName('prompt_group_edit');
       const groupId = await createPromptTagGroup(page, originalGroupName);
 
       // Click edit button on the group (限定在提示词标签组卡片容器内)
@@ -788,7 +791,7 @@ test.describe('标签管理功能', () => {
       await page.screenshot({ path: 'test-results/tag-manager/prompt-group-edit-dialog.png' });
 
       // Rename the group
-      const newGroupName = generateTestTagName('prompt_group_renamed');
+      const newGroupName = electronTest.generateTagName('prompt_group_renamed');
       await page.fill(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_NAME}`, newGroupName);
       await page.click(`#${Constants.Ids.SAVE_PROMPT_TAG_GROUP_BTN}`);
 
@@ -817,7 +820,7 @@ test.describe('标签管理功能', () => {
       await enterPromptTagManager(page);
 
       // Create a test group first
-      const groupName = generateTestTagName('prompt_group_delete');
+      const groupName = electronTest.generateTagName('prompt_group_delete');
       const groupId = await createPromptTagGroup(page, groupName);
 
       // Click delete button on the group (限定在提示词标签组卡片容器内)
@@ -855,8 +858,8 @@ test.describe('标签管理功能', () => {
       await enterPromptTagManager(page);
 
       // Create multiple e2e test tags
-      const testTagName1 = generateTestTagName('prompt_e2e');
-      const testTagName2 = generateTestTagName('prompt_e2e');
+      const testTagName1 = electronTest.generateTagName('prompt_e2e');
+      const testTagName2 = electronTest.generateTagName('prompt_e2e');
       await createPromptTagInManager(page, testTagName1);
       await createPromptTagInManager(page, testTagName2);
 
@@ -976,8 +979,8 @@ test.describe('标签管理功能', () => {
       await enterPromptTagManager(page);
 
       // Create some test tags first
-      const tagName1 = generateTestTagName('prompt_batch1');
-      const tagName2 = generateTestTagName('prompt_batch2');
+      const tagName1 = electronTest.generateTagName('prompt_batch1');
+      const tagName2 = electronTest.generateTagName('prompt_batch2');
       await createPromptTagInManager(page, tagName1);
       await createPromptTagInManager(page, tagName2);
 
@@ -1020,7 +1023,7 @@ test.describe('标签管理功能', () => {
       await enterPromptTagManager(page);
 
       // Create a test tag
-      const tagName = generateTestTagName('prompt_del');
+      const tagName = electronTest.generateTagName('prompt_del');
       await createPromptTagInManager(page, tagName);
 
       // Enter batch mode
@@ -1080,12 +1083,12 @@ test.describe('标签管理功能', () => {
       await enterPromptTagManager(page);
 
       // Create a test group
-      const groupName = generateTestTagName('prompt_move_group');
+      const groupName = electronTest.generateTagName('prompt_move_group');
       const groupId = await createPromptTagGroup(page, groupName);
 
       // Create test tags
-      const tagName1 = generateTestTagName('prompt_move1');
-      const tagName2 = generateTestTagName('prompt_move2');
+      const tagName1 = electronTest.generateTagName('prompt_move1');
+      const tagName2 = electronTest.generateTagName('prompt_move2');
       await createPromptTagInManager(page, tagName1);
       await createPromptTagInManager(page, tagName2);
 

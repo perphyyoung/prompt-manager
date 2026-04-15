@@ -22,11 +22,15 @@ declare global {
 test.describe('Shift 范围选择', () => {
   const electronTest = createElectronTest();
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await electronTest.launch();
   });
 
   test.afterEach(async () => {
+    await electronTest.cleanupAndReset();
+  });
+
+  test.afterAll(async () => {
     await electronTest.close();
   });
 
@@ -47,15 +51,19 @@ test.describe('Shift 范围选择', () => {
     // 进入图像列表视图
     await enterImageListView(page);
 
+    // 先清除所有选择（点击列表视图按钮刷新）
+    await page.click('#imageListViewBtn');
+    await page.waitForSelector('#imageList', { state: 'visible', timeout: 5000 });
+
     // 点击第一个复选框选中（建立 lastSelectedIndex）
     const firstCheckbox = page.locator('.list-item--image').first().locator('.list-item__checkbox');
     await firstCheckbox.click();
     await expect(firstCheckbox).toBeChecked({ timeout: 5000 });
     await page.screenshot({ path: 'test-results/shift-select/04-first-row-selected.png' });
 
-    // 验证选择计数为 1（通过检查复选框状态）
+    // 验证选择计数为 1（只检查图像列表中的复选框）
     const checkedCount = await page.evaluate(() => {
-      return document.querySelectorAll('.list-item__checkbox:checked').length;
+      return document.querySelectorAll('#imageList .list-item__checkbox:checked').length;
     });
     expect(checkedCount).toBe(1);
 
@@ -66,9 +74,9 @@ test.describe('Shift 范围选择', () => {
     await page.keyboard.up('Shift');
     await page.screenshot({ path: 'test-results/shift-select/05-shift-click-list.png' });
 
-    // 验证选择计数为 3（通过检查复选框状态）
+    // 验证选择计数为 3（只检查图像列表中的复选框）
     const finalCheckedCount = await page.evaluate(() => {
-      return document.querySelectorAll('.list-item__checkbox:checked').length;
+      return document.querySelectorAll('#imageList .list-item__checkbox:checked').length;
     });
     expect(finalCheckedCount).toBe(3);
 
@@ -97,15 +105,19 @@ test.describe('Shift 范围选择', () => {
     // 进入提示词列表视图
     await enterPromptListView(page);
 
+    // 先清除所有选择（点击列表视图按钮刷新）
+    await page.click('#promptListViewBtn');
+    await page.waitForSelector('#promptList', { state: 'visible', timeout: 5000 });
+
     // 点击第一个复选框选中（建立 lastSelectedIndex）
     const firstCheckbox = page.locator('.list-item--prompt').first().locator('.list-item__checkbox');
     await firstCheckbox.click();
     await expect(firstCheckbox).toBeChecked({ timeout: 5000 });
     await page.screenshot({ path: 'test-results/shift-select/prompt-04-first-row-selected.png' });
 
-    // 验证选择计数为 1（通过检查复选框状态）
+    // 验证选择计数为 1（只检查提示词列表中的复选框）
     const checkedCount = await page.evaluate(() => {
-      return document.querySelectorAll('.list-item__checkbox:checked').length;
+      return document.querySelectorAll('#promptList .list-item__checkbox:checked').length;
     });
     expect(checkedCount).toBe(1);
 
@@ -116,9 +128,9 @@ test.describe('Shift 范围选择', () => {
     await page.keyboard.up('Shift');
     await page.screenshot({ path: 'test-results/shift-select/prompt-05-shift-click-list.png' });
 
-    // 验证选择计数为 3（通过检查复选框状态）
+    // 验证选择计数为 3（只检查提示词列表中的复选框）
     const finalCheckedCount = await page.evaluate(() => {
-      return document.querySelectorAll('.list-item__checkbox:checked').length;
+      return document.querySelectorAll('#promptList .list-item__checkbox:checked').length;
     });
     expect(finalCheckedCount).toBe(3);
 

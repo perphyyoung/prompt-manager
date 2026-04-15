@@ -29,11 +29,15 @@ declare global {
 test.describe('图像详情界面数据库字段读取', () => {
   const electronTest = createElectronTest();
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await electronTest.launch();
   });
 
   test.afterEach(async () => {
+    await electronTest.cleanupAndReset();
+  });
+
+  test.afterAll(async () => {
     await electronTest.close();
   });
 

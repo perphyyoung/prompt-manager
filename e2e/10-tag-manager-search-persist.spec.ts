@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
   createElectronTest,
-  generateTestTagName,
   enterImageTagManager,
   enterPromptTagManager,
   closeImageTagManager,
@@ -11,6 +10,7 @@ import {
   createImageTagGroup,
   createPromptTagGroup
 } from './electron-test.ts';
+
 import type { IElectronAPI } from '../src/preload/index.ts';
 import { Constants } from '../src/constants.ts';
 
@@ -44,6 +44,10 @@ test.describe('标签管理器搜索状态保持功能', () => {
     await electronTest.close();
   });
 
+  test.afterEach(async () => {
+    await electronTest.cleanupAndReset();
+  });
+
   test.describe('图像标签管理 - 搜索状态保持', () => {
     test('搜索后单个删除保持搜索状态', async () => {
       const page = electronTest.getPage();
@@ -51,9 +55,9 @@ test.describe('标签管理器搜索状态保持功能', () => {
       await enterImageTagManager(page);
 
       const searchKeyword = 'persist_single_delete';
-      const tagName1 = generateTestTagName(searchKeyword);
-      const tagName2 = generateTestTagName(searchKeyword);
-      const otherTagName = generateTestTagName('other');
+      const tagName1 = electronTest.generateTagName(searchKeyword);
+      const tagName2 = electronTest.generateTagName(searchKeyword);
+      const otherTagName = electronTest.generateTagName('other');
 
       await createImageTagInManager(page, tagName1);
       await createImageTagInManager(page, tagName2);
@@ -119,9 +123,9 @@ test.describe('标签管理器搜索状态保持功能', () => {
       await enterImageTagManager(page);
 
       const searchKeyword = 'persist_single_edit';
-      const tagName1 = generateTestTagName(searchKeyword);
-      const tagName2 = generateTestTagName(searchKeyword);
-      const newTagName = generateTestTagName(`${searchKeyword}_renamed`);
+      const tagName1 = electronTest.generateTagName(searchKeyword);
+      const tagName2 = electronTest.generateTagName(searchKeyword);
+      const newTagName = electronTest.generateTagName(`${searchKeyword}_renamed`);
 
       await createImageTagInManager(page, tagName1);
       await createImageTagInManager(page, tagName2);
@@ -184,9 +188,9 @@ test.describe('标签管理器搜索状态保持功能', () => {
       await enterImageTagManager(page);
 
       const searchKeyword = 'persist_test';
-      const tagName1 = generateTestTagName(searchKeyword);
-      const tagName2 = generateTestTagName(searchKeyword);
-      const otherTagName = generateTestTagName('other');
+      const tagName1 = electronTest.generateTagName(searchKeyword);
+      const tagName2 = electronTest.generateTagName(searchKeyword);
+      const otherTagName = electronTest.generateTagName('other');
 
       await createImageTagInManager(page, tagName1);
       await createImageTagInManager(page, tagName2);
@@ -261,9 +265,9 @@ test.describe('标签管理器搜索状态保持功能', () => {
       await enterImageTagManager(page);
 
       const searchKeyword = 'persist_move';
-      const groupName = generateTestTagName('persist_group');
-      const tagName1 = generateTestTagName(searchKeyword);
-      const tagName2 = generateTestTagName(searchKeyword);
+      const groupName = electronTest.generateTagName('persist_group');
+      const tagName1 = electronTest.generateTagName(searchKeyword);
+      const tagName2 = electronTest.generateTagName(searchKeyword);
 
       const groupId = await createImageTagGroup(page, groupName);
       await createImageTagInManager(page, tagName1);
@@ -344,9 +348,9 @@ test.describe('标签管理器搜索状态保持功能', () => {
       await enterPromptTagManager(page);
 
       const searchKeyword = 'persist_single_delete';
-      const tagName1 = generateTestTagName(searchKeyword);
-      const tagName2 = generateTestTagName(searchKeyword);
-      const otherTagName = generateTestTagName('other');
+      const tagName1 = electronTest.generateTagName(searchKeyword);
+      const tagName2 = electronTest.generateTagName(searchKeyword);
+      const otherTagName = electronTest.generateTagName('other');
 
       await createPromptTagInManager(page, tagName1);
       await createPromptTagInManager(page, tagName2);
@@ -412,9 +416,9 @@ test.describe('标签管理器搜索状态保持功能', () => {
       await enterPromptTagManager(page);
 
       const searchKeyword = 'persist_single_edit';
-      const tagName1 = generateTestTagName(searchKeyword);
-      const tagName2 = generateTestTagName(searchKeyword);
-      const newTagName = generateTestTagName(`${searchKeyword}_renamed`);
+      const tagName1 = electronTest.generateTagName(searchKeyword);
+      const tagName2 = electronTest.generateTagName(searchKeyword);
+      const newTagName = electronTest.generateTagName(`${searchKeyword}_renamed`);
 
       await createPromptTagInManager(page, tagName1);
       await createPromptTagInManager(page, tagName2);
@@ -477,9 +481,9 @@ test.describe('标签管理器搜索状态保持功能', () => {
       await enterPromptTagManager(page);
 
       const searchKeyword = 'persist_test';
-      const tagName1 = generateTestTagName(searchKeyword);
-      const tagName2 = generateTestTagName(searchKeyword);
-      const otherTagName = generateTestTagName('other');
+      const tagName1 = electronTest.generateTagName(searchKeyword);
+      const tagName2 = electronTest.generateTagName(searchKeyword);
+      const otherTagName = electronTest.generateTagName('other');
 
       await createPromptTagInManager(page, tagName1);
       await createPromptTagInManager(page, tagName2);
@@ -554,9 +558,9 @@ test.describe('标签管理器搜索状态保持功能', () => {
       await enterPromptTagManager(page);
 
       const searchKeyword = 'persist_move';
-      const groupName = generateTestTagName('persist_group');
-      const tagName1 = generateTestTagName(searchKeyword);
-      const tagName2 = generateTestTagName(searchKeyword);
+      const groupName = electronTest.generateTagName('persist_group');
+      const tagName1 = electronTest.generateTagName(searchKeyword);
+      const tagName2 = electronTest.generateTagName(searchKeyword);
 
       const groupId = await createPromptTagGroup(page, groupName);
       await createPromptTagInManager(page, tagName1);

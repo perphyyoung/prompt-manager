@@ -76,11 +76,15 @@ async function waitForDatabaseImageOrder(
 test.describe('提示词详情界面"设首张"功能', () => {
   const electronTest = createElectronTest();
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await electronTest.launch();
   });
 
   test.afterEach(async () => {
+    await electronTest.cleanupAndReset();
+  });
+
+  test.afterAll(async () => {
     await electronTest.close();
   });
 
@@ -329,8 +333,8 @@ test.describe('提示词详情界面"设首张"功能', () => {
     const secondImageItem = page.locator(`#imagePreviewList .image-preview-item[data-image-id="${secondImageId}"]`);
     await secondImageItem.click({ button: 'right' });
 
-    // 等待右键菜单显示
-    await page.waitForSelector('.context-menu', { state: 'visible', timeout: 5000 });
+    // 等待右键菜单显示（使用特定菜单项选择器来定位图像右键菜单）
+    await page.waitForSelector('.context-menu-item[data-item-id="setAsFirst"]', { state: 'visible', timeout: 5000 });
 
     // 验证菜单项存在
     const menuItem = await page.$('.context-menu-item[data-item-id="setAsFirst"]');
@@ -348,7 +352,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
     // 关闭菜单（点击其他地方）
     await page.click('#promptDetailModal');
-    await page.waitForSelector('.context-menu', { state: 'hidden', timeout: 5000 });
+    await page.waitForSelector('.context-menu-item[data-item-id="setAsFirst"]', { state: 'hidden', timeout: 5000 });
   });
 
   test('双图像：菜单项点击响应正常', async () => {
@@ -370,14 +374,14 @@ test.describe('提示词详情界面"设首张"功能', () => {
     const secondImageItem = page.locator(`#imagePreviewList .image-preview-item[data-image-id="${secondImageId}"]`);
     await secondImageItem.click({ button: 'right' });
 
-    // 等待右键菜单显示
-    await page.waitForSelector('.context-menu', { state: 'visible', timeout: 5000 });
+    // 等待右键菜单显示（使用特定菜单项选择器来定位图像右键菜单）
+    await page.waitForSelector('.context-menu-item[data-item-id="setAsFirst"]', { state: 'visible', timeout: 5000 });
 
     // 点击菜单项
     await page.click('.context-menu-item[data-item-id="setAsFirst"]');
 
     // 验证菜单消失
-    await page.waitForSelector('.context-menu', { state: 'hidden', timeout: 5000 });
+    await page.waitForSelector('.context-menu-item[data-item-id="setAsFirst"]', { state: 'hidden', timeout: 5000 });
 
     // 等待图像顺序变化
     await waitForImageOrderChange(page, secondImageId);

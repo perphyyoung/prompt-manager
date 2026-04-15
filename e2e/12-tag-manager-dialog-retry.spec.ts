@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
   createElectronTest,
-  generateTestTagName,
   enterImageTagManager,
   enterPromptTagManager,
   closeImageTagManager,
@@ -40,6 +39,10 @@ test.describe('标签管理对话框失败重试功能', () => {
     await electronTest.close();
   });
 
+  test.afterEach(async () => {
+    await electronTest.cleanupAndReset();
+  });
+
   test.describe('图像标签管理 - 对话框失败重试', () => {
     test('新建标签时标签名已存在 - 对话框保持打开并保留输入', async () => {
       const page = electronTest.getPage();
@@ -47,7 +50,7 @@ test.describe('标签管理对话框失败重试功能', () => {
       await enterImageTagManager(page);
 
       // 创建一个已存在的标签
-      const existingTagName = generateTestTagName('img_existing');
+      const existingTagName = electronTest.generateTagName('img_existing');
       await createImageTagInManager(page, existingTagName);
 
       // 再次尝试创建同名标签
@@ -55,7 +58,7 @@ test.describe('标签管理对话框失败重试功能', () => {
       await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL}`, { state: 'visible', timeout: 5000 });
 
       // 输入已存在的标签名
-      const newTagName = generateTestTagName('img_new');
+      const newTagName = electronTest.generateTagName('img_new');
       await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, existingTagName);
       await page.screenshot({ path: 'test-results/tag-manager/image-create-duplicate-input.png' });
 
@@ -96,8 +99,8 @@ test.describe('标签管理对话框失败重试功能', () => {
       await enterImageTagManager(page);
 
       // 创建两个标签
-      const tagName1 = generateTestTagName('img_rename1');
-      const tagName2 = generateTestTagName('img_rename2');
+      const tagName1 = electronTest.generateTagName('img_rename1');
+      const tagName2 = electronTest.generateTagName('img_rename2');
       await createImageTagInManager(page, tagName1);
       await createImageTagInManager(page, tagName2);
 
@@ -127,7 +130,7 @@ test.describe('标签管理对话框失败重试功能', () => {
       expect(inputValue).toBe(tagName2);
 
       // 现在输入一个新的唯一标签名
-      const newTagName = generateTestTagName('img_renamed_success');
+      const newTagName = electronTest.generateTagName('img_renamed_success');
       await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, newTagName);
       await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
 
@@ -153,7 +156,7 @@ test.describe('标签管理对话框失败重试功能', () => {
       await enterImageTagManager(page);
 
       // 创建一个已存在的标签组
-      const existingGroupName = generateTestTagName('img_group_existing');
+      const existingGroupName = electronTest.generateTagName('img_group_existing');
       await createImageTagGroup(page, existingGroupName);
 
       // 再次尝试创建同名标签组
@@ -161,7 +164,7 @@ test.describe('标签管理对话框失败重试功能', () => {
       await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL}`, { state: 'visible', timeout: 5000 });
 
       // 输入已存在的标签组名
-      const newGroupName = generateTestTagName('img_group_new');
+      const newGroupName = electronTest.generateTagName('img_group_new');
       await page.fill(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_NAME}`, existingGroupName);
       await page.screenshot({ path: 'test-results/tag-manager/image-group-create-duplicate-input.png' });
 
@@ -205,8 +208,8 @@ test.describe('标签管理对话框失败重试功能', () => {
       await enterImageTagManager(page);
 
       // 创建两个标签组
-      const groupName1 = generateTestTagName('img_edit_group1');
-      const groupName2 = generateTestTagName('img_edit_group2');
+      const groupName1 = electronTest.generateTagName('img_edit_group1');
+      const groupName2 = electronTest.generateTagName('img_edit_group2');
       const groupId1 = await createImageTagGroup(page, groupName1);
       await createImageTagGroup(page, groupName2);
 
@@ -235,7 +238,7 @@ test.describe('标签管理对话框失败重试功能', () => {
       expect(inputValue).toBe(groupName2);
 
       // 现在输入一个新的唯一标签组名
-      const newGroupName = generateTestTagName('img_group_renamed_success');
+      const newGroupName = electronTest.generateTagName('img_group_renamed_success');
       await page.fill(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_NAME}`, newGroupName);
       await page.click(`#${Constants.Ids.SAVE_IMAGE_TAG_GROUP_BTN}`);
 
@@ -264,7 +267,7 @@ test.describe('标签管理对话框失败重试功能', () => {
       await enterPromptTagManager(page);
 
       // 创建一个已存在的标签
-      const existingTagName = generateTestTagName('prompt_existing');
+      const existingTagName = electronTest.generateTagName('prompt_existing');
       await createPromptTagInManager(page, existingTagName);
 
       // 再次尝试创建同名标签
@@ -272,7 +275,7 @@ test.describe('标签管理对话框失败重试功能', () => {
       await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL}`, { state: 'visible', timeout: 5000 });
 
       // 输入已存在的标签名
-      const newTagName = generateTestTagName('prompt_new');
+      const newTagName = electronTest.generateTagName('prompt_new');
       await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, existingTagName);
       await page.screenshot({ path: 'test-results/tag-manager/prompt-create-duplicate-input.png' });
 
@@ -313,8 +316,8 @@ test.describe('标签管理对话框失败重试功能', () => {
       await enterPromptTagManager(page);
 
       // 创建两个标签
-      const tagName1 = generateTestTagName('prompt_rename1');
-      const tagName2 = generateTestTagName('prompt_rename2');
+      const tagName1 = electronTest.generateTagName('prompt_rename1');
+      const tagName2 = electronTest.generateTagName('prompt_rename2');
       await createPromptTagInManager(page, tagName1);
       await createPromptTagInManager(page, tagName2);
 
@@ -344,7 +347,7 @@ test.describe('标签管理对话框失败重试功能', () => {
       expect(inputValue).toBe(tagName2);
 
       // 现在输入一个新的唯一标签名
-      const newTagName = generateTestTagName('prompt_renamed_success');
+      const newTagName = electronTest.generateTagName('prompt_renamed_success');
       await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, newTagName);
       await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
 
@@ -370,7 +373,7 @@ test.describe('标签管理对话框失败重试功能', () => {
       await enterPromptTagManager(page);
 
       // 创建一个已存在的标签组
-      const existingGroupName = generateTestTagName('prompt_group_existing');
+      const existingGroupName = electronTest.generateTagName('prompt_group_existing');
       await createPromptTagGroup(page, existingGroupName);
 
       // 再次尝试创建同名标签组
@@ -378,7 +381,7 @@ test.describe('标签管理对话框失败重试功能', () => {
       await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_MODAL}`, { state: 'visible', timeout: 5000 });
 
       // 输入已存在的标签组名
-      const newGroupName = generateTestTagName('prompt_group_new');
+      const newGroupName = electronTest.generateTagName('prompt_group_new');
       await page.fill(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_NAME}`, existingGroupName);
       await page.screenshot({ path: 'test-results/tag-manager/prompt-group-create-duplicate-input.png' });
 
@@ -422,8 +425,8 @@ test.describe('标签管理对话框失败重试功能', () => {
       await enterPromptTagManager(page);
 
       // 创建两个标签组
-      const groupName1 = generateTestTagName('prompt_edit_group1');
-      const groupName2 = generateTestTagName('prompt_edit_group2');
+      const groupName1 = electronTest.generateTagName('prompt_edit_group1');
+      const groupName2 = electronTest.generateTagName('prompt_edit_group2');
       const groupId1 = await createPromptTagGroup(page, groupName1);
       await createPromptTagGroup(page, groupName2);
 
@@ -452,7 +455,7 @@ test.describe('标签管理对话框失败重试功能', () => {
       expect(inputValue).toBe(groupName2);
 
       // 现在输入一个新的唯一标签组名
-      const newGroupName = generateTestTagName('prompt_group_renamed_success');
+      const newGroupName = electronTest.generateTagName('prompt_group_renamed_success');
       await page.fill(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_NAME}`, newGroupName);
       await page.click(`#${Constants.Ids.SAVE_PROMPT_TAG_GROUP_BTN}`);
 

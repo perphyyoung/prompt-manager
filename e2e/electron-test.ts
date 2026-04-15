@@ -118,6 +118,280 @@ export class ElectronTestHelper {
       window.electronAPI.logInfo('E2E-Test', `Starting test: ${name}`);
     }, testName);
   }
+
+  // ========== 测试数据管理 ==========
+
+  /**
+   * 生成单个测试标签名
+   */
+  generateTagName(suffix: string): string {
+    return `e2e_${suffix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  }
+
+  /**
+   * 生成多个测试标签名
+   */
+  generateTagNames(count: number, prefix: string): string[] {
+    return Array.from({ length: count }, (_, i) =>
+      this.generateTagName(`${prefix}_${i}`)
+    );
+  }
+
+  /**
+   * 创建单个图像标签
+   * @param suffix - 标签名后缀
+   * @param groupId - 可选，标签组ID，指定后将标签分配到该组
+   * @returns 创建的标签名
+   */
+  async createImageTag(suffix: string, groupId?: number): Promise<string> {
+    const page = this.getPage();
+    const tagName = this.generateTagName(suffix);
+    await page.evaluate(async (params: { tag: string; groupId?: number }) => {
+      await window.electronAPI.addImageTag(params.tag);
+      if (params.groupId !== undefined) {
+        await window.electronAPI.assignImageTagToBelongGroup(params.tag, params.groupId);
+      }
+    }, { tag: tagName, groupId });
+    return tagName;
+  }
+
+  /**
+   * 批量创建图像标签
+   * @param count - 标签数量
+   * @param prefix - 标签名前缀
+   * @param groupId - 可选，标签组ID，指定后将所有标签分配到该组
+   * @returns 创建的标签名数组
+   */
+  async createImageTags(count: number, prefix: string, groupId?: number): Promise<string[]> {
+    const page = this.getPage();
+    const tagNames = this.generateTagNames(count, prefix);
+    await page.evaluate(async (params: { tags: string[]; groupId?: number }) => {
+      await window.electronAPI.addImageTags('', params.tags);
+      if (params.groupId !== undefined) {
+        for (const tag of params.tags) {
+          await window.electronAPI.assignImageTagToBelongGroup(tag, params.groupId);
+        }
+      }
+    }, { tags: tagNames, groupId });
+    return tagNames;
+  }
+
+  /**
+   * 创建单个提示词标签
+   * @param suffix - 标签名后缀
+   * @param groupId - 可选，标签组ID，指定后将标签分配到该组
+   * @returns 创建的标签名
+   */
+  async createPromptTag(suffix: string, groupId?: number): Promise<string> {
+    const page = this.getPage();
+    const tagName = this.generateTagName(suffix);
+    await page.evaluate(async (params: { tag: string; groupId?: number }) => {
+      await window.electronAPI.addPromptTag(params.tag);
+      if (params.groupId !== undefined) {
+        await window.electronAPI.assignPromptTagToBelongGroup(params.tag, params.groupId);
+      }
+    }, { tag: tagName, groupId });
+    return tagName;
+  }
+
+  /**
+   * 批量创建提示词标签
+   * @param count - 标签数量
+   * @param prefix - 标签名前缀
+   * @param groupId - 可选，标签组ID，指定后将所有标签分配到该组
+   * @returns 创建的标签名数组
+   */
+  async createPromptTags(count: number, prefix: string, groupId?: number): Promise<string[]> {
+    const page = this.getPage();
+    const tagNames = this.generateTagNames(count, prefix);
+    await page.evaluate(async (params: { tags: string[]; groupId?: number }) => {
+      await window.electronAPI.addPromptTags('', params.tags);
+      if (params.groupId !== undefined) {
+        for (const tag of params.tags) {
+          await window.electronAPI.assignPromptTagToBelongGroup(tag, params.groupId);
+        }
+      }
+    }, { tags: tagNames, groupId });
+    return tagNames;
+  }
+
+  /**
+   * 获取首位图像标签组ID
+   * @returns 首位标签组的ID，如果没有组则返回undefined
+   */
+  async getFirstImageTagGroupId(): Promise<number | undefined> {
+    const page = this.getPage();
+    return await page.evaluate(async () => {
+      const groups = await window.electronAPI.getImageTagGroups();
+      const sortedGroups = groups.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      return sortedGroups[0]?.id;
+    });
+  }
+
+  /**
+   * 获取首位提示词标签组ID
+   * @returns 首位标签组的ID，如果没有组则返回undefined
+   */
+  async getFirstPromptTagGroupId(): Promise<number | undefined> {
+    const page = this.getPage();
+    return await page.evaluate(async () => {
+      const groups = await window.electronAPI.getPromptTagGroups();
+      const sortedGroups = groups.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      return sortedGroups[0]?.id;
+    });
+  }
+
+  /**
+   * 清理所有测试标签和标签组（图像和提示词）
+   */
+  private async _cleanupE2eTagsAndGroups(): Promise<void> {
+    const page = this.getPage();
+    await page.evaluate(async () => {
+      // 清理图像标签
+      const imageTags = await window.electronAPI.getImageTags();
+      const testImageTags = imageTags.filter(tag => tag.startsWith('e2e_'));
+      if (testImageTags.length > 0) {
+        await window.electronAPI.deleteImageTags(testImageTags);
+      }
+
+      // 清理提示词标签
+      const promptTags = await window.electronAPI.getPromptTags();
+      const testPromptTags = promptTags.filter(tag => tag.startsWith('e2e_'));
+      if (testPromptTags.length > 0) {
+        await window.electronAPI.deletePromptTags(testPromptTags);
+      }
+
+      // 清理图像标签组
+      const imageTagGroups = await window.electronAPI.getImageTagGroups();
+      const testImageTagGroups = imageTagGroups.filter(group => group.name.startsWith('e2e_'));
+      for (const group of testImageTagGroups) {
+        await window.electronAPI.deleteImageTagGroup(group.id);
+      }
+
+      // 清理提示词标签组
+      const promptTagGroups = await window.electronAPI.getPromptTagGroups();
+      const testPromptTagGroups = promptTagGroups.filter(group => group.name.startsWith('e2e_'));
+      for (const group of testPromptTagGroups) {
+        await window.electronAPI.deletePromptTagGroup(group.id);
+      }
+    });
+  }
+
+  /**
+   * 清除标签缓存
+   * 清除 PyTagGroups 使用的缓存，确保获取最新数据
+   */
+  async clearTagCache(type: 'image' | 'prompt'): Promise<void> {
+    const page = this.getPage();
+    await page.evaluate((t) => {
+      const app = (window as unknown as { app?: { cacheManager?: { getCache: (name: string) => { clear: () => void } | undefined } } }).app;
+      if (app?.cacheManager) {
+        const tagsCache = app.cacheManager.getCache(`${t}Tags`);
+        const tagGroupsCache = app.cacheManager.getCache(`${t}TagGroups`);
+        tagsCache?.clear();
+        tagGroupsCache?.clear();
+      }
+    }, type);
+  }
+
+  /**
+   * 点击刷新按钮刷新标签筛选区
+   * 通过点击左下角刷新按钮触发标签筛选区刷新
+   */
+  async refreshTagFilters(): Promise<void> {
+    const page = this.getPage();
+    await page.click('#refreshDataBtn');
+    await page.waitForSelector('#toastContainer:has-text("数据已刷新")', { timeout: 5000 });
+  }
+
+  /**
+   * 验证标签是否存在
+   */
+  async tagExists(tagName: string, type: 'image' | 'prompt'): Promise<boolean> {
+    const page = this.getPage();
+    const tags = await page.evaluate(async (t) => {
+      return t === 'image'
+        ? await window.electronAPI.getImageTags()
+        : await window.electronAPI.getPromptTags();
+    }, type);
+    return tags.includes(tagName);
+  }
+
+  // ========== 测试后清理和重置 ==========
+
+  /**
+   * 测试后清理和重置
+   * 关闭所有模态框，清理测试标签和标签组，回到图像主界面
+   * 应在 test.afterEach 中调用
+   */
+  async cleanupAndReset(): Promise<void> {
+    await this._cleanupE2eTagsAndGroups();
+
+    const page = this.getPage();
+
+    // 关闭可能打开的详情模态框
+    const imageDetailModal = page.locator('#imageDetailModal');
+    if (await imageDetailModal.isVisible().catch(() => false)) {
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('#imageDetailModal', { state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
+
+    const promptDetailModal = page.locator('#promptDetailModal');
+    if (await promptDetailModal.isVisible().catch(() => false)) {
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('#promptDetailModal', { state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
+
+    // 关闭可能打开的标签管理器
+    const imageTagManagerModal = page.locator('#imageTagManagerModal');
+    if (await imageTagManagerModal.isVisible().catch(() => false)) {
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('#imageTagManagerModal', { state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
+
+    const promptTagManagerModal = page.locator('#promptTagManagerModal');
+    if (await promptTagManagerModal.isVisible().catch(() => false)) {
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('#promptTagManagerModal', { state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
+
+    // 关闭可能打开的统计和设置模态框
+    const statisticsModal = page.locator('#statisticsModal');
+    if (await statisticsModal.isVisible().catch(() => false)) {
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('#statisticsModal', { state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
+
+    const settingsModal = page.locator('#settingsModal');
+    if (await settingsModal.isVisible().catch(() => false)) {
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('#settingsModal', { state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
+
+    // 关闭可能打开的新建提示词页面
+    const newPromptPage = page.locator('#newPromptPage');
+    if (await newPromptPage.isVisible().catch(() => false)) {
+      await page.click('#newPromptCancelBtn');
+      await page.waitForSelector('#newPromptPage', { state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
+
+    // 关闭可能打开的批量工具栏（避免 pop mismatch 错误）
+    const imageBatchToolbar = page.locator('#imageMainBatchToolbar');
+    if (await imageBatchToolbar.isVisible().catch(() => false)) {
+      await page.keyboard.press('Escape');
+      await imageBatchToolbar.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
+
+    const promptBatchToolbar = page.locator('#promptMainBatchToolbar');
+    if (await promptBatchToolbar.isVisible().catch(() => false)) {
+      await page.keyboard.press('Escape');
+      await promptBatchToolbar.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
+
+    // 回到图像主界面
+    await page.click('#imageManagerBtn');
+    await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
+  }
 }
 
 /**
@@ -128,13 +402,6 @@ export function createElectronTest() {
 }
 
 // ========== 标签管理器测试辅助函数 ==========
-
-/**
- * 生成唯一测试标签名
- */
-export function generateTestTagName(prefix: string): string {
-  return `e2e_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-}
 
 /**
  * 进入图像面板并打开标签管理器
@@ -332,10 +599,19 @@ export async function enterPromptGridView(page: any, screenshotPath?: string) {
  * 3. Wait for list-item--image elements to be visible
  */
 export async function enterImageListView(page: any, screenshotPath?: string) {
+  // 点击图像管理器按钮
   await page.click('#imageManagerBtn');
   await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
+  await page.waitForSelector('#promptPanel', { state: 'hidden', timeout: 5000 }).catch(() => {});
+
+  // 点击列表视图按钮
   await page.click('#imageListViewBtn');
 
+  // 等待图像列表容器可见
+  await page.waitForSelector('#imageList', { state: 'visible', timeout: 5000 });
+  await page.waitForSelector('#promptList', { state: 'hidden', timeout: 5000 }).catch(() => {});
+
+  // 等待图像列表项可见
   const firstItem = page.locator('.list-item--image').first();
   await expect(firstItem).toBeVisible({ timeout: 5000 });
 
@@ -354,10 +630,19 @@ export async function enterImageListView(page: any, screenshotPath?: string) {
  * 3. Wait for list-item--prompt elements to be visible
  */
 export async function enterPromptListView(page: any, screenshotPath?: string) {
+  // 点击提示词管理器按钮
   await page.click('#promptManagerBtn');
   await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
+  await page.waitForSelector('#imagePanel', { state: 'hidden', timeout: 5000 }).catch(() => {});
+
+  // 点击列表视图按钮
   await page.click('#promptListViewBtn');
 
+  // 等待提示词列表容器可见
+  await page.waitForSelector('#promptList', { state: 'visible', timeout: 5000 });
+  await page.waitForSelector('#imageList', { state: 'hidden', timeout: 5000 }).catch(() => {});
+
+  // 等待提示词列表项可见
   const firstItem = page.locator('.list-item--prompt').first();
   await expect(firstItem).toBeVisible({ timeout: 5000 });
 
@@ -420,20 +705,36 @@ export async function openPromptDetail(page: any, screenshotPath?: string) {
  * 5. Wait for detail modal to show
  */
 export async function enterImageDetailView(page: any, screenshotPath?: string) {
-  await page.click('#imageManagerBtn');
-  await page.waitForTimeout(500);
+  // 检查是否已经在图像面板，如果不在则切换
+  const imagePanel = page.locator('#imagePanel');
+  const isImagePanelVisible = await imagePanel.isVisible().catch(() => false);
+  if (!isImagePanelVisible) {
+    await page.click('#imageManagerBtn');
+    await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
+  }
+
+  // 确保图像网格已加载
+  await page.waitForSelector('.image-card', { state: 'visible', timeout: 5000 });
 
   const firstCard = page.locator('.image-card').first();
   await expect(firstCard).toBeVisible({ timeout: 5000 });
 
+  // 等待卡片可交互
+  await firstCard.waitFor({ state: 'visible', timeout: 5000 });
+
   const firstImageId = await firstCard.getAttribute('data-id');
   expect(firstImageId).toBeTruthy();
 
-  await firstCard.click();
-  await page.waitForTimeout(500);
+  // 滚动到卡片位置并点击
+  await firstCard.scrollIntoViewIfNeeded();
+  await firstCard.click({ force: true });
 
+  // 等待详情模态框显示
   const detailModal = page.locator('#imageDetailModal');
   await expect(detailModal).toBeVisible({ timeout: 5000 });
+
+  // 等待模态框内容加载（等待图像元素可见）
+  await page.waitForSelector('#imageDetailImg', { state: 'visible', timeout: 5000 });
 
   if (screenshotPath) {
     await page.screenshot({ path: screenshotPath });
@@ -452,20 +753,36 @@ export async function enterImageDetailView(page: any, screenshotPath?: string) {
  * 5. Wait for detail modal to show
  */
 export async function enterPromptDetailView(page: any, screenshotPath?: string) {
-  await page.click('#promptManagerBtn');
-  await page.waitForTimeout(500);
+  // 检查是否已经在提示词面板，如果不在则切换
+  const promptPanel = page.locator('#promptPanel');
+  const isPromptPanelVisible = await promptPanel.isVisible().catch(() => false);
+  if (!isPromptPanelVisible) {
+    await page.click('#promptManagerBtn');
+    await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
+  }
+
+  // 确保提示词网格已加载
+  await page.waitForSelector('.prompt-card', { state: 'visible', timeout: 5000 });
 
   const firstCard = page.locator('.prompt-card').first();
   await expect(firstCard).toBeVisible({ timeout: 5000 });
 
+  // 等待卡片可交互
+  await firstCard.waitFor({ state: 'visible', timeout: 5000 });
+
   const firstPromptId = await firstCard.getAttribute('data-id');
   expect(firstPromptId).toBeTruthy();
 
-  await firstCard.click();
-  await page.waitForTimeout(500);
+  // 滚动到卡片位置并点击
+  await firstCard.scrollIntoViewIfNeeded();
+  await firstCard.click({ force: true });
 
+  // 等待详情模态框显示
   const detailModal = page.locator('#promptDetailModal');
   await expect(detailModal).toBeVisible({ timeout: 5000 });
+
+  // 等待模态框内容加载（等待标题输入框可见）
+  await page.waitForSelector('#promptDetailTitle', { state: 'visible', timeout: 5000 });
 
   if (screenshotPath) {
     await page.screenshot({ path: screenshotPath });
@@ -600,14 +917,14 @@ export async function rightClickAndSetAsFirst(page: Page, imageId: string): Prom
   const imageItem = page.locator(`#imagePreviewList .image-preview-item[data-image-id="${imageId}"]`);
   await imageItem.click({ button: 'right' });
 
-  // 等待右键菜单显示
-  await page.waitForSelector('.context-menu', { state: 'visible', timeout: 5000 });
+  // 等待右键菜单显示（使用包含特定菜单项的选择器来定位图像右键菜单）
+  await page.waitForSelector('.context-menu-item[data-item-id="setAsFirst"]', { state: 'visible', timeout: 5000 });
 
   // 点击"设为首张"菜单项
   await page.click('.context-menu-item[data-item-id="setAsFirst"]');
 
-  // 等待菜单消失
-  await page.waitForSelector('.context-menu', { state: 'hidden', timeout: 5000 });
+  // 等待菜单消失（通过检查特定菜单项是否隐藏）
+  await page.waitForSelector('.context-menu-item[data-item-id="setAsFirst"]', { state: 'hidden', timeout: 5000 });
 }
 
 /**

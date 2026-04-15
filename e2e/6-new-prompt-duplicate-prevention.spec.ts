@@ -23,11 +23,15 @@ declare global {
 test.describe('新建提示词防重复提交', () => {
   const electronTest = createElectronTest();
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await electronTest.launch();
   });
 
   test.afterEach(async () => {
+    await electronTest.cleanupAndReset();
+  });
+
+  test.afterAll(async () => {
     await electronTest.close();
   });
 
@@ -194,8 +198,11 @@ test.describe('新建提示词防重复提交', () => {
       return !page?.classList.contains('active');
     }, { timeout: 3000 });
 
-    // 等待一段时间确保所有操作完成
-    await page.waitForTimeout(500);
+    // 等待提示词列表更新
+    await page.waitForFunction((expectedCount: number) => {
+      const promptCards = document.querySelectorAll('.prompt-card');
+      return promptCards.length === expectedCount;
+    }, initialPromptCount + 1, { timeout: 3000 });
 
     // 验证只创建了一个提示词
     const finalPromptCount = await page.evaluate(async () => {
@@ -265,8 +272,11 @@ test.describe('新建提示词防重复提交', () => {
     await doneButton.click();
     await page.screenshot({ path: 'test-results/empty-02-clicked.png' });
 
-    // 等待错误提示
-    await page.waitForTimeout(300);
+    // 等待页面保持打开状态（验证空内容不会关闭页面）
+    await page.waitForFunction(() => {
+      const page = document.getElementById('newPromptPage');
+      return page?.classList.contains('active');
+    }, { timeout: 3000 });
     await page.screenshot({ path: 'test-results/empty-03-after-click.png' });
 
     // 验证页面没有关闭（因为内容为空）
@@ -287,6 +297,9 @@ test.describe('新建提示词防重复提交', () => {
 
     // 取消关闭页面
     await page.click('#newPromptCancelBtn');
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => {
+      const page = document.getElementById('newPromptPage');
+      return !page?.classList.contains('active');
+    }, { timeout: 3000 });
   });
 });

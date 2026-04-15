@@ -5,7 +5,6 @@ import {
   enterPromptDetailView,
   enterImageDetailView,
 } from './electron-test.ts';
-import { TestDataHelper } from './test-data-helper.ts';
 
 /**
  * 测试详情界面标签输入框的各种添加方式
@@ -16,16 +15,15 @@ import { TestDataHelper } from './test-data-helper.ts';
 
 const electronTest = createElectronTest();
 
-test.beforeEach(async () => {
+test.beforeAll(async () => {
   await electronTest.launch();
 });
 
 test.afterEach(async () => {
-  const page = electronTest.getPage();
-  if (page) {
-    const helper = new TestDataHelper(page);
-    await helper.cleanupAllTags();
-  }
+  await electronTest.cleanupAndReset();
+});
+
+test.afterAll(async () => {
   await electronTest.close();
 });
 
@@ -38,13 +36,11 @@ test('图像详情界面 - 直接回车添加单个标签（无下拉建议）',
   const page = electronTest.getPage();
   await electronTest.logTestStart('图像详情界面 - 直接回车添加单个标签（无下拉建议）');
 
-  const helper = new TestDataHelper(page);
-
   // 进入图像详情界面
   const { firstImageId } = await enterImageDetailView(page);
 
   // 生成唯一测试标签名
-  const testTagName = helper.generateTagName('enter_no_dropdown');
+  const testTagName = electronTest.generateTagName('enter_no_dropdown');
 
   // 在标签输入框输入标签名
   await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, testTagName);
@@ -82,10 +78,8 @@ test('图像详情界面 - 点击下拉建议项添加标签', async () => {
   const page = electronTest.getPage();
   await electronTest.logTestStart('图像详情界面 - 点击下拉建议项添加标签');
 
-  const helper = new TestDataHelper(page);
-
   // 首先创建一个标签
-  const existingTagName = await helper.createImageTag('existing_for_click');
+  const existingTagName = await electronTest.createImageTag('existing_for_click');
 
   // 进入图像详情界面
   await enterImageDetailView(page);
@@ -122,16 +116,22 @@ test('图像详情界面 - 使用键盘导航选择下拉建议并回车添加',
   const page = electronTest.getPage();
   await electronTest.logTestStart('图像详情界面 - 使用键盘导航选择下拉建议并回车添加');
 
-  const helper = new TestDataHelper(page);
-
   // 创建多个标签
-  const tagNames = await helper.createImageTags(3, 'keyboard_nav');
+  const tagNames = await electronTest.createImageTags(3, 'keyboard_nav');
+
+  // 清除标签缓存，确保新创建的标签在自动完成中可用
+  await electronTest.clearTagCache('image');
 
   // 进入图像详情界面
   await enterImageDetailView(page);
 
-  // 输入共同前缀
-  const prefix = 'e2e_keyboard_nav';
+  // 输入共同前缀（使用第一个标签的前16个字符作为前缀）
+  const prefix = tagNames[0].slice(0, 16);
+
+  // 清除输入框
+  await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, '');
+
+  // 输入前缀触发自动完成
   await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, prefix);
 
   // 等待下拉框显示
@@ -169,14 +169,12 @@ test('图像详情界面 - 批量添加多个标签（使用空格分隔）', as
   const page = electronTest.getPage();
   await electronTest.logTestStart('图像详情界面 - 批量添加多个标签（使用空格分隔）');
 
-  const helper = new TestDataHelper(page);
-
   // 进入图像详情界面
   await enterImageDetailView(page);
 
   // 生成多个测试标签名
-  const tag1 = helper.generateTagName('space_1');
-  const tag2 = helper.generateTagName('space_2');
+  const tag1 = electronTest.generateTagName('space_1');
+  const tag2 = electronTest.generateTagName('space_2');
 
   // 输入空格分隔的标签
   const inputValue = `${tag1} ${tag2}`;
@@ -213,16 +211,14 @@ test('图像详情界面 - 下拉框激活时回车添加当前输入（无选�
   const page = electronTest.getPage();
   await electronTest.logTestStart('图像详情界面 - 下拉框激活时回车添加当前输入（无选中项）');
 
-  const helper = new TestDataHelper(page);
-
   // 创建一个标签以触发下拉框
-  const existingTag = await helper.createImageTag('existing_trigger');
+  const existingTag = await electronTest.createImageTag('existing_trigger');
 
   // 进入图像详情界面
   await enterImageDetailView(page);
 
   // 生成新标签名（使用相同前缀确保能触发下拉框）
-  const newTagName = helper.generateTagName('existing_trigger_new');
+  const newTagName = electronTest.generateTagName('existing_trigger_new');
 
   // 输入现有标签的前缀以触发下拉框
   const prefix = existingTag.slice(0, 10);
@@ -268,13 +264,11 @@ test('提示词详情界面 - 直接回车添加单个标签（无下拉建议�
   const page = electronTest.getPage();
   await electronTest.logTestStart('提示词详情界面 - 直接回车添加单个标签（无下拉建议）');
 
-  const helper = new TestDataHelper(page);
-
   // 进入提示词详情界面
   const { firstPromptId } = await enterPromptDetailView(page);
 
   // 生成唯一测试标签名
-  const testTagName = helper.generateTagName('enter_no_dropdown');
+  const testTagName = electronTest.generateTagName('enter_no_dropdown');
 
   // 在标签输入框输入标签名
   await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, testTagName);
@@ -312,10 +306,8 @@ test('提示词详情界面 - 点击下拉建议项添加标签', async () => {
   const page = electronTest.getPage();
   await electronTest.logTestStart('提示词详情界面 - 点击下拉建议项添加标签');
 
-  const helper = new TestDataHelper(page);
-
   // 首先创建一个标签，以便有建议可显示
-  const existingTagName = await helper.createPromptTag('existing_for_click');
+  const existingTagName = await electronTest.createPromptTag('existing_for_click');
 
   // 进入提示词详情界面
   await enterPromptDetailView(page);
@@ -352,10 +344,11 @@ test('提示词详情界面 - 使用键盘导航选择下拉建议并回车添�
   const page = electronTest.getPage();
   await electronTest.logTestStart('提示词详情界面 - 使用键盘导航选择下拉建议并回车添加');
 
-  const helper = new TestDataHelper(page);
-
   // 创建多个标签以便有多个建议
-  const tagNames = await helper.createPromptTags(3, 'keyboard_nav');
+  const tagNames = await electronTest.createPromptTags(3, 'keyboard_nav');
+
+  // 清除标签缓存，确保新创建的标签在自动完成中可用
+  await electronTest.clearTagCache('prompt');
 
   // 进入提示词详情界面
   await enterPromptDetailView(page);
@@ -398,15 +391,13 @@ test('提示词详情界面 - 批量添加多个标签（使用逗号分隔）',
   const page = electronTest.getPage();
   await electronTest.logTestStart('提示词详情界面 - 批量添加多个标签（使用逗号分隔）');
 
-  const helper = new TestDataHelper(page);
-
   // 进入提示词详情界面
   await enterPromptDetailView(page);
 
   // 生成多个测试标签名
-  const tag1 = helper.generateTagName('batch_1');
-  const tag2 = helper.generateTagName('batch_2');
-  const tag3 = helper.generateTagName('batch_3');
+  const tag1 = electronTest.generateTagName('batch_1');
+  const tag2 = electronTest.generateTagName('batch_2');
+  const tag3 = electronTest.generateTagName('batch_3');
 
   // 输入逗号分隔的标签
   const inputValue = `${tag1},${tag2}，${tag3}`; // 混合使用英文和中文逗号
@@ -446,16 +437,14 @@ test('提示词详情界面 - 下拉框激活时回车添加当前输入（无�
   const page = electronTest.getPage();
   await electronTest.logTestStart('提示词详情界面 - 下拉框激活时回车添加当前输入（无选中项）');
 
-  const helper = new TestDataHelper(page);
-
   // 创建一个标签以触发下拉框
-  const existingTag = await helper.createPromptTag('existing_trigger');
+  const existingTag = await electronTest.createPromptTag('existing_trigger');
 
   // 进入提示词详情界面
   await enterPromptDetailView(page);
 
   // 生成新标签名（使用相同前缀确保能触发下拉框）
-  const newTagName = helper.generateTagName('existing_trigger_new');
+  const newTagName = electronTest.generateTagName('existing_trigger_new');
 
   // 输入现有标签的前缀以触发下拉框
   const prefix = existingTag.slice(0, 10);
