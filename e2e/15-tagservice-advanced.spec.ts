@@ -68,31 +68,38 @@ test.describe('TagService 高级功能测试', () => {
         page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${testTagName}"]`)
       ).toBeVisible({ timeout: 5000 });
 
-      // 3. 记录添加标签前的时间戳
+      // 3. 记录当前时间戳（用于后续比较）
       const imageBefore = await getImageFromDatabase(page, firstImageId);
       const updatedAtBefore = imageBefore?.updatedAt;
 
-      // 4. 点击标签上的删除按钮（X按钮）
+      // 4. 等待下一秒开始，确保删除操作发生在不同秒
+      // （localTime() 只精确到秒，同一秒内操作时间戳相同）
+      await page.waitForFunction((beforeTime: string | undefined) => {
+        const now = new Date().toLocaleString('zh-CN');
+        return now !== beforeTime;
+      }, updatedAtBefore, { timeout: 2000 });
+
+      // 5. 点击标签上的删除按钮（X按钮）
       const tagElement = page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER} .tag-removable[data-tag="${testTagName}"]`);
       await expect(tagElement).toBeVisible({ timeout: 5000 });
       const deleteBtn = tagElement.locator('.tag-remove-btn');
       await expect(deleteBtn).toBeVisible({ timeout: 5000 });
       await deleteBtn.click();
 
-      // 5. 等待确认对话框并确认
+      // 6. 等待确认对话框并确认
       await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, { state: 'visible', timeout: 5000 });
       await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
-      // 6. 验证标签已从界面移除
+      // 7. 验证标签已从界面移除
       await expect(
         page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER} .tag-removable[data-tag="${testTagName}"]`)
       ).not.toBeVisible({ timeout: 5000 });
 
-      // 7. 通过 API 验证标签已从图像移除
+      // 8. 通过 API 验证标签已从图像移除
       const imageAfter = await getImageFromDatabase(page, firstImageId);
       expect(imageAfter?.tags).not.toContain(testTagName);
 
-      // 8. 验证 updated_at 已更新
+      // 9. 验证 updated_at 已更新
       expect(imageAfter?.updatedAt).not.toBe(updatedAtBefore);
 
       await page.screenshot({ path: 'test-results/tagservice-advanced/image-detail-tag-unlinked.png' });
@@ -115,31 +122,38 @@ test.describe('TagService 高级功能测试', () => {
         page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${testTagName}"]`)
       ).toBeVisible({ timeout: 5000 });
 
-      // 3. 记录添加标签前的时间戳
+      // 3. 记录当前时间戳（用于后续比较）
       const promptBefore = await getPromptFromDatabase(page, firstPromptId);
       const updatedAtBefore = promptBefore?.updatedAt;
 
-      // 4. 点击标签上的删除按钮（X按钮）
+      // 4. 等待下一秒开始，确保删除操作发生在不同秒
+      // （localTime() 只精确到秒，同一秒内操作时间戳相同）
+      await page.waitForFunction((beforeTime: string | undefined) => {
+        const now = new Date().toLocaleString('zh-CN');
+        return now !== beforeTime;
+      }, updatedAtBefore, { timeout: 2000 });
+
+      // 5. 点击标签上的删除按钮（X按钮）
       const tagElement = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER} .tag-removable[data-tag="${testTagName}"]`);
       await expect(tagElement).toBeVisible({ timeout: 5000 });
       const deleteBtn = tagElement.locator('.tag-remove-btn');
       await expect(deleteBtn).toBeVisible({ timeout: 5000 });
       await deleteBtn.click();
 
-      // 5. 等待确认对话框并确认
+      // 6. 等待确认对话框并确认
       await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, { state: 'visible', timeout: 5000 });
       await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
-      // 6. 验证标签已从界面移除
+      // 7. 验证标签已从界面移除
       await expect(
         page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER} .tag-removable[data-tag="${testTagName}"]`)
       ).not.toBeVisible({ timeout: 5000 });
 
-      // 7. 通过 API 验证标签已从提示词移除
+      // 8. 通过 API 验证标签已从提示词移除
       const promptAfter = await getPromptFromDatabase(page, firstPromptId);
       expect(promptAfter?.tags).not.toContain(testTagName);
 
-      // 8. 验证 updated_at 已更新
+      // 9. 验证 updated_at 已更新
       expect(promptAfter?.updatedAt).not.toBe(updatedAtBefore);
 
       await page.screenshot({ path: 'test-results/tagservice-advanced/prompt-detail-tag-unlinked.png' });

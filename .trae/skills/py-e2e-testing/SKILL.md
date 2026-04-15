@@ -81,6 +81,15 @@ description: 在编写或调试 Playwright E2E 测试时使用。症状包括：
 5. **绝不使用 `waitForTimeout` 进行等待**
    - 改用显式条件（waitForSelector、waitForFunction 等）
    - 参见下方的"可靠验证"部分了解正确模式
+   - **例外情况**：当需要等待时间戳变化时（如 `localTime()` 只精确到秒），可以使用 `waitForFunction` 等待下一秒：
+
+     ```typescript
+     // 等待下一秒开始，确保操作发生在不同秒（localTime() 只精确到秒）
+     await page.waitForFunction((beforeTime: string | undefined) => {
+       const now = new Date().toLocaleString('zh-CN');
+       return now !== beforeTime;
+     }, updatedAtBefore, { timeout: 2000 });
+     ```
 
 6. **使用 `e2e/electron-test.ts` 中的共享辅助函数**
    - 导入并重用现有的辅助函数，而不是重复代码
