@@ -114,7 +114,7 @@ export class TagService {
    */
   async createTags(options: CreateTagsOptions): Promise<TagOperationResult> {
     const { tagNames, type, defaultGroupId } = options;
-    const names = this.normalizeTagNames(tagNames);
+    const names = this.parseAndNormalizeTagNames(tagNames);
 
     if (names.length === 0) {
       return {
@@ -147,7 +147,7 @@ export class TagService {
    */
   async removeTags(options: RemoveTagsOptions): Promise<TagDeleteResult> {
     const { tagNames, type } = options;
-    const names = this.normalizeTagNames(tagNames);
+    const names = this.parseAndNormalizeTagNames(tagNames);
 
     if (names.length === 0) {
       return { deleted: 0, errors: [] };
@@ -171,8 +171,8 @@ export class TagService {
   async linkTagsToItem(options: LinkTagsOptions): Promise<LinkTagsResult> {
     const { tagNames, type, itemId, itemIds } = options;
 
-    // 1. 标准化标签名
-    const names = this.normalizeTagNames(tagNames);
+    // 1. 解析并标准化标签名
+    const names = this.parseAndNormalizeTagNames(tagNames);
     if (names.length === 0) {
       return {
         success: true,
@@ -370,10 +370,18 @@ export class TagService {
   // ========== 私有方法 ==========
 
   /**
-   * 标准化标签名数组
+   * 解析并标准化标签输入
+   * 支持字符串（自动解析）或数组输入
+   * @param tagNames - 标签输入（字符串或数组）
+   * @returns 标准化后的标签名数组
    */
-  private normalizeTagNames(tagNames: string | string[]): string[] {
-    const names = Array.isArray(tagNames) ? tagNames : [tagNames];
+  private parseAndNormalizeTagNames(tagNames: string | string[]): string[] {
+    // 1. 如果是字符串，使用 parseTagInput 解析
+    const names = typeof tagNames === 'string'
+      ? parseTagInput(tagNames)
+      : tagNames;
+
+    // 2. 标准化处理
     return names
       .map(n => n.trim())
       .filter(n => n.length > 0);

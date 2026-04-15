@@ -1,4 +1,3 @@
-import { parseTagInput } from '../../pyTagGroups/index.ts';
 import { TagService } from '../services/index.ts';
 import { CacheManager } from '../../utils/CacheManager.ts';
 import { LRUCache } from '../../utils/LRUCache.ts';
@@ -60,12 +59,12 @@ async function processBatchAddTags(
 ): Promise<void> {
   const { type } = options;
 
-  // 解析标签输入
-  const tagNames = parseTagInput(tagInput);
+  // 使用 TagService 解析标签输入
+  const tagService = TagService.getInstance();
+  const tagNames = tagService.parseTagInput(tagInput);
   if (tagNames.length === 0) return;
 
   // 使用 TagService 统一处理创建和关联
-  const tagService = TagService.getInstance();
   const result = await tagService.batchLinkTags({
     tagNames,
     type,

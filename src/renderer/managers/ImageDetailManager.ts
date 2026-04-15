@@ -380,19 +380,16 @@ export class ImageDetailManager extends DetailViewManager {
       onSelect: async (tagName: string) => {
         try {
           const currentItem = this.currentItem as unknown as IImageExtended;
-          window.electronAPI.logInfo('ImageDetailManager.ts', 'onSelect called', { tagName, itemId: currentItem?.id });
           const tagService = TagService.getInstance();
           const result = await tagService.linkTagsToItem({
             tagNames: [tagName],
             type: 'image',
             itemId: currentItem?.id
           });
-          window.electronAPI.logInfo('ImageDetailManager.ts', 'linkTagsToItem result', { success: result.success, created: result.created, skipped: result.skipped });
 
           if (result.success) {
             // 添加新创建的标签和已存在的标签（skipped）到本地状态
             const allTagsToAdd = [...result.created, ...result.skipped];
-            window.electronAPI.logInfo('ImageDetailManager.ts', 'Adding tags to currentTags', { allTagsToAdd, currentTags: this.currentTags });
             for (const tag of allTagsToAdd) {
               if (!this.currentTags.includes(tag)) {
                 this.currentTags.push(tag);

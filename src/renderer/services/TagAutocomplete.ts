@@ -269,11 +269,8 @@ export class TagAutocomplete {
     const value = this.input.value.trim();
     if (!value) return;
 
-    // 解析多个标签
-    const tags = value
-      .split(/[,，\s]+/)
-      .map(t => t.trim())
-      .filter(t => t);
+    // 使用 TagService 统一解析标签输入
+    const tags = this.tagService.parseTagInput(value);
 
     if (tags.length === 0) return;
 
