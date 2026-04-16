@@ -292,6 +292,12 @@ export class Constants {
     IMAGE_TAG_MANAGER_ORDER_BTN: 'imageTagManagerOrderBtn',
     PROMPT_TAG_MANAGER_ORDER_BTN: 'promptTagManagerOrderBtn',
 
+    // 标签筛选区排序
+    IMAGE_TAG_FILTER_SORT_SELECT: 'imageTagFilterSortSelect',
+    PROMPT_TAG_FILTER_SORT_SELECT: 'promptTagFilterSortSelect',
+    IMAGE_TAG_FILTER_ORDER_BTN: 'imageTagFilterOrderBtn',
+    PROMPT_TAG_FILTER_ORDER_BTN: 'promptTagFilterOrderBtn',
+
     // 输入对话框
     INPUT_MODAL: 'inputModal',
     INPUT_MODAL_TITLE: 'inputModalTitle',
@@ -348,7 +354,23 @@ export class Constants {
 
     // 标签筛选区 toggle 按钮 ID
     PROMPT_TAG_FILTER_TOGGLE_BTN: 'promptTagFilterToggleBtn',
-    IMAGE_TAG_FILTER_TOGGLE_BTN: 'imageTagFilterToggleBtn'
+    IMAGE_TAG_FILTER_TOGGLE_BTN: 'imageTagFilterToggleBtn',
+
+    // 标签筛选区特殊标签容器
+    PROMPT_TAG_FILTER_SPECIAL_TAGS: 'promptTagFilterSpecialTags',
+    IMAGE_TAG_FILTER_SPECIAL_TAGS: 'imageTagFilterSpecialTags',
+
+    // 标签筛选区标签列表
+    PROMPT_TAG_FILTER_LIST: 'promptTagFilterList',
+    IMAGE_TAG_FILTER_LIST: 'imageTagFilterList',
+
+    // 标签筛选区动作按钮
+    PROMPT_TAG_FILTER_ACTION_BTN: 'promptTagFilterActionBtn',
+    IMAGE_TAG_FILTER_ACTION_BTN: 'imageTagFilterActionBtn',
+
+    // 标签筛选区头部标签容器（收起时显示）
+    PROMPT_TAG_FILTER_HEADER_TAGS: 'promptTagFilterHeaderTags',
+    IMAGE_TAG_FILTER_HEADER_TAGS: 'imageTagFilterHeaderTags'
   } as const);
 }
 

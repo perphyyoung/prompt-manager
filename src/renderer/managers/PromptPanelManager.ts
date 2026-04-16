@@ -89,7 +89,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * @private
    */
   private bindTagFilterActionEvent(): void {
-    document.getElementById('promptTagFilterActionBtn')?.addEventListener('click', () => this.handleFilterAction());
+    document.getElementById(Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN)?.addEventListener('click', () => this.handleFilterAction());
   }
 
   /**
@@ -367,21 +367,21 @@ export class PromptPanelManager extends PanelManagerBase {
    * 获取标签筛选容器 ID（实现基类抽象方法）
    */
   getTagFilterContainerId(): string {
-    return 'promptTagFilterList';
+    return Constants.Ids.PROMPT_TAG_FILTER_LIST;
   }
 
   /**
    * 获取特殊标签容器 ID（实现基类抽象方法）
    */
   getSpecialTagsContainerId(): string {
-    return 'promptTagFilterSpecialTags';
+    return Constants.Ids.PROMPT_TAG_FILTER_SPECIAL_TAGS;
   }
 
   /**
    * 获取筛选动作按钮 ID（实现基类抽象方法）
    */
   getFilterActionBtnId(): string {
-    return 'promptTagFilterActionBtn';
+    return Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN;
   }
 
   /**
@@ -409,7 +409,21 @@ export class PromptPanelManager extends PanelManagerBase {
    * 获取标签筛选头部容器 ID（实现基类抽象方法）
    */
   getTagFilterHeaderContainerId(): string {
-    return 'promptTagFilterHeaderTags';
+    return Constants.Ids.PROMPT_TAG_FILTER_HEADER_TAGS;
+  }
+
+  /**
+   * 获取标签筛选排序选择器 ID（实现基类抽象方法）
+   */
+  getTagFilterSortSelectId(): string {
+    return Constants.Ids.PROMPT_TAG_FILTER_SORT_SELECT;
+  }
+
+  /**
+   * 获取标签筛选排序顺序按钮 ID（实现基类抽象方法）
+   */
+  getTagFilterOrderBtnId(): string {
+    return Constants.Ids.PROMPT_TAG_FILTER_ORDER_BTN;
   }
 
   /**

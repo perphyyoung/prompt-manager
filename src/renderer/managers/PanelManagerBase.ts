@@ -283,9 +283,7 @@ export abstract class PanelManagerBase {
    * @abstract
    * @returns 项目列表
    */
-  getItems(): IPanelItem[] {
-    throw new Error('getItems() must be implemented by subclass');
-  }
+  abstract getItems(): IPanelItem[];
 
   /**
    * 获取可见项目列表（筛选后）
@@ -326,27 +324,21 @@ export abstract class PanelManagerBase {
    * @abstract
    * @returns 特殊标签检查函数 Map
    */
-  getSpecialTagChecks(): Map<string, (item: IPanelItem) => boolean> {
-    throw new Error('getSpecialTagChecks() must be implemented by subclass');
-  }
+  abstract getSpecialTagChecks(): Map<string, (item: IPanelItem) => boolean>;
 
   /**
    * 获取项目类型标识（子类实现）
    * @abstract
    * @returns 项目类型
    */
-  getItemType(): 'prompt' | 'image' {
-    throw new Error('getItemType() must be implemented by subclass');
-  }
+  abstract getItemType(): 'prompt' | 'image';
 
   /**
    * 加载数据（抽象方法, 必须子类实现）
    * @abstract
    * @returns 项目列表
    */
-  async loadData(): Promise<IPanelItem[]> {
-    throw new Error('loadData() must be implemented by subclass');
-  }
+  abstract loadData(): Promise<IPanelItem[]>;
 
   /**
    * 创建卡片 HTML（子类实现）
@@ -355,7 +347,6 @@ export abstract class PanelManagerBase {
    * @returns HTML 字符串
    */
   abstract createCard(item: IPanelItem): string;
-
 
   /**
    * 绑定卡片按钮事件（通用实现）
@@ -562,53 +553,55 @@ export abstract class PanelManagerBase {
    * @abstract
    * @returns 容器 ID
    */
-  getTagFilterContainerId(): string {
-    throw new Error('getTagFilterContainerId() must be implemented by subclass');
-  }
+  abstract getTagFilterContainerId(): string;
 
   /**
    * 获取特殊标签容器 ID（子类实现）
    * @abstract
    * @returns 容器 ID
    */
-  getSpecialTagsContainerId(): string {
-    throw new Error('getSpecialTagsContainerId() must be implemented by subclass');
-  }
+  abstract getSpecialTagsContainerId(): string;
 
   /**
    * 获取筛选动作按钮 ID（实现基类抽象方法）
    * @returns 按钮 ID
    */
-  getFilterActionBtnId(): string {
-    throw new Error('getFilterActionBtnId() must be implemented by subclass');
-  }
+  abstract getFilterActionBtnId(): string;
 
   /**
    * 获取标签筛选头部容器 ID（子类实现）
    * @abstract
    * @returns 容器 ID
    */
-  getTagFilterHeaderContainerId(): string {
-    throw new Error('getTagFilterHeaderContainerId() must be implemented by subclass');
-  }
+  abstract getTagFilterHeaderContainerId(): string;
+
+  /**
+   * 获取标签筛选排序选择器 ID（子类实现）
+   * @abstract
+   * @returns 选择器 ID
+   */
+  abstract getTagFilterSortSelectId(): string;
+
+  /**
+   * 获取标签筛选排序顺序按钮 ID（子类实现）
+   * @abstract
+   * @returns 按钮 ID
+   */
+  abstract getTagFilterOrderBtnId(): string;
 
   /**
    * 获取标签拖拽类型（子类实现）
    * @abstract
    * @returns 拖拽类型
    */
-  getTagDragType(): string {
-    throw new Error('getTagDragType() must be implemented by subclass');
-  }
+  abstract getTagDragType(): string;
 
   /**
    * 获取所有标签（子类实现）
    * @abstract
    * @returns 标签列表
    */
-  async getAllTags(): Promise<string[]> {
-    throw new Error('getAllTags() must be implemented by subclass');
-  }
+  abstract getAllTags(): Promise<string[]>;
 
   /**
    * 计算特殊标签计数（子类实现）
@@ -1088,6 +1081,36 @@ export abstract class PanelManagerBase {
           item.classList.remove('dragging');
           // 注意：不在 dragend 中删除 draggingItems，因为 click 事件会在 dragend 之后触发
         });
+      });
+    }
+
+    // 绑定标签筛选排序选择器事件（防止重复绑定）
+    const sortSelect = document.getElementById(this.getTagFilterSortSelectId()) as HTMLSelectElement | null;
+    if (sortSelect && !sortSelect.hasAttribute('data-event-bound')) {
+      sortSelect.setAttribute('data-event-bound', 'true');
+      sortSelect.addEventListener('change', (e: Event) => {
+        const target = e.target as HTMLSelectElement;
+        const [sortBy, sortOrder] = target.value.split('-');
+        this.tagFilterSortBy = sortBy;
+        this.tagFilterSortOrder = sortOrder as 'asc' | 'desc';
+        localStorage.setItem(`${this.storagePrefix}TagFilterSortBy`, sortBy);
+        localStorage.setItem(`${this.storagePrefix}TagFilterSortOrder`, sortOrder);
+        this.renderTagFilters();
+      });
+    }
+
+    // 绑定标签筛选排序顺序按钮事件（防止重复绑定）
+    const orderBtn = document.getElementById(this.getTagFilterOrderBtnId());
+    if (orderBtn && !orderBtn.hasAttribute('data-event-bound')) {
+      orderBtn.setAttribute('data-event-bound', 'true');
+      orderBtn.addEventListener('click', () => {
+        const newOrder = this.tagFilterSortOrder === 'asc' ? 'desc' : 'asc';
+        this.tagFilterSortOrder = newOrder;
+        localStorage.setItem(`${this.storagePrefix}TagFilterSortOrder`, newOrder);
+        if (sortSelect) {
+          sortSelect.value = `${this.tagFilterSortBy}-${newOrder}`;
+        }
+        this.renderTagFilters();
       });
     }
   }

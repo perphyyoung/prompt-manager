@@ -170,18 +170,18 @@
         <!-- 提示词标签筛选区域 -->
         <div class="tag-filter-section" id="{{PROMPT_TAG_FILTER_SECTION}}">
           <div class="tag-filter-header-three">
-            <button id="promptTagFilterActionBtn" class="tag-filter-action-btn" type="button">标签筛选</button>
+            <button id="{{PROMPT_TAG_FILTER_ACTION_BTN}}" class="tag-filter-action-btn" type="button">标签筛选</button>
             <div class="tag-filter-header-tags" id="promptTagFilterHeaderTags">
               <!-- 收起时显示的标签 -->
             </div>
             <div class="tag-filter-header-actions">
-              <select id="promptTagFilterSortSelect" class="tag-filter-sort-select">
+              <select id="{{PROMPT_TAG_FILTER_SORT_SELECT}}" class="tag-filter-sort-select">
                 <option value="count-desc">数量（多→少）</option>
                 <option value="count-asc">数量（少→多）</option>
                 <option value="name-asc">名称（A→Z）</option>
                 <option value="name-desc">名称（Z→A）</option>
               </select>
-              <button id="promptTagFilterOrderBtn" class="btn btn-text" title="切换排序顺序">逆序</button>
+              <button id="{{PROMPT_TAG_FILTER_ORDER_BTN}}" class="btn btn-text" title="切换排序顺序">逆序</button>
               <button id="{{PROMPT_TAG_MANAGER_BTN}}" class="btn btn-icon-only" title="管理提示词标签">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
@@ -197,11 +197,11 @@
           </div>
           <div class="tag-filter-content" id="promptTagFilterContent">
             <div class="tag-filter-toolbar">
-              <div id="promptTagFilterSpecialTags" class="tag-filter-special-tags">
+              <div id="{{PROMPT_TAG_FILTER_SPECIAL_TAGS}}" class="tag-filter-special-tags">
                 <!-- 特殊标签将在这里动态生成 -->
               </div>
               <div class="tag-filter-divider" id="promptTagFilterDivider"></div>
-              <div id="promptTagFilterList" class="tag-filter-list">
+              <div id="{{PROMPT_TAG_FILTER_LIST}}" class="tag-filter-list">
                 <!-- 标签将在这里动态生成 -->
               </div>
             </div>
@@ -323,16 +323,16 @@
         <!-- 图像标签筛选区域 -->
         <div id="{{IMAGE_TAG_FILTER_SECTION}}" class="tag-filter-section">
           <div class="tag-filter-header-three">
-            <button id="imageTagFilterActionBtn" class="tag-filter-action-btn" type="button">标签筛选</button>
+            <button id="{{IMAGE_TAG_FILTER_ACTION_BTN}}" class="tag-filter-action-btn" type="button">标签筛选</button>
             <div id="imageTagFilterHeaderTags" class="tag-filter-header-tags"></div>
             <div class="tag-filter-header-right">
-              <select id="imageTagFilterSortSelect" class="tag-filter-sort-select">
+              <select id="{{IMAGE_TAG_FILTER_SORT_SELECT}}" class="tag-filter-sort-select">
                 <option value="count-desc">数量（多→少）</option>
                 <option value="count-asc">数量（少→多）</option>
                 <option value="name-asc">名称（A→Z）</option>
                 <option value="name-desc">名称（Z→A）</option>
               </select>
-              <button id="imageTagFilterOrderBtn" class="btn btn-sm btn-text" title="切换排序顺序">逆序</button>
+              <button id="{{IMAGE_TAG_FILTER_ORDER_BTN}}" class="btn btn-sm btn-text" title="切换排序顺序">逆序</button>
               <button id="{{IMAGE_TAG_MANAGER_BTN}}" class="btn btn-icon-only" title="管理图像标签">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
@@ -348,11 +348,11 @@
           </div>
           <div id="imageTagFilterContent" class="tag-filter-content">
             <div class="tag-filter-toolbar">
-              <div id="imageTagFilterSpecialTags" class="tag-filter-special-tags">
+              <div id="{{IMAGE_TAG_FILTER_SPECIAL_TAGS}}" class="tag-filter-special-tags">
                 <!-- 特殊标签将在这里动态生成 -->
               </div>
               <div class="tag-filter-divider"></div>
-              <div id="imageTagFilterList" class="tag-filter-list">
+              <div id="{{IMAGE_TAG_FILTER_LIST}}" class="tag-filter-list">
                 <!-- 普通标签将在这里动态生成 -->
               </div>
             </div>

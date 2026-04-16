@@ -377,9 +377,7 @@ export abstract class DetailViewManager {
    * @abstract
    * @protected
    */
-  getNavButtonPrefix(): string {
-    throw new Error('getNavButtonPrefix() method must be implemented by subclass');
-  }
+  abstract getNavButtonPrefix(): string;
 
   /**
    * 获取当前项目快照
