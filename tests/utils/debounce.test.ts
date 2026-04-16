@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { debounce, rafDebounce, throttle } from '../../src/utils/debounce';
+import { debounce, throttle } from '../../src/utils/debounce';
 
 describe('debounce', () => {
   beforeEach(() => {

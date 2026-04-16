@@ -171,7 +171,6 @@ export abstract class PanelManagerBase {
 
   // UI 配置（子类实现）
   protected abstract getUIConfig(): IUIConfig;
-  protected abstract getUpdateAPI(): (id: string, data: unknown) => Promise<void>;
   protected abstract getTagFilterToggleBtnId(): string;
   protected abstract getTagManagerBtnId(): string;
 
@@ -320,9 +319,7 @@ export abstract class PanelManagerBase {
    * @param lowerQuery - 小写的搜索查询
    * @returns 是否匹配
    */
-  matchesSearch(item: IPanelItem, lowerQuery: string): boolean {
-    return true; // 默认全部匹配
-  }
+  abstract matchesSearch(item: IPanelItem, lowerQuery: string): boolean;
 
   /**
    * 获取特殊标签检查函数 Map（子类实现）
@@ -357,18 +354,8 @@ export abstract class PanelManagerBase {
    * @param item - 项目对象
    * @returns HTML 字符串
    */
-  createCard(item: IPanelItem): string {
-    throw new Error('createCard() must be implemented by subclass');
-  }
+  abstract createCard(item: IPanelItem): string;
 
-  /**
-   * 绑定卡片事件（子类实现）
-   * @abstract
-   * @param filtered - 筛选后的项目列表
-   */
-  bindCardEvents(filtered: IPanelItem[]): void {
-    throw new Error('bindCardEvents() must be implemented by subclass');
-  }
 
   /**
    * 绑定卡片按钮事件（通用实现）
@@ -419,6 +406,7 @@ export abstract class PanelManagerBase {
             await window.electronAPI.copyToClipboard(content);
             this.app.showToast?.('已复制到剪贴板', 'success');
           } catch (error) {
+            window.electronAPI.logError('PanelManagerBase.ts', 'Failed to copy to clipboard', error);
             this.app.showToast?.('复制失败', 'error');
           }
         });
@@ -476,6 +464,7 @@ export abstract class PanelManagerBase {
             await window.electronAPI.copyToClipboard(content);
             this.app.showToast?.('已复制到剪贴板', 'success');
           } catch (error) {
+            window.electronAPI.logError('PanelManagerBase.ts', 'Failed to copy to clipboard', error);
             this.app.showToast?.('复制失败', 'error');
           }
         });
@@ -519,9 +508,7 @@ export abstract class PanelManagerBase {
    * @abstract
    * @param selector - CSS 选择器
    */
-  bindHoverPreview(selector: string): void {
-    throw new Error('bindHoverPreview() must be implemented by subclass');
-  }
+  abstract bindHoverPreview(selector: string): void;
 
   /**
    * 绑定卡片拖拽事件（通用实现）
@@ -552,7 +539,7 @@ export abstract class PanelManagerBase {
           const id = config.getElementId(card as HTMLElement);
           if (id) {
             try {
-              await this.handleTagDrop(id, tagName, this.getUpdateAPI());
+              await this.handleTagDrop(id, tagName);
               this.app.showToast?.('标签已添加', 'success');
             } catch (error) {
               this.app.showToast?.((error as Error).message, 'error');
@@ -568,9 +555,7 @@ export abstract class PanelManagerBase {
    * @abstract
    * @param filtered - 筛选后的项目列表
    */
-  async renderListView(filtered: IPanelItem[]): Promise<void> {
-    throw new Error('renderListView() must be implemented by subclass');
-  }
+  abstract renderListView(filtered: IPanelItem[]): Promise<void>;
 
   /**
    * 获取标签筛选容器 ID（子类实现）
@@ -631,18 +616,14 @@ export abstract class PanelManagerBase {
    * @param visibleItems - 可见项目列表
    * @returns 特殊标签计数列表
    */
-  calculateSpecialTagCounts(visibleItems: IPanelItem[]): SpecialTagCount[] {
-    throw new Error('calculateSpecialTagCounts() must be implemented by subclass');
-  }
+  abstract calculateSpecialTagCounts(visibleItems: IPanelItem[]): SpecialTagCount[];
 
   /**
    * 删除项目（子类实现）
    * @abstract
    * @param id - 项目 ID
    */
-  async deleteItem(id: string): Promise<void> {
-    throw new Error('deleteItem() must be implemented by subclass');
-  }
+  abstract deleteItem(id: string): Promise<void>;
 
   /**
    * 切换收藏状态（子类实现）
@@ -650,9 +631,7 @@ export abstract class PanelManagerBase {
    * @param id - 项目 ID
    * @param isFavorite - 是否收藏
    */
-  async toggleFavorite(id: string, isFavorite: boolean): Promise<void> {
-    throw new Error('toggleFavorite() must be implemented by subclass');
-  }
+  abstract toggleFavorite(id: string, isFavorite: boolean): Promise<void>;
 
   /**
    * 更新收藏按钮 UI（通用实现）
@@ -700,9 +679,7 @@ export abstract class PanelManagerBase {
    * @param sortOrder - 排序顺序
    * @returns 排序后的列表
    */
-  sortItems(items: IPanelItem[], sortBy: string, sortOrder: string): IPanelItem[] {
-    throw new Error('sortItems() must be implemented by subclass');
-  }
+  abstract sortItems(items: IPanelItem[], sortBy: string, sortOrder: string): IPanelItem[];
 
   /**
    * 订阅事件（子类可选实现）
@@ -888,9 +865,7 @@ export abstract class PanelManagerBase {
    * @abstract
    * @param filtered - 筛选后的项目列表
    */
-  async renderContainer(filtered: IPanelItem[]): Promise<void> {
-    throw new Error('renderContainer() must be implemented by subclass');
-  }
+  abstract renderContainer(filtered: IPanelItem[]): Promise<void>;
 
   /**
    * 渲染标签筛选器（模板方法）
@@ -949,23 +924,16 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 计算标签计数
-   * @param tags - 所有标签
+   * 计算可见项目的标签计数（考虑 viewMode 和 isDeleted）
+   * 用于特殊标签筛选器显示
+   * @param _tags - 所有标签（为兼容接口保留，实际使用 visibleItems 计算）
    * @returns 标签计数对象
    */
-  calculateTagCounts(tags: string[]): Record<string, number> {
-    const visibleItems = this.getItems().filter((item: IPanelItem) => !item.isDeleted && (this.app.viewMode !== 'safe' || item.isSafe !== 0));
-
-    const tagCounts: Record<string, number> = {};
-    visibleItems.forEach((item: IPanelItem) => {
-      if (item.tags && item.tags.length > 0) {
-        item.tags.forEach((tag: string) => {
-          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-        });
-      }
-    });
-
-    return tagCounts;
+  calculateTagCounts(_tags: string[]): Record<string, number> {
+    const visibleItems = this.getItems().filter(
+      (item: IPanelItem) => !item.isDeleted && (this.app.viewMode !== 'safe' || item.isSafe !== 0)
+    );
+    return TagService.countTagsInItems(visibleItems);
   }
 
   /**
@@ -1071,12 +1039,6 @@ export abstract class PanelManagerBase {
           }
           e.stopPropagation();
           const tag = (item as HTMLElement).dataset.tag;
-          const groupId = (item as HTMLElement).closest('.tag-filter-group')?.getAttribute('data-group-id');
-
-          // 获取标签所属的组信息
-          const tagService = TagService.getInstance();
-          const groups = await tagService.getTagGroups(this.getItemType());
-          const group = groups.find((g) => String(g.id) === String(groupId));
 
           if ((e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey) {
             // Ctrl/Cmd + 点击：多选模式
@@ -1423,6 +1385,7 @@ export abstract class PanelManagerBase {
         'success'
       );
     } catch (error) {
+      window.electronAPI.logError('PanelManagerBase.ts', 'Failed to batch delete', error);
       this.app.showToast?.(
         config.errorMsg,
         'error'
@@ -1472,6 +1435,7 @@ export abstract class PanelManagerBase {
         'success'
       );
     } catch (error) {
+      window.electronAPI.logError('PanelManagerBase.ts', 'Failed to batch add tag', error);
       this.app.showToast?.(
         config.errorMsg,
         'error'
@@ -1511,6 +1475,7 @@ export abstract class PanelManagerBase {
         'success'
       );
     } catch (error) {
+      window.electronAPI.logError('PanelManagerBase.ts', 'Failed to batch fav', error);
       this.app.showToast?.(
         config.errorMsg,
         'error'
@@ -1540,10 +1505,9 @@ export abstract class PanelManagerBase {
    * 处理标签拖拽到卡片
    * @param itemId - 项目 ID
    * @param tagName - 标签名称
-   * @param updateApi - 更新 API 函数
    * @returns 是否成功
    */
-  async handleTagDrop(itemId: string, tagName: string, updateApi: (id: string, data: { tags: string[] }) => Promise<void>): Promise<boolean> {
+  async handleTagDrop(itemId: string, tagName: string): Promise<boolean> {
     // 从当前项目列表中查找
     const item = this.getItems().find((i: IPanelItem) => String(i.id) === String(itemId));
     if (!item) {

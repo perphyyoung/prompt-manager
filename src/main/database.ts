@@ -13,13 +13,12 @@ import {
   DatabaseError,
   DatabaseErrorCode,
   DuplicateNameError,
-  EntityNotFoundError,
   ConstraintViolationError,
   isConstraintError
 } from './database-errors.ts';
 import type {
   PromptRow, ImageRow, PromptTagGroupRow, ImageTagGroupRow,
-  Prompt, Image, ImageRef, PromptRef, PromptImage,
+  Prompt, Image, ImageRef, PromptImage,
   PromptTagGroup, ImageTagGroup,
   TagConfig, TagConfigMap,
   CreatePromptParams, UpdatePromptParams,
@@ -822,7 +821,7 @@ async function getPromptsWithImages(promptRows: PromptRow[], options: MapPromptO
     if (!imagesByPromptId[key]) {
       imagesByPromptId[key] = [];
     }
-    const { prompt_id, ...imageRef } = img;
+    const { prompt_id: _, ...imageRef } = img;
     imagesByPromptId[key].push(imageRef);
   }
 
@@ -1446,6 +1445,7 @@ async function renameTag(type: keyof TagConfigMap, oldTag: string, newTag: strin
         );
       } catch (err: any) {
         // 关联已存在，忽略
+        window.electronAPI.logError('database.ts', 'Failed to insert relation', err);
       }
     }
     // 删除旧标签

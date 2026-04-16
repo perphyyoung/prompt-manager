@@ -412,7 +412,7 @@ test.describe('Esc 键快捷键功能', () => {
       await openImageDetail(page);
 
       // 创建测试标签
-      const testTagName = await electronTest.createImageTag('esc_autocomplete');
+      await electronTest.createImageTag('esc_autocomplete');
 
       // 使用测试标签的前缀触发自动完成
       const tagInput = page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`);
@@ -447,7 +447,7 @@ test.describe('Esc 键快捷键功能', () => {
       await openPromptDetail(page);
 
       // 创建测试标签
-      const testTagName = await electronTest.createPromptTag('esc_autocomplete');
+      await electronTest.createPromptTag('esc_autocomplete');
 
       // 使用测试标签的前缀触发自动完成
       const tagInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`);

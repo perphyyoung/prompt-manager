@@ -18,26 +18,18 @@ import { promises as fs } from 'fs';
 import os from 'os';
 import sharp from 'sharp';
 import crypto from 'crypto';
-import { exec, spawn } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 import * as db from './database.js';
 import { generatePromptId, generateImageId } from '../utils/idGenerator.js';
 import { getFormattedLocalTimeToSecond, getFormattedYearMonth, localTime } from '../utils/index.js';
 import { logInfo, logDebug, logError, logWarn, initLogger } from './logger.js';
 import { Constants } from '../constants.ts';
-import { copyDirectory, copyDirectoryWithProgress, calculateDirectorySize } from '../utils/FileUtils.js';
+import { copyDirectory, copyDirectoryWithProgress } from '../utils/FileUtils.js';
 import { ConfigManager, AppConfig } from './ConfigManager.js';
-
-const execAsync = promisify(exec);
 
 // 检测是否为生产环境（打包后的应用）
 // 打包后 __dirname 包含 app.asar，开发环境不包含
 const isProduction = __dirname.includes('app.asar');
-
-// 获取基础目录：生产环境使用 userData，开发环境使用项目根目录
-function getBaseDir(): string {
-  return isProduction ? app.getPath('userData') : path.join(__dirname, '..', '..');
-}
 
 // 项目根目录（基于 __dirname 反向推导：out/main/ -> 项目根目录）
 const ROOT_DIR = path.join(__dirname, '..', '..');
@@ -126,18 +118,6 @@ async function migrateData(oldDir: string, newDir: string) {
   } catch (err) {
     logError('Main', 'Data migration failed', err);
     return false;
-  }
-}
-
-/**
- * 确保数据目录存在
- * 如果不存在则创建目录
- */
-async function ensureDataDir() {
-  try {
-    await fs.access(currentDataDir);
-  } catch {
-    await fs.mkdir(currentDataDir, { recursive: true });
   }
 }
 
@@ -549,11 +529,10 @@ async function runBuild(): Promise<boolean> {
       stdio: 'pipe'
     });
 
-    let output = '';
     let errorOutput = '';
 
-    buildProcess.stdout.on('data', (data) => {
-      output += data.toString();
+    buildProcess.stdout.on('data', (_data) => {
+      // 忽略标准输出
     });
 
     buildProcess.stderr.on('data', (data) => {
@@ -705,12 +684,6 @@ ipcMain.handle('batch-favorite-prompts', async (event, ids) => {
 // 检查标题是否已存在
 ipcMain.handle('is-title-exists', async (event, title, excludeId) => {
   return await db.isTitleExists(title, excludeId);
-});
-
-// 保存所有 Prompts（用于直接替换）
-ipcMain.handle('save-prompts', async (event, prompts) => {
-  // 此功能已弃用，使用数据库操作替代
-  throw new Error('save-prompts is deprecated, use database operations instead');
 });
 
 // 获取提示词回收站
@@ -1595,8 +1568,6 @@ async function createZipArchive(sourceDir: string, zipPath: string) {
   
   if (isWindows) {
     // Windows: 使用 PowerShell Compress-Archive
-    const parentDir = path.dirname(sourceDir);
-    const dirName = path.basename(sourceDir);
     await execAsync(`powershell -command "Compress-Archive -Path '${sourceDir}\\*' -DestinationPath '${zipPath}' -Force"`);
   } else {
     // Linux/Mac: 使用 zip 命令
@@ -1676,13 +1647,15 @@ async function scanOrphanFilesInternal() {
 
   try {
     actualImageFiles = await getAllFiles(imagesDir, currentDataDir);
-  } catch (error) {
+  } catch (err) {
+    logError('Main', 'Failed to get image files:', err);
     // 目录可能不存在
   }
 
   try {
     actualThumbnailFiles = await getAllFiles(thumbnailsDir, currentDataDir);
-  } catch (error) {
+  } catch (err) {
+    logError('Main', 'Failed to get image thumb files:', err);
     // 目录可能不存在
   }
 
@@ -2171,7 +2144,7 @@ if (!gotTheLock) {
 }
 
 // 当尝试运行第二个实例时，聚焦到第一个实例的窗口
-app.on('second-instance', (event, commandLine, workingDirectory) => {
+app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
   if (mainWindow) {
     if (mainWindow.isMinimized()) {
       mainWindow.restore();

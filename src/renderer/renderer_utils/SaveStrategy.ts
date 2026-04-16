@@ -17,9 +17,7 @@ export abstract class SaveStrategy {
   /**
    * 获取成功提示消息
    */
-  getSuccessMessage(fieldName: string, value: unknown): string {
-    return 'Saved';
-  }
+  abstract getSuccessMessage(fieldName: string, value: unknown): string;
 
   /**
    * 获取字段值

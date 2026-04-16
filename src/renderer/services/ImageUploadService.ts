@@ -26,7 +26,7 @@ interface ImageInfo {
 
 // 应用接口（简化）
 interface IApp {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   [key: string]: any;
 }
 

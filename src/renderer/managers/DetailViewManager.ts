@@ -34,7 +34,7 @@ interface Item {
  * 详情视图管理器基类
  * 提供详情模态框的通用功能
  */
-export class DetailViewManager {
+export abstract class DetailViewManager {
   protected app: DetailViewManagerOptions['app'];
   protected modalId: string;
   protected closeBtnId: string;
@@ -149,9 +149,7 @@ export class DetailViewManager {
    * @param options - 选项
    * @abstract
    */
-  async open(item: Item, options: { filteredList?: Item[] } = {}): Promise<void> {
-    throw new Error('open() method must be implemented by subclass');
-  }
+  abstract open(item: Item, options?: { filteredList?: Item[] }): Promise<void>;
 
   /**
    * 显示详情模态框
@@ -407,9 +405,7 @@ export class DetailViewManager {
    * @abstract
    * @protected
    */
-  async updateView(item: Item): Promise<void> {
-    throw new Error('updateView() method must be implemented by subclass');
-  }
+  abstract updateView(item: Item): Promise<void>;
 
   // ==================== 标签管理通用方法 ====================
 
@@ -427,7 +423,7 @@ export class DetailViewManager {
     this.initTagRenderer(config, detailTagManager);
 
     // 初始化批量标签管理
-    this.initBatchTagManager(config, detailTagManager);
+    this.initBatchTagManager(config);
   }
 
   /**
@@ -467,7 +463,7 @@ export class DetailViewManager {
    * @param detailTagManager - 详情界面标签管理器
    * @protected
    */
-  protected initBatchTagManager(config: IBatchTagManagerConfig, detailTagManager: IDetailTagManager): void {
+  protected initBatchTagManager(config: IBatchTagManagerConfig): void {
     // 重置批量模式
     if (this.isBatchMode) {
       this.exitBatchMode();
@@ -504,8 +500,6 @@ export class DetailViewManager {
    * 处理批量工具栏动作
    */
   private handleBatchToolbarAction(action: string): void {
-    const app = this.app;
-
     switch (action) {
       case 'SelectAll':
         this.editableTagList?.selectAll();

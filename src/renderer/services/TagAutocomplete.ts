@@ -3,10 +3,7 @@
  * 提供标签输入的自动完成、键盘导航等功能
  */
 
-import { contextStack, IContextStackEntry } from '../managers/ContextStackManager.ts';
-import { Constants } from '../../constants.ts';
 import type { ElementId } from '../../constants.ts';
-import type { IClosableElement } from '../../types/entities.ts';
 import { TagService } from './TagService.ts';
 
 // 配置选项接口

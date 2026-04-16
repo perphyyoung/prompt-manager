@@ -47,7 +47,7 @@ export class DatabaseError extends Error {
         sanitized[key] = '***';
       } else if (key === 'params' && Array.isArray(value)) {
         // 对 params 数组也进行敏感数据过滤
-        sanitized[key] = value.map((param, index) => {
+        sanitized[key] = value.map((param) => {
           if (typeof param === 'string' && param.length > 100) {
             // 截断过长的参数
             return param.substring(0, 100) + '...';

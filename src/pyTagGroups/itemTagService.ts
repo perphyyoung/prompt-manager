@@ -3,7 +3,7 @@
  * 统一处理标签创建与项目关联的复合操作
  */
 
-import type { TagName, DataType, TagOperationResult, TagCreateOptions } from './types.ts';
+import type { DataType, TagOperationResult, TagCreateOptions } from './types.ts';
 import { createTags } from './operations.ts';
 
 /** 关联选项 */

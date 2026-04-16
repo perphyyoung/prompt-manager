@@ -4,7 +4,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PyTagGroups } from '../../src/pyTagGroups/PyTagGroups.ts';
-import type { TagGroup, TagWithGroup } from '../../src/pyTagGroups/types.ts';
 
 // Mock cacheManager
 vi.mock('../../src/utils/CacheManager.ts', () => ({

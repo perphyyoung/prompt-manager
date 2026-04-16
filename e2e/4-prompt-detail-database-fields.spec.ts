@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { Constants } from '../src/constants.ts';
 import { createElectronTest, enterPromptDetailView, getPromptFromDatabase } from './electron-test.ts';
-import type { IElectronAPI, IPrompt } from '../src/preload/index.ts';
+import type { IElectronAPI } from '../src/preload/index.ts';
 
 declare global {
   interface Window {

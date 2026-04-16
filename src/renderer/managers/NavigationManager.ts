@@ -5,7 +5,6 @@
 
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { Constants } from '../../constants.ts';
-import { logInfo } from '@/main/logger.ts';
 
 // 面板配置接口
 interface IPanelConfig {

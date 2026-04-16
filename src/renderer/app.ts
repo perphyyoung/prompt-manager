@@ -25,7 +25,6 @@ import type {
   IApp,
   IPanelManager,
   IToastManager,
-  IDetailManager,
   IImageFullscreenManager,
   INavigationManager,
   IToolbarManager,

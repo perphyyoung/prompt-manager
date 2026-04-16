@@ -345,7 +345,7 @@ test('提示词详情界面 - 使用键盘导航选择下拉建议并回车添�
   await electronTest.logTestStart('提示词详情界面 - 使用键盘导航选择下拉建议并回车添加');
 
   // 创建多个标签以便有多个建议
-  const tagNames = await electronTest.createPromptTags(3, 'keyboard_nav');
+  await electronTest.createPromptTags(3, 'keyboard_nav');
 
   // 清除标签缓存，确保新创建的标签在自动完成中可用
   await electronTest.clearTagCache('prompt');

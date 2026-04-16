@@ -1,6 +1,6 @@
 import { Constants } from '../../constants';
-import { contextStack, IContextStackEntry } from '../managers/ContextStackManager';
-import type { IDialogTemplate, IDialogContext, DialogType, IClosableElement } from '../../types/entities.ts';
+import { contextStack } from '../managers/ContextStackManager';
+import type { IDialogTemplate, IDialogContext, IClosableElement } from '../../types/entities.ts';
 
 // ==================== 对话框配置 ====================
 export const DialogConfig: Record<string, IDialogTemplate> = {
@@ -332,7 +332,6 @@ export class DialogService {
     config: IDialogTemplate,
     data: IDialogContext | null = null
   ): Promise<boolean> {
-    const stackTrace = new Error().stack?.split('\n').slice(2, 8).join('\n');
     const title = typeof config.title === 'function' ? config.title(data || {}) : config.title;
     const msg = typeof config.message === 'function' ? config.message(data || {}) : config.message;
     const dialogType = config.type || 'warning';

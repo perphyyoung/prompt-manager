@@ -1,12 +1,12 @@
 import { TagUI } from './TagUI.ts';
-import { Constants, ElementId } from '../../constants.ts';
+import { ElementId } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
 import { IDialogTemplate, IDialogContext } from '../../types/entities.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { focusInput } from '../renderer_utils/index.ts';
 import { MultiSelectManager } from './MultiSelectManager.ts';
 import { immediateDebounce } from '../../utils/debounce.ts';
-import { TagOperationResult, TagGroup, TagExistsError, InvalidTagNameError, TagOperationError, clearTagsCache, DataType } from '../../pyTagGroups/index.ts';
+import { TagGroup, TagExistsError, InvalidTagNameError, TagOperationError, clearTagsCache, DataType } from '../../pyTagGroups/index.ts';
 import { groupTagsByGroup } from '../../pyTagGroups/utils.ts';
 import { TagService } from '../services/index.ts';
 
@@ -441,16 +441,13 @@ export abstract class TagManager {
   }
 
   /**
-   * 计算标签数量
+   * 计算标签在面板中的使用次数
+   * 用于标签管理器内排序
    */
   private calculateTagCounts(tags: string[]): Record<string, number> {
     const panelManager = this.getPanelManager();
-    const visibleItems = panelManager?.getItems() ?? [];
-
-    return tags.reduce((counts, tag) => {
-      counts[tag] = visibleItems.filter((item: any) => item.tags?.includes(tag)).length;
-      return counts;
-    }, {} as Record<string, number>);
+    const items = panelManager?.getItems() ?? [];
+    return TagService.countTagUsage(tags, items);
   }
 
   /**
@@ -553,10 +550,12 @@ export abstract class TagManager {
 
       item.addEventListener('dragstart', (e) => {
         const tagName = (item as HTMLElement).dataset.tag || '';
-        
+
         const dragEvent = e as DragEvent;
         dragEvent.dataTransfer?.setData('text/plain', tagName);
-        dragEvent.dataTransfer && (dragEvent.dataTransfer.effectAllowed = 'move');
+        if (dragEvent.dataTransfer) {
+          dragEvent.dataTransfer.effectAllowed = 'move';
+        }
       });
 
       item.addEventListener('dragend', () => {
@@ -569,7 +568,9 @@ export abstract class TagManager {
       target.addEventListener('dragover', (e) => {
         e.preventDefault();
         const dragEvent = e as DragEvent;
-        dragEvent.dataTransfer && (dragEvent.dataTransfer.dropEffect = 'move');
+        if (dragEvent.dataTransfer) {
+          dragEvent.dataTransfer.dropEffect = 'move';
+        }
         target.classList.add('drag-over');
       });
 

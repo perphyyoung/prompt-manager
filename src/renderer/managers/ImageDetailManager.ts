@@ -10,7 +10,6 @@ import { Constants, Events } from '../../constants.ts';
 import { TagAutocomplete, DialogService, DialogConfig, TagService } from '../services/index.ts';
 import { IImage, IPrompt } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
-import { TagOperationResult } from '../../pyTagGroups/index.ts';
 
 // 扩展 IImage 接口
 interface IImageExtended extends IImage {
@@ -750,15 +749,14 @@ export class ImageDetailManager extends DetailViewManager {
     });
 
     // 注册所有字段
-    this.registerFields(image);
+    this.registerFields();
   }
 
   /**
    * 注册所有字段到 SaveManager
-   * @param image - 图像对象
    * @private
    */
-  private registerFields(image: IImageExtended): void {
+  private registerFields(): void {
     const app = this.app as unknown as IApp;
 
     if (!this.imageSaveManager) return;

@@ -15,7 +15,6 @@ import type {
   TagDeleteResult,
   TagCreateOptions,
   TagQueryOptions,
-  TagWithGroup,
   Tag
 } from './types.ts';
 import {

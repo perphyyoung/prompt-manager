@@ -347,7 +347,6 @@ export class TagUI {
       tagCounts = {},
       selectedTags,
       onTagClick,
-      topGroupInfo = null,
       dragType = null
     } = options;
 

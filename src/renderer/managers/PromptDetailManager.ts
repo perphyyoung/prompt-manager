@@ -11,7 +11,7 @@ import { DirectSaveStrategy, TagAutocomplete, DialogService, DialogConfig } from
 import { ImageContextMenuManager } from './ImageContextMenuManager.ts';
 import { IPrompt, IImage } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
-import { TagOperationResult, TagDeleteResult, TagExistsError, InvalidTagNameError, TagOperationError } from '../../pyTagGroups/index.ts';
+import { TagExistsError, InvalidTagNameError, TagOperationError } from '../../pyTagGroups/index.ts';
 import { TagService } from '../services/index.ts';
 
 // 扩展 IPrompt 接口以包含更多字段
@@ -472,15 +472,14 @@ export class PromptDetailManager extends DetailViewManager {
     });
 
     // 注册所有字段
-    this.registerFields(prompt);
+    this.registerFields();
   }
 
   /**
    * 注册所有字段到 SaveManager
-   * @param prompt - 提示词对象
    * @private
    */
-  private registerFields(prompt: IPromptExtended): void {
+  private registerFields(): void {
     const app = this.app as unknown as IApp;
 
     if (!this.promptSaveManager) return;
@@ -664,8 +663,6 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private bindImageUploadEvents(): void {
-    const app = this.app as unknown as IApp;
-
     // 点击上传区域选择多图
     const uploadArea = document.getElementById('imageUploadArea');
     if (uploadArea) {

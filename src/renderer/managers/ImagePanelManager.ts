@@ -155,13 +155,6 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
-   * 获取更新 API
-   */
-  protected getUpdateAPI(): (id: string, data: unknown) => Promise<void> {
-    return window.electronAPI.updateImage as (id: string, data: unknown) => Promise<void>;
-  }
-
-  /**
    * 获取图像列表（从缓存读取）
    */
   get images(): IImage[] {

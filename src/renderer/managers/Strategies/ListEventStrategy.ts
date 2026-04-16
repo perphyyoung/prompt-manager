@@ -1,6 +1,6 @@
 import { IEventStrategy, EventContext, IEventStrategyItem } from './IEventStrategy';
 
-export class ListEventStrategy implements IEventStrategy {
+export abstract class ListEventStrategy implements IEventStrategy {
   getCheckboxSelector(): string {
     return '.list-item__checkbox';
   }
@@ -88,8 +88,5 @@ export class ListEventStrategy implements IEventStrategy {
   /**
    * 处理打开详情 - 子类必须覆盖
    */
-  protected handleOpenDetail(item: IEventStrategyItem): void {
-    // 子类必须实现
-    throw new Error('handleOpenDetail must be implemented by subclass');
-  }
+  protected abstract handleOpenDetail(item: IEventStrategyItem): void;
 }

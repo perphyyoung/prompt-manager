@@ -367,6 +367,36 @@ export class TagService {
     return pyTagGroups.search(prefix, exclude);
   }
 
+  // ========== 静态工具方法 ==========
+
+  /**
+   * 计算项目中标签的出现次数
+   * @param items - 项目列表（包含 tags 属性）
+   * @returns 标签计数映射
+   */
+  static countTagsInItems(items: Array<{ tags?: string[] }>): Record<string, number> {
+    const counts: Record<string, number> = {};
+    items.forEach((item) => {
+      item.tags?.forEach((tag) => {
+        counts[tag] = (counts[tag] || 0) + 1;
+      });
+    });
+    return counts;
+  }
+
+  /**
+   * 计算标签在项目中的使用次数
+   * @param tags - 标签列表
+   * @param items - 项目列表
+   * @returns 标签使用次数映射
+   */
+  static countTagUsage(tags: string[], items: Array<{ tags?: string[] }>): Record<string, number> {
+    return tags.reduce((counts, tag) => {
+      counts[tag] = items.filter((item) => item.tags?.includes(tag)).length;
+      return counts;
+    }, {} as Record<string, number>);
+  }
+
   // ========== 私有方法 ==========
 
   /**

@@ -410,10 +410,10 @@ await page.click('.batch-action-delete');
      ```
 
 6. **测试前运行类型检查**
-   - 在运行测试之前验证测试文件通过 TypeScript 类型检查：
+   - 在运行测试之前验证测试文件通过 类型检查 和 eslint 检查：
 
      ```bash
-     npx tsc --noEmit e2e/<test文件>.spec.ts
+     npm run check
      ```
 
    - 首先修复所有类型错误
@@ -421,7 +421,7 @@ await page.click('.batch-action-delete');
 
 7. **每次修改后进行类型检查**
    - 在对测试代码进行任何更改后：
-     1. 运行 `npx tsc --noEmit` 验证类型正确性
+     1. 运行 `npm run check` 类型验证和 lint 检查
      2. 仅在类型检查通过后运行测试
    - 工作流程：
 
@@ -508,7 +508,7 @@ await page.click('.batch-action-delete');
      ```
 
 2. **验证构建是最新的**
-   - 运行 `npx tsc --noEmit; npm run build` 确保没有类型错误且最新代码已编译
+   - 运行 `npm run check; npm run build` 确保没有类型错误, 没有 eslint 错误, 且最新代码已编译
    - 测试前检查是否有任何构建错误
 
 ## 可靠验证（无任意等待时间）
@@ -599,5 +599,5 @@ await page.waitForSelector('#toastContainer:has-text("标签已创建")', { time
    - 验证清理后所有测试仍然通过
 
 3. **最终类型检查验证**
-   - 在整个项目上运行 `npx tsc --noEmit`
+   - 在整个项目上运行 `npm run check`
    - 确保没有类型错误残留

@@ -135,13 +135,6 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 获取更新 API
-   */
-  protected getUpdateAPI(): (id: string, data: unknown) => Promise<void> {
-    return window.electronAPI.updatePrompt as (id: string, data: unknown) => Promise<void>;
-  }
-
-  /**
    * 获取过滤后的提示词列表
    */
   getFilteredPrompts(): IPrompt[] {
