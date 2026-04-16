@@ -5,3 +5,4 @@ description: 修改涉及 *.md 时
 # markdown 规范
 
 - 输出符合 markdownlint 规范
+- 如果可用，使用 `writing-clearly-and-concisely` 技能

@@ -25,29 +25,40 @@
   - 任何命令行文本替换工具（如 sed、awk、perl 等）
   - 正则表达式批量替换整个文件
 - 禁止 `git commit`
-- 禁止动态导入
+- 禁止 ts 动态导入
 - 禁止直接删除日志生成语句, 需要我确认
 
 ## 原则
 
+- 每次修改代码后(包括实际代码和测试代码), 依次验证类型检查和构建 `npx tsc --noEmit; npm run build`
 - 使用中文回答
 - 输出简洁但推理充分, 砍掉一切不改变决策的信息
-- 按照大型项目来设计和重构
-- 每次修改后, 依次验证类型检查和构建 `npx tsc --noEmit; npm run build`
-- 只要可拆分，先派出 subagent。中等及以上任务默认并行 `2-3` 个 subagent
 - 改代码前，先简述计划与影响范围; 如果有类似的功能已实现, 给出复用代码的利弊分析
 - 给出的方案中, 需要遵循 `.trae/rules/具体规范.md` 要求
 - 启动应用、安装依赖时提示我来操作, 而不是启动 `npm start`
-- 删除时, 一次删除不要超过 100 行, 分次删除; 已删除方法的注释也删除
 - 易错点记录到 `docs/易错点.md`, 以备查阅
-- 测试过程如果发现是实现的问题, 询问是否修改实现
+- 测试过程如果发现是实现的问题, 询问是否需要修改实现
 
-## Skills
+## 建议
 
-- `refactor` - 代码重构
+- 按照大型项目来设计和重构
+- 只要可拆分，先派出 subagent; 中等及以上任务默认并行 `2-3` 个 subagent
+- 删除时, 一次删除不要超过 100 行, 分次删除; 已删除方法的注释也删除
+
+## Skills 应用指南
+
+如果你认为哪怕只有 1% 的可能性某个技能适用于你正在做的事情，你绝对必须调用该技能。
+如果一个技能适用于你的任务，你没有选择。你必须使用它。
+这不可协商。这不是可选的。你不能通过合理化来逃避。
+
+- `brainstorming` - 需求澄清
+- `test-driven-development` - 测试驱动开发
+- `verification-before-completion` - 验证先于宣称完成
+- `systematic-debugging` - 调试
+- `writing-clearly-and-concisely` - 在撰写供人类阅读的文本时使用
+- `typescript-refactor` - typescript 重构
 - `py-e2e-testing` - e2e 测试
 - `py-html-variables-plugin` - html 与 ts 共享常量
-- 完整列表 `.trae/skills`
 
 ## 编码前先思考
 
