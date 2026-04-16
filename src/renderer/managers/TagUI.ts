@@ -469,5 +469,3 @@ export class TagUI {
     return `<div class="${noteClass}" title="${HtmlUtils.escapeAttr(note)}">${HtmlUtils.escapeHtml(note)}</div>`;
   }
 }
-
-export default TagUI;

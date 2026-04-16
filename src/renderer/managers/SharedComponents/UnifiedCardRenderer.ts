@@ -130,5 +130,3 @@ export class UnifiedCardRenderer {
     return iconGetter ? iconGetter(icons, isActive) : '';
   }
 }
-
-export default UnifiedCardRenderer;

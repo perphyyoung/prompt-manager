@@ -7,5 +7,3 @@
 export function isSameId(id1: string | number, id2: string | number): boolean {
   return String(id1) === String(id2);
 }
-
-export default isSameId;

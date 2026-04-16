@@ -288,5 +288,3 @@ export class UnifiedListRenderer {
     }
   }
 }
-
-export default UnifiedListRenderer;

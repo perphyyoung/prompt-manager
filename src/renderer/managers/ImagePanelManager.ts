@@ -646,5 +646,3 @@ class ImageListEventStrategy extends ListEventStrategy {
     this.manager.openImageDetail(item as IImage);
   }
 }
-
-export default ImagePanelManager;

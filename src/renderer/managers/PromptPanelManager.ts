@@ -628,5 +628,3 @@ class PromptListEventStrategy extends ListEventStrategy {
     this.manager.openPromptDetail(item as IPrompt);
   }
 }
-
-export default PromptPanelManager;

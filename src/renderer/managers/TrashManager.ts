@@ -524,5 +524,3 @@ export class TrashManager {
     return this.activeModals.size > 0;
   }
 }
-
-export default TrashManager;

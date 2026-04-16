@@ -248,5 +248,3 @@ export class CacheManager {
 
 // 导出单例实例
 export const cacheManager = new CacheManager();
-
-export default CacheManager;

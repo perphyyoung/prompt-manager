@@ -1384,5 +1384,3 @@ export abstract class TagManager {
     });
   }
 }
-
-export default TagManager;

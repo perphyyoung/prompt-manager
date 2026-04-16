@@ -388,5 +388,3 @@ export class SaveManager {
     this.currentValues.clear();
   }
 }
-
-export default SaveManager;

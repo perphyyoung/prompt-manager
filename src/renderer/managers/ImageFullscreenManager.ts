@@ -378,5 +378,3 @@ export class ImageFullscreenManager {
     });
   }
 }
-
-export default ImageFullscreenManager;

@@ -1577,5 +1577,3 @@ export abstract class PanelManagerBase {
     return true;
   }
 }
-
-export default PanelManagerBase;

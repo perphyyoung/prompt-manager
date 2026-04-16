@@ -100,5 +100,3 @@ export class LRUCache<T = any> {
     this.cache.forEach((value, key) => callback(value, key));
   }
 }
-
-export default LRUCache;

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/main/index.ts",
+    "src/preload/index.ts",
+    "src/renderer/app.ts",
+    "electron.vite.config.ts"
+  ],
+  "project": [
+    "src/**/*.ts"
+  ],
+  "ignore": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/test/**",
+    "**/tests/**",
+    "**/e2e/**",
+    "out/**",
+    "dist/**"
+  ],
+  "ignoreDependencies": [
+    "@playwright/test",
+    "@vitest/coverage-v8",
+    "@vitest/ui",
+    "happy-dom",
+    "playwright"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "types": "off"
+  }
+}

@@ -459,5 +459,3 @@ export class ShortcutManager {
     this.enabled = false;
   }
 }
-
-export default ShortcutManager;

@@ -255,5 +255,3 @@ export class ListNavigator<T = unknown> {
     }
   }
 }
-
-export default ListNavigator;

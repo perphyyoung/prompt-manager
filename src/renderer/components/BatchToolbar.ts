@@ -189,5 +189,3 @@ export class BatchToolbar {
     return toolbar;
   }
 }
-
-export default BatchToolbar;

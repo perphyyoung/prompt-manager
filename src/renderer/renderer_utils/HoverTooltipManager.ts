@@ -144,5 +144,3 @@ export class HoverTooltipManager {
     });
   }
 }
-
-export default HoverTooltipManager;

@@ -641,5 +641,3 @@ export class DetailViewManager {
     this.batchTagConfig = null;
   }
 }
-
-export default DetailViewManager;

@@ -195,5 +195,3 @@ export class PanelRenderer {
     if (emptyState) emptyState.style.display = 'none';
   }
 }
-
-export default PanelRenderer;

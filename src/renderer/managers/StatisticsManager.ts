@@ -175,5 +175,3 @@ export class StatisticsManager {
     }
   }
 }
-
-export default StatisticsManager;
