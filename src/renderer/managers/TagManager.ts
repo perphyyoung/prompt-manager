@@ -1,5 +1,5 @@
 import { TagUI } from './TagUI.ts';
-import { ElementId } from '../../constants.ts';
+import { ElementId, Constants } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
 import { IDialogTemplate, IDialogContext } from '../../types/entities.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
@@ -632,7 +632,7 @@ export abstract class TagManager {
 
     const result = await DialogService.showInputDialog({
       title: '重命名标签',
-      placeholder: '请输入新标签名:',
+      placeholder: Constants.PLACEHOLDER_TAG_RENAME,
       defaultValue: initialTagValue,
       showGroupSelect: true,
       groups: groups,
@@ -791,7 +791,7 @@ export abstract class TagManager {
 
     const result = await DialogService.showInputDialog({
       title: `新建${this.getTypeLabel()}标签`,
-      placeholder: '请输入标签名称（支持批量，用逗号或空格分隔）',
+      placeholder: Constants.PLACEHOLDER_TAG_INPUT,
       defaultValue: defaultValue,
       showGroupSelect: true,
       groups: groups,

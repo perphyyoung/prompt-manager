@@ -1,6 +1,7 @@
 import { TagService } from '../services/index.ts';
 import { CacheManager } from '../../utils/CacheManager.ts';
 import { LRUCache } from '../../utils/LRUCache.ts';
+import { Constants } from '../../constants.ts';
 
 export interface IBatchOperationConfig {
   delete?: {
@@ -105,7 +106,7 @@ export const MultiSelectConfig: Record<'prompt' | 'image', IMultiSelectConfig> =
         event: 'promptTagsChanged',
         needInput: true,
         inputTitle: '添加标签',
-        inputPlaceholder: '输入要添加的标签（多个标签用逗号分隔）',
+        inputPlaceholder: Constants.PLACEHOLDER_TAG_INPUT,
         processItems: async (ids: string[], tagInput: string) => {
           await processBatchAddTags(ids, tagInput, {
             getItemById: (id: string) => window.electronAPI.getPromptById(id),
@@ -156,7 +157,7 @@ export const MultiSelectConfig: Record<'prompt' | 'image', IMultiSelectConfig> =
         event: 'imageTagsChanged',
         needInput: true,
         inputTitle: '添加标签',
-        inputPlaceholder: '输入要添加的标签（多个标签用逗号分隔）',
+        inputPlaceholder: Constants.PLACEHOLDER_TAG_INPUT,
         processItems: async (ids: string[], tagInput: string) => {
           await processBatchAddTags(ids, tagInput, {
             getItemById: (id: string) => window.electronAPI.getImageById(id),
