@@ -194,7 +194,9 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 收集所有界面显示的值
-    const uiValues = await page.evaluate((containerId) => {
+    const uiValues = await page.evaluate((params) => {
+      const { containerId, idFieldId, titleId, contentId, translateId, noteId } = params;
+
       const getValue = (id: string): string => {
         const el = document.getElementById(id);
         if (!el) return '';
@@ -219,15 +221,22 @@ test.describe('提示词详情界面数据库字段读取', () => {
       };
 
       return {
-        id: (document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement)?.value || '',
-        title: getValue(Constants.Ids.PROMPT_DETAIL_TITLE),
-        content: getValue(Constants.Ids.PROMPT_DETAIL_CONTENT),
-        contentTranslate: getValue(Constants.Ids.PROMPT_DETAIL_TRANSLATE),
-        note: getValue(Constants.Ids.PROMPT_DETAIL_NOTE),
+        id: (document.getElementById(idFieldId) as HTMLInputElement)?.value || '',
+        title: getValue(titleId),
+        content: getValue(contentId),
+        contentTranslate: getValue(translateId),
+        note: getValue(noteId),
         tags: getTags(),
         imageCount: getImageCount()
       };
-    }, Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER);
+    }, {
+      containerId: Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER,
+      idFieldId: Constants.Ids.PROMPT_DETAIL_ID,
+      titleId: Constants.Ids.PROMPT_DETAIL_TITLE,
+      contentId: Constants.Ids.PROMPT_DETAIL_CONTENT,
+      translateId: Constants.Ids.PROMPT_DETAIL_TRANSLATE,
+      noteId: Constants.Ids.PROMPT_DETAIL_NOTE
+    });
 
     // 验证所有字段一致性
     expect(uiValues.id).toBe(dbPrompt!.id);
