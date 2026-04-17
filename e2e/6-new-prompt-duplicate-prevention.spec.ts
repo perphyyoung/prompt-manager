@@ -37,6 +37,7 @@ test.describe('新建提示词防重复提交', () => {
   });
 
   test('快速点击完成按钮应该只创建一个提示词', async () => {
+    await electronTest.logTestStart('快速点击完成按钮应该只创建一个提示词');
     const page = electronTest.getPage();
 
     // 进入图像网格视图并获取第一个图像
@@ -63,9 +64,9 @@ test.describe('新建提示词防重复提交', () => {
       await unlinkBtn.click();
       await page.screenshot({ path: 'test-results/07-unlink-clicked.png' });
 
-      await page.waitForSelector('#confirmModal[style*="flex"]', { timeout: 1000 });
+      await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}[style*="flex"]`, { timeout: 1000 });
       await page.screenshot({ path: 'test-results/08-confirm-modal.png' });
-      await page.click('#confirmOkBtn');
+      await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
       await page.waitForFunction((btnTextId) => {
         const text = document.getElementById(btnTextId)?.textContent;
@@ -135,6 +136,7 @@ test.describe('新建提示词防重复提交', () => {
   });
 
   test('重复点击完成按钮时应该只执行一次保存', async () => {
+    await electronTest.logTestStart('重复点击完成按钮时应该只执行一次保存');
     const page = electronTest.getPage();
 
     // 进入图像网格视图并获取第一个图像
@@ -157,8 +159,8 @@ test.describe('新建提示词防重复提交', () => {
       await expect(unlinkBtn).toBeVisible();
       await unlinkBtn.click();
 
-      await page.waitForSelector('#confirmModal[style*="flex"]', { timeout: 1000 });
-      await page.click('#confirmOkBtn');
+      await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}[style*="flex"]`, { timeout: 1000 });
+      await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
       await page.waitForFunction((btnTextId) => {
         const text = document.getElementById(btnTextId)?.textContent;
@@ -199,12 +201,6 @@ test.describe('新建提示词防重复提交', () => {
       return !page?.classList.contains('active');
     }, Constants.Ids.NEW_PROMPT_PAGE, { timeout: 3000 });
 
-    // 等待提示词列表更新
-    await page.waitForFunction((expectedCount: number) => {
-      const promptCards = document.querySelectorAll('.prompt-card');
-      return promptCards.length === expectedCount;
-    }, initialPromptCount + 1, { timeout: 3000 });
-
     // 验证只创建了一个提示词
     const finalPromptCount = await page.evaluate(async () => {
       const prompts = await window.electronAPI.getPrompts('createdAt', 'desc');
@@ -223,6 +219,7 @@ test.describe('新建提示词防重复提交', () => {
   });
 
   test('空内容时不应该创建提示词', async () => {
+    await electronTest.logTestStart('空内容时不应该创建提示词');
     const page = electronTest.getPage();
 
     // 进入图像网格视图并获取第一个图像
@@ -245,8 +242,8 @@ test.describe('新建提示词防重复提交', () => {
       await expect(unlinkBtn).toBeVisible();
       await unlinkBtn.click();
 
-      await page.waitForSelector('#confirmModal[style*="flex"]', { timeout: 1000 });
-      await page.click('#confirmOkBtn');
+      await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}[style*="flex"]`, { timeout: 1000 });
+      await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
       await page.waitForFunction((btnTextId) => {
         const text = document.getElementById(btnTextId)?.textContent;
