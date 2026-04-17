@@ -8,7 +8,7 @@ import type { CacheUpdateData, TrashItem } from './TrashHandler.ts';
  */
 export class PromptTrashHandler {
   readonly type: string = Constants.TrashType.PROMPT;
-  readonly containerId: string = 'promptTrashList';
+  readonly containerId: string = Constants.Ids.PROMPT_TRASH_LIST;
   readonly label: string = '提示词';
   readonly eventName: string = Events.PROMPTS_CHANGED;
 

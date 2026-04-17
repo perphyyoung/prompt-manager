@@ -43,12 +43,12 @@ export class TrashManager {
 
   private static readonly MODAL_CONFIG: Record<TrashType, ITrashModalConfig> = {
     [Constants.TrashType.PROMPT]: {
-      modalId: 'promptTrashModal',
+      modalId: Constants.Ids.PROMPT_TRASH_MODAL,
       name: 'promptTrashModal',
       elementId: Constants.Ids.PROMPT_TRASH_MODAL
     },
     [Constants.TrashType.IMAGE]: {
-      modalId: 'imageTrashModal',
+      modalId: Constants.Ids.IMAGE_TRASH_MODAL,
       name: 'imageTrashModal',
       elementId: Constants.Ids.IMAGE_TRASH_MODAL
     }
@@ -106,30 +106,30 @@ export class TrashManager {
    */
   private bindEvents(): void {
     // 提示词回收站
-    document.getElementById('promptTrashBtn')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.PROMPT_TRASH_BTN)?.addEventListener('click', () => {
       this.open(this.promptHandler);
     });
-    document.getElementById('closePromptTrashModal')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.CLOSE_PROMPT_TRASH_MODAL)?.addEventListener('click', () => {
       this.close();
     });
-    document.getElementById('restoreAllPromptTrashBtn')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.RESTORE_ALL_PROMPT_TRASH_BTN)?.addEventListener('click', () => {
       this.restoreAll();
     });
-    document.getElementById('emptyPromptTrashBtn')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.EMPTY_PROMPT_TRASH_BTN)?.addEventListener('click', () => {
       this.confirmClearTrash();
     });
 
     // 图像回收站
-    document.getElementById('imageTrashBtn')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.IMAGE_TRASH_BTN)?.addEventListener('click', () => {
       this.open(this.imageHandler);
     });
-    document.getElementById('closeImageTrashModal')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.CLOSE_IMAGE_TRASH_MODAL)?.addEventListener('click', () => {
       this.close();
     });
-    document.getElementById('restoreAllImageTrashBtn')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.RESTORE_ALL_IMAGE_TRASH_BTN)?.addEventListener('click', () => {
       this.restoreAll();
     });
-    document.getElementById('emptyImageTrashBtn')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.EMPTY_IMAGE_TRASH_BTN)?.addEventListener('click', () => {
       this.confirmClearTrash();
     });
   }

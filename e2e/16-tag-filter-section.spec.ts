@@ -252,7 +252,7 @@ test.describe('图像标签筛选区', () => {
     );
 
     // 验证内容区域已隐藏
-    const tagFilterContent = page.locator('#imageTagFilterContent');
+    const tagFilterContent = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT}`);
     await expect(tagFilterContent).toBeHidden();
 
     // 验证头部标签容器可见（收起时显示）
@@ -543,7 +543,7 @@ test.describe('提示词标签筛选区', () => {
     );
 
     // 验证内容区域已隐藏
-    const tagFilterContent = page.locator('#promptTagFilterContent');
+    const tagFilterContent = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`);
     await expect(tagFilterContent).toBeHidden();
 
     // 验证头部标签容器可见（收起时显示）

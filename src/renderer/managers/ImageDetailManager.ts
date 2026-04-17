@@ -80,8 +80,8 @@ export class ImageDetailManager extends DetailViewManager {
   constructor(options: IImageDetailManagerOptions) {
     super({
       app: options.app as unknown as { constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean }; showToast: (message: string, type?: string) => void; eventBus: { emit: (event: string, data?: unknown) => void }; [key: string]: unknown },
-      modalId: 'imageDetailModal',
-      closeBtnId: 'imageDetailCloseBtn'
+      modalId: Constants.Ids.IMAGE_DETAIL_MODAL,
+      closeBtnId: Constants.Ids.IMAGE_DETAIL_CLOSE_BTN
     });
 
     this.tagManager = options.tagRegistry;
@@ -138,7 +138,7 @@ export class ImageDetailManager extends DetailViewManager {
       this.showModal();
 
       // 自动调整文本框高度
-      const noteInput = document.getElementById('imageDetailNote');
+      const noteInput = document.getElementById(Constants.Ids.IMAGE_DETAIL_NOTE);
       if (noteInput) {
         app.autoResizeTextarea(noteInput);
       }
@@ -154,12 +154,12 @@ export class ImageDetailManager extends DetailViewManager {
    * @private
    */
   private fillFormData(image: IImageExtended): void {
-    const fileNameInput = document.getElementById('imageDetailFileName') as HTMLInputElement | null;
+    const fileNameInput = document.getElementById(Constants.Ids.IMAGE_DETAIL_FILE_NAME) as HTMLInputElement | null;
     if (fileNameInput) {
       fileNameInput.value = image.fileName || '';
     }
 
-    const noteInput = document.getElementById('imageDetailNote') as HTMLTextAreaElement | null;
+    const noteInput = document.getElementById(Constants.Ids.IMAGE_DETAIL_NOTE) as HTMLTextAreaElement | null;
     if (noteInput) {
       noteInput.value = image.note || '';
     }
@@ -171,7 +171,7 @@ export class ImageDetailManager extends DetailViewManager {
    * @private
    */
   private setSafeState(isSafe: boolean): void {
-    const safeToggle = document.getElementById('imageDetailSafeToggle') as HTMLInputElement | null;
+    const safeToggle = document.getElementById(Constants.Ids.IMAGE_DETAIL_SAFE_TOGGLE) as HTMLInputElement | null;
     if (safeToggle) {
       safeToggle.checked = isSafe;
     }
@@ -182,7 +182,7 @@ export class ImageDetailManager extends DetailViewManager {
    * @param isFavorite - 是否收藏
    */
   updateFavoriteBtnUI(isFavorite: boolean): void {
-    const btn = document.getElementById('imageDetailFavoriteBtn');
+    const btn = document.getElementById(Constants.Ids.IMAGE_DETAIL_FAVORITE_BTN);
     if (!btn) return;
 
     if (isFavorite) {
@@ -205,31 +205,31 @@ export class ImageDetailManager extends DetailViewManager {
     const app = this.app as unknown as IApp;
 
     // 更新时间
-    const updatedAtEl = document.getElementById('imageDetailUpdatedAt');
+    const updatedAtEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_UPDATED_AT);
     if (updatedAtEl) {
       updatedAtEl.textContent = image.updatedAt || '-';
     }
 
     // 上传时间
-    const createdAtEl = document.getElementById('imageDetailCreatedAt');
+    const createdAtEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_CREATED_AT);
     if (createdAtEl) {
       createdAtEl.textContent = image.createdAt || '-';
     }
 
     // 图像尺寸
-    const dimensionsEl = document.getElementById('imageDetailDimensions');
+    const dimensionsEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_DIMENSIONS);
     if (dimensionsEl) {
       dimensionsEl.textContent = image.width && image.height ? `${image.width} × ${image.height}` : '-';
     }
 
     // 文件大小
-    const fileSizeEl = document.getElementById('imageDetailFileSize');
+    const fileSizeEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_FILE_SIZE);
     if (fileSizeEl) {
       fileSizeEl.textContent = image.fileSize ? HtmlUtils.formatFileSize(image.fileSize) : '-';
     }
 
     // 设置图像 - 异步获取完整路径
-    const imgEl = document.getElementById('imageDetailImg') as HTMLImageElement | null;
+    const imgEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_IMG) as HTMLImageElement | null;
     if (imgEl && image.relativePath) {
       try {
         const fullPath = await window.electronAPI.getImagePath(image.relativePath);
@@ -345,10 +345,10 @@ export class ImageDetailManager extends DetailViewManager {
     // 使用基类的标签管理功能
     this.initDetailTagManager(
       {
-        toolbarId: 'imageDetailBatchToolbar',
+        toolbarId: Constants.Ids.IMAGE_DETAIL_BATCH_TAG_TOOLBAR,
         containerId: Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER,
-        inputAreaId: 'imageDetailTagInputArea',
-        batchBtnId: 'imageDetailBatchTagBtn'
+        inputAreaId: Constants.Ids.IMAGE_DETAIL_TAG_INPUT_AREA,
+        batchBtnId: Constants.Ids.IMAGE_DETAIL_BATCH_TAG_BTN
       },
       detailTagManager
     );
@@ -449,13 +449,13 @@ export class ImageDetailManager extends DetailViewManager {
   private async renderPromptInfo(image: IImageExtended): Promise<void> {
     const app = this.app as unknown as IApp;
 
-    const promptTitleContainer = document.getElementById('imageDetailPromptTitle');
-    const promptContentEl = document.getElementById('imageDetailPromptContent');
-    const promptTranslateEl = document.getElementById('imageDetailPromptTranslate');
-    const promptNoteEl = document.getElementById('imageDetailPromptNote');
-    const tagsContainer = document.getElementById('imageDetailTags');
-    const editPromptBtn = document.getElementById('editPromptFromImageBtn') as HTMLButtonElement | null;
-    const editPromptBtnText = document.getElementById('editPromptBtnText');
+    const promptTitleContainer = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_TITLE);
+    const promptContentEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_CONTENT);
+    const promptTranslateEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_TRANSLATE);
+    const promptNoteEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_NOTE);
+    const tagsContainer = document.getElementById(Constants.Ids.IMAGE_DETAIL_TAGS);
+    const editPromptBtn = document.getElementById(Constants.Ids.EDIT_PROMPT_FROM_IMAGE_BTN) as HTMLButtonElement | null;
+    const editPromptBtnText = document.getElementById(Constants.Ids.EDIT_PROMPT_BTN_TEXT);
 
     // 收集所有引用的提示词信息
     let allPromptRefs: IPrompt[] = [];
@@ -627,7 +627,7 @@ export class ImageDetailManager extends DetailViewManager {
     this.currentDetailPromptId = promptInfo.id;
 
     // 更新提示词标题区域的选中状态
-    const promptTitleContainer = document.getElementById('imageDetailPromptTitle');
+    const promptTitleContainer = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_TITLE);
     if (promptTitleContainer) {
       promptTitleContainer.querySelectorAll('.prompt-ref-item').forEach(item => {
         const itemPromptId = (item as HTMLElement).dataset.promptId;
@@ -640,10 +640,10 @@ export class ImageDetailManager extends DetailViewManager {
     }
 
     // 更新提示词内容
-    const promptContentEl = document.getElementById('imageDetailPromptContent');
-    const promptTranslateEl = document.getElementById('imageDetailPromptTranslate');
-    const promptNoteEl = document.getElementById('imageDetailPromptNote');
-    const tagsContainer = document.getElementById('imageDetailTags');
+    const promptContentEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_CONTENT);
+    const promptTranslateEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_TRANSLATE);
+    const promptNoteEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_NOTE);
+    const tagsContainer = document.getElementById(Constants.Ids.IMAGE_DETAIL_TAGS);
 
     if (promptContentEl) promptContentEl.textContent = promptInfo.content || '-';
     if (promptTranslateEl) promptTranslateEl.textContent = promptInfo.contentTranslate || '-';
@@ -661,7 +661,7 @@ export class ImageDetailManager extends DetailViewManager {
     }
 
     // 更新编辑按钮文本
-    const editPromptBtnText = document.getElementById('editPromptBtnText');
+    const editPromptBtnText = document.getElementById(Constants.Ids.EDIT_PROMPT_BTN_TEXT);
     const allRefs = this.currentDetailPromptRefs || [];
     const currentIndex = allRefs.findIndex(p => isSameId(p.id, promptInfo.id));
     if (editPromptBtnText && currentIndex >= 0) {
@@ -728,7 +728,7 @@ export class ImageDetailManager extends DetailViewManager {
 
     // 清理收藏按钮事件监听器
     if (this.favoriteBtnHandler) {
-      const favoriteBtn = document.getElementById('imageDetailFavoriteBtn');
+      const favoriteBtn = document.getElementById(Constants.Ids.IMAGE_DETAIL_FAVORITE_BTN);
       if (favoriteBtn) {
         favoriteBtn.removeEventListener('click', this.favoriteBtnHandler);
       }
@@ -765,8 +765,8 @@ export class ImageDetailManager extends DetailViewManager {
     this.imageSaveManager.registerField('fileName', {
       saveMode: 'debounce',
       delay: 800,
-      elementId: 'imageDetailFileName',
-      statusId: 'imageDetailFileNameStatus',
+      elementId: Constants.Ids.IMAGE_DETAIL_FILE_NAME,
+      statusId: Constants.Ids.IMAGE_DETAIL_FILE_NAME_STATUS,
       validate: (value: unknown) => validateFileName(value as string)
     });
 
@@ -774,16 +774,16 @@ export class ImageDetailManager extends DetailViewManager {
     this.imageSaveManager.registerField('note', {
       saveMode: 'debounce',
       delay: 800,
-      elementId: 'imageDetailNote',
+      elementId: Constants.Ids.IMAGE_DETAIL_NOTE,
       autoResize: true,
-      statusId: 'imageDetailNoteStatus'
+      statusId: Constants.Ids.IMAGE_DETAIL_NOTE_STATUS
     });
 
     // 3. 安全状态 - 防抖保存
     this.imageSaveManager.registerField('isSafe', {
       saveMode: 'debounce',
       delay: 800,
-      elementId: 'imageDetailSafeToggle',
+      elementId: Constants.Ids.IMAGE_DETAIL_SAFE_TOGGLE,
       getValue: (element: HTMLElement) => (element as HTMLInputElement).checked ? 1 : 0,
       onChange: (value: unknown) => {
         app.showToast(value ? '已标记为安全' : '已标记为不安全', 'success');
@@ -806,7 +806,7 @@ export class ImageDetailManager extends DetailViewManager {
     });
 
     // 手动绑定收藏按钮点击事件
-    const favoriteBtn = document.getElementById('imageDetailFavoriteBtn');
+    const favoriteBtn = document.getElementById(Constants.Ids.IMAGE_DETAIL_FAVORITE_BTN);
     if (favoriteBtn) {
       this.favoriteBtnHandler = async () => {
         const currentItem = this.currentItem as unknown as IImageExtended;
@@ -838,10 +838,10 @@ export class ImageDetailManager extends DetailViewManager {
       image as unknown as { id: string | number; [key: string]: unknown },
       items as unknown as { id: string | number; [key: string]: unknown }[],
       {
-        first: document.getElementById('imageDetailFirstNavBtn') ?? undefined,
-        prev: document.getElementById('imageDetailPrevNavBtn') ?? undefined,
-        next: document.getElementById('imageDetailNextNavBtn') ?? undefined,
-        last: document.getElementById('imageDetailLastNavBtn') ?? undefined
+        first: document.getElementById(Constants.Ids.IMAGE_DETAIL_FIRST_NAV_BTN) ?? undefined,
+        prev: document.getElementById(Constants.Ids.IMAGE_DETAIL_PREV_NAV_BTN) ?? undefined,
+        next: document.getElementById(Constants.Ids.IMAGE_DETAIL_NEXT_NAV_BTN) ?? undefined,
+        last: document.getElementById(Constants.Ids.IMAGE_DETAIL_LAST_NAV_BTN) ?? undefined
       },
       onNavigate
     );
@@ -894,7 +894,7 @@ export class ImageDetailManager extends DetailViewManager {
     await this.renderPromptInfo(image);
 
     // 自动调整文本框高度
-    const noteInput = document.getElementById('imageDetailNote');
+    const noteInput = document.getElementById(Constants.Ids.IMAGE_DETAIL_NOTE);
     if (noteInput) {
       app.autoResizeTextarea(noteInput);
     }

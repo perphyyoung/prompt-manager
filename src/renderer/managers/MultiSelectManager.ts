@@ -251,14 +251,6 @@ export class MultiSelectManager {
   }
 
   /**
-   * 隐藏工具栏，但不触发 onClose 回调
-   * 用于 exitBatchMode 中避免递归调用
-   */
-  hideToolbarWithoutCancel(): void {
-    this.toolbar?.hide(false);
-  }
-
-  /**
    * 实际执行工具栏 UI 更新（私有方法）
    */
   private _doUpdateToolbarUI(): void {
@@ -271,8 +263,8 @@ export class MultiSelectManager {
         this.toolbar?.show(this.count);
       }
     } else {
-      // 选择为空时自动隐藏，不触发取消回调（triggerCancel=false）
-      this.toolbar?.hide(false);
+      // 选择为空时自动隐藏
+      this.toolbar?.hide();
     }
   }
 

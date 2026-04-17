@@ -36,7 +36,7 @@ test.describe('Esc 键快捷键功能', () => {
       await page.waitForSelector('#statisticsModal.active', { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/image-statistics-open.png' });
 
-      const statisticsModal = page.locator('#statisticsModal');
+      const statisticsModal = page.locator(`#${Constants.Ids.STATISTICS_MODAL}`);
       await expect(statisticsModal).toHaveClass(/active/);
 
       await page.keyboard.press('Escape');
@@ -54,7 +54,7 @@ test.describe('Esc 键快捷键功能', () => {
       await page.waitForSelector('#statisticsModal.active', { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/prompt-statistics-open.png' });
 
-      const statisticsModal = page.locator('#statisticsModal');
+      const statisticsModal = page.locator(`#${Constants.Ids.STATISTICS_MODAL}`);
       await expect(statisticsModal).toHaveClass(/active/);
 
       await page.keyboard.press('Escape');
@@ -74,7 +74,7 @@ test.describe('Esc 键快捷键功能', () => {
       await page.waitForSelector('#settingsModal.active', { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/image-settings-open.png' });
 
-      const settingsModal = page.locator('#settingsModal');
+      const settingsModal = page.locator(`#${Constants.Ids.SETTINGS_MODAL}`);
       await expect(settingsModal).toHaveClass(/active/);
 
       await page.keyboard.press('Escape');
@@ -92,7 +92,7 @@ test.describe('Esc 键快捷键功能', () => {
       await page.waitForSelector('#settingsModal.active', { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/prompt-settings-open.png' });
 
-      const settingsModal = page.locator('#settingsModal');
+      const settingsModal = page.locator(`#${Constants.Ids.SETTINGS_MODAL}`);
       await expect(settingsModal).toHaveClass(/active/);
 
       await page.keyboard.press('Escape');
@@ -111,11 +111,11 @@ test.describe('Esc 键快捷键功能', () => {
       await openImageDetail(page);
       await page.screenshot({ path: 'test-results/esc/image-detail-open.png' });
 
-      const detailModal = page.locator('#imageDetailModal');
+      const detailModal = page.locator(`#${Constants.Ids.IMAGE_DETAIL_MODAL}`);
       await expect(detailModal).toHaveClass(/active/);
 
       await page.keyboard.press('Escape');
-      await page.waitForSelector('#imageDetailModal', { state: 'hidden', timeout: 5000 });
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}`, { state: 'hidden', timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/image-detail-closed.png' });
 
       await expect(detailModal).not.toHaveClass(/active/);
@@ -128,11 +128,11 @@ test.describe('Esc 键快捷键功能', () => {
       await openPromptDetail(page);
       await page.screenshot({ path: 'test-results/esc/prompt-detail-open.png' });
 
-      const detailModal = page.locator('#promptDetailModal');
+      const detailModal = page.locator(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
       await expect(detailModal).toHaveClass(/active/);
 
       await page.keyboard.press('Escape');
-      await page.waitForSelector('#promptDetailModal', { state: 'hidden', timeout: 5000 });
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`, { state: 'hidden', timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/prompt-detail-closed.png' });
 
       await expect(detailModal).not.toHaveClass(/active/);
@@ -146,33 +146,33 @@ test.describe('Esc 键快捷键功能', () => {
       await enterImageGridView(page);
       await openImageDetail(page);
 
-      const batchTagBtn = page.locator('#imageDetailBatchTagBtn');
+      const batchTagBtn = page.locator(`#${Constants.Ids.IMAGE_DETAIL_BATCH_TAG_BTN}`);
       await batchTagBtn.click();
-      await page.waitForFunction(() => {
-        const toolbar = document.getElementById('imageDetailBatchToolbar');
+      await page.waitForFunction((toolbarId) => {
+        const toolbar = document.getElementById(toolbarId);
         return toolbar?.classList.contains('visible');
-      }, { timeout: 5000 });
+      }, Constants.Ids.IMAGE_DETAIL_BATCH_TOOLBAR, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/image-batch-mode-open.png' });
 
-      const detailModal = page.locator('#imageDetailModal');
+      const detailModal = page.locator(`#${Constants.Ids.IMAGE_DETAIL_MODAL}`);
       await expect(detailModal).toHaveClass(/active/);
 
       await page.keyboard.press('Escape');
       // 等待批量工具栏从 DOM 中移除（ESC 关闭批量模式会移除元素）
-      await page.waitForFunction(() => {
-        const toolbar = document.getElementById('imageDetailBatchToolbar');
+      await page.waitForFunction((toolbarId) => {
+        const toolbar = document.getElementById(toolbarId);
         return toolbar === null;
-      }, { timeout: 5000 });
+      }, Constants.Ids.IMAGE_DETAIL_BATCH_TAG_TOOLBAR, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/image-batch-mode-closed.png' });
 
       // 验证详情模态框仍然打开
       await expect(detailModal).toHaveClass(/active/);
 
       await page.keyboard.press('Escape');
-      await page.waitForFunction(() => {
-        const modal = document.getElementById('imageDetailModal');
+      await page.waitForFunction((modalId) => {
+        const modal = document.getElementById(modalId);
         return !modal?.classList.contains('active');
-      }, { timeout: 5000 });
+      }, Constants.Ids.IMAGE_DETAIL_MODAL, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/image-detail-closed-after-batch.png' });
 
       await expect(detailModal).not.toHaveClass(/active/);
@@ -184,33 +184,33 @@ test.describe('Esc 键快捷键功能', () => {
       await enterPromptGridView(page);
       await openPromptDetail(page);
 
-      const batchTagBtn = page.locator('#promptDetailBatchTagBtn');
+      const batchTagBtn = page.locator(`#${Constants.Ids.PROMPT_DETAIL_BATCH_TAG_BTN}`);
       await batchTagBtn.click();
-      await page.waitForFunction(() => {
-        const toolbar = document.getElementById('promptDetailBatchToolbar');
+      await page.waitForFunction((toolbarId) => {
+        const toolbar = document.getElementById(toolbarId);
         return toolbar?.classList.contains('visible');
-      }, { timeout: 5000 });
+      }, Constants.Ids.PROMPT_DETAIL_BATCH_TOOLBAR, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/prompt-batch-mode-open.png' });
 
-      const detailModal = page.locator('#promptDetailModal');
+      const detailModal = page.locator(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
       await expect(detailModal).toHaveClass(/active/);
 
       await page.keyboard.press('Escape');
       // 等待批量工具栏从 DOM 中移除（ESC 关闭批量模式会移除元素）
-      await page.waitForFunction(() => {
-        const toolbar = document.getElementById('promptDetailBatchToolbar');
+      await page.waitForFunction((toolbarId) => {
+        const toolbar = document.getElementById(toolbarId);
         return toolbar === null;
-      }, { timeout: 5000 });
+      }, Constants.Ids.PROMPT_DETAIL_BATCH_TAG_TOOLBAR, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/prompt-batch-mode-closed.png' });
 
       // 验证详情模态框仍然打开
       await expect(detailModal).toHaveClass(/active/);
 
       await page.keyboard.press('Escape');
-      await page.waitForFunction(() => {
-        const modal = document.getElementById('promptDetailModal');
+      await page.waitForFunction((modalId) => {
+        const modal = document.getElementById(modalId);
         return !modal?.classList.contains('active');
-      }, { timeout: 5000 });
+      }, Constants.Ids.PROMPT_DETAIL_MODAL, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/prompt-detail-closed-after-batch.png' });
 
       await expect(detailModal).not.toHaveClass(/active/);
@@ -238,10 +238,10 @@ test.describe('Esc 键快捷键功能', () => {
 
       await expect(batchToolbar).not.toBeVisible();
 
-      const hasSelectionMode = await page.evaluate(() => {
-        const container = document.getElementById('imageGrid');
+      const hasSelectionMode = await page.evaluate((gridId) => {
+        const container = document.getElementById(gridId);
         return container?.classList.contains('selection-mode');
-      });
+      }, Constants.Ids.IMAGE_GRID);
       expect(hasSelectionMode).toBe(false);
     });
 
@@ -265,10 +265,10 @@ test.describe('Esc 键快捷键功能', () => {
 
       await expect(batchToolbar).not.toBeVisible();
 
-      const hasSelectionMode = await page.evaluate(() => {
-        const container = document.getElementById('promptGrid');
+      const hasSelectionMode = await page.evaluate((gridId) => {
+        const container = document.getElementById(gridId);
         return container?.classList.contains('selection-mode');
-      });
+      }, Constants.Ids.PROMPT_GRID);
       expect(hasSelectionMode).toBe(false);
     });
   });
@@ -291,20 +291,20 @@ test.describe('Esc 键快捷键功能', () => {
     await page.waitForSelector('#confirmModal', { state: 'visible', timeout: 5000 });
     await page.screenshot({ path: 'test-results/esc/dialog-open.png' });
 
-    const confirmModalVisible = await page.evaluate(() => {
-      const modal = document.getElementById('confirmModal');
+    const confirmModalVisible = await page.evaluate((modalId) => {
+      const modal = document.getElementById(modalId);
       return modal && modal.style.display !== 'none';
-    });
+    }, Constants.Ids.CONFIRM_MODAL);
     expect(confirmModalVisible).toBe(true);
 
     await page.keyboard.press('Escape');
     await page.waitForSelector('#confirmModal', { state: 'hidden', timeout: 5000 });
     await page.screenshot({ path: 'test-results/esc/dialog-closed.png' });
 
-    const confirmModalHidden = await page.evaluate(() => {
-      const modal = document.getElementById('confirmModal');
+    const confirmModalHidden = await page.evaluate((modalId) => {
+      const modal = document.getElementById(modalId);
       return !modal || modal.style.display === 'none';
-    });
+    }, Constants.Ids.CONFIRM_MODAL);
     expect(confirmModalHidden).toBe(true);
 
     await expect(batchToolbar).toBeVisible();
@@ -318,29 +318,29 @@ test.describe('Esc 键快捷键功能', () => {
 
       await enterImageGridView(page);
       await page.click('#imageTrashBtn');
-      await page.waitForFunction(() => {
-        const modal = document.getElementById('imageTrashModal');
+      await page.waitForFunction((modalId) => {
+        const modal = document.getElementById(modalId);
         return modal && modal.style.display !== 'none';
-      }, { timeout: 5000 });
+      }, Constants.Ids.IMAGE_TRASH_MODAL, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/image-trash-open.png' });
 
-      const trashModalVisible = await page.evaluate(() => {
-        const modal = document.getElementById('imageTrashModal');
+      const trashModalVisible = await page.evaluate((modalId) => {
+        const modal = document.getElementById(modalId);
         return modal && modal.style.display !== 'none';
-      });
+      }, Constants.Ids.IMAGE_TRASH_MODAL);
       expect(trashModalVisible).toBe(true);
 
       await page.keyboard.press('Escape');
-      await page.waitForFunction(() => {
-        const modal = document.getElementById('imageTrashModal');
+      await page.waitForFunction((modalId) => {
+        const modal = document.getElementById(modalId);
         return !modal || modal.style.display === 'none';
-      }, { timeout: 5000 });
+      }, Constants.Ids.IMAGE_TRASH_MODAL, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/image-trash-closed.png' });
 
-      const trashModalHidden = await page.evaluate(() => {
-        const modal = document.getElementById('imageTrashModal');
+      const trashModalHidden = await page.evaluate((modalId) => {
+        const modal = document.getElementById(modalId);
         return !modal || modal.style.display === 'none';
-      });
+      }, Constants.Ids.IMAGE_TRASH_MODAL);
       expect(trashModalHidden).toBe(true);
     });
 
@@ -349,29 +349,29 @@ test.describe('Esc 键快捷键功能', () => {
 
       await enterPromptGridView(page);
       await page.click('#promptTrashBtn');
-      await page.waitForFunction(() => {
-        const modal = document.getElementById('promptTrashModal');
+      await page.waitForFunction((modalId) => {
+        const modal = document.getElementById(modalId);
         return modal && modal.style.display !== 'none';
-      }, { timeout: 5000 });
+      }, Constants.Ids.PROMPT_TRASH_MODAL, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/prompt-trash-open.png' });
 
-      const trashModalVisible = await page.evaluate(() => {
-        const modal = document.getElementById('promptTrashModal');
+      const trashModalVisible = await page.evaluate((modalId) => {
+        const modal = document.getElementById(modalId);
         return modal && modal.style.display !== 'none';
-      });
+      }, Constants.Ids.PROMPT_TRASH_MODAL);
       expect(trashModalVisible).toBe(true);
 
       await page.keyboard.press('Escape');
-      await page.waitForFunction(() => {
-        const modal = document.getElementById('promptTrashModal');
+      await page.waitForFunction((modalId) => {
+        const modal = document.getElementById(modalId);
         return !modal || modal.style.display === 'none';
-      }, { timeout: 5000 });
+      }, Constants.Ids.PROMPT_TRASH_MODAL, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/prompt-trash-closed.png' });
 
-      const trashModalHidden = await page.evaluate(() => {
-        const modal = document.getElementById('promptTrashModal');
+      const trashModalHidden = await page.evaluate((modalId) => {
+        const modal = document.getElementById(modalId);
         return !modal || modal.style.display === 'none';
-      });
+      }, Constants.Ids.PROMPT_TRASH_MODAL);
       expect(trashModalHidden).toBe(true);
     });
   });
@@ -384,12 +384,12 @@ test.describe('Esc 键快捷键功能', () => {
     await enterImageGridView(page);
     await openImageDetail(page);
 
-    const image = page.locator('#imageDetailImg');
+    const image = page.locator(`#${Constants.Ids.IMAGE_DETAIL_IMG}`);
     await image.dblclick();
     await page.waitForSelector('#imageFullscreenViewer.active', { timeout: 5000 });
     await page.screenshot({ path: 'test-results/esc/fullscreen-open.png' });
 
-    const fullscreenViewer = page.locator('#imageFullscreenViewer');
+    const fullscreenViewer = page.locator(`#${Constants.Ids.IMAGE_FULLSCREEN_VIEWER}`);
     await expect(fullscreenViewer).toHaveClass(/active/);
 
     await page.keyboard.press('Escape');
@@ -398,7 +398,7 @@ test.describe('Esc 键快捷键功能', () => {
 
     await expect(fullscreenViewer).not.toHaveClass(/active/);
 
-    const detailModal = page.locator('#imageDetailModal');
+    const detailModal = page.locator(`#${Constants.Ids.IMAGE_DETAIL_MODAL}`);
     await expect(detailModal).toHaveClass(/active/);
   });
 
@@ -419,24 +419,24 @@ test.describe('Esc 键快捷键功能', () => {
       await tagInput.click();
       await tagInput.fill('e2e');
 
-      await page.waitForSelector('#imageDetailTagAutocomplete.active', { timeout: 5000 });
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}.active`, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/image-autocomplete-open.png' });
 
-      const autocompleteDropdown = page.locator('#imageDetailTagAutocomplete');
+      const autocompleteDropdown = page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}`);
       const isVisible = await autocompleteDropdown.evaluate((el: HTMLElement) => el.classList.contains('active'));
       expect(isVisible).toBe(true);
 
       await page.keyboard.press('Escape');
-      await page.waitForFunction(() => {
-        const dropdown = document.getElementById('imageDetailTagAutocomplete');
+      await page.waitForFunction((dropdownId) => {
+        const dropdown = document.getElementById(dropdownId);
         return !dropdown?.classList.contains('active');
-      }, { timeout: 5000 });
+      }, Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/image-autocomplete-closed.png' });
 
       const isHidden = await autocompleteDropdown.evaluate((el: HTMLElement) => !el.classList.contains('active'));
       expect(isHidden).toBe(true);
 
-      const detailModal = page.locator('#imageDetailModal');
+      const detailModal = page.locator(`#${Constants.Ids.IMAGE_DETAIL_MODAL}`);
       await expect(detailModal).toHaveClass(/active/);
     });
 
@@ -454,24 +454,24 @@ test.describe('Esc 键快捷键功能', () => {
       await tagInput.click();
       await tagInput.fill('e2e');
 
-      await page.waitForSelector('#promptDetailTagAutocomplete.active', { timeout: 5000 });
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}.active`, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/prompt-autocomplete-open.png' });
 
-      const autocompleteDropdown = page.locator('#promptDetailTagAutocomplete');
+      const autocompleteDropdown = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}`);
       const isVisible = await autocompleteDropdown.evaluate((el: HTMLElement) => el.classList.contains('active'));
       expect(isVisible).toBe(true);
 
       await page.keyboard.press('Escape');
-      await page.waitForFunction(() => {
-        const dropdown = document.getElementById('promptDetailTagAutocomplete');
+      await page.waitForFunction((dropdownId) => {
+        const dropdown = document.getElementById(dropdownId);
         return !dropdown?.classList.contains('active');
-      }, { timeout: 5000 });
+      }, Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE, { timeout: 5000 });
       await page.screenshot({ path: 'test-results/esc/prompt-autocomplete-closed.png' });
 
       const isHidden = await autocompleteDropdown.evaluate((el: HTMLElement) => !el.classList.contains('active'));
       expect(isHidden).toBe(true);
 
-      const detailModal = page.locator('#promptDetailModal');
+      const detailModal = page.locator(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
       await expect(detailModal).toHaveClass(/active/);
     });
   });

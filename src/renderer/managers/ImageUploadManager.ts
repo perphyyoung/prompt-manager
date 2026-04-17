@@ -1,7 +1,7 @@
 import { DelaySaveStrategy } from '../services/index.ts';
 import { ImagePreviewManager } from './ImagePreviewManager.ts';
 import { DuplicatePreventionMixin } from '../../utils/index.ts';
-import { Events } from '../../constants.ts';
+import { Constants, Events } from '../../constants.ts';
 
 /**
  * App 类型定义
@@ -56,7 +56,7 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
     this.app = options.app;
     this.strategy = new DelaySaveStrategy(this.app as unknown as { eventBus: { emit: (event: string) => void }; [key: string]: unknown });
     this.previewManager = new ImagePreviewManager({
-      containerId: 'modalImagePreviewList',
+      containerId: Constants.Ids.MODAL_IMAGE_PREVIEW_LIST,
       onRemove: (index: number) => this.handleRemoveImage(index)
     });
     // 绑定事件委托（只需执行一次）
@@ -73,7 +73,7 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
    * 打开上传图像模态框
    */
   open(): void {
-    const modal = document.getElementById('imageUploadModal');
+    const modal = document.getElementById(Constants.Ids.IMAGE_UPLOAD_MODAL);
     if (modal) {
       modal.classList.add('active');
     }
@@ -83,7 +83,7 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
    * 关闭上传图像模态框
    */
   async close(): Promise<void> {
-    const modal = document.getElementById('imageUploadModal');
+    const modal = document.getElementById(Constants.Ids.IMAGE_UPLOAD_MODAL);
     if (modal) {
       modal.classList.remove('active');
     }
@@ -101,7 +101,7 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
    * 绑定模态框上传事件
    */
   bindModalUploadEvents(): void {
-    const modalUploadArea = document.getElementById('modalImageUploadArea');
+    const modalUploadArea = document.getElementById(Constants.Ids.MODAL_IMAGE_UPLOAD_AREA);
     if (!modalUploadArea) return;
 
     // 点击上传区域 - 选择多图
@@ -126,9 +126,9 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
    * 绑定模态框按钮事件
    */
   bindModalButtonEvents(): void {
-    const cancelBtn = document.getElementById('cancelImageUploadBtn');
-    const confirmBtn = document.getElementById('confirmImageUploadBtn');
-    const closeBtn = document.getElementById('closeImageUploadModal');
+    const cancelBtn = document.getElementById(Constants.Ids.CANCEL_IMAGE_UPLOAD_BTN);
+    const confirmBtn = document.getElementById(Constants.Ids.CONFIRM_IMAGE_UPLOAD_BTN);
+    const closeBtn = document.getElementById(Constants.Ids.CLOSE_IMAGE_UPLOAD_MODAL);
 
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => this.handleCancel());
@@ -207,7 +207,7 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
     }
 
     // 获取提示词内容
-    const promptTextarea = document.getElementById('uploadImagePrompt') as HTMLTextAreaElement | null;
+    const promptTextarea = document.getElementById(Constants.Ids.UPLOAD_IMAGE_PROMPT) as HTMLTextAreaElement | null;
     const promptContent = promptTextarea?.value?.trim();
 
     // 标记是否需要刷新提示词列表

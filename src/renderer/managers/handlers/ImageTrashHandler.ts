@@ -8,7 +8,7 @@ import type { CacheUpdateData, TrashItem } from './TrashHandler.ts';
  */
 export class ImageTrashHandler {
   readonly type: string = Constants.TrashType.IMAGE;
-  readonly containerId: string = 'imageTrashList';
+  readonly containerId: string = Constants.Ids.IMAGE_TRASH_LIST;
   readonly label: string = '图像';
   readonly eventName: string = Events.IMAGES_CHANGED;
 

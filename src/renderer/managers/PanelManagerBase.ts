@@ -1305,7 +1305,7 @@ export abstract class PanelManagerBase {
    * 根据是否有选中项在容器上添加/移除 selection-mode 类
    */
   protected updateSelectionModeClass(): void {
-    const containerIds = ['imageGrid', 'promptGrid', 'imageList', 'promptList'];
+    const containerIds = [Constants.Ids.IMAGE_GRID, Constants.Ids.PROMPT_GRID, Constants.Ids.IMAGE_LIST, Constants.Ids.PROMPT_LIST];
 
     containerIds.forEach(id => {
       const container = document.getElementById(id);

@@ -1,6 +1,7 @@
 /**
  * 批量操作工具栏组件
- * 统一处理批量工具栏的创建、显示、隐藏和ESC关闭
+ * 统一处理批量工具栏的显示、隐藏和ESC关闭
+ * 使用 HTML 中已存在的元素，不创建新元素
  */
 
 import { contextStack, IContextStackEntry } from '../managers/ContextStackManager.ts';
@@ -32,6 +33,7 @@ export class BatchToolbar {
   private onClose?: () => void;
   private element: IClosableElement | null = null;
   private isVisible: boolean = false;
+  private isEventBound: boolean = false;
 
   constructor(options: IBatchToolbarOptions) {
     this.config = options.config;
@@ -41,21 +43,26 @@ export class BatchToolbar {
 
   /**
    * 显示工具栏
+   * 使用 HTML 中已存在的元素，不存在则报错
    */
   show(count: number = 0): void {
     if (this.isVisible) {
-      // 已经显示，只更新计数
       this.updateCount(count);
       return;
     }
 
+    // 获取已存在的元素
+    this.element = document.getElementById(this.config.id) as IClosableElement;
+
     if (!this.element) {
-      this.element = this.createElement();
-      document.body.appendChild(this.element);
+      throw new Error(`BatchToolbar element with id "${this.config.id}" not found in HTML`);
     }
 
-    // 强制重绘以确保动画生效
-    void this.element.offsetHeight;
+    // 绑定按钮事件（只绑定一次）
+    if (!this.isEventBound) {
+      this.bindButtonEvents();
+      this.isEventBound = true;
+    }
 
     this.element.classList.add('visible');
     this.isVisible = true;
@@ -66,11 +73,9 @@ export class BatchToolbar {
     // 附加 ctrla 方法用于 Ctrl+A 处理
     (this.element as HTMLElement & { ctrla: () => boolean }).ctrla = () => {
       this.handleSelectAll();
-      // 返回 true 表示已处理
       return true;
     };
 
-    // 更新计数显示
     this.updateCount(count);
 
     // 压栈：进入批量模式上下文
@@ -84,9 +89,8 @@ export class BatchToolbar {
 
   /**
    * 隐藏工具栏
-   * @param triggerCancel 是否触发取消回调，默认为 true。当因选择为空自动隐藏时应设为 false
    */
-  hide(triggerCancel: boolean = true): void {
+  hide(): void {
     if (!this.isVisible || !this.element) return;
 
     this.element.classList.remove('visible');
@@ -95,18 +99,8 @@ export class BatchToolbar {
     // 出栈：退出批量模式上下文
     contextStack.pop(this.config.id as ElementId);
 
-    // 延迟移除 DOM 元素
-    setTimeout(() => {
-      if (!this.isVisible && this.element) {
-        this.element.remove();
-        this.element = null;
-      }
-    }, 300);
-
-    // 调用关闭回调（仅在用户主动关闭时）
-    if (triggerCancel) {
-      this.onClose?.();
-    }
+    // 调用关闭回调
+    this.onClose?.();
   }
 
   /**
@@ -115,9 +109,17 @@ export class BatchToolbar {
   updateCount(count: number): void {
     if (!this.element) return;
 
+    // 支持两种计数元素选择器
+    // 1. 主面板工具栏: .batch-toolbar-count
+    // 2. 详情页工具栏: .batch-tag-count span
     const countSpan = this.element.querySelector('.batch-toolbar-count');
     if (countSpan) {
       countSpan.textContent = `已选择 ${count} 个${this.config.label}`;
+    }
+
+    const batchTagCountSpan = this.element.querySelector('.batch-tag-count span');
+    if (batchTagCountSpan) {
+      batchTagCountSpan.textContent = count.toString();
     }
   }
 
@@ -129,10 +131,28 @@ export class BatchToolbar {
   }
 
   /**
+   * 绑定按钮事件
+   */
+  private bindButtonEvents(): void {
+    if (!this.element) return;
+
+    // 使用事件委托绑定按钮点击
+    this.element.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const button = target.closest('.batch-action-btn') as HTMLElement;
+      if (button) {
+        const action = button.dataset.action;
+        if (action) {
+          this.onAction(action);
+        }
+      }
+    });
+  }
+
+  /**
    * 处理全选操作
    */
   private handleSelectAll(): void {
-    // 触发 SelectAll 动作
     this.onAction('SelectAll');
   }
 
@@ -141,51 +161,7 @@ export class BatchToolbar {
    */
   destroy(): void {
     this.hide();
-    if (this.element) {
-      this.element.remove();
-      this.element = null;
-    }
-  }
-
-  /**
-   * 创建工具栏 DOM 元素
-   */
-  private createElement(): HTMLElement {
-    const toolbar = document.createElement('div');
-    toolbar.className = 'batch-toolbar';
-    toolbar.id = this.config.id;
-
-    const buttonsHtml = this.config.buttons.map(btn => `
-      <button
-        type="button"
-        class="batch-action-btn ${btn.className || ''}"
-        data-action="${btn.action}"
-        title="${btn.title || btn.text}"
-      >
-        ${btn.text}
-      </button>
-    `).join('');
-
-    toolbar.innerHTML = `
-      <div class="batch-toolbar-content">
-        <span class="batch-toolbar-count">已选择 0 个${this.config.label}</span>
-        <div class="batch-toolbar-actions">
-          ${buttonsHtml}
-        </div>
-      </div>
-    `;
-
-    // 绑定按钮事件
-    toolbar.querySelectorAll('.batch-action-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const target = e.currentTarget as HTMLElement;
-        const action = target.dataset.action;
-        if (action) {
-          this.onAction(action);
-        }
-      });
-    });
-
-    return toolbar;
+    this.element = null;
+    this.isEventBound = false;
   }
 }

@@ -100,8 +100,8 @@ export class PromptPanelManager extends PanelManagerBase {
       cardSelector: '.prompt-card',
       listItemSelector: '.list-item--prompt',
       cardBgSelector: '.prompt-card-bg, .card__bg',
-      gridContainerId: 'promptGrid',
-      listContainerId: 'promptList',
+      gridContainerId: Constants.Ids.PROMPT_GRID,
+      listContainerId: Constants.Ids.PROMPT_LIST,
       dragSource: 'prompt-tag',
       getCardDropSelector: () => '.prompt-card, .list-item--prompt',
 
@@ -222,24 +222,24 @@ export class PromptPanelManager extends PanelManagerBase {
   async renderContainer(filtered: IPrompt[]): Promise<void> {
     this.filteredPrompts = filtered;
 
-    const container = document.getElementById('promptGrid');
-    const listContainer = document.getElementById('promptList');
+    const container = document.getElementById(Constants.Ids.PROMPT_GRID);
+    const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
     const currentSearchQuery = this.getSearchQuery();
 
     if (filtered.length === 0) {
       if (currentSearchQuery) {
-        PanelRenderer.showEmptyState('promptGrid', 'promptEmptyState', `未找到匹配"${currentSearchQuery}"的提示词`, '搜索无结果');
+        PanelRenderer.showEmptyState(Constants.Ids.PROMPT_GRID, Constants.Ids.PROMPT_EMPTY_STATE, `未找到匹配"${currentSearchQuery}"的提示词`, '搜索无结果');
       } else if (this.selectedTags.size > 0) {
         const selectedTagNames = Array.from(this.selectedTags).join(', ');
-        PanelRenderer.showEmptyState('promptGrid', 'promptEmptyState', `没有符合标签"${selectedTagNames}"的提示词`, '筛选无结果');
+        PanelRenderer.showEmptyState(Constants.Ids.PROMPT_GRID, Constants.Ids.PROMPT_EMPTY_STATE, `没有符合标签"${selectedTagNames}"的提示词`, '筛选无结果');
       } else {
-        PanelRenderer.showEmptyState('promptGrid', 'promptEmptyState', '暂无提示词');
+        PanelRenderer.showEmptyState(Constants.Ids.PROMPT_GRID, Constants.Ids.PROMPT_EMPTY_STATE, '暂无提示词');
       }
       if (listContainer) listContainer.style.display = 'none';
       return;
     }
 
-    PanelRenderer.hideEmptyState('promptGrid', 'promptEmptyState');
+    PanelRenderer.hideEmptyState(Constants.Ids.PROMPT_GRID, Constants.Ids.PROMPT_EMPTY_STATE);
 
     // 根据视图模式渲染
     if (this.viewModeType === 'grid') {
@@ -247,7 +247,7 @@ export class PromptPanelManager extends PanelManagerBase {
       if (listContainer) listContainer.style.display = 'none';
 
       // 渲染网格视图
-      PanelRenderer.renderGrid(filtered, (prompt) => this.createCard(prompt as IPrompt), 'promptGrid');
+      PanelRenderer.renderGrid(filtered, (prompt) => this.createCard(prompt as IPrompt), Constants.Ids.PROMPT_GRID);
       this.bindItemEvents(filtered);
       this.bindCardButtonEvents(filtered);
       this.loadCardBackgrounds();
@@ -280,7 +280,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 渲染提示词列表视图（实现基类抽象方法）
    */
   async renderListView(filtered: IPrompt[]): Promise<void> {
-    const listContainer = document.getElementById('promptList');
+    const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
     if (!listContainer) return;
 
     const isCompact = this.viewModeType === 'list-compact';
@@ -312,7 +312,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 异步加载提示词列表缩略图
    */
   async loadPromptListThumbnails(filtered: IPrompt[]): Promise<void> {
-    const listContainer = document.getElementById('promptList');
+    const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
     if (!listContainer) return;
 
     const allImages = await window.electronAPI.getImages('updatedAt', 'desc');
@@ -596,9 +596,9 @@ export class PromptPanelManager extends PanelManagerBase {
    */
   protected getCurrentContainer(): HTMLElement | null {
     if (this.viewModeType === 'grid') {
-      return document.getElementById('promptGrid');
+      return document.getElementById(Constants.Ids.PROMPT_GRID);
     } else {
-      return document.getElementById('promptList');
+      return document.getElementById(Constants.Ids.PROMPT_LIST);
     }
   }
 

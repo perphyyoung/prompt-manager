@@ -50,7 +50,7 @@ test.describe('图像详情界面数据库字段读取', () => {
     expect(dbImage).toBeTruthy();
 
     // 验证文件名输入框显示正确
-    const fileNameInput = page.locator('#imageDetailFileName');
+    const fileNameInput = page.locator(`#${Constants.Ids.IMAGE_DETAIL_FILE_NAME}`);
     await expect(fileNameInput).toBeVisible();
     const displayedFileName = await fileNameInput.inputValue();
     expect(displayedFileName).toBe(dbImage!.fileName);
@@ -67,7 +67,7 @@ test.describe('图像详情界面数据库字段读取', () => {
     expect(dbImage).toBeTruthy();
 
     // 验证文件大小显示正确
-    const fileSizeEl = page.locator('#imageDetailFileSize');
+    const fileSizeEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_FILE_SIZE}`);
     await expect(fileSizeEl).toBeVisible();
     const displayedFileSize = await fileSizeEl.textContent();
 
@@ -91,7 +91,7 @@ test.describe('图像详情界面数据库字段读取', () => {
     expect(dbImage).toBeTruthy();
 
     // 验证图像尺寸显示正确
-    const dimensionsEl = page.locator('#imageDetailDimensions');
+    const dimensionsEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_DIMENSIONS}`);
     await expect(dimensionsEl).toBeVisible();
     const displayedDimensions = await dimensionsEl.textContent();
 
@@ -116,7 +116,7 @@ test.describe('图像详情界面数据库字段读取', () => {
     expect(dbImage).toBeTruthy();
 
     // 验证上传时间显示正确
-    const createdAtEl = page.locator('#imageDetailCreatedAt');
+    const createdAtEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_CREATED_AT}`);
     await expect(createdAtEl).toBeVisible();
     const displayedCreatedAt = await createdAtEl.textContent();
 
@@ -140,7 +140,7 @@ test.describe('图像详情界面数据库字段读取', () => {
     expect(dbImage).toBeTruthy();
 
     // 验证更新时间显示正确
-    const updatedAtEl = page.locator('#imageDetailUpdatedAt');
+    const updatedAtEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_UPDATED_AT}`);
     await expect(updatedAtEl).toBeVisible();
     const displayedUpdatedAt = await updatedAtEl.textContent();
 
@@ -164,7 +164,7 @@ test.describe('图像详情界面数据库字段读取', () => {
     expect(dbImage).toBeTruthy();
 
     // 验证备注输入框显示正确
-    const noteInput = page.locator('#imageDetailNote');
+    const noteInput = page.locator(`#${Constants.Ids.IMAGE_DETAIL_NOTE}`);
     await expect(noteInput).toBeVisible();
     const displayedNote = await noteInput.inputValue();
 
@@ -234,23 +234,23 @@ test.describe('图像详情界面数据库字段读取', () => {
     expect(dbImage).toBeTruthy();
 
     // 验证提示词标题区域
-    const promptTitleEl = page.locator('#imageDetailPromptTitle');
+    const promptTitleEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_PROMPT_TITLE}`);
     await expect(promptTitleEl).toBeVisible();
 
     // 验证提示词内容区域
-    const promptContentEl = page.locator('#imageDetailPromptContent');
+    const promptContentEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_PROMPT_CONTENT}`);
     await expect(promptContentEl).toBeVisible();
 
     // 验证提示词翻译区域
-    const promptTranslateEl = page.locator('#imageDetailPromptTranslate');
+    const promptTranslateEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_PROMPT_TRANSLATE}`);
     await expect(promptTranslateEl).toBeVisible();
 
     // 验证提示词备注区域
-    const promptNoteEl = page.locator('#imageDetailPromptNote');
+    const promptNoteEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_PROMPT_NOTE}`);
     await expect(promptNoteEl).toBeVisible();
 
     // 验证提示词标签区域
-    const promptTagsEl = page.locator('#imageDetailTags');
+    const promptTagsEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAGS}`);
     await expect(promptTagsEl).toBeVisible();
 
     // 如果有关联提示词，验证信息显示
@@ -292,7 +292,7 @@ test.describe('图像详情界面数据库字段读取', () => {
     expect(dbImage).toBeTruthy();
 
     // 验证图像元素存在
-    const imgEl = page.locator('#imageDetailImg');
+    const imgEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_IMG}`);
     await expect(imgEl).toBeVisible();
 
     // 验证图像 src 不为空

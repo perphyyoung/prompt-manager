@@ -3,6 +3,8 @@
  * 负责管理提示消息的显示和隐藏
  */
 
+import { Constants } from '../../constants';
+
 interface ToastOptions {
   duration?: number;
   containerId?: string;
@@ -26,8 +28,8 @@ export class ToastManager {
 
   constructor(options: ToastOptions = {}) {
     this.duration = options.duration ?? 3000;
-    this.containerId = options.containerId ?? 'toast';
-    this.messageId = options.messageId ?? 'toastMessage';
+    this.containerId = options.containerId ?? Constants.Ids.TOAST_CONTAINER;
+    this.messageId = options.messageId ?? Constants.Ids.TOAST_MESSAGE;
   }
 
   /**

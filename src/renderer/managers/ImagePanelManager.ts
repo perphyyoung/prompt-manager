@@ -120,8 +120,8 @@ export class ImagePanelManager extends PanelManagerBase {
       cardSelector: '.image-card',
       listItemSelector: '.list-item--image',
       cardBgSelector: '.image-card-bg, .card__bg',
-      gridContainerId: 'imageGrid',
-      listContainerId: 'imageList',
+      gridContainerId: Constants.Ids.IMAGE_GRID,
+      listContainerId: Constants.Ids.IMAGE_LIST,
       dragSource: 'image-tag',
       getCardDropSelector: () => '.image-card',
 
@@ -231,24 +231,24 @@ export class ImagePanelManager extends PanelManagerBase {
   async renderContainer(filtered: IImage[]): Promise<void> {
     this.filteredImages = filtered;
 
-    const container = document.getElementById('imageGrid');
-    const listContainer = document.getElementById('imageList');
+    const container = document.getElementById(Constants.Ids.IMAGE_GRID);
+    const listContainer = document.getElementById(Constants.Ids.IMAGE_LIST);
     const currentSearchQuery = this.getSearchQuery();
 
     if (filtered.length === 0) {
       if (currentSearchQuery) {
-        PanelRenderer.showEmptyState('imageGrid', 'imageEmptyState', `未找到匹配"${currentSearchQuery}"的图像`, '搜索无结果');
+        PanelRenderer.showEmptyState(Constants.Ids.IMAGE_GRID, Constants.Ids.IMAGE_EMPTY_STATE, `未找到匹配"${currentSearchQuery}"的图像`, '搜索无结果');
       } else if (this.selectedTags.size > 0) {
         const selectedTagNames = Array.from(this.selectedTags).join(', ');
-        PanelRenderer.showEmptyState('imageGrid', 'imageEmptyState', `没有符合标签"${selectedTagNames}"的图像`, '筛选无结果');
+        PanelRenderer.showEmptyState(Constants.Ids.IMAGE_GRID, Constants.Ids.IMAGE_EMPTY_STATE, `没有符合标签"${selectedTagNames}"的图像`, '筛选无结果');
       } else {
-        PanelRenderer.showEmptyState('imageGrid', 'imageEmptyState', '暂无图像');
+        PanelRenderer.showEmptyState(Constants.Ids.IMAGE_GRID, Constants.Ids.IMAGE_EMPTY_STATE, '暂无图像');
       }
       if (listContainer) listContainer.style.display = 'none';
       return;
     }
 
-    PanelRenderer.hideEmptyState('imageGrid', 'imageEmptyState');
+    PanelRenderer.hideEmptyState(Constants.Ids.IMAGE_GRID, Constants.Ids.IMAGE_EMPTY_STATE);
 
     // 根据视图模式渲染
     if (this.viewModeType === 'grid') {
@@ -256,7 +256,7 @@ export class ImagePanelManager extends PanelManagerBase {
       if (listContainer) listContainer.style.display = 'none';
 
       // 渲染网格视图
-      PanelRenderer.renderGrid(filtered, (img) => this.createCard(img as IImage), 'imageGrid');
+      PanelRenderer.renderGrid(filtered, (img) => this.createCard(img as IImage), Constants.Ids.IMAGE_GRID);
       this.bindItemEvents(filtered);
       this.bindCardButtonEvents(filtered);
       this.loadCardBackgrounds();
@@ -289,7 +289,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 异步加载卡片背景图（实现基类抽象方法）
    */
   async loadCardBackgrounds(): Promise<void> {
-    const container = document.getElementById('imageGrid');
+    const container = document.getElementById(Constants.Ids.IMAGE_GRID);
     if (!container) return;
 
     const cards = container.querySelectorAll('.image-card');
@@ -317,7 +317,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 渲染图像列表视图（实现基类抽象方法）
    */
   async renderListView(filtered: IImage[]): Promise<void> {
-    const listContainer = document.getElementById('imageList');
+    const listContainer = document.getElementById(Constants.Ids.IMAGE_LIST);
     if (!listContainer) return;
 
     const isCompact = this.viewModeType === 'list-compact';
@@ -346,7 +346,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 异步加载列表视图缩略图
    */
   async loadImageListThumbnails(): Promise<void> {
-    const listContainer = document.getElementById('imageList');
+    const listContainer = document.getElementById(Constants.Ids.IMAGE_LIST);
     if (!listContainer) return;
 
     const items = listContainer.querySelectorAll('.list-item--image');
@@ -614,9 +614,9 @@ export class ImagePanelManager extends PanelManagerBase {
    */
   protected getCurrentContainer(): HTMLElement | null {
     if (this.viewModeType === 'grid') {
-      return document.getElementById('imageGrid');
+      return document.getElementById(Constants.Ids.IMAGE_GRID);
     } else {
-      return document.getElementById('imageList');
+      return document.getElementById(Constants.Ids.IMAGE_LIST);
     }
   }
 

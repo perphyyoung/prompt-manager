@@ -181,6 +181,30 @@ export class Constants {
     PROMPT_PANEL: 'promptPanel',
     IMAGE_PANEL: 'imagePanel',
 
+    // 侧边栏
+    SIDEBAR: 'sidebar',
+    TOGGLE_SIDEBAR_BTN: 'toggleSidebarBtn',
+
+    // 设置按钮
+    SETTINGS_BTN: 'settingsBtn',
+
+    // 提示词搜索和工具栏
+    PROMPT_SEARCH_INPUT: 'promptSearchInput',
+    CLEAR_PROMPT_SEARCH_BTN: 'clearPromptSearchBtn',
+    PROMPT_TRASH_BTN: 'promptTrashBtn',
+    PROMPT_SORT_SELECT: 'promptSortSelect',
+    PROMPT_SORT_REVERSE_BTN: 'promptSortReverseBtn',
+    PROMPT_CARD_SIZE_SLIDER: 'promptCardSizeSlider',
+
+    // 提示词标签筛选区
+    PROMPT_TAG_FILTER_CONTENT: 'promptTagFilterContent',
+    PROMPT_TAG_FILTER_DIVIDER: 'promptTagFilterDivider',
+
+    // 提示词视图容器
+    PROMPT_GRID: 'promptGrid',
+    PROMPT_LIST: 'promptList',
+    PROMPT_EMPTY_STATE: 'promptEmptyState',
+
     // 提示词详情
     PROMPT_DETAIL_MODAL: 'promptDetailModal',
     PROMPT_DETAIL_BATCH_TOOLBAR: 'promptDetailBatchToolbar',
@@ -208,22 +232,35 @@ export class Constants {
     PROMPT_MAIN_BATCH_TOOLBAR: 'promptMainBatchToolbar',
     IMAGE_MAIN_BATCH_TOOLBAR: 'imageMainBatchToolbar',
 
+    // 主面板批量操作按钮
+    PROMPT_BATCH_SELECT_ALL_BTN: 'promptBatchSelectAllBtn',
+    PROMPT_BATCH_INVERT_BTN: 'promptBatchInvertBtn',
+    PROMPT_BATCH_ADD_TAG_BTN: 'promptBatchAddTagBtn',
+    PROMPT_BATCH_FAVORITE_BTN: 'promptBatchFavoriteBtn',
+    PROMPT_BATCH_DELETE_BTN: 'promptBatchDeleteBtn',
+    PROMPT_BATCH_CANCEL_BTN: 'promptBatchCancelBtn',
+    IMAGE_BATCH_SELECT_ALL_BTN: 'imageBatchSelectAllBtn',
+    IMAGE_BATCH_INVERT_BTN: 'imageBatchInvertBtn',
+    IMAGE_BATCH_ADD_TAG_BTN: 'imageBatchAddTagBtn',
+    IMAGE_BATCH_FAVORITE_BTN: 'imageBatchFavoriteBtn',
+    IMAGE_BATCH_DELETE_BTN: 'imageBatchDeleteBtn',
+    IMAGE_BATCH_CANCEL_BTN: 'imageBatchCancelBtn',
+
     // 标签管理器批量工具栏
     PROMPT_TAG_BATCH_TOOLBAR: 'promptTagBatchToolbar',
     IMAGE_TAG_BATCH_TOOLBAR: 'imageTagBatchToolbar',
 
     // 下拉菜单和对话框（用于 ESC 处理）
     DROPDOWN: 'dropdown',
-    CONFIRM_DIALOG: 'confirmModal',
-    INPUT_DIALOG: 'inputModal',
-    SELECT_DIALOG: 'selectModal',
+    CONFIRM_MODAL: 'confirmModal',
+    INPUT_MODAL: 'inputModal',
 
     // 选择对话框
     SELECT_MODAL: 'selectModal',
     SELECT_MODAL_FIELD: 'selectModalField',
     SELECT_MODAL_TITLE: 'selectModalTitle',
-    SELECT_MODAL_OK_BTN: 'selectOkBtn',
-    SELECT_MODAL_CANCEL_BTN: 'selectCancelBtn',
+    SELECT_OK_BTN: 'selectOkBtn',
+    SELECT_CANCEL_BTN: 'selectCancelBtn',
     CLOSE_SELECT_MODAL: 'closeSelectModal',
 
     // 标签自动完成下拉框
@@ -299,7 +336,6 @@ export class Constants {
     PROMPT_TAG_FILTER_ORDER_BTN: 'promptTagFilterOrderBtn',
 
     // 输入对话框
-    INPUT_MODAL: 'inputModal',
     INPUT_MODAL_TITLE: 'inputModalTitle',
     INPUT_MODAL_LABEL: 'inputModalLabel',
     INPUT_MODAL_FIELD: 'inputModalField',
@@ -318,19 +354,74 @@ export class Constants {
     SAVE_PROMPT_TAG_GROUP_BTN: 'savePromptTagGroupBtn',
 
     // 确认对话框
-    CONFIRM_MODAL: 'confirmModal',
     CONFIRM_MODAL_TITLE: 'confirmModalTitle',
     CONFIRM_MODAL_MESSAGE: 'confirmModalMessage',
     CONFIRM_OK_BTN: 'confirmOkBtn',
     CONFIRM_CANCEL_BTN: 'confirmCancelBtn',
     CLOSE_CONFIRM_MODAL: 'closeConfirmModal',
 
+    // 数据迁移对话框
+    MIGRATE_MODAL: 'migrateModal',
+    MIGRATE_MODAL_TITLE: 'migrateModalTitle',
+    MIGRATE_OLD_PATH: 'migrateOldPath',
+    MIGRATE_NEW_PATH: 'migrateNewPath',
+    MIGRATE_CANCEL_BTN: 'migrateCancelBtn',
+    CLOSE_MIGRATE_MODAL: 'closeMigrateModal',
+
+    // 选择对话框
+    SELECT_MODAL_LABEL: 'selectModalLabel',
+
     // Toast 容器
     TOAST_CONTAINER: 'toastContainer',
+    TOAST_MESSAGE: 'toastMessage',
+
+    // 提示词预览 Tooltip
+    PROMPT_PREVIEW_TOOLTIP: 'promptPreviewTooltip',
+    PROMPT_PREVIEW_CONTENT: 'promptPreviewContent',
+    PROMPT_PREVIEW_IMAGE: 'promptPreviewImage',
+
+    // 进度对话框
+    PROGRESS_DIALOG: 'progressDialog',
+    PROGRESS_DIALOG_TITLE: 'progressDialogTitle',
+    CLOSE_PROGRESS_DIALOG: 'closeProgressDialog',
+    PROGRESS_BAR: 'progressBar',
+    PROGRESS_FILL: 'progressFill',
+    PROGRESS_PERCENT: 'progressPercent',
+    PROGRESS_STATUS: 'progressStatus',
+    PROGRESS_DETAIL: 'progressDetail',
+    PROGRESS_TIME: 'progressTime',
+    PROGRESS_ACTIONS: 'progressActions',
+    CANCEL_PROGRESS_BTN: 'cancelProgressBtn',
+    CLOSE_PROGRESS_BTN: 'closeProgressBtn',
 
     // 标签管理器空状态
     IMAGE_TAG_MANAGER_EMPTY: 'imageTagManagerEmpty',
     PROMPT_TAG_MANAGER_EMPTY: 'promptTagManagerEmpty',
+
+    // 标签管理器工具栏
+    PROMPT_TAG_MANAGER_TOOLBAR: 'promptTagManagerToolbar',
+    IMAGE_TAG_MANAGER_TOOLBAR: 'imageTagManagerToolbar',
+
+    // 同步标签按钮
+    SYNC_PROMPT_TAGS_BTN: 'syncPromptTagsBtn',
+    SYNC_IMAGE_TAGS_BTN: 'syncImageTagsBtn',
+
+    // 统计模态框关闭按钮
+    CLOSE_STATISTICS_MODAL: 'closeStatisticsModal',
+
+    // 统计元素 ID
+    STAT_PROMPTS_TOTAL: 'statPromptsTotal',
+    STAT_PROMPTS_DELETED: 'statPromptsDeleted',
+    STAT_PROMPTS_FAVORITE: 'statPromptsFavorite',
+    STAT_PROMPTS_WITH_IMAGES: 'statPromptsWithImages',
+    STAT_PROMPT_TAG_GROUPS: 'statPromptTagGroups',
+    STAT_PROMPT_TAGS_TOTAL: 'statPromptTagsTotal',
+    STAT_IMAGES_TOTAL: 'statImagesTotal',
+    STAT_IMAGES_DELETED: 'statImagesDeleted',
+    STAT_IMAGES_FAVORITE: 'statImagesFavorite',
+    STAT_IMAGES_REFERENCED: 'statImagesReferenced',
+    STAT_IMAGE_TAG_GROUPS: 'statImageTagGroups',
+    STAT_IMAGE_TAGS_TOTAL: 'statImageTagsTotal',
 
     // 标签组编辑模态框关闭按钮
     CLOSE_IMAGE_TAG_GROUP_EDIT_MODAL: 'closeImageTagGroupEditModal',
@@ -370,7 +461,176 @@ export class Constants {
 
     // 标签筛选区头部标签容器（收起时显示）
     PROMPT_TAG_FILTER_HEADER_TAGS: 'promptTagFilterHeaderTags',
-    IMAGE_TAG_FILTER_HEADER_TAGS: 'imageTagFilterHeaderTags'
+    IMAGE_TAG_FILTER_HEADER_TAGS: 'imageTagFilterHeaderTags',
+
+    // 全屏图像查看器
+    IMAGE_FULLSCREEN_VIEWER_CLOSE: 'imageFullscreenViewerClose',
+    IMAGE_FULLSCREEN_VIEWER_FIRST_NAV_BTN: 'imageFullscreenViewerFirstNavBtn',
+    IMAGE_FULLSCREEN_VIEWER_PREV_NAV_BTN: 'imageFullscreenViewerPrevNavBtn',
+    IMAGE_FULLSCREEN_VIEWER_NEXT_NAV_BTN: 'imageFullscreenViewerNextNavBtn',
+    IMAGE_FULLSCREEN_VIEWER_LAST_NAV_BTN: 'imageFullscreenViewerLastNavBtn',
+    IMAGE_FULLSCREEN_VIEWER_INFO: 'imageFullscreenViewerInfo',
+    IMAGE_FULLSCREEN_VIEWER_FILE_NAME: 'imageFullscreenViewerFileName',
+    IMAGE_FULLSCREEN_VIEWER_COUNTER: 'imageFullscreenViewerCounter',
+    IMAGE_FULLSCREEN_VIEWER_HINT: 'imageFullscreenViewerHint',
+    IMAGE_FULLSCREEN_VIEWER_WRAPPER: 'imageFullscreenViewerWrapper',
+    IMAGE_FULLSCREEN_VIEWER_IMG: 'imageFullscreenViewerImg',
+    IMAGE_FULLSCREEN_VIEWER_CLICK_LEFT: 'imageFullscreenViewerClickLeft',
+    IMAGE_FULLSCREEN_VIEWER_CLICK_RIGHT: 'imageFullscreenViewerClickRight',
+
+    // 新建提示词页面
+    NEW_PROMPT_PAGE: 'newPromptPage',
+    CLOSE_NEW_PROMPT_PAGE: 'closeNewPromptPage',
+    NEW_PROMPT_ID: 'newPromptId',
+    NEW_PROMPT_CONTENT: 'newPromptContent',
+    NEW_PROMPT_IMAGE_PREVIEW_LIST: 'newPromptImagePreviewList',
+    NEW_PROMPT_IMAGE_UPLOAD_AREA: 'newPromptImageUploadArea',
+    NEW_PROMPT_IMAGE_INPUT: 'newPromptImageInput',
+    NEW_PROMPT_CANCEL_BTN: 'newPromptCancelBtn',
+    NEW_PROMPT_DONE_BTN: 'newPromptDoneBtn',
+
+    // 图像详情 Modal
+    EDIT_PROMPT_FROM_IMAGE_BTN: 'editPromptFromImageBtn',
+    EDIT_PROMPT_BTN_TEXT: 'editPromptBtnText',
+    IMAGE_DETAIL_PROMPT_TITLE: 'imageDetailPromptTitle',
+    IMAGE_DETAIL_PROMPT_CONTENT: 'imageDetailPromptContent',
+    IMAGE_DETAIL_PROMPT_TRANSLATE: 'imageDetailPromptTranslate',
+    IMAGE_DETAIL_PROMPT_NOTE: 'imageDetailPromptNote',
+    IMAGE_DETAIL_TAGS: 'imageDetailTags',
+    IMAGE_DETAIL_IMG: 'imageDetailImg',
+    IMAGE_DETAIL_FIRST_NAV_BTN: 'imageDetailFirstNavBtn',
+    IMAGE_DETAIL_PREV_NAV_BTN: 'imageDetailPrevNavBtn',
+    IMAGE_DETAIL_NEXT_NAV_BTN: 'imageDetailNextNavBtn',
+    IMAGE_DETAIL_LAST_NAV_BTN: 'imageDetailLastNavBtn',
+    IMAGE_DETAIL_COUNTER: 'imageDetailCounter',
+    IMAGE_DETAIL_FAVORITE_BTN: 'imageDetailFavoriteBtn',
+    IMAGE_DETAIL_SAFE_TOGGLE: 'imageDetailSafeToggle',
+    IMAGE_DETAIL_CLOSE_BTN: 'imageDetailCloseBtn',
+    IMAGE_DETAIL_FILE_NAME: 'imageDetailFileName',
+    IMAGE_DETAIL_FILE_NAME_STATUS: 'imageDetailFileNameStatus',
+    IMAGE_DETAIL_BATCH_TAG_TOOLBAR: 'imageDetailBatchTagToolbar',
+    IMAGE_DETAIL_BATCH_TAG_COUNT: 'imageDetailBatchTagCount',
+    IMAGE_DETAIL_BATCH_TAG_DELETE_BTN: 'imageDetailBatchTagDeleteBtn',
+    IMAGE_DETAIL_BATCH_TAG_CANCEL_BTN: 'imageDetailBatchTagCancelBtn',
+    IMAGE_DETAIL_BATCH_TAG_BTN: 'imageDetailBatchTagBtn',
+    IMAGE_DETAIL_TAG_INPUT_AREA: 'imageDetailTagInputArea',
+    IMAGE_DETAIL_NOTE: 'imageDetailNote',
+    IMAGE_DETAIL_NOTE_STATUS: 'imageDetailNoteStatus',
+    IMAGE_DETAIL_UPDATED_AT: 'imageDetailUpdatedAt',
+    IMAGE_DETAIL_CREATED_AT: 'imageDetailCreatedAt',
+    IMAGE_DETAIL_DIMENSIONS: 'imageDetailDimensions',
+    IMAGE_DETAIL_FILE_SIZE: 'imageDetailFileSize',
+
+    // 图像面板相关
+    IMAGE_SEARCH_INPUT: 'imageSearchInput',
+    CLEAR_IMAGE_SEARCH_BTN: 'clearImageSearchBtn',
+    IMAGE_TRASH_BTN: 'imageTrashBtn',
+    IMAGE_SORT_SELECT: 'imageSortSelect',
+    IMAGE_SORT_REVERSE_BTN: 'imageSortReverseBtn',
+    IMAGE_CARD_SIZE_SLIDER: 'imageCardSizeSlider',
+    IMAGE_TAG_FILTER_CONTENT: 'imageTagFilterContent',
+    IMAGE_GRID: 'imageGrid',
+    IMAGE_LIST: 'imageList',
+    IMAGE_PROMPT_TOOLTIP: 'imagePromptTooltip',
+    IMAGE_PROMPT_TOOLTIP_CONTENT: 'imagePromptTooltipContent',
+    IMAGE_EMPTY_STATE: 'imageEmptyState',
+
+    // 提示词详情模态框相关
+    PROMPT_DETAIL_ID: 'promptDetailId',
+    PROMPT_DETAIL_CLOSE_BTN: 'promptDetailCloseBtn',
+    PROMPT_DETAIL_TITLE: 'promptDetailTitle',
+    PROMPT_DETAIL_TITLE_STATUS: 'promptDetailTitleStatus',
+    PROMPT_DETAIL_CONTENT: 'promptDetailContent',
+    PROMPT_DETAIL_CONTENT_STATUS: 'promptDetailContentStatus',
+    PROMPT_DETAIL_TRANSLATE: 'promptDetailTranslate',
+    PROMPT_DETAIL_TRANSLATE_STATUS: 'promptDetailTranslateStatus',
+    PROMPT_DETAIL_BATCH_TAG_TOOLBAR: 'promptDetailBatchTagToolbar',
+    PROMPT_DETAIL_BATCH_TAG_COUNT: 'promptDetailBatchTagCount',
+    PROMPT_DETAIL_BATCH_TAG_DELETE_BTN: 'promptDetailBatchTagDeleteBtn',
+    PROMPT_DETAIL_BATCH_TAG_CANCEL_BTN: 'promptDetailBatchTagCancelBtn',
+    PROMPT_DETAIL_BATCH_TAG_BTN: 'promptDetailBatchTagBtn',
+    PROMPT_DETAIL_TAG_INPUT_AREA: 'promptDetailTagInputArea',
+    PROMPT_DETAIL_NOTE: 'promptDetailNote',
+    PROMPT_DETAIL_NOTE_STATUS: 'promptDetailNoteStatus',
+    PROMPT_DETAIL_FIRST_NAV_BTN: 'promptDetailFirstNavBtn',
+    PROMPT_DETAIL_PREV_NAV_BTN: 'promptDetailPrevNavBtn',
+    PROMPT_DETAIL_NEXT_NAV_BTN: 'promptDetailNextNavBtn',
+    PROMPT_DETAIL_LAST_NAV_BTN: 'promptDetailLastNavBtn',
+
+    // 图像详情相关
+    IMAGE_PREVIEW_LIST: 'imagePreviewList',
+    IMAGE_UPLOAD_AREA: 'imageUploadArea',
+    IMAGE_INPUT: 'imageInput',
+    IMAGE_DETAIL_INFO_LIST: 'imageDetailInfoList',
+
+    // 提示词详情按钮
+    PROMPT_DETAIL_SELECT_FROM_IMAGE_MANAGER_BTN: 'promptDetailSelectFromImageManagerBtn',
+    PROMPT_DETAIL_FAVORITE_BTN: 'promptDetailFavoriteBtn',
+    PROMPT_DETAIL_SAFE_TOGGLE: 'promptDetailSafeToggle',
+
+    CLOSE_SETTINGS_MODAL: 'closeSettingsModal',
+    SETTINGS_THEME_TOGGLE: 'settingsThemeToggle',
+    SETTINGS_SUN_ICON: 'settingsSunIcon',
+    SETTINGS_MOON_ICON: 'settingsMoonIcon',
+    SETTINGS_THEME_TEXT: 'settingsThemeText',
+    CARD_TEXT_COLOR_PICKER: 'cardTextColorPicker',
+    FONT_SIZE_DECREASE: 'fontSizeDecrease',
+    FONT_SIZE_VALUE: 'fontSizeValue',
+    FONT_SIZE_INCREASE: 'fontSizeIncrease',
+    CUSTOM_FONT_SELECT: 'customFontSelect',
+    SELECT_FONT_FILE_BTN: 'selectFontFileBtn',
+    CURRENT_DATA_PATH: 'currentDataPath',
+    CHANGE_DATA_PATH_BTN: 'changeDataPathBtn',
+    EXPORT_ORPHAN_FILES_BTN: 'exportOrphanFilesBtn',
+    EXPORT_FULL_BACKUP_BTN: 'exportFullBackupBtn',
+    IMPORT_FULL_BACKUP_BTN: 'importFullBackupBtn',
+    VIEW_MODE_TOGGLE: 'viewModeToggle',
+    VIEW_MODE_SELECT: 'viewModeSelect',
+    CLEAR_ALL_DATA_BTN: 'clearAllDataBtn',
+
+    // 动态创建的上下文菜单
+    DYNAMIC_CONTEXT_MENU: 'dynamicContextMenu',
+
+    // 标签面板和回收站面板（用于快捷键）
+    TAGS_PANEL: 'tagsPanel',
+    TRASH_PANEL: 'trashPanel',
+
+    // 图像上传 Modal
+    IMAGE_UPLOAD_MODAL: 'imageUploadModal',
+    CLOSE_IMAGE_UPLOAD_MODAL: 'closeImageUploadModal',
+    IMAGE_UPLOAD_FORM: 'imageUploadForm',
+    NEW_PROMPT_FORM: 'newPromptForm',
+    MODAL_IMAGE_UPLOAD_AREA: 'modalImageUploadArea',
+    MODAL_UPLOAD_PLACEHOLDER: 'modalUploadPlaceholder',
+    MODAL_IMAGE_PREVIEW_LIST: 'modalImagePreviewList',
+    UPLOAD_IMAGE_PROMPT: 'uploadImagePrompt',
+    CANCEL_IMAGE_UPLOAD_BTN: 'cancelImageUploadBtn',
+    CONFIRM_IMAGE_UPLOAD_BTN: 'confirmImageUploadBtn',
+
+    // 图像选择器 Modal
+    IMAGE_SELECTOR_MODAL: 'imageSelectorModal',
+    CLOSE_IMAGE_SELECTOR_MODAL: 'closeImageSelectorModal',
+    IMAGE_SELECTOR_SEARCH_INPUT: 'imageSelectorSearchInput',
+    CLEAR_IMAGE_SELECTOR_SEARCH_BTN: 'clearImageSelectorSearchBtn',
+    IMAGE_SELECTOR_TAG_FILTER: 'imageSelectorTagFilter',
+    IMAGE_SELECTOR_SORT_SELECT: 'imageSelectorSortSelect',
+    IMAGE_SELECTOR_SORT_REVERSE_BTN: 'imageSelectorSortReverseBtn',
+    IMAGE_SELECTOR_GRID: 'imageSelectorGrid',
+    IMAGE_SELECTOR_EMPTY: 'imageSelectorEmpty',
+    CANCEL_IMAGE_SELECTOR_BTN: 'cancelImageSelectorBtn',
+    CONFIRM_IMAGE_SELECTOR_BTN: 'confirmImageSelectorBtn',
+
+    CLOSE_PROMPT_TRASH_MODAL: 'closePromptTrashModal',
+    RESTORE_ALL_PROMPT_TRASH_BTN: 'restoreAllPromptTrashBtn',
+    EMPTY_PROMPT_TRASH_BTN: 'emptyPromptTrashBtn',
+    PROMPT_TRASH_LIST: 'promptTrashList',
+    PROMPT_TRASH_EMPTY: 'promptTrashEmpty',
+
+    CLOSE_IMAGE_TRASH_MODAL: 'closeImageTrashModal',
+    RESTORE_ALL_IMAGE_TRASH_BTN: 'restoreAllImageTrashBtn',
+    EMPTY_IMAGE_TRASH_BTN: 'emptyImageTrashBtn',
+    IMAGE_TRASH_LIST: 'imageTrashList',
+    IMAGE_TRASH_EMPTY: 'imageTrashEmpty'
   } as const);
 }
 

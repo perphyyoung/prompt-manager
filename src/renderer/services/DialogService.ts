@@ -197,7 +197,7 @@ export class DialogService {
       }
 
       // 选择对话框 - 确定按钮
-      if (target.closest(`#${Constants.Ids.SELECT_MODAL_OK_BTN}`)) {
+      if (target.closest(`#${Constants.Ids.SELECT_OK_BTN}`)) {
         e.stopPropagation();
         const selectEl = document.getElementById(Constants.Ids.SELECT_MODAL_FIELD) as HTMLSelectElement | null;
         _selectResolve?.(selectEl?.value || null);
@@ -206,7 +206,7 @@ export class DialogService {
       }
 
       // 选择对话框 - 取消/关闭按钮
-      if (target.closest(`#${Constants.Ids.SELECT_MODAL_CANCEL_BTN}, #${Constants.Ids.CLOSE_SELECT_MODAL}`)) {
+      if (target.closest(`#${Constants.Ids.SELECT_CANCEL_BTN}, #${Constants.Ids.CLOSE_SELECT_MODAL}`)) {
         e.stopPropagation();
         _selectResolve?.(null);
         DialogService._closeSelectDialog();
@@ -303,7 +303,7 @@ export class DialogService {
 
       // 压栈 - 复用 DOM 元素的 close
       contextStack.push({
-        id: Constants.Ids.INPUT_DIALOG,
+        id: Constants.Ids.INPUT_MODAL,
         title: options.title,
         state: { isBatchToolbarVisible: false },
         close: () => modal.close?.()
@@ -323,7 +323,7 @@ export class DialogService {
     if (modal) {
       (modal as HTMLElement).style.display = 'none';
     }
-    contextStack.pop(Constants.Ids.INPUT_DIALOG);
+    contextStack.pop(Constants.Ids.INPUT_MODAL);
     _inputResolve = null;
   }
 
@@ -376,7 +376,7 @@ export class DialogService {
 
       // 压栈 - 复用 DOM 元素的 close
       contextStack.push({
-        id: Constants.Ids.CONFIRM_DIALOG,
+        id: Constants.Ids.CONFIRM_MODAL,
         state: { isBatchToolbarVisible: false },
         close: () => modal.close?.()
       });
@@ -398,7 +398,7 @@ export class DialogService {
     if (cancelBtn) (cancelBtn as HTMLElement).style.display = '';
     if (okBtn) (okBtn as HTMLElement).style.margin = '';
 
-    contextStack.pop(Constants.Ids.CONFIRM_DIALOG);
+    contextStack.pop(Constants.Ids.CONFIRM_MODAL);
     _confirmCallback = null;
   }
 
@@ -445,7 +445,7 @@ export class DialogService {
 
       // 压栈 - 复用 DOM 元素的 close
       contextStack.push({
-        id: Constants.Ids.SELECT_DIALOG,
+        id: Constants.Ids.SELECT_MODAL,
         state: { isBatchToolbarVisible: false },
         close: () => modal.close?.()
       });
@@ -460,7 +460,7 @@ export class DialogService {
     if (modal) {
       (modal as HTMLElement).style.display = 'none';
     }
-    contextStack.pop(Constants.Ids.SELECT_DIALOG);
+    contextStack.pop(Constants.Ids.SELECT_MODAL);
     _selectResolve = null;
   }
 }

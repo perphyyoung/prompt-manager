@@ -491,13 +491,13 @@ export abstract class TagManager {
    * 显示右键菜单
    */
   private showContextMenu(event: Event, items: Array<{ label: string; action: () => void }>): void {
-    const existingMenu = document.getElementById('dynamicContextMenu');
+    const existingMenu = document.getElementById(Constants.Ids.DYNAMIC_CONTEXT_MENU);
     if (existingMenu) {
       existingMenu.remove();
     }
 
     const menu = document.createElement('div');
-    menu.id = 'dynamicContextMenu';
+    menu.id = Constants.Ids.DYNAMIC_CONTEXT_MENU;
     menu.className = 'context-menu';
     menu.innerHTML = items.map((item, index) =>
       `<div class="context-menu-item" data-index="${index}">${item.label}</div>`
@@ -945,8 +945,8 @@ export abstract class TagManager {
     // 先设置标志，防止递归调用
     this.isBatchModeActive = false;
 
-    // 隐藏工具栏，但不触发 onClose 回调（避免递归）
-    this.multiSelectManager.hideToolbarWithoutCancel();
+    // 隐藏工具栏
+    this.multiSelectManager.hideToolbar();
 
     this.multiSelectManager.clear();
   }

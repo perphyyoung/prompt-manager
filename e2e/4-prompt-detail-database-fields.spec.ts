@@ -49,7 +49,7 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 验证 ID 隐藏输入框值正确
-    const idInput = page.locator('#promptDetailId');
+    const idInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_ID}`);
     await expect(idInput).toBeAttached();
     const displayedId = await idInput.inputValue();
     expect(displayedId).toBe(dbPrompt!.id);
@@ -66,7 +66,7 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 验证标题输入框显示正确
-    const titleInput = page.locator('#promptDetailTitle');
+    const titleInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TITLE}`);
     await expect(titleInput).toBeVisible();
     const displayedTitle = await titleInput.inputValue();
     expect(displayedTitle).toBe(dbPrompt!.title);
@@ -83,7 +83,7 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 验证内容文本域显示正确
-    const contentInput = page.locator('#promptDetailContent');
+    const contentInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_CONTENT}`);
     await expect(contentInput).toBeVisible();
     const displayedContent = await contentInput.inputValue();
     expect(displayedContent).toBe(dbPrompt!.content);
@@ -100,7 +100,7 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 验证翻译文本域显示正确
-    const translateInput = page.locator('#promptDetailTranslate');
+    const translateInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TRANSLATE}`);
     await expect(translateInput).toBeVisible();
     const displayedTranslate = await translateInput.inputValue();
     expect(displayedTranslate).toBe(dbPrompt!.contentTranslate || '');
@@ -117,7 +117,7 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 验证备注文本域显示正确
-    const noteInput = page.locator('#promptDetailNote');
+      const noteInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_NOTE}`);
     await expect(noteInput).toBeVisible();
     const displayedNote = await noteInput.inputValue();
     expect(displayedNote).toBe(dbPrompt!.note || '');
@@ -171,7 +171,7 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 验证图像上传区域存在
-    const imageUploadArea = page.locator('#imageUploadArea');
+    const imageUploadArea = page.locator(`#${Constants.Ids.IMAGE_UPLOAD_AREA}`);
     await expect(imageUploadArea).toBeVisible();
 
     // 获取显示的图像数量
@@ -219,11 +219,11 @@ test.describe('提示词详情界面数据库字段读取', () => {
       };
 
       return {
-        id: (document.getElementById('promptDetailId') as HTMLInputElement)?.value || '',
-        title: getValue('promptDetailTitle'),
-        content: getValue('promptDetailContent'),
-        contentTranslate: getValue('promptDetailTranslate'),
-        note: getValue('promptDetailNote'),
+        id: (document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement)?.value || '',
+        title: getValue(Constants.Ids.PROMPT_DETAIL_TITLE),
+        content: getValue(Constants.Ids.PROMPT_DETAIL_CONTENT),
+        contentTranslate: getValue(Constants.Ids.PROMPT_DETAIL_TRANSLATE),
+        note: getValue(Constants.Ids.PROMPT_DETAIL_NOTE),
         tags: getTags(),
         imageCount: getImageCount()
       };

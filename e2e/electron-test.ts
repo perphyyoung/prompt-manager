@@ -344,8 +344,17 @@ export class ElectronTestHelper {
    */
   async refreshTagFilters(): Promise<void> {
     const page = this.getPage();
-    await page.click('#refreshDataBtn');
-    await page.waitForSelector('#toastContainer:has-text("数据已刷新")', { timeout: 5000 });
+    await page.click(`#${Constants.Ids.REFRESH_DATA_BTN}`);
+    // 使用 waitForFunction 轮询检查 toast 是否显示过"数据已刷新"
+    // 因为 toast 可能会很快消失，使用轮询更可靠
+    await page.waitForFunction(
+      (toastId: string) => {
+        const toast = document.getElementById(toastId);
+        return toast && toast.textContent?.includes('数据已刷新');
+      },
+      Constants.Ids.TOAST_CONTAINER,
+      { timeout: 5000 }
+    );
   }
 
   /**
@@ -374,67 +383,80 @@ export class ElectronTestHelper {
     const page = this.getPage();
 
     // 关闭可能打开的详情模态框
-    const imageDetailModal = page.locator('#imageDetailModal');
+    const imageDetailModal = page.locator(`#${Constants.Ids.IMAGE_DETAIL_MODAL}`);
     if (await imageDetailModal.isVisible().catch(() => false)) {
       await page.keyboard.press('Escape');
-      await page.waitForSelector('#imageDetailModal', { state: 'hidden', timeout: 5000 }).catch(() => {});
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}`, { state: 'hidden', timeout: 5000 }).catch(() => {});
     }
 
-    const promptDetailModal = page.locator('#promptDetailModal');
+    const promptDetailModal = page.locator(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
     if (await promptDetailModal.isVisible().catch(() => false)) {
       await page.keyboard.press('Escape');
-      await page.waitForSelector('#promptDetailModal', { state: 'hidden', timeout: 5000 }).catch(() => {});
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`, { state: 'hidden', timeout: 5000 }).catch(() => {});
     }
 
     // 关闭可能打开的标签管理器
-    const imageTagManagerModal = page.locator('#imageTagManagerModal');
+    const imageTagManagerModal = page.locator(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`);
     if (await imageTagManagerModal.isVisible().catch(() => false)) {
       await page.keyboard.press('Escape');
-      await page.waitForSelector('#imageTagManagerModal', { state: 'hidden', timeout: 5000 }).catch(() => {});
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 }).catch(() => {});
     }
 
-    const promptTagManagerModal = page.locator('#promptTagManagerModal');
+    const promptTagManagerModal = page.locator(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`);
     if (await promptTagManagerModal.isVisible().catch(() => false)) {
       await page.keyboard.press('Escape');
-      await page.waitForSelector('#promptTagManagerModal', { state: 'hidden', timeout: 5000 }).catch(() => {});
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, { state: 'hidden', timeout: 5000 }).catch(() => {});
     }
 
     // 关闭可能打开的统计和设置模态框
-    const statisticsModal = page.locator('#statisticsModal');
+    const statisticsModal = page.locator(`#${Constants.Ids.STATISTICS_MODAL}`);
     if (await statisticsModal.isVisible().catch(() => false)) {
       await page.keyboard.press('Escape');
-      await page.waitForSelector('#statisticsModal', { state: 'hidden', timeout: 5000 }).catch(() => {});
+      await page.waitForSelector(`#${Constants.Ids.STATISTICS_MODAL}`, { state: 'hidden', timeout: 5000 }).catch(() => {});
     }
 
-    const settingsModal = page.locator('#settingsModal');
+    const settingsModal = page.locator(`#${Constants.Ids.SETTINGS_MODAL}`);
     if (await settingsModal.isVisible().catch(() => false)) {
       await page.keyboard.press('Escape');
-      await page.waitForSelector('#settingsModal', { state: 'hidden', timeout: 5000 }).catch(() => {});
+      await page.waitForSelector(`#${Constants.Ids.SETTINGS_MODAL}`, { state: 'hidden', timeout: 5000 }).catch(() => {});
     }
 
     // 关闭可能打开的新建提示词页面
-    const newPromptPage = page.locator('#newPromptPage');
+    const newPromptPage = page.locator(`#${Constants.Ids.NEW_PROMPT_PAGE}`);
     if (await newPromptPage.isVisible().catch(() => false)) {
-      await page.click('#newPromptCancelBtn');
-      await page.waitForSelector('#newPromptPage', { state: 'hidden', timeout: 5000 }).catch(() => {});
+      await page.click(`#${Constants.Ids.NEW_PROMPT_CANCEL_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.NEW_PROMPT_PAGE}`, { state: 'hidden', timeout: 5000 }).catch(() => {});
     }
 
     // 关闭可能打开的批量工具栏（避免 pop mismatch 错误）
-    const imageBatchToolbar = page.locator('#imageMainBatchToolbar');
-    if (await imageBatchToolbar.isVisible().catch(() => false)) {
+    // 使用 evaluate 快速检查元素是否有 visible 类，避免 isVisible() 的等待
+    const isImageToolbarVisible = await page.evaluate((toolbarId) => {
+      const toolbar = document.getElementById(toolbarId);
+      return toolbar?.classList.contains('visible') ?? false;
+    }, Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR);
+    if (isImageToolbarVisible) {
       await page.keyboard.press('Escape');
-      await imageBatchToolbar.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+      await page.waitForFunction((toolbarId) => {
+        const toolbar = document.getElementById(toolbarId);
+        return !toolbar?.classList.contains('visible');
+      }, Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR, { timeout: 5000 }).catch(() => {});
     }
 
-    const promptBatchToolbar = page.locator('#promptMainBatchToolbar');
-    if (await promptBatchToolbar.isVisible().catch(() => false)) {
+    const isPromptToolbarVisible = await page.evaluate((toolbarId) => {
+      const toolbar = document.getElementById(toolbarId);
+      return toolbar?.classList.contains('visible') ?? false;
+    }, Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR);
+    if (isPromptToolbarVisible) {
       await page.keyboard.press('Escape');
-      await promptBatchToolbar.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+      await page.waitForFunction((toolbarId) => {
+        const toolbar = document.getElementById(toolbarId);
+        return !toolbar?.classList.contains('visible');
+      }, Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR, { timeout: 5000 }).catch(() => {});
     }
 
     // 回到图像主界面
-    await page.click('#imageManagerBtn');
-    await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
+    await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, { state: 'visible', timeout: 5000 });
   }
 }
 
@@ -596,21 +618,21 @@ export async function createPromptTagGroup(page: any, groupName: string): Promis
  * Steps to enter target interface:
  * 1. Click imageManagerBtn to switch to image panel
  * 2. Click imageGridViewBtn to ensure grid view
- * 3. Wait for image-card elements to be visible
+ * 3. Wait for image grid container to be visible
  */
 export async function enterImageGridView(page: any, screenshotPath?: string) {
-  await page.click('#imageManagerBtn');
-  await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
-  await page.click('#imageGridViewBtn');
+  await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, { state: 'visible', timeout: 5000 });
+  await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
 
-  const firstCard = page.locator('.image-card').first();
-  await expect(firstCard).toBeVisible({ timeout: 5000 });
+  // 等待图像网格容器可见（不依赖卡片存在）
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID}`, { state: 'visible', timeout: 5000 });
 
   if (screenshotPath) {
     await page.screenshot({ path: screenshotPath });
   }
 
-  return firstCard;
+  return page.locator('.image-card').first();
 }
 
 /**
@@ -618,21 +640,21 @@ export async function enterImageGridView(page: any, screenshotPath?: string) {
  * Steps to enter target interface:
  * 1. Click promptManagerBtn to switch to prompt panel
  * 2. Click promptGridViewBtn to ensure grid view
- * 3. Wait for prompt-card elements to be visible
+ * 3. Wait for prompt panel to be active
  */
 export async function enterPromptGridView(page: any, screenshotPath?: string) {
-  await page.click('#promptManagerBtn');
-  await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
-  await page.click('#promptGridViewBtn');
+  await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, { state: 'visible', timeout: 5000 });
+  await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
 
-  const firstCard = page.locator('.prompt-card').first();
-  await expect(firstCard).toBeVisible({ timeout: 5000 });
+  // 等待提示词网格容器可见（不依赖卡片存在）
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_GRID}`, { state: 'visible', timeout: 5000 });
 
   if (screenshotPath) {
     await page.screenshot({ path: screenshotPath });
   }
 
-  return firstCard;
+  return page.locator('.prompt-card').first();
 }
 
 /**
@@ -644,16 +666,16 @@ export async function enterPromptGridView(page: any, screenshotPath?: string) {
  */
 export async function enterImageListView(page: any, screenshotPath?: string) {
   // 点击图像管理器按钮
-  await page.click('#imageManagerBtn');
-  await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
-  await page.waitForSelector('#promptPanel', { state: 'hidden', timeout: 5000 }).catch(() => {});
+  await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, { state: 'visible', timeout: 5000 });
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, { state: 'hidden', timeout: 5000 }).catch(() => {});
 
   // 点击列表视图按钮
-  await page.click('#imageListViewBtn');
+  await page.click(`#${Constants.Ids.IMAGE_LIST_VIEW_BTN}`);
 
   // 等待图像列表容器可见
-  await page.waitForSelector('#imageList', { state: 'visible', timeout: 5000 });
-  await page.waitForSelector('#promptList', { state: 'hidden', timeout: 5000 }).catch(() => {});
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_LIST}`, { state: 'visible', timeout: 5000 });
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_LIST}`, { state: 'hidden', timeout: 5000 }).catch(() => {});
 
   // 等待图像列表项可见
   const firstItem = page.locator('.list-item--image').first();
@@ -675,16 +697,16 @@ export async function enterImageListView(page: any, screenshotPath?: string) {
  */
 export async function enterPromptListView(page: any, screenshotPath?: string) {
   // 点击提示词管理器按钮
-  await page.click('#promptManagerBtn');
-  await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
-  await page.waitForSelector('#imagePanel', { state: 'hidden', timeout: 5000 }).catch(() => {});
+  await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, { state: 'visible', timeout: 5000 });
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, { state: 'hidden', timeout: 5000 }).catch(() => {});
 
   // 点击列表视图按钮
-  await page.click('#promptListViewBtn');
+  await page.click(`#${Constants.Ids.PROMPT_LIST_VIEW_BTN}`);
 
   // 等待提示词列表容器可见
-  await page.waitForSelector('#promptList', { state: 'visible', timeout: 5000 });
-  await page.waitForSelector('#imageList', { state: 'hidden', timeout: 5000 }).catch(() => {});
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_LIST}`, { state: 'visible', timeout: 5000 });
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_LIST}`, { state: 'hidden', timeout: 5000 }).catch(() => {});
 
   // 等待提示词列表项可见
   const firstItem = page.locator('.list-item--prompt').first();
@@ -709,7 +731,7 @@ export async function openImageDetail(page: any, screenshotPath?: string) {
   const firstCard = page.locator('.image-card').first();
   await firstCard.click();
 
-  const detailModal = page.locator('#imageDetailModal');
+  const detailModal = page.locator(`#${Constants.Ids.IMAGE_DETAIL_MODAL}`);
   await expect(detailModal).toHaveClass(/active/);
 
   if (screenshotPath) {
@@ -729,7 +751,7 @@ export async function openPromptDetail(page: any, screenshotPath?: string) {
   const firstCard = page.locator('.prompt-card').first();
   await firstCard.click();
 
-  const detailModal = page.locator('#promptDetailModal');
+  const detailModal = page.locator(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
   await expect(detailModal).toHaveClass(/active/);
 
   if (screenshotPath) {
@@ -751,16 +773,16 @@ export async function openPromptDetail(page: any, screenshotPath?: string) {
  */
 export async function enterImageDetailView(page: any, screenshotPath?: string) {
   // 检查是否已经在图像面板，如果不在则切换
-  const imagePanel = page.locator('#imagePanel');
+  const imagePanel = page.locator(`#${Constants.Ids.IMAGE_PANEL}`);
   const isImagePanelVisible = await imagePanel.isVisible().catch(() => false);
   if (!isImagePanelVisible) {
-    await page.click('#imageManagerBtn');
-    await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
+    await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, { state: 'visible', timeout: 5000 });
   }
 
   // 确保切换到网格视图（点击网格视图按钮）
-  await page.click('#imageGridViewBtn');
-  await page.waitForSelector('#imageGridViewBtn.active', { state: 'visible', timeout: 5000 });
+  await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}.active`, { state: 'visible', timeout: 5000 });
 
   // 确保图像网格已加载
   await page.waitForSelector('.image-card', { state: 'visible', timeout: 5000 });
@@ -779,11 +801,11 @@ export async function enterImageDetailView(page: any, screenshotPath?: string) {
   await firstCard.click({ force: true });
 
   // 等待详情模态框显示
-  const detailModal = page.locator('#imageDetailModal');
+  const detailModal = page.locator(`#${Constants.Ids.IMAGE_DETAIL_MODAL}`);
   await expect(detailModal).toBeVisible({ timeout: 5000 });
 
   // 等待模态框内容加载（等待图像元素可见）
-  await page.waitForSelector('#imageDetailImg', { state: 'visible', timeout: 5000 });
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_IMG}`, { state: 'visible', timeout: 5000 });
 
   if (screenshotPath) {
     await page.screenshot({ path: screenshotPath });
@@ -804,16 +826,16 @@ export async function enterImageDetailView(page: any, screenshotPath?: string) {
  */
 export async function enterPromptDetailView(page: any, screenshotPath?: string) {
   // 检查是否已经在提示词面板，如果不在则切换
-  const promptPanel = page.locator('#promptPanel');
+  const promptPanel = page.locator(`#${Constants.Ids.PROMPT_PANEL}`);
   const isPromptPanelVisible = await promptPanel.isVisible().catch(() => false);
   if (!isPromptPanelVisible) {
-    await page.click('#promptManagerBtn');
-    await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
+    await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, { state: 'visible', timeout: 5000 });
   }
 
   // 确保切换到网格视图（点击网格视图按钮）
-  await page.click('#promptGridViewBtn');
-  await page.waitForSelector('#promptGridViewBtn.active', { state: 'visible', timeout: 5000 });
+  await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}.active`, { state: 'visible', timeout: 5000 });
 
   // 确保提示词网格已加载
   await page.waitForSelector('.prompt-card', { state: 'visible', timeout: 5000 });
@@ -832,11 +854,11 @@ export async function enterPromptDetailView(page: any, screenshotPath?: string) 
   await firstCard.click({ force: true });
 
   // 等待详情模态框显示
-  const detailModal = page.locator('#promptDetailModal');
+  const detailModal = page.locator(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
   await expect(detailModal).toBeVisible({ timeout: 5000 });
 
   // 等待模态框内容加载（等待标题输入框可见）
-  await page.waitForSelector('#promptDetailTitle', { state: 'visible', timeout: 5000 });
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_TITLE}`, { state: 'visible', timeout: 5000 });
 
   if (screenshotPath) {
     await page.screenshot({ path: screenshotPath });
@@ -881,9 +903,9 @@ export async function getPromptFromDatabase(page: any, promptId: string): Promis
  * 获取第一个图像的ID
  */
 export async function getFirstImageId(page: any): Promise<string> {
-  await page.click('#imageManagerBtn');
-  await page.waitForSelector('#imagePanel', { state: 'visible', timeout: 5000 });
-  await page.click('#imageGridViewBtn');
+  await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, { state: 'visible', timeout: 5000 });
+  await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
 
   const firstCard = page.locator('.image-card').first();
   await expect(firstCard).toBeVisible({ timeout: 5000 });
@@ -895,9 +917,9 @@ export async function getFirstImageId(page: any): Promise<string> {
  * 获取第一个提示词的ID
  */
 export async function getFirstPromptId(page: any): Promise<string> {
-  await page.click('#promptManagerBtn');
-  await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
-  await page.click('#promptGridViewBtn');
+  await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, { state: 'visible', timeout: 5000 });
+  await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
 
   const firstCard = page.locator('.prompt-card').first();
   await expect(firstCard).toBeVisible({ timeout: 5000 });
@@ -955,10 +977,10 @@ export async function ensureTagFilterCollapsed(page: any, filterSectionId: strin
  * @returns 图像ID数组
  */
 export async function getDisplayedImageIds(page: Page): Promise<string[]> {
-  return await page.evaluate(() => {
-    const items = document.querySelectorAll('#imagePreviewList .image-preview-item');
+  return await page.evaluate((containerId) => {
+    const items = document.querySelectorAll(`#${containerId} .image-preview-item`);
     return Array.from(items).map(item => item.getAttribute('data-image-id') || '');
-  });
+  }, Constants.Ids.IMAGE_PREVIEW_LIST);
 }
 
 /**
@@ -968,7 +990,7 @@ export async function getDisplayedImageIds(page: Page): Promise<string[]> {
  */
 export async function rightClickAndSetAsFirst(page: Page, imageId: string): Promise<void> {
   // 右键点击图像
-  const imageItem = page.locator(`#imagePreviewList .image-preview-item[data-image-id="${imageId}"]`);
+  const imageItem = page.locator(`#${Constants.Ids.IMAGE_PREVIEW_LIST} .image-preview-item[data-image-id="${imageId}"]`);
   await imageItem.click({ button: 'right' });
 
   // 等待右键菜单显示（使用包含特定菜单项的选择器来定位图像右键菜单）
@@ -1026,22 +1048,23 @@ export async function findPromptWithImageCount(
  */
 export async function openPromptDetailById(page: Page, promptId: string): Promise<void> {
   // 确保在提示词面板
-  await page.click('#promptManagerBtn');
-  await page.waitForSelector('#promptPanel', { state: 'visible', timeout: 5000 });
+  await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, { state: 'visible', timeout: 5000 });
 
   // 点击指定提示词卡片
   const promptCard = page.locator(`.prompt-card[data-id="${promptId}"]`);
   await promptCard.click();
 
   // 等待详情模态框显示
-  await page.waitForSelector('#promptDetailModal', { state: 'visible', timeout: 5000 });
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`, { state: 'visible', timeout: 5000 });
 
   // 等待图像预览列表加载完成（显式等待，而非固定等待）
   await page.waitForFunction(
-    () => {
-      const imageList = document.querySelector('#imagePreviewList');
+    (containerId) => {
+      const imageList = document.getElementById(containerId);
       return imageList !== null;
     },
+    Constants.Ids.IMAGE_PREVIEW_LIST,
     { timeout: 5000 }
   );
 }

@@ -87,8 +87,8 @@ export class NavigationManager {
    */
   private registerPanels(): void {
     this.panels.set('prompt', {
-      id: 'promptPanel',
-      buttonId: 'promptManagerBtn',
+      id: Constants.Ids.PROMPT_PANEL,
+      buttonId: Constants.Ids.PROMPT_MANAGER_BTN,
       name: 'prompt',
       onShow: async () => {
         if (this.app.promptPanelManager) {
@@ -99,8 +99,8 @@ export class NavigationManager {
     });
 
     this.panels.set('image', {
-      id: 'imagePanel',
-      buttonId: 'imageManagerBtn',
+      id: Constants.Ids.IMAGE_PANEL,
+      buttonId: Constants.Ids.IMAGE_MANAGER_BTN,
       name: 'image',
       onShow: async () => {
         if (this.app.imagePanelManager) {
@@ -117,8 +117,8 @@ export class NavigationManager {
    */
   private bindEvents(): void {
     // 导航按钮事件
-    document.getElementById('promptManagerBtn')?.addEventListener('click', () => this.switchTo('prompt'));
-    document.getElementById('imageManagerBtn')?.addEventListener('click', () => this.switchTo('image'));
+    document.getElementById(Constants.Ids.PROMPT_MANAGER_BTN)?.addEventListener('click', () => this.switchTo('prompt'));
+    document.getElementById(Constants.Ids.IMAGE_MANAGER_BTN)?.addEventListener('click', () => this.switchTo('image'));
 
     // 侧边栏事件
     this.bindSidebarEvents();
@@ -129,8 +129,8 @@ export class NavigationManager {
    * @private
    */
   private bindSidebarEvents(): void {
-    const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-    const sidebar = document.getElementById('sidebar');
+    const toggleSidebarBtn = document.getElementById(Constants.Ids.TOGGLE_SIDEBAR_BTN);
+    const sidebar = document.getElementById(Constants.Ids.SIDEBAR);
     if (!toggleSidebarBtn || !sidebar) return;
 
     toggleSidebarBtn.addEventListener('click', () => {

@@ -63,7 +63,7 @@ export class ImageFullscreenManager {
    * @param startIndex - 起始图像索引
    */
   async open(images: Array<{ id?: string; relativePath?: string; fileName?: string }>, startIndex: number): Promise<void> {
-    const viewer = document.getElementById('imageFullscreenViewer');
+    const viewer = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER);
     if (!viewer) return;
 
     this.viewerImages = this.buildViewerImages(images.filter(img => img.id));
@@ -112,7 +112,7 @@ export class ImageFullscreenManager {
     }
 
     // 重置提示文字动画
-    const hint = document.getElementById('imageFullscreenViewerHint');
+    const hint = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_HINT);
     if (hint) {
       hint.classList.remove('fade-out');
       setTimeout(() => {
@@ -138,8 +138,8 @@ export class ImageFullscreenManager {
    * 更新查看器显示
    */
   async updateViewer(): Promise<void> {
-    const img = document.getElementById('imageFullscreenViewerImg') as HTMLImageElement | null;
-    const counter = document.getElementById('imageFullscreenViewerCounter');
+    const img = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_IMG) as HTMLImageElement | null;
+    const counter = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_COUNTER);
 
     if (this.viewerImages.length === 0) return;
 
@@ -159,7 +159,7 @@ export class ImageFullscreenManager {
     img!.alt = currentImage.fileName || '';
 
     // 更新文件名和索引
-    const fileNameEl = document.getElementById('imageFullscreenViewerFileName');
+    const fileNameEl = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_FILE_NAME);
     if (fileNameEl) {
       fileNameEl.textContent = currentImage.fileName || '';
     }
@@ -174,7 +174,7 @@ export class ImageFullscreenManager {
    */
   handleZoom(e: WheelEvent): void {
     e.preventDefault();
-    const img = document.getElementById('imageFullscreenViewerImg');
+    const img = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_IMG);
     if (!img) return;
 
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
@@ -190,7 +190,7 @@ export class ImageFullscreenManager {
    * 更新图像变换
    */
   updateImageTransform(): void {
-    const img = document.getElementById('imageFullscreenViewerImg');
+    const img = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_IMG);
     if (!img) return;
 
     const zoom = this.viewerZoom || 1;
@@ -204,7 +204,7 @@ export class ImageFullscreenManager {
    * 绑定图像拖拽
    */
   bindImageDrag(): void {
-    const wrapper = document.getElementById('imageFullscreenViewerWrapper');
+    const wrapper = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_WRAPPER);
     if (!wrapper) return;
 
     let isDragging = false;
@@ -254,7 +254,7 @@ export class ImageFullscreenManager {
    * 初始化导航器
    */
   initNavigator(): void {
-    const viewer = document.getElementById('imageFullscreenViewer');
+    const viewer = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER);
     if (!viewer) return;
 
     this.navigator = new ListNavigator<ViewerImage>({
@@ -274,10 +274,10 @@ export class ImageFullscreenManager {
       },
       onClose: () => this.close(),
       navButtons: {
-        first: document.getElementById('imageFullscreenViewerFirstNavBtn') ?? undefined,
-        prev: document.getElementById('imageFullscreenViewerPrevNavBtn') ?? undefined,
-        next: document.getElementById('imageFullscreenViewerNextNavBtn') ?? undefined,
-        last: document.getElementById('imageFullscreenViewerLastNavBtn') ?? undefined
+        first: document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_FIRST_NAV_BTN) ?? undefined,
+        prev: document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_PREV_NAV_BTN) ?? undefined,
+        next: document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_NEXT_NAV_BTN) ?? undefined,
+        last: document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_LAST_NAV_BTN) ?? undefined
       },
       targetElement: document,
       shouldHandleKeyboard: (e: KeyboardEvent) => {
@@ -296,10 +296,10 @@ export class ImageFullscreenManager {
   bindFullscreenEvents(): void {
     if (this.eventsBound) return;
 
-    const viewer = document.getElementById('imageFullscreenViewer');
+    const viewer = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER);
 
     // 关闭按钮
-    const closeBtn = document.getElementById('imageFullscreenViewerClose');
+    const closeBtn = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_CLOSE);
     if (closeBtn) {
       closeBtn.addEventListener('click', () => this.close());
     }
@@ -314,7 +314,7 @@ export class ImageFullscreenManager {
     }
 
     // 滚轮缩放
-    const wrapper = document.getElementById('imageFullscreenViewerWrapper');
+    const wrapper = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_WRAPPER);
     if (wrapper) {
       wrapper.addEventListener('wheel', (e) => this.handleZoom(e as WheelEvent), { passive: false });
     }
@@ -329,7 +329,7 @@ export class ImageFullscreenManager {
    * 关闭全屏查看器
    */
   async close(): Promise<void> {
-    const viewer = document.getElementById('imageFullscreenViewer');
+    const viewer = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER);
     if (viewer) {
       viewer.classList.remove('active');
     }
@@ -364,10 +364,10 @@ export class ImageFullscreenManager {
    */
   fillNavButtonSVGs(): void {
     const navButtons = [
-      { id: 'imageFullscreenViewerFirstNavBtn', type: 'first' as const },
-      { id: 'imageFullscreenViewerPrevNavBtn', type: 'prev' as const },
-      { id: 'imageFullscreenViewerNextNavBtn', type: 'next' as const },
-      { id: 'imageFullscreenViewerLastNavBtn', type: 'last' as const }
+      { id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER_FIRST_NAV_BTN, type: 'first' as const },
+      { id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER_PREV_NAV_BTN, type: 'prev' as const },
+      { id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER_NEXT_NAV_BTN, type: 'next' as const },
+      { id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER_LAST_NAV_BTN, type: 'last' as const }
     ];
 
     navButtons.forEach(({ id, type }) => {

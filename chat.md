@@ -40,6 +40,11 @@ npx tsx e2e/cleanup-test-tag-groups.ts
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 需要输出中文版本的可复制的详细版本和简洁版本的 git commit 信息
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
 
+## 20260417
+
+根据 git status 输出修改的文件列表到 todo 文件(输出到文件!), 用于追踪进度; 然后逐个文件检查 git 状态, 修改是否与 常量id 相关, 不相关的撤销; 一次只允许修改一个文件, 保证正确性, 之前的批量替换导致了很多问题; 没修改完一个文件, 更新一次 todo 文件, 直到所有 todo 文件的每一项都处理完
+添加ESLint规则禁止使用硬编码的DOM ID字符串
+
 ## 20260416
 
 `npm run check` 现在会依次执行类型检查和 ESLint

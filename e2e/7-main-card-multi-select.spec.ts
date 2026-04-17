@@ -56,10 +56,10 @@ test.describe('主界面卡片视图多选功能', () => {
       const countText = batchToolbar.locator('.batch-toolbar-count');
       await expect(countText).toContainText('1');
 
-      const hasSelectionMode = await page.evaluate(() => {
-        const container = document.getElementById('imageGrid');
+      const hasSelectionMode = await page.evaluate((containerId) => {
+        const container = document.getElementById(containerId);
         return container?.classList.contains('selection-mode');
-      });
+      }, Constants.Ids.IMAGE_GRID);
       expect(hasSelectionMode).toBe(true);
     });
 
@@ -86,17 +86,17 @@ test.describe('主界面卡片视图多选功能', () => {
       const page = electronTest.getPage();
       await enterImageGridView(page);
 
-      const searchInput = page.locator('#imageSearchInput');
+      const searchInput = page.locator(`#${Constants.Ids.IMAGE_SEARCH_INPUT}`);
       await searchInput.fill('');
 
-      const filterActionBtn = page.locator('#imageTagFilterActionBtn');
+      const filterActionBtn = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_ACTION_BTN}`);
       const btnText = await filterActionBtn.textContent();
       if (btnText === '清除筛选') {
         await filterActionBtn.click();
-        await page.waitForFunction(() => {
-          const btn = document.getElementById('imageTagFilterActionBtn');
+        await page.waitForFunction((btnId) => {
+          const btn = document.getElementById(btnId);
           return btn?.textContent === '标签筛选';
-        }, { timeout: 3000 });
+        }, Constants.Ids.IMAGE_TAG_FILTER_ACTION_BTN, { timeout: 3000 });
       }
 
       const visibleCards = await page.locator('.image-card').count();
@@ -151,10 +151,10 @@ test.describe('主界面卡片视图多选功能', () => {
 
       await expect(batchToolbar).not.toBeVisible();
 
-      const hasSelectionMode = await page.evaluate(() => {
-        const container = document.getElementById('imageGrid');
+      const hasSelectionMode = await page.evaluate((containerId) => {
+        const container = document.getElementById(containerId);
         return container?.classList.contains('selection-mode');
-      });
+      }, Constants.Ids.IMAGE_GRID);
       expect(hasSelectionMode).toBe(false);
     });
 
@@ -295,10 +295,10 @@ test.describe('主界面卡片视图多选功能', () => {
       const countText = batchToolbar.locator('.batch-toolbar-count');
       await expect(countText).toContainText('1');
 
-      const hasSelectionMode = await page.evaluate(() => {
-        const container = document.getElementById('promptGrid');
+      const hasSelectionMode = await page.evaluate((containerId) => {
+        const container = document.getElementById(containerId);
         return container?.classList.contains('selection-mode');
-      });
+      }, Constants.Ids.PROMPT_GRID);
       expect(hasSelectionMode).toBe(true);
     });
 
@@ -325,17 +325,17 @@ test.describe('主界面卡片视图多选功能', () => {
       const page = electronTest.getPage();
       await enterPromptGridView(page);
 
-      const searchInput = page.locator('#promptSearchInput');
+      const searchInput = page.locator(`#${Constants.Ids.PROMPT_SEARCH_INPUT}`);
       await searchInput.fill('');
 
-      const filterActionBtn = page.locator('#promptTagFilterActionBtn');
+      const filterActionBtn = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN}`);
       const btnText = await filterActionBtn.textContent();
       if (btnText === '清除筛选') {
         await filterActionBtn.click();
-        await page.waitForFunction(() => {
-          const btn = document.getElementById('promptTagFilterActionBtn');
+        await page.waitForFunction((btnId) => {
+          const btn = document.getElementById(btnId);
           return btn?.textContent === '标签筛选';
-        }, { timeout: 3000 });
+        }, Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN, { timeout: 3000 });
       }
 
       const visibleCards = await page.locator('.prompt-card').count();
@@ -390,10 +390,10 @@ test.describe('主界面卡片视图多选功能', () => {
 
       await expect(batchToolbar).not.toBeVisible();
 
-      const hasSelectionMode = await page.evaluate(() => {
-        const container = document.getElementById('promptGrid');
+      const hasSelectionMode = await page.evaluate((containerId) => {
+        const container = document.getElementById(containerId);
         return container?.classList.contains('selection-mode');
-      });
+      }, Constants.Ids.PROMPT_GRID);
       expect(hasSelectionMode).toBe(false);
     });
 

@@ -2,7 +2,7 @@ import { DialogService, DialogConfig, DelaySaveStrategy } from '../services/inde
 import { ImagePreviewManager } from './ImagePreviewManager.ts';
 import { cacheManager, DuplicatePreventionMixin } from '../../utils/index.ts';
 import { IImage } from '../../types/entities.ts';
-import { Events } from '../../constants.ts';
+import { Constants, Events } from '../../constants.ts';
 
 /**
  * App 类型定义
@@ -65,7 +65,7 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
     this.app = options.app;
     this.strategy = new DelaySaveStrategy(this.app as unknown as { eventBus: { emit: (event: string) => void }; [key: string]: unknown });
     this.previewManager = new ImagePreviewManager({
-      containerId: 'newPromptImagePreviewList',
+      containerId: Constants.Ids.NEW_PROMPT_IMAGE_PREVIEW_LIST,
       onRemove: (index: number) => this.handleRemoveImage(index)
     });
     // 绑定事件委托（只需执行一次）
@@ -98,14 +98,14 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
       this.strategy.clear(); // 清理之前的状态
 
       // 初始化表单
-      const contentInput = document.getElementById('newPromptContent') as HTMLTextAreaElement | null;
+      const contentInput = document.getElementById(Constants.Ids.NEW_PROMPT_CONTENT) as HTMLTextAreaElement | null;
       if (contentInput) {
         contentInput.value = '';
       }
       this.previewManager.clear();
 
       // 显示页面
-      const page = document.getElementById('newPromptPage');
+      const page = document.getElementById(Constants.Ids.NEW_PROMPT_PAGE);
       if (page) {
         page.classList.add('active');
       }
@@ -136,7 +136,7 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
    * @param save - 是否保存
    */
   async close(save: boolean = true): Promise<void> {
-    const modal = document.getElementById('newPromptPage');
+    const modal = document.getElementById(Constants.Ids.NEW_PROMPT_PAGE);
 
     if (!save) {
       // 取消时清理（不显示提醒）
@@ -146,7 +146,7 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
       // 使用防重复提交机制执行保存
       const result = await this.executeWithPrevention('close', async () => {
         // 完成时保存图像并创建提示词
-        const contentInput = document.getElementById('newPromptContent') as HTMLTextAreaElement | null;
+        const contentInput = document.getElementById(Constants.Ids.NEW_PROMPT_CONTENT) as HTMLTextAreaElement | null;
         const content = contentInput?.value.trim();
         if (!content) {
           this.app.showToast('提示词内容不能为空', 'error');
@@ -282,9 +282,9 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
    * 绑定事件
    */
   bindEvents(): void {
-    const cancelBtn = document.getElementById('newPromptCancelBtn');
-    const doneBtn = document.getElementById('newPromptDoneBtn');
-    const closeBtn = document.getElementById('closeNewPromptPage');
+    const cancelBtn = document.getElementById(Constants.Ids.NEW_PROMPT_CANCEL_BTN);
+    const doneBtn = document.getElementById(Constants.Ids.NEW_PROMPT_DONE_BTN);
+    const closeBtn = document.getElementById(Constants.Ids.CLOSE_NEW_PROMPT_PAGE);
 
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => this.close(false));
@@ -296,7 +296,7 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
       closeBtn.addEventListener('click', () => this.close(false));
     }
 
-    const contentInput = document.getElementById('newPromptContent') as HTMLTextAreaElement | null;
+    const contentInput = document.getElementById(Constants.Ids.NEW_PROMPT_CONTENT) as HTMLTextAreaElement | null;
     if (contentInput) {
       contentInput.addEventListener('input', () => {
         this.app.autoResizeTextarea(contentInput);
@@ -304,7 +304,7 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
     }
 
     // 图像上传区域点击
-    const uploadArea = document.getElementById('newPromptImageUploadArea');
+    const uploadArea = document.getElementById(Constants.Ids.NEW_PROMPT_IMAGE_UPLOAD_AREA);
     if (uploadArea) {
       uploadArea.addEventListener('click', async (e) => {
         if ((e.target as HTMLElement).closest('.remove-image')) return;

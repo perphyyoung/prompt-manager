@@ -84,8 +84,8 @@ export class PromptDetailManager extends DetailViewManager {
   constructor(options: IPromptDetailManagerOptions) {
     super({
       app: options.app as unknown as { constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean }; showToast: (message: string, type?: string) => void; eventBus: { emit: (event: string, data?: unknown) => void }; [key: string]: unknown },
-      modalId: 'promptDetailModal',
-      closeBtnId: 'promptDetailCloseBtn'
+      modalId: Constants.Ids.PROMPT_DETAIL_MODAL,
+      closeBtnId: Constants.Ids.PROMPT_DETAIL_CLOSE_BTN
     });
 
     this.tagManager = options.tagRegistry;
@@ -154,11 +154,11 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private fillFormData(prompt: IPromptExtended): void {
-    const idInput = document.getElementById('promptDetailId') as HTMLInputElement | null;
-    const titleInput = document.getElementById('promptDetailTitle') as HTMLInputElement | null;
-    const contentInput = document.getElementById('promptDetailContent') as HTMLTextAreaElement | null;
-    const translateInput = document.getElementById('promptDetailTranslate') as HTMLTextAreaElement | null;
-    const noteInput = document.getElementById('promptDetailNote') as HTMLTextAreaElement | null;
+    const idInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
+    const titleInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_TITLE) as HTMLInputElement | null;
+    const contentInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_CONTENT) as HTMLTextAreaElement | null;
+    const translateInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_TRANSLATE) as HTMLTextAreaElement | null;
+    const noteInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_NOTE) as HTMLTextAreaElement | null;
 
     if (idInput) idInput.value = prompt.id || '';
     if (titleInput) titleInput.value = prompt.title || '';
@@ -173,7 +173,7 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private setSafeState(isSafe: boolean): void {
-    const safeToggle = document.getElementById('promptDetailSafeToggle') as HTMLInputElement | null;
+    const safeToggle = document.getElementById(Constants.Ids.PROMPT_DETAIL_SAFE_TOGGLE) as HTMLInputElement | null;
     if (safeToggle) {
       safeToggle.checked = isSafe;
     }
@@ -184,7 +184,7 @@ export class PromptDetailManager extends DetailViewManager {
    * @param isFavorite - 是否收藏
    */
   updateFavoriteBtnUI(isFavorite: boolean): void {
-    const btn = document.getElementById('promptDetailFavoriteBtn');
+    const btn = document.getElementById(Constants.Ids.PROMPT_DETAIL_FAVORITE_BTN);
     if (!btn) return;
 
     if (isFavorite) {
@@ -319,10 +319,10 @@ export class PromptDetailManager extends DetailViewManager {
     // 使用基类的标签管理功能
     this.initDetailTagManager(
       {
-        toolbarId: 'promptDetailBatchToolbar',
+        toolbarId: Constants.Ids.PROMPT_DETAIL_BATCH_TAG_TOOLBAR,
         containerId: Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER,
-        inputAreaId: 'promptDetailTagInputArea',
-        batchBtnId: 'promptDetailBatchTagBtn'
+        inputAreaId: Constants.Ids.PROMPT_DETAIL_TAG_INPUT_AREA,
+        batchBtnId: Constants.Ids.PROMPT_DETAIL_BATCH_TAG_BTN
       },
       detailTagManager
     );
@@ -450,7 +450,7 @@ export class PromptDetailManager extends DetailViewManager {
 
     // 清理收藏按钮事件监听器
     if (this.favoriteBtnHandler) {
-      const favoriteBtn = document.getElementById('promptDetailFavoriteBtn');
+      const favoriteBtn = document.getElementById(Constants.Ids.PROMPT_DETAIL_FAVORITE_BTN);
       if (favoriteBtn) {
         favoriteBtn.removeEventListener('click', this.favoriteBtnHandler);
       }
@@ -488,8 +488,8 @@ export class PromptDetailManager extends DetailViewManager {
     this.promptSaveManager.registerField('title', {
       saveMode: 'debounce',
       delay: 800,
-      elementId: 'promptDetailTitle',
-      statusId: 'promptDetailTitleStatus',
+      elementId: Constants.Ids.PROMPT_DETAIL_TITLE,
+      statusId: Constants.Ids.PROMPT_DETAIL_TITLE_STATUS,
       validate: (value: unknown) => validateTitle(value as string)
     });
 
@@ -497,34 +497,34 @@ export class PromptDetailManager extends DetailViewManager {
     this.promptSaveManager.registerField('content', {
       saveMode: 'debounce',
       delay: 800,
-      elementId: 'promptDetailContent',
+      elementId: Constants.Ids.PROMPT_DETAIL_CONTENT,
       autoResize: true,
-      statusId: 'promptDetailContentStatus'
+      statusId: Constants.Ids.PROMPT_DETAIL_CONTENT_STATUS
     });
 
     // 3. 翻译 - 防抖保存
     this.promptSaveManager.registerField('contentTranslate', {
       saveMode: 'debounce',
       delay: 800,
-      elementId: 'promptDetailTranslate',
+      elementId: Constants.Ids.PROMPT_DETAIL_TRANSLATE,
       autoResize: true,
-      statusId: 'promptDetailTranslateStatus'
+      statusId: Constants.Ids.PROMPT_DETAIL_TRANSLATE_STATUS
     });
 
     // 4. 备注 - 防抖保存
     this.promptSaveManager.registerField('note', {
       saveMode: 'debounce',
       delay: 800,
-      elementId: 'promptDetailNote',
+      elementId: Constants.Ids.PROMPT_DETAIL_NOTE,
       autoResize: true,
-      statusId: 'promptDetailNoteStatus'
+      statusId: Constants.Ids.PROMPT_DETAIL_NOTE_STATUS
     });
 
     // 5. 安全状态 - 防抖保存
     this.promptSaveManager.registerField('isSafe', {
       saveMode: 'debounce',
       delay: 800,
-      elementId: 'promptDetailSafeToggle',
+      elementId: Constants.Ids.PROMPT_DETAIL_SAFE_TOGGLE,
       getValue: (element: HTMLElement) => (element as HTMLInputElement).checked ? 1 : 0,
       onChange: (value: unknown) => {
         app.showToast(value ? '已标记为安全' : '已标记为不安全', 'success');
@@ -547,7 +547,7 @@ export class PromptDetailManager extends DetailViewManager {
     });
 
     // 手动绑定收藏按钮点击事件
-    const favoriteBtn = document.getElementById('promptDetailFavoriteBtn');
+    const favoriteBtn = document.getElementById(Constants.Ids.PROMPT_DETAIL_FAVORITE_BTN);
     if (favoriteBtn) {
       this.favoriteBtnHandler = async () => {
         const currentItem = this.currentItem as unknown as IPromptExtended;
@@ -594,10 +594,10 @@ export class PromptDetailManager extends DetailViewManager {
       prompt as unknown as { id: string | number; [key: string]: unknown },
       items as unknown as { id: string | number; [key: string]: unknown }[],
       {
-        first: document.getElementById('promptDetailFirstNavBtn') || undefined,
-        prev: document.getElementById('promptDetailPrevNavBtn') || undefined,
-        next: document.getElementById('promptDetailNextNavBtn') || undefined,
-        last: document.getElementById('promptDetailLastNavBtn') || undefined
+        first: document.getElementById(Constants.Ids.PROMPT_DETAIL_FIRST_NAV_BTN) || undefined,
+        prev: document.getElementById(Constants.Ids.PROMPT_DETAIL_PREV_NAV_BTN) || undefined,
+        next: document.getElementById(Constants.Ids.PROMPT_DETAIL_NEXT_NAV_BTN) || undefined,
+        last: document.getElementById(Constants.Ids.PROMPT_DETAIL_LAST_NAV_BTN) || undefined
       },
       onNavigate as unknown as (item: { id: string | number; [key: string]: unknown }) => void | Promise<void>
     );
@@ -650,7 +650,7 @@ export class PromptDetailManager extends DetailViewManager {
    */
   private autoResizeAllTextareas(): void {
     const app = this.app as unknown as IApp;
-    ['promptDetailContent', 'promptDetailTranslate', 'promptDetailNote'].forEach(id => {
+    [Constants.Ids.PROMPT_DETAIL_CONTENT, Constants.Ids.PROMPT_DETAIL_TRANSLATE, Constants.Ids.PROMPT_DETAIL_NOTE].forEach(id => {
       const textarea = document.getElementById(id);
       if (textarea) {
         app.autoResizeTextarea(textarea);
@@ -664,7 +664,7 @@ export class PromptDetailManager extends DetailViewManager {
    */
   private bindImageUploadEvents(): void {
     // 点击上传区域选择多图
-    const uploadArea = document.getElementById('imageUploadArea');
+    const uploadArea = document.getElementById(Constants.Ids.IMAGE_UPLOAD_AREA);
     if (uploadArea) {
       uploadArea.addEventListener('click', async (e) => {
         if ((e.target as HTMLElement).closest('.remove-image')) return;
@@ -683,7 +683,7 @@ export class PromptDetailManager extends DetailViewManager {
       });
     }
 
-    document.getElementById('promptDetailSelectFromImageManagerBtn')?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.PROMPT_DETAIL_SELECT_FROM_IMAGE_MANAGER_BTN)?.addEventListener('click', () => {
       this.openImageSelectorForPrompt();
     });
   }
@@ -718,7 +718,7 @@ export class PromptDetailManager extends DetailViewManager {
     this.imageContextMenuManager.init();
 
     // 绑定到图像预览容器（事件委托）
-    const imagePreviewContainer = document.getElementById('imagePreviewList');
+    const imagePreviewContainer = document.getElementById(Constants.Ids.IMAGE_PREVIEW_LIST);
     if (imagePreviewContainer) {
       imagePreviewContainer.addEventListener('contextmenu', (e) => {
         const target = e.target as HTMLElement;
@@ -785,7 +785,7 @@ export class PromptDetailManager extends DetailViewManager {
       // 更新全局图像缓存，确保 renderImagePreviews 能获取完整信息
       cacheManager.cacheImages(result.images);
 
-      const promptIdInput = document.getElementById('promptDetailId') as HTMLInputElement | null;
+      const promptIdInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
       const promptId = promptIdInput?.value;
       if (promptId) {
         const updatedImages = Array.from(app.currentImagesCache.values());
@@ -818,7 +818,7 @@ export class PromptDetailManager extends DetailViewManager {
       });
 
       // 保存到数据库
-      const promptIdInput = document.getElementById('promptDetailId') as HTMLInputElement | null;
+      const promptIdInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
       const promptId = promptIdInput?.value;
       if (promptId) {
         const updatedImages = Array.from(app.currentImagesCache.values());
@@ -857,7 +857,7 @@ export class PromptDetailManager extends DetailViewManager {
     });
 
     // 保存到数据库
-    const promptIdInput = document.getElementById('promptDetailId') as HTMLInputElement | null;
+    const promptIdInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
     const promptId = promptIdInput?.value;
     if (promptId) {
       await this.savePromptField('images', images);
@@ -871,7 +871,7 @@ export class PromptDetailManager extends DetailViewManager {
    * 渲染图像预览
    */
   async renderImagePreviews(): Promise<void> {
-    const container = document.getElementById('imagePreviewList');
+    const container = document.getElementById(Constants.Ids.IMAGE_PREVIEW_LIST);
     if (!container) return;
 
     const app = this.app as unknown as IApp;
@@ -894,7 +894,7 @@ export class PromptDetailManager extends DetailViewManager {
     // 记录警告日志：发现无效图像
     if (cachedImages.length !== validImages.length) {
       const invalidCount = cachedImages.length - validImages.length;
-      const promptId = (document.getElementById('promptDetailId') as HTMLInputElement | null)?.value || 'unknown';
+      const promptId = (document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null)?.value || 'unknown';
       const invalidImages = cachedImages.filter((img: { id?: string }) => !img.id);
 
       window.electronAPI.logWarn('PromptDetailManager', `Found ${invalidCount} images without ID in prompt ${promptId}`, {
@@ -1003,7 +1003,7 @@ export class PromptDetailManager extends DetailViewManager {
   private async savePromptField(field: string, value: unknown): Promise<void> {
     const app = this.app as unknown as IApp;
 
-    const promptIdInput = document.getElementById('promptDetailId') as HTMLInputElement | null;
+    const promptIdInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
     const promptId = promptIdInput?.value;
     if (!promptId) return;
 
@@ -1035,7 +1035,7 @@ export class PromptDetailManager extends DetailViewManager {
 
             this.renderImagePreviews();
 
-            const promptIdInput = document.getElementById('promptDetailId') as HTMLInputElement | null;
+            const promptIdInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
             const promptId = promptIdInput?.value;
             if (promptId) {
               const updatedImages = Array.from(app.currentImagesCache.values());

@@ -63,9 +63,9 @@ export class ContextStackManager {
 
     // 关闭当前栈顶（如果有批量工具栏显示）
     // 但确认对话框、输入对话框和选择对话框弹出时不关闭批量工具栏
-    const isDialog = entry.id === Constants.Ids.CONFIRM_DIALOG ||
-                     entry.id === Constants.Ids.INPUT_DIALOG ||
-                     entry.id === Constants.Ids.SELECT_DIALOG;
+    const isDialog = entry.id === Constants.Ids.CONFIRM_MODAL ||
+                     entry.id === Constants.Ids.INPUT_MODAL ||
+                     entry.id === Constants.Ids.SELECT_MODAL;
     if (currentTop?.state.isBatchToolbarVisible && !isDialog) {
       window.electronAPI.logInfo('ContextStackManager', `close before push ${currentTop.id} for ${newId}`);
       currentTop.close();

@@ -3,6 +3,8 @@
  * 用于显示长时间操作的进度
  */
 
+import { Constants } from '../../constants';
+
 export interface ProgressDialogOptions {
   title?: string;
   status?: string;
@@ -38,17 +40,17 @@ export class ProgressDialog {
    * @private
    */
   private init(): void {
-    this.dialog = document.getElementById('progressDialog');
-    this.titleEl = document.getElementById('progressDialogTitle');
-    this.fillEl = document.getElementById('progressFill');
-    this.percentEl = document.getElementById('progressPercent');
-    this.statusEl = document.getElementById('progressStatus');
-    this.detailEl = document.getElementById('progressDetail');
-    this.timeEl = document.getElementById('progressTime');
-    this.cancelBtn = document.getElementById('cancelProgressBtn') as HTMLButtonElement | null;
-    this.closeBtn = document.getElementById('closeProgressDialog') as HTMLButtonElement | null;
-    this.closeProgressBtn = document.getElementById('closeProgressBtn') as HTMLButtonElement | null;
-    this.actionsEl = document.getElementById('progressActions');
+    this.dialog = document.getElementById(Constants.Ids.PROGRESS_DIALOG);
+    this.titleEl = document.getElementById(Constants.Ids.PROGRESS_DIALOG_TITLE);
+    this.fillEl = document.getElementById(Constants.Ids.PROGRESS_FILL);
+    this.percentEl = document.getElementById(Constants.Ids.PROGRESS_PERCENT);
+    this.statusEl = document.getElementById(Constants.Ids.PROGRESS_STATUS);
+    this.detailEl = document.getElementById(Constants.Ids.PROGRESS_DETAIL);
+    this.timeEl = document.getElementById(Constants.Ids.PROGRESS_TIME);
+    this.cancelBtn = document.getElementById(Constants.Ids.CANCEL_PROGRESS_BTN) as HTMLButtonElement | null;
+    this.closeBtn = document.getElementById(Constants.Ids.CLOSE_PROGRESS_DIALOG) as HTMLButtonElement | null;
+    this.closeProgressBtn = document.getElementById(Constants.Ids.CLOSE_PROGRESS_BTN) as HTMLButtonElement | null;
+    this.actionsEl = document.getElementById(Constants.Ids.PROGRESS_ACTIONS);
 
     this.bindEvents();
   }

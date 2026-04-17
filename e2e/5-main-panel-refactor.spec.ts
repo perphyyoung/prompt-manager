@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { createElectronTest, enterImageGridView, enterImageListView, enterPromptGridView, enterPromptListView } from './electron-test.ts';
 import type { IElectronAPI, IImage, IPrompt } from '../src/preload/index.ts';
+import { Constants } from '../src/constants.ts';
 
 declare global {
   interface Window {
@@ -92,7 +93,7 @@ test.describe('主界面重构功能', () => {
       await copyBtn.click();
       await page.screenshot({ path: 'test-results/refactor/image-copy-clicked.png' });
 
-      const toastVisible = await page.locator('#toastContainer').isVisible();
+      const toastVisible = await page.locator(`#${Constants.Ids.TOAST_CONTAINER}`).isVisible();
       expect(toastVisible).toBe(true);
     });
 
@@ -131,7 +132,7 @@ test.describe('主界面重构功能', () => {
       await copyBtn.click();
       await page.screenshot({ path: 'test-results/refactor/image-list-copy-clicked.png' });
 
-      const toastVisible = await page.locator('#toastContainer').isVisible();
+      const toastVisible = await page.locator(`#${Constants.Ids.TOAST_CONTAINER}`).isVisible();
       expect(toastVisible).toBe(true);
     });
 
@@ -139,33 +140,33 @@ test.describe('主界面重构功能', () => {
       const page = electronTest.getPage();
       await enterImageGridView(page);
 
-      const tagFilterSection = page.locator('#imageTagFilterSection');
+      const tagFilterSection = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_SECTION}`);
       let isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) => el.classList.contains('collapsed'));
 
       if (isCollapsed) {
-        await page.click('#imageTagFilterToggleBtn');
-        await page.waitForSelector('#imageTagFilterContent', { state: 'visible', timeout: 5000 });
+        await page.click(`#${Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN}`);
+        await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT}`, { state: 'visible', timeout: 5000 });
       }
 
       isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) => el.classList.contains('collapsed'));
       expect(isCollapsed).toBe(false);
 
-      const isContentVisible = await page.locator('#imageTagFilterContent').isVisible();
+      const isContentVisible = await page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT}`).isVisible();
       expect(isContentVisible).toBe(true);
       await page.screenshot({ path: 'test-results/refactor/image-filter-expanded.png' });
 
-      await page.click('#imageTagFilterToggleBtn');
-      await page.waitForSelector('#imageTagFilterContent', { state: 'hidden', timeout: 5000 });
+      await page.click(`#${Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT}`, { state: 'hidden', timeout: 5000 });
 
       isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) => el.classList.contains('collapsed'));
       expect(isCollapsed).toBe(true);
 
-      const isContentHidden = await page.locator('#imageTagFilterContent').isHidden();
+      const isContentHidden = await page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT}`).isHidden();
       expect(isContentHidden).toBe(true);
       await page.screenshot({ path: 'test-results/refactor/image-filter-collapsed.png' });
 
-      await page.click('#imageTagFilterToggleBtn');
-      await page.waitForSelector('#imageTagFilterContent', { state: 'visible', timeout: 5000 });
+      await page.click(`#${Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT}`, { state: 'visible', timeout: 5000 });
 
       isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) => el.classList.contains('collapsed'));
       expect(isCollapsed).toBe(false);
@@ -256,7 +257,7 @@ test.describe('主界面重构功能', () => {
       await copyBtn.click();
       await page.screenshot({ path: 'test-results/refactor/prompt-copy-clicked.png' });
 
-      const toastVisible = await page.locator('#toastContainer').isVisible();
+      const toastVisible = await page.locator(`#${Constants.Ids.TOAST_CONTAINER}`).isVisible();
       expect(toastVisible).toBe(true);
     });
 
@@ -297,7 +298,7 @@ test.describe('主界面重构功能', () => {
       await copyBtn.click();
       await page.screenshot({ path: 'test-results/refactor/prompt-list-copy-clicked.png' });
 
-      const toastVisible = await page.locator('#toastContainer').isVisible();
+      const toastVisible = await page.locator(`#${Constants.Ids.TOAST_CONTAINER}`).isVisible();
       expect(toastVisible).toBe(true);
     });
 
@@ -305,33 +306,33 @@ test.describe('主界面重构功能', () => {
       const page = electronTest.getPage();
       await enterPromptGridView(page);
 
-      const tagFilterSection = page.locator('#promptTagFilterSection');
+      const tagFilterSection = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_SECTION}`);
       let isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) => el.classList.contains('collapsed'));
 
       if (isCollapsed) {
-        await page.click('#promptTagFilterToggleBtn');
-        await page.waitForSelector('#promptTagFilterContent', { state: 'visible', timeout: 5000 });
+        await page.click(`#${Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN}`);
+        await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`, { state: 'visible', timeout: 5000 });
       }
 
       isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) => el.classList.contains('collapsed'));
       expect(isCollapsed).toBe(false);
 
-      const isContentVisible = await page.locator('#promptTagFilterContent').isVisible();
+      const isContentVisible = await page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`).isVisible();
       expect(isContentVisible).toBe(true);
       await page.screenshot({ path: 'test-results/refactor/prompt-filter-expanded.png' });
 
-      await page.click('#promptTagFilterToggleBtn');
-      await page.waitForSelector('#promptTagFilterContent', { state: 'hidden', timeout: 5000 });
+      await page.click(`#${Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`, { state: 'hidden', timeout: 5000 });
 
       isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) => el.classList.contains('collapsed'));
       expect(isCollapsed).toBe(true);
 
-      const isContentHidden = await page.locator('#promptTagFilterContent').isHidden();
+      const isContentHidden = await page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`).isHidden();
       expect(isContentHidden).toBe(true);
       await page.screenshot({ path: 'test-results/refactor/prompt-filter-collapsed.png' });
 
-      await page.click('#promptTagFilterToggleBtn');
-      await page.waitForSelector('#promptTagFilterContent', { state: 'visible', timeout: 5000 });
+      await page.click(`#${Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`, { state: 'visible', timeout: 5000 });
 
       isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) => el.classList.contains('collapsed'));
       expect(isCollapsed).toBe(false);

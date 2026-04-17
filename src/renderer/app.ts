@@ -192,7 +192,7 @@ class PromptManager implements IApp {
     html.setAttribute('data-theme', savedTheme);
 
     // 更新主题按钮文本
-    const themeToggle = document.getElementById('settingsThemeToggle');
+    const themeToggle = document.getElementById(Constants.Ids.SETTINGS_THEME_TOGGLE);
     if (themeToggle) {
       themeToggle.innerHTML = savedTheme === 'dark'
         ? '<span>☀️</span> 明亮'
@@ -205,7 +205,11 @@ class PromptManager implements IApp {
    */
   initHoverTooltips() {
     // 提示词预览 tooltip（左右布局，同时显示内容和图像）
-    this.promptHoverTooltip = new HoverTooltipManager('promptPreviewTooltip', 'promptPreviewContent', 'promptPreviewImage');
+    this.promptHoverTooltip = new HoverTooltipManager(
+      Constants.Ids.PROMPT_PREVIEW_TOOLTIP,
+      Constants.Ids.PROMPT_PREVIEW_CONTENT,
+      Constants.Ids.PROMPT_PREVIEW_IMAGE
+    );
   }
 
   /**
@@ -218,8 +222,8 @@ class PromptManager implements IApp {
     // 初始化 Toast 管理器（最先初始化，以便其他模块使用）
     this.toastManager = new ToastManager({
       duration: 3000,
-      containerId: 'toastContainer',
-      messageId: 'toastMessage'
+      containerId: Constants.Ids.TOAST_CONTAINER,
+      messageId: Constants.Ids.TOAST_MESSAGE
     });
     this.toastManager.init();
 
@@ -427,7 +431,7 @@ class PromptManager implements IApp {
   bindSyncTagButtons() {
     // 同步标签按钮（双向同步）- 提示词面板
     TagManager.bindSyncButton(
-      'syncPromptTagsBtn',
+      Constants.Ids.SYNC_PROMPT_TAGS_BTN,
       this.promptTagManager,
       this.imageTagManager,
       this
@@ -435,7 +439,7 @@ class PromptManager implements IApp {
 
     // 同步标签按钮（双向同步）- 图像面板
     TagManager.bindSyncButton(
-      'syncImageTagsBtn',
+      Constants.Ids.SYNC_IMAGE_TAGS_BTN,
       this.promptTagManager,
       this.imageTagManager,
       this
@@ -567,7 +571,7 @@ class PromptManager implements IApp {
    * @param isFavorite - 是否收藏
    */
   updatePromptFavoriteBtnUI(isFavorite: boolean) {
-    const btn = document.getElementById('promptDetailFavoriteBtn');
+    const btn = document.getElementById(Constants.Ids.PROMPT_DETAIL_FAVORITE_BTN);
     if (!btn) return;
 
     if (isFavorite) {
@@ -594,7 +598,7 @@ class PromptManager implements IApp {
    * @param isFavorite - 是否收藏
    */
   updateImageDetailFavoriteBtnUI(isFavorite: boolean) {
-    const btn = document.getElementById('imageDetailFavoriteBtn');
+    const btn = document.getElementById(Constants.Ids.IMAGE_DETAIL_FAVORITE_BTN);
     if (!btn) return;
 
     if (isFavorite) {
@@ -614,32 +618,32 @@ class PromptManager implements IApp {
    */
   async renderImageDetailInfo(image: { id: string; updatedAt?: string; createdAt?: string; width?: number; height?: number; fileSize?: number; relativePath?: string; fileName?: string }) {
     // 更新时间
-    const updatedAtEl = document.getElementById('imageDetailUpdatedAt');
+    const updatedAtEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_UPDATED_AT);
     if (updatedAtEl) {
       updatedAtEl.textContent = image.updatedAt || '-';
     }
 
     // 上传时间
-    const createdAtEl = document.getElementById('imageDetailCreatedAt');
+    const createdAtEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_CREATED_AT);
     if (createdAtEl) {
       createdAtEl.textContent = image.createdAt || '-';
     }
 
     // 图像尺寸
-    const dimensionsEl = document.getElementById('imageDetailDimensions');
+    const dimensionsEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_DIMENSIONS);
     if (dimensionsEl) {
       dimensionsEl.textContent = image.width && image.height ? `${image.width} × ${image.height}` : '-';
     }
 
     // 文件大小
-    const fileSizeEl = document.getElementById('imageDetailFileSize');
+    const fileSizeEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_FILE_SIZE);
     if (fileSizeEl) {
       fileSizeEl.textContent = image.fileSize ? HtmlUtils.formatFileSize(image.fileSize) : '-';
     }
 
     // 设置图像 - 异步获取完整路径
     // 使用 relativePath（原图路径），与重构前一致
-    const imgEl = document.getElementById('imageDetailImg') as HTMLImageElement | null;
+    const imgEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_IMG) as HTMLImageElement | null;
     const imagePath = image.relativePath;
     if (imgEl && imagePath) {
       try {
@@ -777,7 +781,7 @@ class PromptManager implements IApp {
       this.showToast('Image added');
 
       // 立即保存到数据库
-      const promptIdEl = document.getElementById('promptDetailId') as HTMLInputElement | null;
+      const promptIdEl = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
       const promptId = promptIdEl?.value;
       if (promptId) {
         const updatedImages = Array.from(this.currentImagesCache.values());
@@ -794,7 +798,7 @@ class PromptManager implements IApp {
    * @param value - 字段值
    */
   async savePromptField(field: string, value: unknown) {
-    const promptIdEl = document.getElementById('promptDetailId') as HTMLInputElement | null;
+    const promptIdEl = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
     const promptId = promptIdEl ? promptIdEl.value : null;
 
     if (!promptId) {
@@ -869,9 +873,9 @@ class PromptManager implements IApp {
     const gridBtn = document.getElementById(Constants.Ids.PROMPT_GRID_VIEW_BTN);
     const listBtn = document.getElementById(Constants.Ids.PROMPT_LIST_VIEW_BTN);
     const compactBtn = document.getElementById(Constants.Ids.PROMPT_COMPACT_VIEW_BTN);
-    const promptGrid = document.getElementById('promptGrid');
-    const promptList = document.getElementById('promptList');
-    const cardSizeSlider = document.getElementById('promptCardSizeSlider');
+    const promptGrid = document.getElementById(Constants.Ids.PROMPT_GRID);
+    const promptList = document.getElementById(Constants.Ids.PROMPT_LIST);
+    const cardSizeSlider = document.getElementById(Constants.Ids.PROMPT_CARD_SIZE_SLIDER);
     const cardSizeSliderContainer = cardSizeSlider?.closest('.thumbnail-size-slider') as HTMLElement | null;
 
     // 更新按钮状态
@@ -905,9 +909,9 @@ class PromptManager implements IApp {
     const gridBtn = document.getElementById(Constants.Ids.IMAGE_GRID_VIEW_BTN);
     const listBtn = document.getElementById(Constants.Ids.IMAGE_LIST_VIEW_BTN);
     const compactBtn = document.getElementById(Constants.Ids.IMAGE_COMPACT_VIEW_BTN);
-    const imageGrid = document.getElementById('imageGrid');
-    const imageList = document.getElementById('imageList');
-    const imageCardSizeSlider = document.getElementById('imageCardSizeSlider');
+    const imageGrid = document.getElementById(Constants.Ids.IMAGE_GRID);
+    const imageList = document.getElementById(Constants.Ids.IMAGE_LIST);
+    const imageCardSizeSlider = document.getElementById(Constants.Ids.IMAGE_CARD_SIZE_SLIDER);
     const imageCardSizeSliderContainer = imageCardSizeSlider?.closest('.thumbnail-size-slider') as HTMLElement | null;
 
     // 更新按钮状态

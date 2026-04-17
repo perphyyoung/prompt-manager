@@ -194,13 +194,13 @@ export abstract class DetailViewManager {
    */
   private hideHoverTooltip(): void {
     // 隐藏图像提示词 tooltip
-    const imageTooltip = document.getElementById('imagePromptTooltip');
+    const imageTooltip = document.getElementById(Constants.Ids.IMAGE_PROMPT_TOOLTIP);
     if (imageTooltip?.classList.contains('show')) {
       imageTooltip.classList.remove('show');
     }
 
     // 隐藏提示词预览 tooltip
-    const promptTooltip = document.getElementById('promptPreviewTooltip');
+    const promptTooltip = document.getElementById(Constants.Ids.PROMPT_PREVIEW_TOOLTIP);
     if (promptTooltip?.classList.contains('show')) {
       promptTooltip.classList.remove('show');
     }
@@ -342,7 +342,7 @@ export abstract class DetailViewManager {
           const modal = document.getElementById(this.modalId);
           if (!modal || !modal.classList.contains('active')) return false;
           // 如果全屏查看器打开，不响应（让全屏查看器优先处理）
-          const fullscreenViewer = document.getElementById('imageFullscreenViewer');
+          const fullscreenViewer = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER);
           if (fullscreenViewer && fullscreenViewer.classList.contains('active')) return false;
           // 如果在批量标签模式，不响应（让 ShortcutManager 处理 Esc）
           if (this.isBatchMode) return false;

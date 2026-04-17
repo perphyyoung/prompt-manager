@@ -591,7 +591,7 @@ test.describe('标签管理功能', () => {
 
       // Select the target group
       await page.selectOption(`#${Constants.Ids.SELECT_MODAL_FIELD}`, String(groupId));
-      await page.click(`#${Constants.Ids.SELECT_MODAL_OK_BTN}`);
+      await page.click(`#${Constants.Ids.SELECT_OK_BTN}`);
 
       // Wait for move via API
       await page.waitForFunction(async (params: { tags: string[]; groupId: number }) => {
@@ -1117,7 +1117,7 @@ test.describe('标签管理功能', () => {
 
       // Select the target group
       await page.selectOption(`#${Constants.Ids.SELECT_MODAL_FIELD}`, String(groupId));
-      await page.click(`#${Constants.Ids.SELECT_MODAL_OK_BTN}`);
+      await page.click(`#${Constants.Ids.SELECT_OK_BTN}`);
 
       // Wait for move via API
       await page.waitForFunction(async (params: { tags: string[]; groupId: number }) => {

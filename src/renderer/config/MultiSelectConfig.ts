@@ -82,12 +82,12 @@ export const MultiSelectConfig: Record<'prompt' | 'image', IMultiSelectConfig> =
     label: '提示词',
     itemType: 'prompt',
     buttons: [
-      { id: 'promptBatchSelectAllBtn', text: '全选', className: 'batch-action-btn batch-action-selectall', action: 'SelectAll' },
-      { id: 'promptBatchInvertBtn', text: '反选', className: 'batch-action-btn batch-action-invert', action: 'Invert' },
-      { id: 'promptBatchAddTagBtn', text: '批量添加标签', className: 'batch-action-btn batch-action-addtag', action: 'AddTag' },
-      { id: 'promptBatchFavoriteBtn', text: '批量收藏', className: 'batch-action-btn batch-action-favorite', action: 'Favorite' },
-      { id: 'promptBatchDeleteBtn', text: '批量删除', className: 'batch-action-btn batch-action-delete', action: 'Delete' },
-      { id: 'promptBatchCancelBtn', text: '取消选择', className: 'batch-action-btn batch-action-cancel', action: 'Cancel' }
+      { id: Constants.Ids.PROMPT_BATCH_SELECT_ALL_BTN, text: '全选', className: 'batch-action-btn batch-action-selectall', action: 'SelectAll' },
+      { id: Constants.Ids.PROMPT_BATCH_INVERT_BTN, text: '反选', className: 'batch-action-btn batch-action-invert', action: 'Invert' },
+      { id: Constants.Ids.PROMPT_BATCH_ADD_TAG_BTN, text: '批量添加标签', className: 'batch-action-btn batch-action-addtag', action: 'AddTag' },
+      { id: Constants.Ids.PROMPT_BATCH_FAVORITE_BTN, text: '批量收藏', className: 'batch-action-btn batch-action-favorite', action: 'Favorite' },
+      { id: Constants.Ids.PROMPT_BATCH_DELETE_BTN, text: '批量删除', className: 'batch-action-btn batch-action-delete', action: 'Delete' },
+      { id: Constants.Ids.PROMPT_BATCH_CANCEL_BTN, text: '取消选择', className: 'batch-action-btn batch-action-cancel', action: 'Cancel' }
     ],
     operations: {
       delete: {
@@ -133,12 +133,12 @@ export const MultiSelectConfig: Record<'prompt' | 'image', IMultiSelectConfig> =
     label: '图像',
     itemType: 'image',
     buttons: [
-      { id: 'imageBatchSelectAllBtn', text: '全选', className: 'batch-action-btn batch-action-selectall', action: 'SelectAll' },
-      { id: 'imageBatchInvertBtn', text: '反选', className: 'batch-action-btn batch-action-invert', action: 'Invert' },
-      { id: 'imageBatchAddTagBtn', text: '批量添加标签', className: 'batch-action-btn batch-action-addtag', action: 'AddTag' },
-      { id: 'imageBatchFavoriteBtn', text: '批量收藏', className: 'batch-action-btn batch-action-favorite', action: 'Favorite' },
-      { id: 'imageBatchDeleteBtn', text: '批量删除', className: 'batch-action-btn batch-action-delete', action: 'Delete' },
-      { id: 'imageBatchCancelBtn', text: '取消选择', className: 'batch-action-btn batch-action-cancel', action: 'Cancel' }
+      { id: Constants.Ids.IMAGE_BATCH_SELECT_ALL_BTN, text: '全选', className: 'batch-action-btn batch-action-selectall', action: 'SelectAll' },
+      { id: Constants.Ids.IMAGE_BATCH_INVERT_BTN, text: '反选', className: 'batch-action-btn batch-action-invert', action: 'Invert' },
+      { id: Constants.Ids.IMAGE_BATCH_ADD_TAG_BTN, text: '批量添加标签', className: 'batch-action-btn batch-action-addtag', action: 'AddTag' },
+      { id: Constants.Ids.IMAGE_BATCH_FAVORITE_BTN, text: '批量收藏', className: 'batch-action-btn batch-action-favorite', action: 'Favorite' },
+      { id: Constants.Ids.IMAGE_BATCH_DELETE_BTN, text: '批量删除', className: 'batch-action-btn batch-action-delete', action: 'Delete' },
+      { id: Constants.Ids.IMAGE_BATCH_CANCEL_BTN, text: '取消选择', className: 'batch-action-btn batch-action-cancel', action: 'Cancel' }
     ],
     operations: {
       delete: {

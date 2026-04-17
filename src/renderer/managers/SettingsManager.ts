@@ -73,10 +73,10 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    */
   private bindSettingsEvents(): void {
     // 关闭按钮
-    document.getElementById('closeSettingsModal')?.addEventListener('click', () => this.closeModal());
+    document.getElementById(Constants.Ids.CLOSE_SETTINGS_MODAL)?.addEventListener('click', () => this.closeModal());
 
     // 设置按钮（打开模态框）
-    document.getElementById('settingsBtn')?.addEventListener('click', () => this.openModal());
+    document.getElementById(Constants.Ids.SETTINGS_BTN)?.addEventListener('click', () => this.openModal());
   }
 
   /**
@@ -86,15 +86,15 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     // 获取当前数据路径
     try {
       const dataPath = await window.electronAPI.getDataPath();
-      const el = document.getElementById('currentDataPath');
+      const el = document.getElementById(Constants.Ids.CURRENT_DATA_PATH);
       if (el) el.textContent = dataPath;
     } catch (error) {
       window.electronAPI.logError('SettingsManager', 'Failed to get data path:', error);
-      const el = document.getElementById('currentDataPath');
+      const el = document.getElementById(Constants.Ids.CURRENT_DATA_PATH);
       if (el) el.textContent = '获取失败';
     }
 
-    const modal = document.getElementById('settingsModal');
+    const modal = document.getElementById(Constants.Ids.SETTINGS_MODAL);
     if (modal) {
       const stackEntry: IContextStackEntry = {
         id: Constants.Ids.SETTINGS_MODAL,
@@ -113,7 +113,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    * 关闭设置模态框
    */
   closeModal(): void {
-    const modal = document.getElementById('settingsModal');
+    const modal = document.getElementById(Constants.Ids.SETTINGS_MODAL);
     if (modal) {
       modal.classList.remove('active');
     }
@@ -155,7 +155,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     const savedCardTextColor = localStorage.getItem(Constants.LocalStorageKey.CARD_TEXT_COLOR);
     if (savedCardTextColor) {
       this.applyCardTextColor(savedCardTextColor);
-      const picker = document.getElementById('cardTextColorPicker') as HTMLInputElement | null;
+      const picker = document.getElementById(Constants.Ids.CARD_TEXT_COLOR_PICKER) as HTMLInputElement | null;
       if (picker) picker.value = savedCardTextColor;
     }
 
@@ -187,13 +187,13 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    */
   private bindEvents(): void {
     // 数据路径更改
-    document.getElementById('changeDataPathBtn')?.addEventListener('click', () => this.changeDataPath());
+    document.getElementById(Constants.Ids.CHANGE_DATA_PATH_BTN)?.addEventListener('click', () => this.changeDataPath());
 
     // 清空数据
-    document.getElementById('clearAllDataBtn')?.addEventListener('click', () => this.clearAllData());
+    document.getElementById(Constants.Ids.CLEAR_ALL_DATA_BTN)?.addEventListener('click', () => this.clearAllData());
 
     // 视图模式
-    const viewModeToggle = document.getElementById('viewModeToggle') as HTMLInputElement | null;
+    const viewModeToggle = document.getElementById(Constants.Ids.VIEW_MODE_TOGGLE) as HTMLInputElement | null;
     if (viewModeToggle) {
       // 初始化状态：safe = 选中(绿色), nsfw = 未选中(灰色)
       viewModeToggle.checked = this.app?.viewMode === Constants.ViewMode.SAFE;
@@ -204,10 +204,10 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     }
 
     // 主题切换
-    document.getElementById('settingsThemeToggle')?.addEventListener('click', () => this.toggleTheme());
+    document.getElementById(Constants.Ids.SETTINGS_THEME_TOGGLE)?.addEventListener('click', () => this.toggleTheme());
 
     // 卡片文字颜色选择器
-    const cardTextColorPicker = document.getElementById('cardTextColorPicker') as HTMLInputElement | null;
+    const cardTextColorPicker = document.getElementById(Constants.Ids.CARD_TEXT_COLOR_PICKER) as HTMLInputElement | null;
     if (cardTextColorPicker) {
       cardTextColorPicker.addEventListener('change', (e) => {
         const color = (e.target as HTMLInputElement).value;
@@ -217,19 +217,19 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     }
 
     // 自定义字体文件选择
-    document.getElementById('selectFontFileBtn')?.addEventListener('click', () => this.selectCustomFont());
+    document.getElementById(Constants.Ids.SELECT_FONT_FILE_BTN)?.addEventListener('click', () => this.selectCustomFont());
 
     // 导出孤儿文件
-    document.getElementById('exportOrphanFilesBtn')?.addEventListener('click', () => this.exportOrphanFiles());
+    document.getElementById(Constants.Ids.EXPORT_ORPHAN_FILES_BTN)?.addEventListener('click', () => this.exportOrphanFiles());
 
     // 完整备份导出
-    document.getElementById('exportFullBackupBtn')?.addEventListener('click', () => this.exportFullBackup());
+    document.getElementById(Constants.Ids.EXPORT_FULL_BACKUP_BTN)?.addEventListener('click', () => this.exportFullBackup());
 
     // 完整备份导入
-    document.getElementById('importFullBackupBtn')?.addEventListener('click', () => this.importFullBackup());
+    document.getElementById(Constants.Ids.IMPORT_FULL_BACKUP_BTN)?.addEventListener('click', () => this.importFullBackup());
 
     // 绑定自定义字体下拉框事件
-    const customFontSelect = document.getElementById('customFontSelect') as HTMLSelectElement | null;
+    const customFontSelect = document.getElementById(Constants.Ids.CUSTOM_FONT_SELECT) as HTMLSelectElement | null;
     if (customFontSelect) {
       customFontSelect.addEventListener('change', () => {
         if (customFontSelect.value) {
@@ -239,9 +239,9 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     }
 
     // 绑定字体大小按钮事件
-    const fontSizeDecrease = document.getElementById('fontSizeDecrease');
-    const fontSizeIncrease = document.getElementById('fontSizeIncrease');
-    const fontSizeValue = document.getElementById('fontSizeValue');
+    const fontSizeDecrease = document.getElementById(Constants.Ids.FONT_SIZE_DECREASE);
+    const fontSizeIncrease = document.getElementById(Constants.Ids.FONT_SIZE_INCREASE);
+    const fontSizeValue = document.getElementById(Constants.Ids.FONT_SIZE_VALUE);
 
     if (fontSizeDecrease && fontSizeIncrease && fontSizeValue) {
       // 初始化显示值
@@ -342,7 +342,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
   private async loadCustomFonts(): Promise<void> {
     try {
       const fonts = await window.electronAPI.getInstalledFonts();
-      const customFontSelect = document.getElementById('customFontSelect') as HTMLSelectElement | null;
+      const customFontSelect = document.getElementById(Constants.Ids.CUSTOM_FONT_SELECT) as HTMLSelectElement | null;
 
       if (!customFontSelect) return;
 
@@ -382,7 +382,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     try {
       const newPath = await window.electronAPI.selectDataPath();
       if (newPath) {
-        const currentDataPathEl = document.getElementById('currentDataPath');
+        const currentDataPathEl = document.getElementById(Constants.Ids.CURRENT_DATA_PATH);
         if (currentDataPathEl) {
           currentDataPathEl.textContent = newPath;
         }
@@ -479,7 +479,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     this.currentTheme = theme;
 
     // 更新主题切换按钮文本
-    const themeToggle = document.getElementById('settingsThemeToggle');
+    const themeToggle = document.getElementById(Constants.Ids.SETTINGS_THEME_TOGGLE);
     if (themeToggle) {
       themeToggle.innerHTML = theme === 'dark'
         ? '<span>☀️</span> 明亮'
@@ -579,7 +579,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     await this.handleViewModeChange(mode);
 
     // 更新选择框
-    const viewModeSelect = document.getElementById('viewModeSelect') as HTMLSelectElement | null;
+    const viewModeSelect = document.getElementById(Constants.Ids.VIEW_MODE_SELECT) as HTMLSelectElement | null;
     if (viewModeSelect) {
       viewModeSelect.value = mode;
     }

@@ -81,8 +81,8 @@ export class SearchSortManager {
    */
   private bindSearchEvents(): void {
     // 提示词搜索
-    const promptSearchInput = document.getElementById('promptSearchInput') as HTMLInputElement | null;
-    const clearPromptSearchBtn = document.getElementById('clearPromptSearchBtn');
+    const promptSearchInput = document.getElementById(Constants.Ids.PROMPT_SEARCH_INPUT) as HTMLInputElement | null;
+    const clearPromptSearchBtn = document.getElementById(Constants.Ids.CLEAR_PROMPT_SEARCH_BTN);
 
     if (promptSearchInput) {
       promptSearchInput.addEventListener('input', (e) => {
@@ -97,8 +97,8 @@ export class SearchSortManager {
     }
 
     // 图像搜索
-    const imageSearchInput = document.getElementById('imageSearchInput') as HTMLInputElement | null;
-    const clearImageSearchBtn = document.getElementById('clearImageSearchBtn');
+    const imageSearchInput = document.getElementById(Constants.Ids.IMAGE_SEARCH_INPUT) as HTMLInputElement | null;
+    const clearImageSearchBtn = document.getElementById(Constants.Ids.CLEAR_IMAGE_SEARCH_BTN);
 
     if (imageSearchInput) {
       imageSearchInput.addEventListener('input', (e) => {
@@ -255,9 +255,9 @@ export class SearchSortManager {
    * @private
    */
   private bindPromptSortEvents(): void {
-    const promptSortSelect = document.getElementById('promptSortSelect') as HTMLSelectElement | null;
-    const promptSortReverseBtn = document.getElementById('promptSortReverseBtn');
-    const promptCardSizeSlider = document.getElementById('promptCardSizeSlider') as HTMLInputElement | null;
+    const promptSortSelect = document.getElementById(Constants.Ids.PROMPT_SORT_SELECT) as HTMLSelectElement | null;
+    const promptSortReverseBtn = document.getElementById(Constants.Ids.PROMPT_SORT_REVERSE_BTN);
+    const promptCardSizeSlider = document.getElementById(Constants.Ids.PROMPT_CARD_SIZE_SLIDER) as HTMLInputElement | null;
 
     if (!this.app.promptPanelManager) return;
 
@@ -328,9 +328,9 @@ export class SearchSortManager {
    * @private
    */
   private bindImageSortEvents(): void {
-    const imageSortSelect = document.getElementById('imageSortSelect') as HTMLSelectElement | null;
-    const imageSortReverseBtn = document.getElementById('imageSortReverseBtn');
-    const imageCardSizeSlider = document.getElementById('imageCardSizeSlider') as HTMLInputElement | null;
+    const imageSortSelect = document.getElementById(Constants.Ids.IMAGE_SORT_SELECT) as HTMLSelectElement | null;
+    const imageSortReverseBtn = document.getElementById(Constants.Ids.IMAGE_SORT_REVERSE_BTN);
+    const imageCardSizeSlider = document.getElementById(Constants.Ids.IMAGE_CARD_SIZE_SLIDER) as HTMLInputElement | null;
 
     if (!this.app.imagePanelManager) return;
 
@@ -418,7 +418,7 @@ export class SearchSortManager {
    */
   setPromptSearchQuery(query: string): void {
     this.searchQuery = query;
-    const input = document.getElementById('promptSearchInput') as HTMLInputElement | null;
+    const input = document.getElementById(Constants.Ids.PROMPT_SEARCH_INPUT) as HTMLInputElement | null;
     if (input) {
       input.value = query;
     }
@@ -430,7 +430,7 @@ export class SearchSortManager {
    */
   setImageSearchQuery(query: string): void {
     this.imageSearchQuery = query;
-    const input = document.getElementById('imageSearchInput') as HTMLInputElement | null;
+    const input = document.getElementById(Constants.Ids.IMAGE_SEARCH_INPUT) as HTMLInputElement | null;
     if (input) {
       input.value = query;
     }
@@ -441,12 +441,12 @@ export class SearchSortManager {
    */
   clearAllSearches(): void {
     this.clearPromptSearch(
-      document.getElementById('promptSearchInput') as HTMLInputElement | null,
-      document.getElementById('clearPromptSearchBtn')
+      document.getElementById(Constants.Ids.PROMPT_SEARCH_INPUT) as HTMLInputElement | null,
+      document.getElementById(Constants.Ids.CLEAR_PROMPT_SEARCH_BTN)
     );
     this.clearImageSearch(
-      document.getElementById('imageSearchInput') as HTMLInputElement | null,
-      document.getElementById('clearImageSearchBtn')
+      document.getElementById(Constants.Ids.IMAGE_SEARCH_INPUT) as HTMLInputElement | null,
+      document.getElementById(Constants.Ids.CLEAR_IMAGE_SEARCH_BTN)
     );
   }
 }

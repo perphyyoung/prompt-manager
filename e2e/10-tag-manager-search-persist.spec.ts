@@ -305,7 +305,7 @@ test.describe('标签管理器搜索状态保持功能', () => {
 
       await page.waitForSelector(`#${Constants.Ids.SELECT_MODAL}`, { state: 'visible', timeout: 5000 });
       await page.selectOption(`#${Constants.Ids.SELECT_MODAL_FIELD}`, String(groupId));
-      await page.click(`#${Constants.Ids.SELECT_MODAL_OK_BTN}`);
+      await page.click(`#${Constants.Ids.SELECT_OK_BTN}`);
 
       // 等待移动完成，验证两个标签都在目标组中
       await page.waitForFunction(async (params: { tags: string[]; groupId: number }) => {
@@ -598,7 +598,7 @@ test.describe('标签管理器搜索状态保持功能', () => {
 
       await page.waitForSelector(`#${Constants.Ids.SELECT_MODAL}`, { state: 'visible', timeout: 5000 });
       await page.selectOption(`#${Constants.Ids.SELECT_MODAL_FIELD}`, String(groupId));
-      await page.click(`#${Constants.Ids.SELECT_MODAL_OK_BTN}`);
+      await page.click(`#${Constants.Ids.SELECT_OK_BTN}`);
 
       await page.waitForFunction(async (params: { tags: string[]; groupId: number }) => {
         const groups = await window.electronAPI.getPromptTagGroups();

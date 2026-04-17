@@ -44,10 +44,10 @@ export class StatisticsManager {
     });
 
     // 关闭按钮
-    document.getElementById('closeStatisticsModal')?.addEventListener('click', () => this.closeStatisticsModal());
+    document.getElementById(Constants.Ids.CLOSE_STATISTICS_MODAL)?.addEventListener('click', () => this.closeStatisticsModal());
 
     // 点击背景关闭
-    const statisticsModal = document.getElementById('statisticsModal');
+    const statisticsModal = document.getElementById(Constants.Ids.STATISTICS_MODAL);
     if (statisticsModal) {
       statisticsModal.addEventListener('click', (e) => {
         if (e.target === statisticsModal) {
@@ -62,7 +62,7 @@ export class StatisticsManager {
    */
   async openStatisticsModal(): Promise<void> {
     await this.renderStatistics();
-    const modal = document.getElementById('statisticsModal');
+    const modal = document.getElementById(Constants.Ids.STATISTICS_MODAL);
     if (modal) {
       // 压栈：进入统计视图上下文
       const stackEntry: IContextStackEntry = {
@@ -81,7 +81,7 @@ export class StatisticsManager {
    * 关闭统计模态框
    */
   closeStatisticsModal(): void {
-    const modal = document.getElementById('statisticsModal');
+    const modal = document.getElementById(Constants.Ids.STATISTICS_MODAL);
     if (modal) {
       modal.classList.remove('active');
     }
@@ -150,19 +150,19 @@ export class StatisticsManager {
    * 更新 DOM 显示
    */
   private updateDOM(data: IStatistics): void {
-    this.updateStatElement('statPromptsTotal', data.totalPrompts);
-    this.updateStatElement('statPromptsDeleted', data.deletedPrompts);
-    this.updateStatElement('statPromptsFavorite', data.favoritePrompts);
-    this.updateStatElement('statPromptsWithImages', data.promptsWithImages);
-    this.updateStatElement('statPromptTagGroups', data.promptTagGroups);
-    this.updateStatElement('statPromptTagsTotal', data.totalPromptTags);
+    this.updateStatElement(Constants.Ids.STAT_PROMPTS_TOTAL, data.totalPrompts);
+    this.updateStatElement(Constants.Ids.STAT_PROMPTS_DELETED, data.deletedPrompts);
+    this.updateStatElement(Constants.Ids.STAT_PROMPTS_FAVORITE, data.favoritePrompts);
+    this.updateStatElement(Constants.Ids.STAT_PROMPTS_WITH_IMAGES, data.promptsWithImages);
+    this.updateStatElement(Constants.Ids.STAT_PROMPT_TAG_GROUPS, data.promptTagGroups);
+    this.updateStatElement(Constants.Ids.STAT_PROMPT_TAGS_TOTAL, data.totalPromptTags);
 
-    this.updateStatElement('statImagesTotal', data.totalImages);
-    this.updateStatElement('statImagesDeleted', data.deletedImages);
-    this.updateStatElement('statImagesFavorite', data.favoriteImages);
-    this.updateStatElement('statImagesReferenced', data.referencedImages);
-    this.updateStatElement('statImageTagGroups', data.imageTagGroups);
-    this.updateStatElement('statImageTagsTotal', data.totalImageTags);
+    this.updateStatElement(Constants.Ids.STAT_IMAGES_TOTAL, data.totalImages);
+    this.updateStatElement(Constants.Ids.STAT_IMAGES_DELETED, data.deletedImages);
+    this.updateStatElement(Constants.Ids.STAT_IMAGES_FAVORITE, data.favoriteImages);
+    this.updateStatElement(Constants.Ids.STAT_IMAGES_REFERENCED, data.referencedImages);
+    this.updateStatElement(Constants.Ids.STAT_IMAGE_TAG_GROUPS, data.imageTagGroups);
+    this.updateStatElement(Constants.Ids.STAT_IMAGE_TAGS_TOTAL, data.totalImageTags);
   }
 
   /**

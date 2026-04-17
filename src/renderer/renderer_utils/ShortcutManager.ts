@@ -312,7 +312,7 @@ export class ShortcutManager {
    * 导航编辑器
    */
   navigateEditor(direction: string): void {
-    const promptDetailModal = document.querySelector('#promptDetailModal.active');
+    const promptDetailModal = document.querySelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`);
     const imageEditModal = document.querySelector('#imageEditModal.active');
 
     if (promptDetailModal) {
@@ -330,7 +330,7 @@ export class ShortcutManager {
    * 保存当前内容
    */
   async saveCurrent(): Promise<void> {
-    const promptDetailModal = document.querySelector('#promptDetailModal.active');
+    const promptDetailModal = document.querySelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`);
     const imageEditModal = document.querySelector('#imageEditModal.active');
 
     if (promptDetailModal && this.app.savePromptWithoutClosing) {
@@ -344,7 +344,7 @@ export class ShortcutManager {
    * 保存并关闭
    */
   async saveAndClose(): Promise<void> {
-    const promptDetailModal = document.querySelector('#promptDetailModal.active');
+    const promptDetailModal = document.querySelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`);
     const imageEditModal = document.querySelector('#imageEditModal.active');
 
     if (promptDetailModal && this.app.saveAndClosePromptDetail) {
@@ -382,7 +382,7 @@ export class ShortcutManager {
    * 切换标签面板
    */
   toggleTagsPanel(): void {
-    const tagsPanel = document.getElementById('tagsPanel');
+    const tagsPanel = document.getElementById(Constants.Ids.TAGS_PANEL);
     if (tagsPanel) {
       const isVisible = tagsPanel.style.display !== 'none';
       tagsPanel.style.display = isVisible ? 'none' : 'block';
@@ -393,7 +393,7 @@ export class ShortcutManager {
    * 打开回收站
    */
   openTrash(): void {
-    const trashPanel = document.getElementById('trashPanel');
+    const trashPanel = document.getElementById(Constants.Ids.TRASH_PANEL);
     if (trashPanel) {
       trashPanel.classList.add('active');
       if (this.app.trashManager) {
