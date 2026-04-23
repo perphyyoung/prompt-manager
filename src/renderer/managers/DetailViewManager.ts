@@ -436,6 +436,54 @@ export abstract class DetailViewManager {
   abstract getNavButtonPrefix(): string;
 
   /**
+   * 获取收藏按钮元素 ID（子类实现）
+   * @returns 收藏按钮的元素 ID
+   * @abstract
+   * @protected
+   */
+  protected abstract getFavoriteBtnId(): string;
+
+  /**
+   * 获取安全状态切换元素 ID（子类实现）
+   * @returns 安全状态切换的元素 ID
+   * @abstract
+   * @protected
+   */
+  protected abstract getSafeToggleId(): string;
+
+  /**
+   * 更新收藏按钮 UI（通用实现）
+   * @param isFavorite - 是否收藏
+   * @protected
+   */
+  protected updateFavoriteBtnUI(isFavorite: boolean): void {
+    const btn = document.getElementById(this.getFavoriteBtnId());
+    if (!btn) return;
+
+    if (isFavorite) {
+      btn.classList.add('active');
+      btn.title = '取消收藏';
+      btn.innerHTML = Constants.ICONS.favorite.filled;
+    } else {
+      btn.classList.remove('active');
+      btn.title = '收藏';
+      btn.innerHTML = Constants.ICONS.favorite.outline;
+    }
+  }
+
+  /**
+   * 设置安全状态 UI（通用实现）
+   * @param isSafe - 是否安全
+   * @protected
+   */
+  protected setSafeState(isSafe: boolean): void {
+    const safeToggle = document.getElementById(this.getSafeToggleId()) as HTMLInputElement | null;
+    if (safeToggle) {
+      safeToggle.checked = isSafe;
+    }
+  }
+
+  /**
    * 获取当前项目快照
    * @returns 项目快照数组
    */
