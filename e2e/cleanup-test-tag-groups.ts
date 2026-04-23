@@ -13,6 +13,8 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const prefix = "测试组_"; // e2e_
+
 /**
  * 启动 Electron 应用并获取 API
  */
@@ -43,7 +45,7 @@ async function cleanupImageTagGroups(page: any): Promise<number> {
     return await window.electronAPI.getImageTagGroups();
   });
 
-  const testGroups = groups.filter((g: { name: string }) => g.name.startsWith('e2e_'));
+  const testGroups = groups.filter((g: { name: string }) => g.name.startsWith(prefix));
   console.log(`发现 ${testGroups.length} 个图像测试标签组`);
 
   for (const group of testGroups) {
@@ -68,7 +70,7 @@ async function cleanupPromptTagGroups(page: any): Promise<number> {
     return await window.electronAPI.getPromptTagGroups();
   });
 
-  const testGroups = groups.filter((g: { name: string }) => g.name.startsWith('e2e_'));
+  const testGroups = groups.filter((g: { name: string }) => g.name.startsWith(prefix));
   console.log(`发现 ${testGroups.length} 个提示词测试标签组`);
 
   for (const group of testGroups) {

@@ -1,13 +1,10 @@
-import { test, expect } from '@playwright/test';
-import { Constants } from '../src/constants.ts';
-import { createElectronTest, enterPromptDetailView, getPromptFromDatabase } from './electron-test.ts';
-import type { IElectronAPI } from '../src/preload/index.ts';
-
-declare global {
-  interface Window {
-    electronAPI: IElectronAPI;
-  }
-}
+import { expect } from "@playwright/test";
+import { Constants } from "../src/constants.ts";
+import {
+  test,
+  enterPromptDetailView,
+  getPromptFromDatabase,
+} from "./electron-test.ts";
 
 /**
  * 提示词详情界面数据库字段读取 E2E 测试
@@ -25,23 +22,8 @@ declare global {
  * 3. 点击第一个提示词卡片打开详情模态框
  * 4. 等待 #promptDetailModal 显示
  */
-test.describe('提示词详情界面数据库字段读取', () => {
-  const electronTest = createElectronTest();
-
-  test.beforeAll(async () => {
-    await electronTest.launch();
-  });
-
-  test.afterEach(async () => {
-    await electronTest.cleanupAndReset();
-  });
-
-  test.afterAll(async () => {
-    await electronTest.close();
-  });
-
-  test('ID 字段正确显示', async () => {
-    const page = electronTest.getPage();
+test.describe("提示词详情界面数据库字段读取", () => {
+  test("ID 字段正确显示", async ({ _electronTest, page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -53,12 +35,9 @@ test.describe('提示词详情界面数据库字段读取', () => {
     await expect(idInput).toBeAttached();
     const displayedId = await idInput.inputValue();
     expect(displayedId).toBe(dbPrompt!.id);
-
-    await page.screenshot({ path: 'test-results/prompt-detail/04-id-field.png' });
   });
 
-  test('标题 (title) 字段正确显示', async () => {
-    const page = electronTest.getPage();
+  test("标题 (title) 字段正确显示", async ({ _electronTest, page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -70,12 +49,9 @@ test.describe('提示词详情界面数据库字段读取', () => {
     await expect(titleInput).toBeVisible();
     const displayedTitle = await titleInput.inputValue();
     expect(displayedTitle).toBe(dbPrompt!.title);
-
-    await page.screenshot({ path: 'test-results/prompt-detail/05-title-field.png' });
   });
 
-  test('内容 (content) 字段正确显示', async () => {
-    const page = electronTest.getPage();
+  test("内容 (content) 字段正确显示", async ({ _electronTest, page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -83,16 +59,18 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 验证内容文本域显示正确
-    const contentInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_CONTENT}`);
+    const contentInput = page.locator(
+      `#${Constants.Ids.PROMPT_DETAIL_CONTENT}`,
+    );
     await expect(contentInput).toBeVisible();
     const displayedContent = await contentInput.inputValue();
     expect(displayedContent).toBe(dbPrompt!.content);
-
-    await page.screenshot({ path: 'test-results/prompt-detail/06-content-field.png' });
   });
 
-  test('翻译 (contentTranslate) 字段正确显示', async () => {
-    const page = electronTest.getPage();
+  test("翻译 (contentTranslate) 字段正确显示", async ({
+    _electronTest,
+    page,
+  }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -100,16 +78,15 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 验证翻译文本域显示正确
-    const translateInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TRANSLATE}`);
+    const translateInput = page.locator(
+      `#${Constants.Ids.PROMPT_DETAIL_TRANSLATE}`,
+    );
     await expect(translateInput).toBeVisible();
     const displayedTranslate = await translateInput.inputValue();
-    expect(displayedTranslate).toBe(dbPrompt!.contentTranslate || '');
-
-    await page.screenshot({ path: 'test-results/prompt-detail/07-translate-field.png' });
+    expect(displayedTranslate).toBe(dbPrompt!.contentTranslate || "");
   });
 
-  test('备注 (note) 字段正确显示', async () => {
-    const page = electronTest.getPage();
+  test("备注 (note) 字段正确显示", async ({ _electronTest, page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -117,16 +94,13 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 验证备注文本域显示正确
-      const noteInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_NOTE}`);
+    const noteInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_NOTE}`);
     await expect(noteInput).toBeVisible();
     const displayedNote = await noteInput.inputValue();
-    expect(displayedNote).toBe(dbPrompt!.note || '');
-
-    await page.screenshot({ path: 'test-results/prompt-detail/08-note-field.png' });
+    expect(displayedNote).toBe(dbPrompt!.note || "");
   });
 
-  test('标签 (tags) 字段正确显示', async () => {
-    const page = electronTest.getPage();
+  test("标签 (tags) 字段正确显示", async ({ _electronTest, page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -134,18 +108,21 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 验证标签容器存在
-    const tagsContainer = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER}`);
+    const tagsContainer = page.locator(
+      `#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER}`,
+    );
     await expect(tagsContainer).toBeVisible();
 
     // 获取显示的标签（去除删除按钮文本）
     const displayedTags = await page.evaluate((containerId) => {
       const container = document.getElementById(containerId);
       if (!container) return [];
-      return Array.from(container.querySelectorAll('.tag-editable'))
-        .map(el => {
-          const text = el.textContent || '';
-          return text.replace(/[\s×]+$/, '').trim();
-        });
+      return Array.from(container.querySelectorAll(".tag-editable")).map(
+        (el) => {
+          const text = el.textContent || "";
+          return text.replace(/[\s×]+$/, "").trim();
+        },
+      );
     }, Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER);
 
     // 验证标签数量匹配
@@ -158,12 +135,9 @@ test.describe('提示词详情界面数据库字段读取', () => {
         expect(displayedTags[i]).toBe(dbTags[i]);
       }
     }
-
-    await page.screenshot({ path: 'test-results/prompt-detail/09-tags-field.png' });
   });
 
-  test('关联图像 (images) 字段正确显示', async () => {
-    const page = electronTest.getPage();
+  test("关联图像 (images) 字段正确显示", async ({ _electronTest, page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -175,18 +149,15 @@ test.describe('提示词详情界面数据库字段读取', () => {
     await expect(imageUploadArea).toBeVisible();
 
     // 获取显示的图像数量
-    const imageElements = page.locator('.image-preview-item');
+    const imageElements = page.locator(".image-preview-item");
     const displayedImageCount = await imageElements.count();
 
     // 验证图像数量匹配
     const dbImageCount = dbPrompt!.images?.length || 0;
     expect(displayedImageCount).toBe(dbImageCount);
-
-    await page.screenshot({ path: 'test-results/prompt-detail/10-images-field.png' });
   });
 
-  test('所有数据库字段一致性验证', async () => {
-    const page = electronTest.getPage();
+  test("所有数据库字段一致性验证", async ({ _electronTest, page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取完整提示词信息
@@ -194,56 +165,72 @@ test.describe('提示词详情界面数据库字段读取', () => {
     expect(dbPrompt).toBeTruthy();
 
     // 收集所有界面显示的值
-    const uiValues = await page.evaluate((params) => {
-      const { containerId, idFieldId, titleId, contentId, translateId, noteId } = params;
+    const uiValues = await page.evaluate(
+      (params) => {
+        const {
+          containerId,
+          idFieldId,
+          titleId,
+          contentId,
+          translateId,
+          noteId,
+        } = params;
 
-      const getValue = (id: string): string => {
-        const el = document.getElementById(id);
-        if (!el) return '';
-        if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-          return el.value;
-        }
-        return el.textContent || '';
-      };
+        const getValue = (id: string): string => {
+          const el = document.getElementById(id);
+          if (!el) return "";
+          if (
+            el instanceof HTMLInputElement ||
+            el instanceof HTMLTextAreaElement
+          ) {
+            return el.value;
+          }
+          return el.textContent || "";
+        };
 
-      const getTags = (): string[] => {
-        const container = document.getElementById(containerId);
-        if (!container) return [];
-        return Array.from(container.querySelectorAll('.tag-editable'))
-          .map(el => {
-            const text = el.textContent || '';
-            return text.replace(/[\s×]+$/, '').trim();
-          });
-      };
+        const getTags = (): string[] => {
+          const container = document.getElementById(containerId);
+          if (!container) return [];
+          return Array.from(container.querySelectorAll(".tag-editable")).map(
+            (el) => {
+              const text = el.textContent || "";
+              return text.replace(/[\s×]+$/, "").trim();
+            },
+          );
+        };
 
-      const getImageCount = (): number => {
-        return document.querySelectorAll('.image-preview-item').length;
-      };
+        const getImageCount = (): number => {
+          return document.querySelectorAll(".image-preview-item").length;
+        };
 
-      return {
-        id: (document.getElementById(idFieldId) as HTMLInputElement)?.value || '',
-        title: getValue(titleId),
-        content: getValue(contentId),
-        contentTranslate: getValue(translateId),
-        note: getValue(noteId),
-        tags: getTags(),
-        imageCount: getImageCount()
-      };
-    }, {
-      containerId: Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER,
-      idFieldId: Constants.Ids.PROMPT_DETAIL_ID,
-      titleId: Constants.Ids.PROMPT_DETAIL_TITLE,
-      contentId: Constants.Ids.PROMPT_DETAIL_CONTENT,
-      translateId: Constants.Ids.PROMPT_DETAIL_TRANSLATE,
-      noteId: Constants.Ids.PROMPT_DETAIL_NOTE
-    });
+        return {
+          id:
+            (document.getElementById(idFieldId) as HTMLInputElement)?.value ||
+            "",
+          title: getValue(titleId),
+          content: getValue(contentId),
+          contentTranslate: getValue(translateId),
+          note: getValue(noteId),
+          tags: getTags(),
+          imageCount: getImageCount(),
+        };
+      },
+      {
+        containerId: Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER,
+        idFieldId: Constants.Ids.PROMPT_DETAIL_ID,
+        titleId: Constants.Ids.PROMPT_DETAIL_TITLE,
+        contentId: Constants.Ids.PROMPT_DETAIL_CONTENT,
+        translateId: Constants.Ids.PROMPT_DETAIL_TRANSLATE,
+        noteId: Constants.Ids.PROMPT_DETAIL_NOTE,
+      },
+    );
 
     // 验证所有字段一致性
     expect(uiValues.id).toBe(dbPrompt!.id);
     expect(uiValues.title).toBe(dbPrompt!.title);
     expect(uiValues.content).toBe(dbPrompt!.content);
-    expect(uiValues.contentTranslate).toBe(dbPrompt!.contentTranslate || '');
-    expect(uiValues.note).toBe(dbPrompt!.note || '');
+    expect(uiValues.contentTranslate).toBe(dbPrompt!.contentTranslate || "");
+    expect(uiValues.note).toBe(dbPrompt!.note || "");
 
     // 验证标签
     const dbTags = dbPrompt!.tags || [];
@@ -252,7 +239,5 @@ test.describe('提示词详情界面数据库字段读取', () => {
     // 验证图像数量
     const dbImageCount = dbPrompt!.images?.length || 0;
     expect(uiValues.imageCount).toBe(dbImageCount);
-
-    await page.screenshot({ path: 'test-results/prompt-detail/11-all-fields-consistency.png' });
   });
 });
