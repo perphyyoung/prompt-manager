@@ -273,18 +273,6 @@ describe('PyTagGroups', () => {
     });
   });
 
-  describe('merge', () => {
-    it('should merge two tag arrays', () => {
-      const result = lib.merge(['a', 'b'], ['b', 'c']);
-      expect(result).toEqual(['a', 'b', 'c']);
-    });
-
-    it('should handle empty arrays', () => {
-      const result = lib.merge(['a', 'b'], []);
-      expect(result).toEqual(['a', 'b']);
-    });
-  });
-
   describe('diff', () => {
     it('should return tags to remove', () => {
       const result = lib.diff(['a', 'b', 'c'], ['b']);

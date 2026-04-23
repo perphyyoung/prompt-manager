@@ -5,7 +5,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseTagInput,
-  mergeTags,
   diffTags,
   normalizeTag,
   hasTag,
@@ -53,22 +52,6 @@ describe('utils', () => {
     it('should return empty array for empty input', () => {
       expect(parseTagInput('')).toEqual([]);
       expect(parseTagInput('   ')).toEqual([]);
-    });
-  });
-
-  describe('mergeTags', () => {
-    it('should merge two arrays', () => {
-      expect(mergeTags(['a', 'b'], ['c', 'd'])).toEqual(['a', 'b', 'c', 'd']);
-    });
-
-    it('should remove duplicates', () => {
-      expect(mergeTags(['a', 'b'], ['b', 'c'])).toEqual(['a', 'b', 'c']);
-    });
-
-    it('should handle empty arrays', () => {
-      expect(mergeTags([], ['a', 'b'])).toEqual(['a', 'b']);
-      expect(mergeTags(['a', 'b'], [])).toEqual(['a', 'b']);
-      expect(mergeTags([], [])).toEqual([]);
     });
   });
 

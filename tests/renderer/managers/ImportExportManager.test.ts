@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ImportExportManager } from '../../../src/renderer/managers/ImportExportManager';
+import { progressDialog } from '../../../src/renderer/components/ProgressDialog';
 
 // 模拟 PromptManager
 const createMockApp = () => ({
@@ -19,18 +20,15 @@ const mockRelaunchApp = vi.fn();
 const mockOnBackupProgress = vi.fn();
 const mockOffBackupProgress = vi.fn();
 
-// 模拟 ProgressDialog
-const mockProgressDialog = {
-  show: vi.fn(),
-  hide: vi.fn(),
-  updateProgress: vi.fn(),
-  complete: vi.fn(),
-  error: vi.fn(),
-};
-
 // 模拟 ProgressDialog 模块
 vi.mock('../../../src/renderer/components/ProgressDialog', () => ({
-  progressDialog: mockProgressDialog,
+  progressDialog: {
+    show: vi.fn(),
+    hide: vi.fn(),
+    updateProgress: vi.fn(),
+    complete: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
 beforeEach(() => {
@@ -79,13 +77,13 @@ describe('ImportExportManager', () => {
 
       expect(result).toBe(true);
       expect(mockExportFullBackup).toHaveBeenCalledTimes(1);
-      expect(mockProgressDialog.show).toHaveBeenCalledWith({
+      expect(progressDialog.show).toHaveBeenCalledWith({
         title: '正在创建备份...',
         status: '准备中...',
         onCancel: expect.any(Function),
       });
       expect(mockOnBackupProgress).toHaveBeenCalled();
-      expect(mockProgressDialog.complete).toHaveBeenCalledWith(
+      expect(progressDialog.complete).toHaveBeenCalledWith(
         expect.stringContaining('备份成功')
       );
       // 验证导出成功后不自动重启
@@ -101,8 +99,8 @@ describe('ImportExportManager', () => {
       const result = await manager.exportFullBackup();
 
       expect(result).toBe(false);
-      expect(mockProgressDialog.hide).toHaveBeenCalled();
-      expect(mockProgressDialog.complete).not.toHaveBeenCalled();
+      expect(progressDialog.hide).toHaveBeenCalled();
+      expect(progressDialog.complete).not.toHaveBeenCalled();
     });
 
     it('应该处理导出失败', async () => {
@@ -114,7 +112,7 @@ describe('ImportExportManager', () => {
       const result = await manager.exportFullBackup();
 
       expect(result).toBe(false);
-      expect(mockProgressDialog.error).toHaveBeenCalledWith(
+      expect(progressDialog.error).toHaveBeenCalledWith(
         '备份失败：磁盘空间不足'
       );
       expect(mockLogError).toHaveBeenCalled();
@@ -170,14 +168,14 @@ describe('ImportExportManager', () => {
 
       expect(result).toBe(true);
       expect(mockImportFullBackup).toHaveBeenCalledTimes(1);
-      expect(mockProgressDialog.show).toHaveBeenCalledWith({
+      expect(progressDialog.show).toHaveBeenCalledWith({
         title: '正在导入备份...',
         status: '准备中...',
         onCancel: expect.any(Function),
         onComplete: expect.any(Function),
       });
       expect(mockOnBackupProgress).toHaveBeenCalled();
-      expect(mockProgressDialog.complete).toHaveBeenCalledWith(
+      expect(progressDialog.complete).toHaveBeenCalledWith(
         expect.stringContaining('导入成功')
       );
 
@@ -185,7 +183,7 @@ describe('ImportExportManager', () => {
       expect(mockRelaunchApp).not.toHaveBeenCalled();
 
       // 模拟用户点击关闭按钮，触发 onComplete 回调
-      const showCall = mockProgressDialog.show.mock.calls[0];
+      const showCall = (progressDialog.show as any).mock.calls[0];
       const onCompleteCallback = showCall[0].onComplete;
       onCompleteCallback();
 
@@ -202,8 +200,8 @@ describe('ImportExportManager', () => {
       const result = await manager.importFullBackup();
 
       expect(result).toBe(false);
-      expect(mockProgressDialog.hide).toHaveBeenCalled();
-      expect(mockProgressDialog.complete).not.toHaveBeenCalled();
+      expect(progressDialog.hide).toHaveBeenCalled();
+      expect(progressDialog.complete).not.toHaveBeenCalled();
     });
 
     it('应该处理导入失败', async () => {
@@ -215,7 +213,7 @@ describe('ImportExportManager', () => {
       const result = await manager.importFullBackup();
 
       expect(result).toBe(false);
-      expect(mockProgressDialog.error).toHaveBeenCalledWith(
+      expect(progressDialog.error).toHaveBeenCalledWith(
         '导入失败：备份文件损坏'
       );
       expect(mockLogError).toHaveBeenCalled();
@@ -251,7 +249,7 @@ describe('ImportExportManager', () => {
       const result = await manager.importFullBackup();
 
       expect(result).toBe(false);
-      expect(mockProgressDialog.error).toHaveBeenCalledWith(
+      expect(progressDialog.error).toHaveBeenCalledWith(
         '导入失败：版本不兼容：备份版本 2.0.0，当前版本 1.0.0'
       );
       expect(mockLogError).toHaveBeenCalled();
