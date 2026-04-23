@@ -79,7 +79,6 @@ src/
 | 功能 | 说明 |
 |-----|------|
 | 解析标签输入 | 解析逗号/空格/中文逗号分隔的标签字符串 |
-| 合并标签数组 | 合并两个标签数组并去重 |
 | 差集计算 | 计算两个标签数组的差集 |
 | 标准化标签名 | 去除首尾空格，统一格式 |
 
@@ -247,7 +246,6 @@ export class PyTagGroups {
 
   // 工具方法
   parse(input: string): TagName[];
-  merge(current: TagName[], added: TagName[]): TagName[];
   diff(current: TagName[], removed: TagName[]): TagName[];
 
   // 按组分组标签
@@ -371,9 +369,6 @@ export function getReservedTags(type: DataType): TagName[];
 ```typescript
 // 解析标签输入（支持批量）
 export function parseTagInput(input: string): TagName[];
-
-// 合并标签数组（去重）
-export function mergeTags(current: TagName[], added: TagName[]): TagName[];
 
 // 计算标签差集
 export function diffTags(current: TagName[], removed: TagName[]): TagName[];
@@ -587,8 +582,6 @@ const groups = await lib.getGroups();
 // 解析输入
 const tags = lib.parse('tag1, tag2, tag3');  // ['tag1', 'tag2', 'tag3']
 
-// 合并标签
-const merged = lib.merge(['a', 'b'], ['b', 'c']);  // ['a', 'b', 'c']
 ```
 
 ---
@@ -637,7 +630,6 @@ const merged = lib.merge(['a', 'b'], ['b', 'c']);  // ['a', 'b', 'c']
 #### utils.test.ts - 工具函数测试
 
 - `parseTagInput` - 解析逗号/空格分隔的标签输入
-- `mergeTags` - 合并标签数组并去重
 - `diffTags` - 计算标签数组差集
 - `normalizeTag` - 标准化标签名（trim）
 - `hasTag` - 检查标签是否存在
@@ -701,7 +693,6 @@ const merged = lib.merge(['a', 'b'], ['b', 'c']);  // ['a', 'b', 'c']
 - `deleteGroup` - 删除标签组
 - `assignToGroup` - 分配标签到组
 - `parse` - 解析标签输入
-- `merge` - 合并标签
 - `diff` - 计算标签差集
 
 #### TopGroupManager.test.ts - 首位组管理器测试
