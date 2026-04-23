@@ -1,6 +1,7 @@
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
 import noHardcodedElementIds from './eslint-rules/no-hardcoded-element-ids.js';
+import noDynamicImport from './eslint-rules/no-dynamic-import.js';
 
 export default [
   {
@@ -18,7 +19,8 @@ export default [
       '@typescript-eslint': tseslint,
       'custom': {
         rules: {
-          'no-hardcoded-element-ids': noHardcodedElementIds
+          'no-hardcoded-element-ids': noHardcodedElementIds,
+          'no-dynamic-import': noDynamicImport
         }
       }
     },
@@ -32,7 +34,9 @@ export default [
       // 其他推荐规则
       '@typescript-eslint/no-unused-expressions': 'error',
       // 禁止硬编码 DOM ID 字符串
-      'custom/no-hardcoded-element-ids': 'error'
+      'custom/no-hardcoded-element-ids': 'error',
+      // 禁止动态 import()
+      'custom/no-dynamic-import': 'error'
     }
   }
 ];
