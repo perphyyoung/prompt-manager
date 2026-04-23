@@ -12,7 +12,7 @@ export interface IPrompt {
   note?: string;
   isSafe?: number;
   isFavorite?: number;
-  isDeleted?: boolean;
+  isDeleted: boolean;
   images?: Array<{ id: string; thumbnailPath?: string }>;
   tags?: string[];
   createdAt?: string;
@@ -28,7 +28,7 @@ export interface IImage {
   relativePath: string;
   isSafe?: number;
   isFavorite?: number;
-  isDeleted?: boolean;
+  isDeleted: boolean;
   fileSize?: number;
   width?: number;
   height?: number;
@@ -148,4 +148,5 @@ export interface IBatchTagManagerConfig {
   containerId: string;
   inputAreaId: string;
   batchBtnId: string;
+  context: 'promptDetail' | 'imageDetail';
 }

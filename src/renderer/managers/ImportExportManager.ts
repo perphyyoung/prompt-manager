@@ -5,6 +5,7 @@
 
 import type { IApp } from '../app.types.ts';
 import type { IScanOrphanFilesResult, IExportOrphanFilesResult } from '../../types/entities.ts';
+import { progressDialog } from '../components/ProgressDialog.ts';
 
 interface ImportExportManagerOptions {
   app: IApp;
@@ -99,9 +100,6 @@ export class ImportExportManager {
 
     this.isExporting = true;
 
-    // 动态导入 ProgressDialog
-    const { progressDialog } = await import('../components/ProgressDialog');
-
     // 设置进度回调
     const handleProgress = (progress: { stage: string; percent: number; status: string; detail?: string }) => {
       progressDialog.updateProgress(progress.percent, progress.status, progress.detail);
@@ -169,9 +167,6 @@ export class ImportExportManager {
     }
 
     this.isExporting = true;
-
-    // 动态导入 ProgressDialog
-    const { progressDialog } = await import('../components/ProgressDialog');
 
     // 设置进度回调
     const handleProgress = (progress: { stage: string; percent: number; status: string; detail?: string }) => {

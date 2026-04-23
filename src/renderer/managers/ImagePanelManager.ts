@@ -5,6 +5,7 @@ import type { IEventBus } from '../app.types.ts';
 import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig, UnifiedListRenderer, ImageListConfig } from './SharedComponents/index.ts';
 import { Constants, Events } from '../../constants.ts';
 import { DialogConfig } from '../services/index.ts';
+import { batchToolbarMiddle } from '../../middle/index.ts';
 
 import { IImage } from '../../types/entities.ts';
 import type { LRUCache } from '../../utils/LRUCache.ts';
@@ -280,7 +281,7 @@ export class ImagePanelManager extends PanelManagerBase {
       icons: Constants.ICONS,
       sortBy: this.sortBy,
       app: this.app,
-      selectedIds: this.multiSelectManager.selectedIds,
+      selectedIds: batchToolbarMiddle.getSelectedIds(this.toolbarContext),
       index
     });
   }
@@ -327,7 +328,7 @@ export class ImagePanelManager extends PanelManagerBase {
       UnifiedListRenderer.render(ImageListConfig, img, {
         icons: Constants.ICONS,
         isCompact,
-        isSelected: this.multiSelectManager.isSelected(String(img.id)),
+        isSelected: batchToolbarMiddle.isSelected(this.toolbarContext, String(img.id)),
         index
       })
     ).join('');

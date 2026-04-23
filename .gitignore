@@ -2,6 +2,7 @@
 py-data*/
 *.diff
 bak/*
+test-data
 *.db
 tmp.md
 test-results/*

@@ -253,6 +253,8 @@ export class PromptDetailManager extends DetailViewManager {
           if (success) {
             this.currentTags = this.currentTags.filter(t => t !== tagName);
             app.eventBus.emit(Events.PROMPTS_CHANGED);
+            // 触发重新渲染标签列表
+            detailTagManager.onRender?.();
           }
           return success;
         } catch (error) {
@@ -322,7 +324,8 @@ export class PromptDetailManager extends DetailViewManager {
         toolbarId: Constants.Ids.PROMPT_DETAIL_BATCH_TAG_TOOLBAR,
         containerId: Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER,
         inputAreaId: Constants.Ids.PROMPT_DETAIL_TAG_INPUT_AREA,
-        batchBtnId: Constants.Ids.PROMPT_DETAIL_BATCH_TAG_BTN
+        batchBtnId: Constants.Ids.PROMPT_DETAIL_BATCH_TAG_BTN,
+        context: 'promptDetail'
       },
       detailTagManager
     );

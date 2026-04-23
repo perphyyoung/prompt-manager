@@ -44,7 +44,6 @@ export {
 // 工具函数（按需导出）
 export {
   parseTagInput,
-  mergeTags,
   diffTags,
   normalizeTag,
   hasTag,

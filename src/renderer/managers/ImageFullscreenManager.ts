@@ -117,7 +117,7 @@ export class ImageFullscreenManager {
       hint.classList.remove('fade-out');
       setTimeout(() => {
         hint.classList.add('fade-out');
-      }, 2000);
+      }, 1000);
     }
   }
 

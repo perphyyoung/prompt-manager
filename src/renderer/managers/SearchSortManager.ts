@@ -14,6 +14,7 @@ interface ISearchSortManagerOptions {
 interface ISearchSortManagerDeps {
   promptPanelManager: {
     renderView: () => void;
+    exitBatchMode: () => void;
     sortBy: string;
     sortOrder: string;
     cardSize: number;
@@ -22,6 +23,7 @@ interface ISearchSortManagerDeps {
   } | null;
   imagePanelManager: {
     renderView: () => void;
+    exitBatchMode: () => void;
     sortBy: string;
     sortOrder: string;
     cardSize: number;
@@ -126,6 +128,8 @@ export class SearchSortManager {
       clearBtn.style.display = value ? 'flex' : 'none';
     }
 
+    this.app.promptPanelManager?.exitBatchMode();
+
     // 防抖处理
     if (this.searchDebounceTimer) {
       clearTimeout(this.searchDebounceTimer);
@@ -155,6 +159,8 @@ export class SearchSortManager {
       clearBtn.style.display = 'none';
     }
 
+    this.app.promptPanelManager?.exitBatchMode();
+
     if (this.app.promptPanelManager) {
       this.app.promptPanelManager.renderView();
     }
@@ -172,6 +178,8 @@ export class SearchSortManager {
     if (clearBtn) {
       clearBtn.style.display = value ? 'flex' : 'none';
     }
+
+    this.app.imagePanelManager?.exitBatchMode();
 
     // 防抖处理
     if (this.searchDebounceTimer) {
@@ -201,6 +209,8 @@ export class SearchSortManager {
     if (clearBtn) {
       clearBtn.style.display = 'none';
     }
+
+    this.app.imagePanelManager?.exitBatchMode();
 
     if (this.app.imagePanelManager) {
       this.app.imagePanelManager.renderView();

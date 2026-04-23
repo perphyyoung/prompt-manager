@@ -288,6 +288,8 @@ export class ImageDetailManager extends DetailViewManager {
           if (success) {
             this.currentTags = this.currentTags.filter(t => t !== tagName);
             app.eventBus.emit(Events.IMAGES_CHANGED);
+            // 触发重新渲染标签列表
+            detailTagManager.onRender?.();
           }
           return success;
         } catch (error) {
@@ -348,7 +350,8 @@ export class ImageDetailManager extends DetailViewManager {
         toolbarId: Constants.Ids.IMAGE_DETAIL_BATCH_TAG_TOOLBAR,
         containerId: Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER,
         inputAreaId: Constants.Ids.IMAGE_DETAIL_TAG_INPUT_AREA,
-        batchBtnId: Constants.Ids.IMAGE_DETAIL_BATCH_TAG_BTN
+        batchBtnId: Constants.Ids.IMAGE_DETAIL_BATCH_TAG_BTN,
+        context: 'imageDetail'
       },
       detailTagManager
     );
@@ -475,7 +478,8 @@ export class ImageDetailManager extends DetailViewManager {
             content: ref.promptContent,
             contentTranslate: ref.promptContentTranslate,
             note: ref.promptNote,
-            tags: []
+            tags: [],
+            isDeleted: false
           };
           cacheManager.cachePrompt(prompt);
           return prompt;

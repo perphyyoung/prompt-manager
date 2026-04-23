@@ -227,20 +227,8 @@
           <p>点击左侧"新建 Prompt"按钮开始创建</p>
         </div>
 
-        <!-- 提示词主面板批量工具栏 -->
-        <div id="{{PROMPT_MAIN_BATCH_TOOLBAR}}" class="batch-toolbar">
-          <div class="batch-toolbar-content">
-            <span class="batch-toolbar-count">已选择 0 个提示词</span>
-            <div class="batch-toolbar-actions">
-              <button type="button" id="{{PROMPT_BATCH_SELECT_ALL_BTN}}" class="batch-action-btn batch-action-selectall" data-action="SelectAll">全选</button>
-              <button type="button" id="{{PROMPT_BATCH_INVERT_BTN}}" class="batch-action-btn batch-action-invert" data-action="Invert">反选</button>
-              <button type="button" id="{{PROMPT_BATCH_ADD_TAG_BTN}}" class="batch-action-btn batch-action-addtag" data-action="AddTag">批量添加标签</button>
-              <button type="button" id="{{PROMPT_BATCH_FAVORITE_BTN}}" class="batch-action-btn batch-action-favorite" data-action="Favorite">批量收藏</button>
-              <button type="button" id="{{PROMPT_BATCH_DELETE_BTN}}" class="batch-action-btn batch-action-delete" data-action="Delete">批量删除</button>
-              <button type="button" id="{{PROMPT_BATCH_CANCEL_BTN}}" class="batch-action-btn batch-action-cancel" data-action="Cancel">取消选择</button>
-            </div>
-          </div>
-        </div>
+        <!-- 提示词主面板批量工具栏容器（动态生成） -->
+        <div id="promptMainBatchToolbarContainer"></div>
       </div>
 
       <!-- 图像管理面板 -->
@@ -394,22 +382,9 @@
           <p>在创建或编辑 Prompt 时添加图像</p>
         </div>
 
-        <!-- 图像主面板批量工具栏 -->
-        <div id="{{IMAGE_MAIN_BATCH_TOOLBAR}}" class="batch-toolbar">
-          <div class="batch-toolbar-content">
-            <span class="batch-toolbar-count">已选择 0 个图像</span>
-            <div class="batch-toolbar-actions">
-              <button type="button" id="{{IMAGE_BATCH_SELECT_ALL_BTN}}" class="batch-action-btn batch-action-selectall" data-action="SelectAll">全选</button>
-              <button type="button" id="{{IMAGE_BATCH_INVERT_BTN}}" class="batch-action-btn batch-action-invert" data-action="Invert">反选</button>
-              <button type="button" id="{{IMAGE_BATCH_ADD_TAG_BTN}}" class="batch-action-btn batch-action-addtag" data-action="AddTag">批量添加标签</button>
-              <button type="button" id="{{IMAGE_BATCH_FAVORITE_BTN}}" class="batch-action-btn batch-action-favorite" data-action="Favorite">批量收藏</button>
-              <button type="button" id="{{IMAGE_BATCH_DELETE_BTN}}" class="batch-action-btn batch-action-delete" data-action="Delete">批量删除</button>
-              <button type="button" id="{{IMAGE_BATCH_CANCEL_BTN}}" class="batch-action-btn batch-action-cancel" data-action="Cancel">取消选择</button>
-            </div>
-          </div>
-        </div>
+        <!-- 图像主面板批量工具栏容器（动态生成） -->
+        <div id="imageMainBatchToolbarContainer"></div>
       </div>
-
     </main>
   </div>
   
@@ -480,11 +455,8 @@
               <div class="section-header-with-actions">
                 <label>提示词标签</label>
                 <div class="header-actions-group">
-                  <div id="promptDetailBatchTagToolbar" class="batch-tag-toolbar-inline" style="display: none;">
-                    <span class="batch-tag-count"><span id="promptDetailBatchTagCount">0</span> 个</span>
-                    <button type="button" id="promptDetailBatchTagDeleteBtn" class="btn btn-sm btn-danger">删除</button>
-                    <button type="button" id="promptDetailBatchTagCancelBtn" class="btn btn-sm btn-secondary">取消</button>
-                  </div>
+                  <!-- 提示词详情页批量工具栏容器（动态生成） -->
+                  <div id="promptDetailBatchTagToolbarContainer"></div>
                   <button type="button" id="promptDetailBatchTagBtn" class="btn btn-sm btn-outline">批量管理</button>
                 </div>
               </div>
@@ -665,11 +637,8 @@
                 <div class="section-header-with-actions">
                   <h4>图像标签</h4>
                   <div class="header-actions-group">
-                    <div id="imageDetailBatchTagToolbar" class="batch-tag-toolbar-inline" style="display: none;">
-                      <span class="batch-tag-count"><span id="imageDetailBatchTagCount">0</span> 个</span>
-                      <button type="button" id="imageDetailBatchTagDeleteBtn" class="btn btn-sm btn-danger">删除</button>
-                      <button type="button" id="imageDetailBatchTagCancelBtn" class="btn btn-sm btn-secondary">取消</button>
-                    </div>
+                    <!-- 图像详情页批量工具栏容器（动态生成） -->
+                    <div id="imageDetailBatchTagToolbarContainer"></div>
                     <button type="button" id="imageDetailBatchTagBtn" class="btn btn-sm btn-outline">批量管理</button>
                   </div>
                 </div>

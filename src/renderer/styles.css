@@ -5412,19 +5412,6 @@ body * {
   gap: 8px;
 }
 
-/* 内联批量工具栏 */
-.batch-tag-toolbar-inline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.batch-tag-toolbar-inline .batch-tag-count {
-  font-size: 12px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
 /* 批量模式下的标签样式 - 复选框在右侧 */
 .tag-batch-mode {
   display: inline-flex;

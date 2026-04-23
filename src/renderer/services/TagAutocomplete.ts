@@ -224,6 +224,7 @@ export class TagAutocomplete {
     // 下拉框未激活时，回车添加输入的内容
     if (e.key === 'Enter' && this.input?.value.trim()) {
       e.preventDefault();
+      e.stopPropagation();
       this.handleBatchAdd();
     }
   }

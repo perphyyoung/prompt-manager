@@ -328,17 +328,7 @@ export class PyTagGroups {
     return utils.parseTagInput(input);
   }
 
-  /**
-   * 合并标签数组（去重）
-   * @param current - 当前标签数组
-   * @param added - 要添加的标签数组
-   * @returns 合并后的标签数组
-   */
-  merge(current: TagName[], added: TagName[]): TagName[] {
-    return utils.mergeTags(current, added);
-  }
-
-  /**
+/**
    * 计算标签差集
    * @param current - 当前标签数组
    * @param removed - 要移除的标签数组

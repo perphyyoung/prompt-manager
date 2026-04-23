@@ -6,11 +6,11 @@ export interface IEventStrategyItem {
   [key: string]: unknown;
 }
 
-// 导入 MultiSelectManager 类型
-import type { MultiSelectManager } from '../MultiSelectManager.ts';
+import type { BatchToolbarMiddle, ToolbarContext } from '../../../middle/index.ts';
 
 export interface EventContext {
-  multiSelectManager: MultiSelectManager;
+  batchToolbarMiddle: BatchToolbarMiddle;
+  toolbarContext: ToolbarContext;
   renderView: () => void | Promise<void>;
   items: IEventStrategyItem[];
 }

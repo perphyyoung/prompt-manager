@@ -97,6 +97,16 @@ export const DialogConfig: Record<string, IDialogTemplate> = {
     message: (data: IDialogContext) => `确定要删除选中的 ${data.count} 个标签吗？此操作不可恢复！`,
     type: 'warning'
   },
+  BATCH_DELETE_PROMPTS: {
+    title: '确认删除',
+    message: (data: IDialogContext) => `确定要删除选中的 ${data.count} 个提示词吗？`,
+    type: 'warning'
+  },
+  BATCH_DELETE_IMAGES: {
+    title: '确认删除',
+    message: (data: IDialogContext) => `确定要删除选中的 ${data.count} 个图像吗？`,
+    type: 'warning'
+  },
   PERMANENT_DELETE: {
     title: '确认永久删除',
     message: (data: IDialogContext) => `确定要永久删除此${data.type === 'trash-image' ? '图像' : '提示词'}吗？此操作不可恢复！`,

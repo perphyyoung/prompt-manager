@@ -525,7 +525,7 @@ class PromptManager implements IApp {
    * @param options - 选项
    */
   async openEditPromptModal(prompt: IPrompt, options = {}) {
-    await this.promptDetailManager?.open(prompt as { id: string; title: string; content: string; [key: string]: unknown }, options);
+    await this.promptDetailManager?.open(prompt, options);
   }
 
   /**

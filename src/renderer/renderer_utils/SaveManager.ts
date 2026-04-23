@@ -357,7 +357,7 @@ export class SaveManager {
         setTimeout(() => {
           element.className = 'save-status';
           element.textContent = '';
-        }, 2000);
+        }, 1000);
         break;
       case 'error':
         element.textContent = message || Constants.STATUS_SAVE_FAILED;

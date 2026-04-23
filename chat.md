@@ -33,15 +33,31 @@ composes 是 CSS Modules 语法, 当前项目怎样引入
 按照真实逻辑测试, 如果测试失败, 仔细分析原因, 是测试代码问题, 还是真实逻辑问题; 测试的目的是找出真实逻辑的问题, 不是为了测试通过; 重新测试; 如果测试失败, 中断测试, 分析原因, 和我商量修改
 应用已关闭, 使用实际数据 e2e 测试
 `SKILL.md` 按照规范来, 先测试失败的, 不要浪费时间在已经通过的, 最后再统一测试
-cnpm run test:e2e -- e2e/new-prompt-duplicate-prevention.spec.ts --grep ""
-cnpm run dist:win:nsis -> exe
+npm run test:e2e -- e2e/new-prompt-duplicate-prevention.spec.ts --grep ""
+npm run dist:win:nsis -> exe
 npx tsc --noEmit; npm run build -> npm run check; npm run build
 npx tsx e2e/cleanup-test-tag-groups.ts
 我已经生成了 git-diff.log, 通过 google-code-review skill 审查 git-diff.log, 总结后输出到对话中, 需要输出中文版本的可复制的详细版本和简洁版本的 git commit 信息
 我已经生成了 git-diff.log, 通过 receiving-code-review skill 审查 git-diff.log
 
+## 20260419
+
+1 当前已部分完成重构, 但可能和重构前不一致, 需要描述当前实现, 我可能会直接修改对应 prd 部分; 2 这6个是当前已经实现的, 后续需要添加 列表视图和紧凑视图, 和 网格视图 功能一样, 应该只是样式不同吧; 3 约束可感知行为, 不用太细化
+先将 批量工具栏 相关的部分生成 prd, 用于开发和重构约束, 需要覆盖 图像/提示词 * 网格视图/详情标签管理/ 标签管理界面
+现在重构时, 很多功能在重构前后不一致, 需要 prd 来约束; 目标 prd 是约束当前项目的修改, 确保修改前后需求一致
+`prd SKILL.md` 根据规范编写 prd, 主要依据为当前代码库; 如果代码库不合理, 获知其他你觉得需要确认的, 可以问我
+
+## 20260418
+
+`electron-test.ts` 生成主界面的图像测试数据和提示词测试数据,用于验证删除等操作; 如何定位测试数据? 提示词验证 title? 图像验证文件名? 结合实际代码, 给出方案
+
 ## 20260417
 
+详情界面进入批量模式, 没有出现工具栏, 排查
+只有 BatchToolbarMiddle 可以直接访问 pyBatchToolbar, 其他都通过 BatchToolbarMiddle 对应的 index.ts 访问, 修改到符合要求
+我已将 BatchToolbarService.ts 从原来的位置移动到 `middle` , 并重命名为 `BatchToolbarMiddle.ts` , 明确这是一个中间层, 与普通服务层区分, 更新 `index.ts` 更新相关引用
+MultiSelectManager 删除,  BatchToolbarService 作为唯一的中间层
+参考 `pyTagGroups` 的设计思路, 将 批量工具栏 与库的方式重构, 命名为 pyBatchToolbar, 并新建 BatchToolbar 中间层封装逻辑, 参考 TagService.ts; 删除 html 中的静态工具栏, 由新库统一动态生成; 总共有 图像/提示词 * 主界面/详情界面/标签管理界面 6个入口, 用 配置驱动 最合适吧; 给出重构方案
 根据 git status 输出修改的文件列表到 todo 文件(输出到文件!), 用于追踪进度; 然后逐个文件检查 git 状态, 修改是否与 常量id 相关, 不相关的撤销; 一次只允许修改一个文件, 保证正确性, 之前的批量替换导致了很多问题; 没修改完一个文件, 更新一次 todo 文件, 直到所有 todo 文件的每一项都处理完
 添加ESLint规则禁止使用硬编码的DOM ID字符串
 

@@ -36,13 +36,12 @@ export abstract class CardEventStrategy implements IEventStrategy {
         const isChecked = (e.target as HTMLInputElement).checked;
 
         if (isChecked) {
-          context.multiSelectManager.addSelectionWithIndex(idStr, index);
+          context.batchToolbarMiddle.addSelectionWithIndex(context.toolbarContext, idStr, index);
         } else {
-          context.multiSelectManager.removeSelection(idStr);
+          context.batchToolbarMiddle.removeSelection(context.toolbarContext, idStr);
         }
 
         context.renderView();
-        // updateToolbarUI 由 onChange 回调统一处理，避免重复调用
       });
   }
 
@@ -71,10 +70,10 @@ export abstract class CardEventStrategy implements IEventStrategy {
 
     if (event.ctrlKey || event.metaKey) {
       // Ctrl/Cmd + 点击：切换选择
-      context.multiSelectManager.toggleSelection(idStr, index);
+      context.batchToolbarMiddle.toggleSelection(context.toolbarContext, idStr, index);
     } else if (event.shiftKey) {
       // Shift + 点击：范围选择
-      context.multiSelectManager.rangeSelect(context.items, index);
+      context.batchToolbarMiddle.rangeSelect(context.toolbarContext, context.items, index);
     } else {
       // 普通点击：打开详情
       this.handleOpenDetail(item);

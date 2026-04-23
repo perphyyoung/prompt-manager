@@ -1,7 +1,6 @@
 import type { LRUCache } from '../utils/LRUCache.ts';
 import type { IPrompt, IImage } from '../types/entities.ts';
 import type { DialogService } from './services/DialogService.ts';
-import type { MultiSelectManager } from './managers/MultiSelectManager.ts';
 
 // 重新导出类型
 export type { IPrompt, IImage };
@@ -27,7 +26,6 @@ export interface IPanelManager {
   setViewMode(mode: string): void;
   setCardSize(size: number): void;
   handleFilterAction(): void;
-  multiSelectManager: MultiSelectManager;
   refreshAfterUpdate(): Promise<void>;
   updateToolbarUI(): void;
   exitBatchMode(): void;

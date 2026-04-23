@@ -1,10 +1,19 @@
-import { Constants, ElementId } from '../../constants.ts';
-import { ListNavigator } from '../../utils/index.ts';
-import { EditableTagList } from '../components/index.ts';
-import { DialogService, DialogConfig } from '../services/index.ts';
-import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
-import { BatchToolbar, IBatchToolbarConfig } from '../components/BatchToolbar.ts';
-import type { IClosableElement, IDetailTagManager, IBatchTagManagerConfig } from '../../types/entities.ts';
+import { Constants, ElementId } from "../../constants.ts";
+import { ListNavigator } from "../../utils/index.ts";
+import { EditableTagList } from "../components/index.ts";
+import { DialogConfig } from "../services/index.ts";
+import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
+import {
+  batchToolbarMiddle,
+  type ToolbarContext,
+  type BatchBusinessConfig,
+} from "../../middle/index.ts";
+import type {
+  IClosableElement,
+  IDetailTagManager,
+  IBatchTagManagerConfig,
+} from "../../types/entities.ts";
+import { cacheManager } from "../../utils/CacheManager.ts";
 interface DetailViewManagerOptions {
   app: {
     constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean };
@@ -35,7 +44,7 @@ interface Item {
  * 提供详情模态框的通用功能
  */
 export abstract class DetailViewManager {
-  protected app: DetailViewManagerOptions['app'];
+  protected app: DetailViewManagerOptions["app"];
   protected modalId: string;
   protected closeBtnId: string;
 
@@ -49,7 +58,10 @@ export abstract class DetailViewManager {
 
   // 保存管理
   protected saveManager: unknown = null;
-  protected changeTracker: { hasChanges: () => boolean; destroy: () => void } | null = null;
+  protected changeTracker: {
+    hasChanges: () => boolean;
+    destroy: () => void;
+  } | null = null;
 
   // 批量标签管理
   protected editableTagList: EditableTagList | null = null;
@@ -57,7 +69,7 @@ export abstract class DetailViewManager {
   protected isBatchMode: boolean = false;
   protected batchTagConfig: IBatchTagManagerConfig | null = null;
   protected batchBtnHandler: (() => void) | null = null;
-  protected batchToolbar: BatchToolbar | null = null;
+  protected toolbarContext: ToolbarContext | null = null;
 
   // 关闭事件处理函数引用（用于移除事件监听）
   private closeHandler: (() => void) | null = null;
@@ -114,9 +126,14 @@ export abstract class DetailViewManager {
     const modal = document.getElementById(this.modalId);
     if (modal) {
       (modal as any).ctrla = () => {
-        if (this.isBatchMode) {
+        if (this.isBatchMode && this.toolbarContext) {
           // 批量模式下全选标签
-          this.editableTagList?.selectAll();
+          const allTags = this.detailTagManager?.getTags() || [];
+          const filteredTags = allTags.filter(
+            (tag) => !Constants.ALL_SPECIAL_TAGS.includes(tag),
+          );
+          batchToolbarMiddle.selectAllTags(this.toolbarContext, filteredTags);
+          this.renderTagList();
         }
         // 始终返回 true 阻止默认行为（非批量模式下 Ctrl+A 无效）
         return true;
@@ -132,14 +149,20 @@ export abstract class DetailViewManager {
     if (closeBtn) {
       // 先移除旧的事件监听器（如果存在）
       if (this.closeHandler) {
-        window.electronAPI.logWarn('DetailViewManager', `removing old event listener for ${this.closeBtnId}`);
-        closeBtn.removeEventListener('click', this.closeHandler);
+        window.electronAPI.logWarn(
+          "DetailViewManager",
+          `removing old event listener for ${this.closeBtnId}`,
+        );
+        closeBtn.removeEventListener("click", this.closeHandler);
       }
       // 创建新的处理函数并保存引用
       this.closeHandler = () => this.close();
-      closeBtn.addEventListener('click', this.closeHandler);
+      closeBtn.addEventListener("click", this.closeHandler);
     } else {
-      window.electronAPI.logError('DetailViewManager', `closeBtn not found: ${this.closeBtnId}`);
+      window.electronAPI.logError(
+        "DetailViewManager",
+        `closeBtn not found: ${this.closeBtnId}`,
+      );
     }
   }
 
@@ -161,7 +184,7 @@ export abstract class DetailViewManager {
 
     const modal = document.getElementById(this.modalId) as IClosableElement;
     if (modal) {
-      modal.classList.add('active');
+      modal.classList.add("active");
 
       // 添加 close 方法供 ShortcutManager 调用
       modal.close = () => {
@@ -172,18 +195,23 @@ export abstract class DetailViewManager {
     // 附加 ctrla 方法
     this.attachCtrlAMethod();
 
-    // 压栈：进入详情视图上下文，包含批量模式状态
+    // 压栈：进入详情视图上下文
     const stackEntry: IContextStackEntry = {
       id: this.modalId as ElementId,
       state: {
-        isBatchToolbarVisible: this.isBatchMode
+        isBatchToolbarVisible: this.isBatchMode,
       },
       close: () => {
-        // 如果被其他视图覆盖，退出批量模式
-        if (this.isBatchMode) {
-          this.exitBatchMode();
+        // 直接关闭模态框
+        const modal = document.getElementById(this.modalId);
+        if (modal) {
+          modal.classList.remove("active");
         }
-      }
+        // 清理（包括退出批量模式，这会先 pop 批量工具栏）
+        this.cleanup();
+        // 出栈
+        contextStack.pop(this.modalId as ElementId);
+      },
     };
     contextStack.push(stackEntry);
   }
@@ -194,15 +222,19 @@ export abstract class DetailViewManager {
    */
   private hideHoverTooltip(): void {
     // 隐藏图像提示词 tooltip
-    const imageTooltip = document.getElementById(Constants.Ids.IMAGE_PROMPT_TOOLTIP);
-    if (imageTooltip?.classList.contains('show')) {
-      imageTooltip.classList.remove('show');
+    const imageTooltip = document.getElementById(
+      Constants.Ids.IMAGE_PROMPT_TOOLTIP,
+    );
+    if (imageTooltip?.classList.contains("show")) {
+      imageTooltip.classList.remove("show");
     }
 
     // 隐藏提示词预览 tooltip
-    const promptTooltip = document.getElementById(Constants.Ids.PROMPT_PREVIEW_TOOLTIP);
-    if (promptTooltip?.classList.contains('show')) {
-      promptTooltip.classList.remove('show');
+    const promptTooltip = document.getElementById(
+      Constants.Ids.PROMPT_PREVIEW_TOOLTIP,
+    );
+    if (promptTooltip?.classList.contains("show")) {
+      promptTooltip.classList.remove("show");
     }
   }
 
@@ -212,7 +244,10 @@ export abstract class DetailViewManager {
   async close(): Promise<void> {
     // 防止重复执行
     if (this.isClosing) {
-      window.electronAPI.logWarn('DetailViewManager', `close skipped (already closing), modalId=${this.modalId}`);
+      window.electronAPI.logWarn(
+        "DetailViewManager",
+        `close skipped (already closing), modalId=${this.modalId}`,
+      );
       return;
     }
     this.isClosing = true;
@@ -225,14 +260,14 @@ export abstract class DetailViewManager {
 
       const modal = document.getElementById(this.modalId);
       if (modal) {
-        modal.classList.remove('active');
+        modal.classList.remove("active");
       }
+
+      // 清理（包括退出批量模式，这会先 pop 批量工具栏）
+      this.cleanup();
 
       // 出栈：退出详情视图上下文
       contextStack.pop(this.modalId as ElementId);
-
-      // 清理
-      this.cleanup();
     } finally {
       this.isClosing = false;
     }
@@ -249,25 +284,29 @@ export abstract class DetailViewManager {
     let newIndex = this.currentIndex;
 
     switch (direction) {
-      case 'first':
+      case "first":
         newIndex = 0;
         break;
-      case 'prev':
+      case "prev":
         if (this.currentIndex > 0) {
           newIndex = this.currentIndex - 1;
         }
         break;
-      case 'next':
+      case "next":
         if (this.currentIndex < this.itemsSnapshot.length - 1) {
           newIndex = this.currentIndex + 1;
         }
         break;
-      case 'last':
+      case "last":
         newIndex = this.itemsSnapshot.length - 1;
         break;
     }
 
-    if (newIndex !== this.currentIndex && newIndex >= 0 && newIndex < this.itemsSnapshot.length) {
+    if (
+      newIndex !== this.currentIndex &&
+      newIndex >= 0 &&
+      newIndex < this.itemsSnapshot.length
+    ) {
       this.currentIndex = newIndex;
       const targetItem = this.itemsSnapshot[newIndex];
 
@@ -316,11 +355,18 @@ export abstract class DetailViewManager {
    * @param onNavigate - 导航回调
    * @protected
    */
-  initNavigator(item: Item, items: Item[], navButtons: NavButtons, onNavigate: (item: Item) => void | Promise<void>): void {
+  initNavigator(
+    item: Item,
+    items: Item[],
+    navButtons: NavButtons,
+    onNavigate: (item: Item) => void | Promise<void>,
+  ): void {
     // 记录快照
     this.itemsSnapshot = [...items];
-    this.currentIndex = this.itemsSnapshot.findIndex(i =>
-      this.app.constructor.isSameId ? this.app.constructor.isSameId(i.id, item.id) : String(i.id) === String(item.id)
+    this.currentIndex = this.itemsSnapshot.findIndex((i) =>
+      this.app.constructor.isSameId
+        ? this.app.constructor.isSameId(i.id, item.id)
+        : String(i.id) === String(item.id),
     );
 
     // 填充导航按钮 SVGs
@@ -340,16 +386,23 @@ export abstract class DetailViewManager {
         shouldHandleKeyboard: (e: KeyboardEvent) => {
           // 只在当前模态框打开时响应
           const modal = document.getElementById(this.modalId);
-          if (!modal || !modal.classList.contains('active')) return false;
+          if (!modal || !modal.classList.contains("active")) return false;
           // 如果全屏查看器打开，不响应（让全屏查看器优先处理）
-          const fullscreenViewer = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER);
-          if (fullscreenViewer && fullscreenViewer.classList.contains('active')) return false;
+          const fullscreenViewer = document.getElementById(
+            Constants.Ids.IMAGE_FULLSCREEN_VIEWER,
+          );
+          if (fullscreenViewer && fullscreenViewer.classList.contains("active"))
+            return false;
           // 如果在批量标签模式，不响应（让 ShortcutManager 处理 Esc）
           if (this.isBatchMode) return false;
           // 如果正在编辑输入框，不响应导航键
-          if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return false;
+          if (
+            (e.target as HTMLElement).tagName === "INPUT" ||
+            (e.target as HTMLElement).tagName === "TEXTAREA"
+          )
+            return false;
           return true;
-        }
+        },
       });
 
       // 确保按钮状态正确更新（DOM 元素已存在）
@@ -363,10 +416,13 @@ export abstract class DetailViewManager {
    */
   fillNavButtonSVGs(): void {
     const prefix = this.getNavButtonPrefix();
-    ['first', 'prev', 'next', 'last'].forEach(type => {
-      const btn = document.getElementById(`${prefix}${type.charAt(0).toUpperCase() + type.slice(1)}NavBtn`);
+    ["first", "prev", "next", "last"].forEach((type) => {
+      const btn = document.getElementById(
+        `${prefix}${type.charAt(0).toUpperCase() + type.slice(1)}NavBtn`,
+      );
       if (btn) {
-        btn.innerHTML = Constants.ICONS.nav[type as 'first' | 'prev' | 'next' | 'last'];
+        btn.innerHTML =
+          Constants.ICONS.nav[type as "first" | "prev" | "next" | "last"];
       }
     });
   }
@@ -413,7 +469,10 @@ export abstract class DetailViewManager {
    * @param detailTagManager - 详情界面标签管理器
    * @protected
    */
-  protected initDetailTagManager(config: IBatchTagManagerConfig, detailTagManager: IDetailTagManager): void {
+  protected initDetailTagManager(
+    config: IBatchTagManagerConfig,
+    detailTagManager: IDetailTagManager,
+  ): void {
     this.batchTagConfig = config;
     this.detailTagManager = detailTagManager;
 
@@ -430,9 +489,13 @@ export abstract class DetailViewManager {
    * @param detailTagManager - 详情界面标签管理器
    * @protected
    */
-  protected initTagRenderer(config: IBatchTagManagerConfig, detailTagManager: IDetailTagManager): void {
-    // 清理旧的标签列表组件
+  protected initTagRenderer(
+    config: IBatchTagManagerConfig,
+    detailTagManager: IDetailTagManager,
+  ): void {
+    // 清理旧的标签列表组件和事件监听器
     if (this.editableTagList) {
+      this.editableTagList.destroy();
       this.editableTagList = null;
     }
 
@@ -444,14 +507,23 @@ export abstract class DetailViewManager {
           tagManager: detailTagManager as { getTags: () => string[] },
           onRemove: async (tagName: string) => {
             return await detailTagManager.removeTag(tagName);
+          },
+        });
+        // 初始化事件委托，设置标签点击回调
+        this.editableTagList.init((tagName: string) => {
+          if (this.toolbarContext && this.isBatchMode) {
+            batchToolbarMiddle.toggleTagSelection(this.toolbarContext, tagName);
+            // 更新工具栏计数
+            this.updateToolbarCount();
+            // 只更新单个标签的选中状态，不重新渲染整个列表
+            const isSelected = batchToolbarMiddle
+              .getSelectedTags(this.toolbarContext)
+              .has(tagName);
+            this.editableTagList?.updateTagSelection(tagName, isSelected);
           }
         });
-        // 设置选择变更回调
-        this.editableTagList.setOnSelectionChange((selectedTags) => {
-          this.batchToolbar?.updateCount(selectedTags.size);
-        });
       }
-      this.editableTagList.renderWithInit();
+      this.renderTagList();
     };
   }
 
@@ -467,73 +539,138 @@ export abstract class DetailViewManager {
       this.exitBatchMode();
     }
 
-    // 初始化 BatchToolbar
-    this.batchToolbar = new BatchToolbar({
-      config: this.createBatchToolbarConfig(config),
-      onAction: (action) => this.handleBatchToolbarAction(action),
-      onClose: () => this.exitBatchMode()
-    });
+    // 初始化 BatchToolbarMiddle
+    this.toolbarContext = config.context as ToolbarContext;
+
+    // 业务配置 (详情页面只需要删除功能)
+    const businessConfig: BatchBusinessConfig = {
+      delete: {
+        batchApi: async (ids) => {
+          const result = await window.electronAPI.softDeletePrompts(ids);
+          return { success: result.success, deleted: result.deleted };
+        },
+        clearCache: () => {
+          cacheManager.getPromptCache().clear();
+        },
+      },
+      addTag: {
+        processItems: async () => {
+          // 详情页面不支持批量添加标签
+          throw new Error("详情页面不支持批量添加标签");
+        },
+      },
+      favorite: {
+        batchApi: async () => {
+          // 详情页面不支持批量收藏
+          throw new Error("详情页面不支持批量收藏");
+        },
+      },
+    };
+
+    batchToolbarMiddle.init(this.toolbarContext, businessConfig);
+    batchToolbarMiddle.registerActionHandler(
+      this.toolbarContext,
+      "SelectAll",
+      () => {
+        if (this.toolbarContext) {
+          const allTags = this.detailTagManager?.getTags() || [];
+          const filteredTags = allTags.filter(
+            (tag) => !Constants.ALL_SPECIAL_TAGS.includes(tag),
+          );
+          batchToolbarMiddle.selectAllTags(this.toolbarContext, filteredTags);
+          this.renderTagList();
+        }
+      },
+    );
+    batchToolbarMiddle.registerActionHandler(
+      this.toolbarContext,
+      "Invert",
+      () => {
+        if (this.toolbarContext) {
+          const allTags = this.detailTagManager?.getTags() || [];
+          const filteredTags = allTags.filter(
+            (tag) => !Constants.ALL_SPECIAL_TAGS.includes(tag),
+          );
+          batchToolbarMiddle.invertTagSelection(
+            this.toolbarContext,
+            filteredTags,
+          );
+          this.renderTagList();
+        }
+      },
+    );
+    batchToolbarMiddle.registerActionHandler(
+      this.toolbarContext,
+      "Delete",
+      () => this.handleBatchDelete(),
+    );
+    batchToolbarMiddle.registerActionHandler(
+      this.toolbarContext,
+      "Cancel",
+      () => this.exitBatchMode(),
+    );
 
     // 绑定批量管理按钮事件
     this.bindBatchTagBtnEvent();
   }
 
   /**
-   * 创建 BatchToolbar 配置
-   */
-  private createBatchToolbarConfig(config: IBatchTagManagerConfig): IBatchToolbarConfig {
-    return {
-      id: config.toolbarId,
-      label: '标签',
-      buttons: [
-        { action: 'SelectAll', text: '全选', className: 'batch-action-select-all' },
-        { action: 'Invert', text: '反选', className: 'batch-action-invert' },
-        { action: 'Delete', text: '删除', className: 'batch-action-delete' },
-        { action: 'Cancel', text: '完成', className: 'batch-action-cancel' }
-      ]
-    };
-  }
-
-  /**
-   * 处理批量工具栏动作
-   */
-  private handleBatchToolbarAction(action: string): void {
-    switch (action) {
-      case 'SelectAll':
-        this.editableTagList?.selectAll();
-        break;
-      case 'Invert':
-        this.editableTagList?.invertSelection();
-        break;
-      case 'Delete':
-        void this.handleBatchDelete();
-        break;
-      case 'Cancel':
-        this.exitBatchMode();
-        break;
-    }
-  }
-
-  /**
    * 处理批量删除标签
    */
   private async handleBatchDelete(): Promise<void> {
-    const app = this.app;
-    const selectedTags = this.editableTagList?.getSelectedTags();
-    if (selectedTags && selectedTags.size > 0) {
-      const confirmed = await DialogService.showConfirmDialogByConfig(
-        DialogConfig.BATCH_DELETE_TAGS,
-        { count: selectedTags.size }
-      );
-      if (confirmed) {
-        const result = await this.detailTagManager?.removeTags(Array.from(selectedTags));
-        if (result?.success) {
-          app.showToast(`已删除 ${result.deleted} 个标签`, 'success');
-        }
+    if (!this.toolbarContext) return;
+    const context = this.toolbarContext; // 保存上下文引用
+    await batchToolbarMiddle.executeDeleteTags(context, {
+      getSelectedTags: () => batchToolbarMiddle.getSelectedTags(context),
+      confirmConfig: DialogConfig.BATCH_DELETE_TAGS,
+      execute: async (tagNames) => {
+        const result = await this.detailTagManager?.removeTags(tagNames);
+        return {
+          success: result?.success || false,
+          deleted: result?.deleted || 0,
+        };
+      },
+      onRefresh: async () => {
+        // 退出批量模式（会隐藏工具栏并清空选择）
         this.exitBatchMode();
-      }
-    } else {
-      app.showToast('请先选择要删除的标签', 'warning');
+        // 重新渲染标签
+        this.detailTagManager?.onRender?.();
+      },
+      showToast: (msg, type) => this.app.showToast(msg, type),
+      successMessage: (deleted) => `已删除 ${deleted} 个标签`,
+    });
+  }
+
+  /**
+   * 渲染标签列表
+   */
+  private renderTagList(): void {
+    if (!this.editableTagList) return;
+
+    const selectedTags = this.toolbarContext
+      ? batchToolbarMiddle.getSelectedTags(this.toolbarContext)
+      : new Set<string>();
+
+    this.editableTagList.render(selectedTags, this.isBatchMode);
+  }
+
+  /**
+   * 更新工具栏计数显示
+   */
+  private updateToolbarCount(): void {
+    if (!this.toolbarContext) return;
+    const toolbarConfig = batchToolbarMiddle.getToolbarConfig(
+      this.toolbarContext,
+    );
+    if (!toolbarConfig) return;
+
+    const toolbar = document.getElementById(toolbarConfig.id);
+    if (!toolbar) return;
+
+    const count = batchToolbarMiddle.getSelectedTags(this.toolbarContext).size;
+    const countSpan = toolbar.querySelector(".batch-toolbar-count");
+    if (countSpan) {
+      countSpan.textContent = `已选择 ${count} 个标签`;
     }
   }
 
@@ -549,12 +686,12 @@ export abstract class DetailViewManager {
 
     // 移除旧的事件监听器
     if (this.batchBtnHandler) {
-      batchBtn.removeEventListener('click', this.batchBtnHandler);
+      batchBtn.removeEventListener("click", this.batchBtnHandler);
     }
 
     // 创建并绑定新的事件监听器
     this.batchBtnHandler = () => this.toggleBatchMode();
-    batchBtn.addEventListener('click', this.batchBtnHandler);
+    batchBtn.addEventListener("click", this.batchBtnHandler);
   }
 
   /**
@@ -578,14 +715,28 @@ export abstract class DetailViewManager {
    */
   private enterBatchMode(): void {
     this.isBatchMode = true;
-    this.editableTagList?.enterBatchMode();
-    this.batchToolbar?.show(0);
+
+    // 清空之前的选择
+    if (this.toolbarContext) {
+      batchToolbarMiddle.clearSelection(this.toolbarContext);
+    }
+
+    // 重新渲染标签列表（显示复选框）
+    this.renderTagList();
+
+    if (this.toolbarContext) {
+      // 获取工具栏配置并检查状态
+
+      batchToolbarMiddle.show(this.toolbarContext, 0, () => {
+        this.exitBatchMode();
+      });
+    }
 
     // 隐藏输入区域
     const config = this.batchTagConfig;
     if (config) {
       const inputArea = document.getElementById(config.inputAreaId);
-      if (inputArea) inputArea.style.display = 'none';
+      if (inputArea) inputArea.style.display = "none";
     }
   }
 
@@ -594,14 +745,21 @@ export abstract class DetailViewManager {
    */
   private exitBatchMode(): void {
     this.isBatchMode = false;
-    this.editableTagList?.exitBatchMode();
-    this.batchToolbar?.hide();
+
+    // 清空选择并隐藏工具栏（不等待动画）
+    if (this.toolbarContext) {
+      batchToolbarMiddle.clearSelection(this.toolbarContext);
+      batchToolbarMiddle.hide(this.toolbarContext);
+    }
+
+    // 重新渲染标签列表（显示删除按钮）
+    this.renderTagList();
 
     // 显示输入区域
     const config = this.batchTagConfig;
     if (config) {
       const inputArea = document.getElementById(config.inputAreaId);
-      if (inputArea) inputArea.style.display = '';
+      if (inputArea) inputArea.style.display = "";
     }
   }
 
@@ -619,17 +777,19 @@ export abstract class DetailViewManager {
     if (this.batchBtnHandler && this.batchTagConfig) {
       const batchBtn = document.getElementById(this.batchTagConfig.batchBtnId);
       if (batchBtn) {
-        batchBtn.removeEventListener('click', this.batchBtnHandler);
+        batchBtn.removeEventListener("click", this.batchBtnHandler);
       }
     }
 
-    // 销毁工具栏
-    this.batchToolbar?.destroy();
-    this.batchToolbar = null;
+    // 隐藏工具栏（不等待动画完成）
+    if (this.toolbarContext) {
+      batchToolbarMiddle.hide(this.toolbarContext);
+    }
 
     this.batchBtnHandler = null;
     this.editableTagList = null;
     this.detailTagManager = null;
     this.batchTagConfig = null;
+    this.toolbarContext = null;
   }
 }
