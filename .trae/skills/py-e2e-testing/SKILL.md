@@ -5,9 +5,24 @@ description: 在编写或调试 Playwright E2E 测试时使用。症状包括：
 
 # E2E 测试规范
 
+## 禁止行为
+
+- 禁止使用弃用方法
+- 禁止在没有理解代码的情况下编写测试
+- 禁止在没有截图的情况下进行断言
+- 禁止在没有验证的情况下假设页面状态
+- 禁止跳过自动化测试验证
+
+## 测试相关路径
+
+- 测试文件目录: `e2e/`
+- 截图目录: `test-results/`
+
 ## 必须遵守 - 关键规则
 
 这些规则是**绝对要求** - 不允许例外：
+
+0. timeout 时间不要超过 1000 毫秒, 超过时需要充足理由
 
 1. **使用 Electron 日志 API 进行测试日志记录**
    - 使用 `window.electronAPI.logInfo()` 将测试日志记录到 `pm.log`
@@ -29,50 +44,64 @@ description: 在编写或调试 Playwright E2E 测试时使用。症状包括：
 2. **在每个测试前用中文记录测试项描述**
 
    - 使用 ElectronTestHelper 的 logTestStart 方法
-   - 所有描述都用中文
+   - 所有描述都用简洁的中文
+   - 测试标题 和 测试描述 使用同一个字符串字面量
 
    ```typescript
    import { createElectronTest } from './electron-test.ts';
 
    const electronTest = createElectronTest();
 
-   test('应该创建新提示词', async () => {
-     await electronTest.logTestStart('创建新提示词');
-     // ... 测试代码
-   });
+   let desc: string;
+
+   test.describe('提示词管理功能', () => {
+    desc = '应该创建新提示词';
+    test(desc, async ({ electronTest, page }) => {
+      await electronTest.logTestStart(desc);
+      // ... 测试代码
+    });
+
+    desc = '应该删除提示词';
+    test(desc, async ({ electronTest, page }) => {
+      await electronTest.logTestStart(desc);
+      // ... 测试代码
+    });
+
+  });
+
    ```
 
 3. **始终使用 Constants.Ids 进行 DOM 元素选择**
 
-   ```typescript
-   // ❌ 错误：硬编码 ID - 源代码变更时容易出错
-   await page.click('#selectModalOkBtn');
+    - 源代码使用 `Constants.Ids.Xxx` 进行类型安全
+    - 测试代码必须使用相同的常量以保持一致性
+    - 如果常量不存在，请检查 `src/constants.ts` 并使用其中定义的实际 ID
+    - **对于 `waitForFunction` 和 `page.evaluate`**：将常量作为参数传递，因为它们在浏览器上下文中运行
 
-   // ✅ 正确：使用 Constants.Ids - 确保与源代码一致
-   await page.click(`#${Constants.Ids.SELECT_MODAL_OK_BTN}`);
-   ```
+    ```typescript
+    // ❌ 错误：硬编码 ID - 源代码变更时容易出错
+    await page.click('#selectModalOkBtn');
 
-   - 源代码使用 `Constants.Ids.Xxx` 进行类型安全
-   - 测试代码必须使用相同的常量以保持一致性
-   - 如果常量不存在，请检查 `src/constants.ts` 并使用其中定义的实际 ID
-   - **对于 `waitForFunction` 和 `page.evaluate`**：将常量作为参数传递，因为它们在浏览器上下文中运行
+    // ✅ 正确：使用 Constants.Ids - 确保与源代码一致
+    await page.click(`#${Constants.Ids.SELECT_MODAL_OK_BTN}`);
+    ```
 
-     ```typescript
-     // ❌ 错误：浏览器上下文中无法使用 Constants
-     await page.waitForFunction(() => {
-       const items = document.querySelectorAll(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item`);
-       return items.length > 0;
-     });
+    ```typescript
+    // ❌ 错误：浏览器上下文中无法使用 Constants
+    await page.waitForFunction(() => {
+      const items = document.querySelectorAll(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item`);
+      return items.length > 0;
+    });
 
-     // ✅ 正确：将常量值作为参数传递
-     await page.waitForFunction(
-       (containerId: string) => {
-         const items = document.querySelectorAll(`#${containerId} .tag-manager-item`);
-         return items.length > 0;
-       },
-       Constants.Ids.IMAGE_TAG_GROUP_CARDS  // 将常量作为参数传递
-     );
-     ```
+    // ✅ 正确：将常量值作为参数传递
+    await page.waitForFunction(
+      (containerId: string) => {
+        const items = document.querySelectorAll(`#${containerId} .tag-manager-item`);
+        return items.length > 0;
+      },
+      Constants.Ids.IMAGE_TAG_GROUP_CARDS  // 将常量作为参数传递
+    );
+    ```
 
 4. **绝不在 E2E 测试中删除非测试数据**
    - 始终先创建测试数据，然后仅删除测试数据
@@ -88,54 +117,47 @@ description: 在编写或调试 Playwright E2E 测试时使用。症状包括：
      await page.waitForFunction((beforeTime: string | undefined) => {
        const now = new Date().toLocaleString('zh-CN');
        return now !== beforeTime;
-     }, updatedAtBefore, { timeout: 2000 });
+     }, updatedAtBefore, { timeout: 1000 });
      ```
 
 6. **使用 `e2e/electron-test.ts` 中的共享辅助函数**
-   - 导入并重用现有的辅助函数，而不是重复代码
-   - 可用的辅助函数类别：
-     - **ElectronTestHelper 类**：`launch()`、`close()`、`getPage()`、`waitForSelector()`、`click()`、`getText()`、`exists()`、`wait()`、`screenshot()`、`logTestStart()`
-     - **标签管理器辅助函数**：`enterImageTagManager()`、`enterPromptTagManager()`、`createImageTagInManager()`、`createPromptTagInManager()`、`createImageTagGroup()`、`createPromptTagGroup()` 等
-     - **视图导航辅助函数**：`enterImageGridView()`、`enterPromptGridView()`、`enterImageListView()`、`enterPromptListView()`
-     - **详情视图辅助函数**：`openImageDetail()`、`openPromptDetail()`、`enterImageDetailView()`、`enterPromptDetailView()`
-     - **数据库辅助函数**：`getImageFromDatabase()`、`getPromptFromDatabase()`、`getFirstImageId()`、`getFirstPromptId()`
-     - **标签筛选辅助函数**：`ensureTagFilterExpanded()`
-   - 完整文档参见：[e2e-测试共享辅助函数库.md](e2e-测试共享辅助函数库.md)
-   - **添加新的共享函数时**：首先添加到 `e2e/electron-test.ts`，然后更新 `e2e-测试共享辅助函数库.md`
+    - 导入并重用现有的辅助函数，而不是重复代码
+    - 完整文档参见：[e2e-测试共享辅助函数库.md](e2e-测试共享辅助函数库.md)
+    - **添加新的共享函数时**：首先添加到 `e2e/electron-test.ts`，然后更新 `e2e-测试共享辅助函数库.md`
 
-   ```typescript
-   // ✅ 正确：导入并重用辅助函数
-   import { createElectronTest, enterImageGridView, getImageFromDatabase } from './electron-test.ts';
+    ```typescript
+    // ✅ 正确：导入并重用辅助函数
+    import { createElectronTest, enterImageGridView, getImageFromDatabase } from './electron-test.ts';
 
-   const electronTest = createElectronTest();
-   await electronTest.launch();
-   const page = electronTest.getPage();
-   const firstCard = await enterImageGridView(page);
-   ```
+    const electronTest = createElectronTest();
+    await electronTest.launch();
+    const page = electronTest.getPage();
+    const firstCard = await enterImageGridView(page);
+    ```
 
 7. **使用 ElectronTestHelper 进行测试数据生成和清理**
 
-   - `ElectronTestHelper` 已集成测试数据管理功能，无需额外导入
-   - 使用 `generateTagName()` 生成带有 `e2e_` 前缀的唯一测试标签名
-   - 使用 `createImageTag()` / `createPromptTag()` 创建测试标签
-   - 在 `afterEach` 中使用 `cleanupAndReset()` 清理测试数据, 并返回图像主界面
+    - `ElectronTestHelper` 已集成测试数据管理功能，无需额外导入
+    - 使用 `generateTagName()` 生成带有 `e2e_` 前缀的唯一测试标签名
+    - 使用 `createImageTag()` / `createPromptTag()` 创建测试标签
+    - 在 `afterEach` 中使用 `cleanupAndReset()` 清理测试数据, 并返回图像主界面
 
-   ```typescript
-   // ✅ 正确：使用 ElectronTestHelper 进行测试数据管理
-   import { createElectronTest } from './electron-test.ts';
+    ```typescript
+    // ✅ 正确：使用 ElectronTestHelper 进行测试数据管理
+    import { createElectronTest } from './electron-test.ts';
 
-   const electronTest = createElectronTest();
+    const electronTest = createElectronTest();
 
-   test.afterEach(async () => {
-     await electronTest.cleanupAndReset();
-   });
+    test.afterEach(async () => {
+      await electronTest.cleanupAndReset();
+    });
 
-   test('应该创建标签', async () => {
-     const tagName = electronTest.generateTagName('test_suffix');
-     await electronTest.createImageTag(tagName);
-     // ... 测试逻辑
-   });
-   ```
+    test('应该创建标签', async () => {
+      const tagName = electronTest.generateTagName('test_suffix');
+      await electronTest.createImageTag(tagName);
+      // ... 测试逻辑
+    });
+    ```
 
    - 优点：
      - 一致的 `e2e_` 前缀，便于识别和清理
@@ -143,11 +165,11 @@ description: 在编写或调试 Playwright E2E 测试时使用。症状包括：
      - 集中式清理防止测试之间的数据污染
      - 无需额外导入，简化测试代码
 
-8. 安全删除模式（必须遵守）
+## 安全删除模式（必须遵守）
 
 在 E2E 测试中实现任何删除操作时，必须遵循这些模式以防止意外删除非测试数据。
 
-### 8.1 安全单个删除模式
+### 1 安全单个删除模式
 
 通过点击删除按钮删除单个项目时（使用 ElectronTestHelper）：
 
@@ -173,7 +195,7 @@ await page.waitForFunction(
            items[0].getAttribute('data-tag') === params.tagName;
   },
   { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, tagName: testTagName },
-  { timeout: 5000 }
+  { timeout: 1000 }
 );
 
 // 点击特定标签的删除按钮
@@ -181,20 +203,20 @@ const deleteBtn = page.locator(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-man
 await deleteBtn.click();
 
 // 确认删除
-await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, { state: 'visible', timeout: 5000 });
+await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, { state: 'visible', timeout: 1000 });
 await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
 // 通过 API 验证删除
 await page.waitForFunction(async (name: string) => {
   const tags = await window.electronAPI.getImageTags();
   return !tags.includes(name);
-}, testTagName, { timeout: 5000 });
+}, testTagName, { timeout: 1000 });
 
 // 注意：如果使用 test.afterEach 的 cleanupAndReset()，则不需要手动删除
 // 这里的删除操作仅用于测试删除功能本身
 ```
 
-### 8.2 安全批量删除模式
+### 2 安全批量删除模式
 
 批量删除多个项目时（使用 ElectronTestHelper）：
 
@@ -226,12 +248,12 @@ await page.waitForFunction(
     );
   },
   { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, keyword: searchKeyword },
-  { timeout: 5000 }
+  { timeout: 1000 }
 );
 
 // 进入批量模式并全选
 await page.click(`#${Constants.Ids.BATCH_MANAGE_IMAGE_TAGS_BTN}`);
-await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-batch-checkbox`, { state: 'visible', timeout: 5000 });
+await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-batch-checkbox`, { state: 'visible', timeout: 1000 });
 
 const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_TAG_BATCH_TOOLBAR}`);
 await batchToolbar.locator('.batch-action-select-all').click();
@@ -242,18 +264,18 @@ await page.waitForFunction(async (keyword: string) => {
   const selectedTags = Array.from(checkedBoxes).map(cb => cb.getAttribute('data-tag'));
   // 安全检查：所有选中的标签必须包含搜索关键词
   return selectedTags.every(tag => tag?.includes(keyword));
-}, searchKeyword, { timeout: 5000 });
+}, searchKeyword, { timeout: 1000 });
 
 // 执行删除
 await batchToolbar.locator('.batch-action-delete').click();
-await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, { state: 'visible', timeout: 5000 });
+await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, { state: 'visible', timeout: 1000 });
 await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
 // 通过 API 验证删除
 await page.waitForFunction(async (names: string[]) => {
   const tags = await window.electronAPI.getImageTags();
   return !tags.includes(names[0]) && !tags.includes(names[1]);
-}, [tagName1, tagName2], { timeout: 5000 });
+}, [tagName1, tagName2], { timeout: 1000 });
 
 // 关键：验证对照组（otherTagName）仍然存在
 await page.click(`#${Constants.Ids.CLEAR_IMAGE_TAG_MANAGER_SEARCH_BTN}`);
@@ -263,12 +285,12 @@ await page.waitForFunction(
     return Array.from(items).some(item => item.getAttribute('data-tag') === params.tagName);
   },
   { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, tagName: otherTagName },
-  { timeout: 5000 }
+  { timeout: 1000 }
 );
-await expect(page.locator(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${otherTagName}"]`)).toBeVisible({ timeout: 5000 });
+await expect(page.locator(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${otherTagName}"]`)).toBeVisible({ timeout: 1000 });
 ```
 
-### 8.3 关键安全要求
+### 3 关键安全要求
 
 **⚠️ 警告：跳过任何这些步骤可能导致数据丢失！**
 
@@ -292,7 +314,7 @@ await expect(page.locator(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-
    - 这确认了仅删除了预期的项目
    - 如果对照组丢失，说明测试有 bug
 
-### 8.4 反模式（绝不要这样做）
+### 4 反模式（绝不要这样做）
 
 ```typescript
 // ❌ 错误：危险的批量删除 - 可能删除所有数据
@@ -323,15 +345,56 @@ await page.click('.batch-action-delete');
 - 单个删除：`e2e/9-tag-manager.spec.ts`（删除标签测试）
 - 带对照组的批量删除：`e2e/10-tag-manager-search-persist.spec.ts`
 
-## 禁止行为
+### 5 测试数据刷新模式（必须遵守）
 
-- 禁止使用弃用方法
-- 禁止在没有理解代码的情况下编写测试
-- 禁止在没有截图的情况下进行断言
-- 禁止在没有验证的情况下假设页面状态
-- 禁止跳过自动化测试验证
+主界面(网格,列表,紧凑模式)创建测试数据后，必须通过刷新按钮加载最新数据到视图中，**不要使用 `waitForTimeout` 等待数据加载**：
 
----
+```typescript
+// ✅ 正确：使用刷新按钮加载测试数据
+import { createElectronTest, enterImageGridView } from './electron-test.ts';
+
+const electronTest = createElectronTest();
+
+test('应该显示新创建的图像', async () => {
+  // 创建测试数据
+  const testImages = await electronTest.createTestImages(2, 'test_suffix');
+  
+  // 进入视图
+  await enterImageGridView(page);
+  
+  // 点击左下角刷新按钮加载最新数据
+  await page.click(`#${Constants.Ids.REFRESH_DATA_BTN}`);
+  
+  // 使用显式等待条件验证数据已显示
+  await page.waitForFunction((ids: string[]) => {
+    const cards = document.querySelectorAll('.image-card');
+    const foundIds = Array.from(cards).map(card => card.getAttribute('data-id'));
+    return ids.every(id => foundIds.includes(id));
+  }, testImages.map(img => img.id), { timeout: 1000 });
+});
+
+// ✅ 正确：提示词同理
+test('应该显示新创建的提示词', async () => {
+  const testPrompt = await electronTest.createTestPrompt('test_suffix');
+  await enterPromptGridView(page);
+  
+  // 点击刷新按钮
+  await page.click(`#${Constants.Ids.REFRESH_DATA_BTN}`);
+  
+  // 验证数据已显示
+  await page.waitForFunction((id: string) => {
+    const cards = document.querySelectorAll('.prompt-card');
+    return Array.from(cards).some(card => card.getAttribute('data-id') === id);
+  }, testPrompt.id, { timeout: 1000 });
+});
+```
+
+**关键要点：**
+
+1. **刷新按钮 ID**: `Constants.Ids.REFRESH_DATA_BTN`（位于界面左下角）
+2. **何时调用**: 创建测试数据后、验证数据显示前
+3. **不要使用**: `await page.waitForTimeout(1000)` 等待数据加载
+4. **改用**: 刷新按钮 + 显式等待条件（`waitForFunction`）
 
 ## 编写 E2E 测试的强制流程
 
@@ -383,11 +446,11 @@ await page.click('.batch-action-delete');
       */
      async function enterImageGridView(page: any) {
        await page.click('#imageManagerBtn');
-       await page.waitForSelector('#imagePanel.active', { timeout: 5000 });
+       await page.waitForSelector('#imagePanel.active', { timeout: 1000 });
        await page.click('#imageGridViewBtn');
-       await page.waitForSelector('#imageGridView.active', { timeout: 5000 });
+       await page.waitForSelector('#imageGridView.active', { timeout: 1000 });
        const firstCard = page.locator('.image-card').first();
-       await expect(firstCard).toBeVisible({ timeout: 5000 });
+       await expect(firstCard).toBeVisible({ timeout: 1000 });
        return firstCard;
      }
      ```
@@ -519,7 +582,7 @@ await page.click('.batch-action-delete');
 
 ```typescript
 // ❌ 错误：不理解原因的情况下延长等待时间
-await page.waitForTimeout(2000); // 原来是 500ms，增加是因为"可能有帮助"
+await page.waitForTimeout(1000); // 原来是 500ms，增加是因为"可能有帮助"
 ```
 
 ### 正确的方式（要求）
@@ -532,19 +595,19 @@ await page.waitForTimeout(2000); // 原来是 500ms，增加是因为"可能有�
 await page.waitForFunction(async (tagName: string) => {
   const tags = await window.electronAPI.getAllTags();
   return tags.includes(tagName);
-}, testTagName, { timeout: 5000 });
+}, testTagName, { timeout: 1000 });
 
 // ✅ 正确：使用带状态的 waitForSelector
 // 最适合：模态框、面板、可见性变化
-await page.waitForSelector('#imageTagManagerModal', { state: 'hidden', timeout: 5000 });
+await page.waitForSelector('#imageTagManagerModal', { state: 'hidden', timeout: 1000 });
 
 // ✅ 正确：使用带 toBeVisible 的 expect
 // 最适合：操作后应该出现的元素
-await expect(page.locator('.tag-filter-item[data-tag="newTag"]')).toBeVisible({ timeout: 5000 });
+await expect(page.locator('.tag-filter-item[data-tag="newTag"]')).toBeVisible({ timeout: 1000 });
 
 // ✅ 正确：使用带 has-text 的 waitForSelector
 // 最适合：Toast 消息、通知
-await page.waitForSelector('#toastContainer:has-text("标签已创建")', { timeout: 5000 });
+await page.waitForSelector('#toastContainer:has-text("标签已创建")', { timeout: 1000 });
 ```
 
 ### 选择正确的方法

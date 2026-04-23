@@ -13,14 +13,14 @@
 ```typescript
 // 步骤 1：悬停在源元素上并验证它已准备就绪
 await sourceElement.hover();
-await expect(sourceElement).toBeVisible({ timeout: 5000 });
+await expect(sourceElement).toBeVisible({ timeout: 1000 });
 
 // 步骤 2：按下鼠标按钮（开始拖动）
 await page.mouse.down();
 
 // 步骤 3：移动到目标元素并验证它已准备就绪
 await targetElement.hover();
-await expect(targetElement).toBeVisible({ timeout: 5000 });
+await expect(targetElement).toBeVisible({ timeout: 1000 });
 
 // 步骤 4：释放鼠标按钮（完成放置）
 await page.mouse.up();
@@ -29,7 +29,7 @@ await page.mouse.up();
 await page.waitForFunction(async (tagName: string) => {
   const tags = await window.electronAPI.getAllTags();
   return tags.includes(tagName);
-}, testTagName, { timeout: 5000 });
+}, testTagName, { timeout: 1000 });
 ```
 
 ### 为什么这比 `dragTo()` 更好
@@ -83,12 +83,12 @@ if (!tagName) {
 
 // 执行拖放
 await firstTag.hover();
-await expect(firstTag).toBeVisible({ timeout: 5000 });
+await expect(firstTag).toBeVisible({ timeout: 1000 });
 
 await page.mouse.down();
 
 await firstCard.hover();
-await expect(firstCard).toBeVisible({ timeout: 5000 });
+await expect(firstCard).toBeVisible({ timeout: 1000 });
 
 await page.mouse.up();
 
@@ -96,7 +96,7 @@ await page.mouse.up();
 await page.waitForFunction(async (id: string, tag: string) => {
   const image = await window.electronAPI.getImageById(id);
   return (image as IImage)?.tags?.includes(tag);
-}, imageId, tagName, { timeout: 5000 });
+}, imageId, tagName, { timeout: 1000 });
 
 // 最终验证
 const newTags = await page.evaluate(async (id) => {
@@ -147,7 +147,7 @@ await page.evaluate(() => {
 await page.waitForFunction(async () => {
   const records = await window.electronAPI.getRecords();
   return records.length > 0;
-}, { timeout: 5000 });
+}, { timeout: 1000 });
 
 // 验证仅创建了一条记录
 const count = await page.evaluate(async () => {
@@ -191,11 +191,11 @@ expect(count).toBe(expectedCount);
 
 | 场景 | 推荐方法 | 示例 |
 |----------|-------------------|---------|
-| API 调用完成 | `waitForFunction` | `await page.waitForFunction(async () => { ... }, { timeout: 5000 })` |
-| 模态框打开/关闭 | 带状态的 `waitForSelector` | `await page.waitForSelector('#modal', { state: 'hidden', timeout: 5000 })` |
-| 元素可见性 | `expect().toBeVisible()` | `await expect(page.locator('.item')).toBeVisible({ timeout: 5000 })` |
-| 文本内容 | 带 `:has-text` 的 `waitForSelector` | `await page.waitForSelector('#toast:has-text("完成")', { timeout: 5000 })` |
-| 导航完成 | `waitForURL` 或 `waitForLoadState` | `await page.waitForURL('/dashboard', { timeout: 5000 })` |
+| API 调用完成 | `waitForFunction` | `await page.waitForFunction(async () => { ... }, { timeout: 1000 })` |
+| 模态框打开/关闭 | 带状态的 `waitForSelector` | `await page.waitForSelector('#modal', { state: 'hidden', timeout: 1000 })` |
+| 元素可见性 | `expect().toBeVisible()` | `await expect(page.locator('.item')).toBeVisible({ timeout: 1000 })` |
+| 文本内容 | 带 `:has-text` 的 `waitForSelector` | `await page.waitForSelector('#toast:has-text("完成")', { timeout: 1000 })` |
+| 导航完成 | `waitForURL` 或 `waitForLoadState` | `await page.waitForURL('/dashboard', { timeout: 1000 })` |
 
 ### 示例
 
@@ -204,14 +204,14 @@ expect(count).toBe(expectedCount);
 ```typescript
 // 错误：任意延迟
 await page.click('#createTag');
-await page.waitForTimeout(2000);
+await page.waitForTimeout(1000);
 
 // 正确：轮询直到条件满足
 await page.click('#createTag');
 await page.waitForFunction(async (tagName: string) => {
   const tags = await window.electronAPI.getAllTags();
   return tags.includes(tagName);
-}, testTagName, { timeout: 5000 });
+}, testTagName, { timeout: 1000 });
 ```
 
 #### 等待模态框关闭
@@ -223,7 +223,7 @@ await page.waitForTimeout(1000);
 
 // 正确：等待特定状态
 await page.click('#closeModal');
-await page.waitForSelector('#modalId', { state: 'hidden', timeout: 5000 });
+await page.waitForSelector('#modalId', { state: 'hidden', timeout: 1000 });
 ```
 
 #### 等待元素出现
@@ -237,7 +237,7 @@ const item = page.locator('.data-item');
 // 正确：带超时等待元素
 await page.click('#loadData');
 const item = page.locator('.data-item');
-await expect(item).toBeVisible({ timeout: 5000 });
+await expect(item).toBeVisible({ timeout: 1000 });
 ```
 
 #### 等待文本内容
@@ -245,13 +245,13 @@ await expect(item).toBeVisible({ timeout: 5000 });
 ```typescript
 // 错误：任意延迟
 await page.click('#save');
-await page.waitForTimeout(2000);
+await page.waitForTimeout(1000);
 const toastText = await page.locator('#toast').textContent();
 expect(toastText).toContain('已保存');
 
 // 正确：等待特定文本
 await page.click('#save');
-await page.waitForSelector('#toast:has-text("已保存")', { timeout: 5000 });
+await page.waitForSelector('#toast:has-text("已保存")', { timeout: 1000 });
 ```
 
 ---
