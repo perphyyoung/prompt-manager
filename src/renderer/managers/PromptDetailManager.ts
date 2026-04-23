@@ -168,34 +168,27 @@ export class PromptDetailManager extends DetailViewManager {
   }
 
   /**
-   * 设置安全状态
-   * @param isSafe - 是否安全
-   * @private
+   * 获取导航按钮前缀
+   * @returns 前缀
    */
-  private setSafeState(isSafe: boolean): void {
-    const safeToggle = document.getElementById(Constants.Ids.PROMPT_DETAIL_SAFE_TOGGLE) as HTMLInputElement | null;
-    if (safeToggle) {
-      safeToggle.checked = isSafe;
-    }
+  getNavButtonPrefix(): string {
+    return 'promptDetail';
   }
 
   /**
-   * 更新收藏按钮 UI
-   * @param isFavorite - 是否收藏
+   * 获取收藏按钮元素 ID
+   * @returns 收藏按钮的元素 ID
    */
-  updateFavoriteBtnUI(isFavorite: boolean): void {
-    const btn = document.getElementById(Constants.Ids.PROMPT_DETAIL_FAVORITE_BTN);
-    if (!btn) return;
+  protected getFavoriteBtnId(): string {
+    return Constants.Ids.PROMPT_DETAIL_FAVORITE_BTN;
+  }
 
-    if (isFavorite) {
-      btn.classList.add('active');
-      btn.title = '取消收藏';
-      btn.innerHTML = Constants.ICONS.favorite.filled;
-    } else {
-      btn.classList.remove('active');
-      btn.title = '收藏';
-      btn.innerHTML = Constants.ICONS.favorite.outline;
-    }
+  /**
+   * 获取安全状态切换元素 ID
+   * @returns 安全状态切换的元素 ID
+   */
+  protected getSafeToggleId(): string {
+    return Constants.Ids.PROMPT_DETAIL_SAFE_TOGGLE;
   }
 
   /**
@@ -604,14 +597,6 @@ export class PromptDetailManager extends DetailViewManager {
       },
       onNavigate as unknown as (item: { id: string | number; [key: string]: unknown }) => void | Promise<void>
     );
-  }
-
-  /**
-   * 获取导航按钮前缀
-   * @returns 前缀
-   */
-  getNavButtonPrefix(): string {
-    return 'promptDetail';
   }
 
   /**

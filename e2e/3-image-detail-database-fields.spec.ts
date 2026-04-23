@@ -191,6 +191,28 @@ test.describe("图像详情界面数据库字段读取", () => {
     }
   });
 
+  test("安全状态 (isSafe) 字段正确显示", async ({ _electronTest, page }) => {
+    const { firstImageId } = await enterImageDetailView(page);
+
+    // 从数据库获取图像信息
+    const dbImage = await getImageFromDatabase(page, firstImageId);
+    expect(dbImage).toBeTruthy();
+
+    // 验证安全状态开关存在（checkbox 被 CSS 隐藏，需要定位到父级 label）
+    const safeToggleLabel = page.locator(
+      `label:has(#${Constants.Ids.IMAGE_DETAIL_SAFE_TOGGLE})`,
+    );
+    await expect(safeToggleLabel).toBeVisible();
+
+    // 验证开关状态与数据库一致
+    const safeToggle = page.locator(
+      `#${Constants.Ids.IMAGE_DETAIL_SAFE_TOGGLE}`,
+    );
+    const isChecked = await safeToggle.isChecked();
+    const expectedSafe = dbImage!.isSafe === 1;
+    expect(isChecked).toBe(expectedSafe);
+  });
+
   test("关联提示词信息正确显示", async ({ _electronTest, page }) => {
     const { firstImageId } = await enterImageDetailView(page);
 
