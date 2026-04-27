@@ -5,7 +5,7 @@
 import { DetailViewManager } from './DetailViewManager.ts';
 import type { IDetailTagManager } from '../../types/entities.ts';
 import { HtmlUtils, validateFileName, cacheManager } from '../../utils/index.ts';
-import { SaveManager, ImageSaveStrategy } from '../renderer_utils/index.ts';
+import { SaveManager, ImageSaveStrategy, ErrorHandler } from '../renderer_utils/index.ts';
 import { Constants, Events } from '../../constants.ts';
 import { TagAutocomplete, DialogService, DialogConfig, TagService } from '../services/index.ts';
 import { IImage, IPrompt } from '../../types/entities.ts';
@@ -108,8 +108,11 @@ export class ImageDetailManager extends DetailViewManager {
         this.app.autoResizeTextarea(noteInput);
       }
     } catch (error) {
-      window.electronAPI.logError('ImageDetailManager.ts', 'Failed to open image detail modal:', error);
-      this.app.showToast('打开图像详情失败', 'error');
+      ErrorHandler.handleError(
+        { module: 'ImageDetailManager.ts', operation: 'open image detail modal' },
+        error,
+        { userMessage: '打开图像详情失败' }
+      );
     }
   }
 
@@ -204,7 +207,11 @@ export class ImageDetailManager extends DetailViewManager {
           };
         }
       } catch (error) {
-        window.electronAPI.logError('ImageDetailManager.ts', 'Failed to load image:', error);
+        ErrorHandler.handleError(
+          { module: 'ImageDetailManager.ts', operation: 'load image' },
+          error,
+          { showToast: false }
+        );
         imgEl.alt = '加载图像失败';
       }
     }
@@ -248,7 +255,11 @@ export class ImageDetailManager extends DetailViewManager {
           }
           return success;
         } catch (error) {
-          this.app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+          ErrorHandler.handleError(
+            { module: 'ImageDetailManager.ts', operation: 'delete tag' },
+            error,
+            { userMessage: '删除标签失败', logError: false }
+          );
           return false;
         }
       },
@@ -264,7 +275,11 @@ export class ImageDetailManager extends DetailViewManager {
           }
           return { success: result.errors.length === 0, deleted: result.deleted };
         } catch (error) {
-          this.app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+          ErrorHandler.handleError(
+            { module: 'ImageDetailManager.ts', operation: 'delete tags' },
+            error,
+            { userMessage: '删除标签失败', logError: false }
+          );
           return { success: false, deleted: 0 };
         }
       },
@@ -292,7 +307,11 @@ export class ImageDetailManager extends DetailViewManager {
           }
           return { success: result.success, added: result.created?.length || 0 };
         } catch (error) {
-          this.app.showToast(`添加标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+          ErrorHandler.handleError(
+            { module: 'ImageDetailManager.ts', operation: 'add tags' },
+            error,
+            { userMessage: '添加标签失败', logError: false }
+          );
           return { success: false, added: 0 };
         }
       },
@@ -356,8 +375,11 @@ export class ImageDetailManager extends DetailViewManager {
           }
           return result.success;
         } catch (error) {
-          window.electronAPI.logError('ImageDetailManager.ts', 'Failed to add tag:', error);
-          this.app.showToast(error instanceof Error ? error.message : '添加标签失败', 'error');
+          ErrorHandler.handleError(
+            { module: 'ImageDetailManager.ts', operation: 'add tag' },
+            error,
+            { userMessage: '添加标签失败' }
+          );
           return false;
         }
       },
@@ -385,8 +407,11 @@ export class ImageDetailManager extends DetailViewManager {
           }
           return result.success;
         } catch (error) {
-          window.electronAPI.logError('ImageDetailManager.ts', 'Failed to add tags:', error);
-          this.app.showToast(error instanceof Error ? error.message : '添加标签失败', 'error');
+          ErrorHandler.handleError(
+            { module: 'ImageDetailManager.ts', operation: 'add tags' },
+            error,
+            { userMessage: '添加标签失败' }
+          );
           return false;
         }
       },

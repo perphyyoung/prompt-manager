@@ -1,6 +1,7 @@
 import { Constants } from '../../constants.ts';
 import { ListNavigator } from '../../utils/index.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
+import { ErrorHandler } from '../renderer_utils/index.ts';
 import type { IClosableElement } from '../../types/entities.ts';
 
 interface ImageFullscreenManagerOptions {
@@ -109,7 +110,11 @@ export class ImageFullscreenManager {
         await window.electronAPI.setFullscreen(true);
       }
     } catch (error) {
-      window.electronAPI?.logError?.('ImageFullscreenManager.ts', 'Failed to enter fullscreen:', error);
+      ErrorHandler.handleError(
+        { module: 'ImageFullscreenManager.ts', operation: 'enter fullscreen' },
+        error,
+        { showToast: false }
+      );
     }
 
     // 重置提示文字动画
@@ -360,7 +365,11 @@ export class ImageFullscreenManager {
         await window.electronAPI.setFullscreen(false);
       }
     } catch (error) {
-      window.electronAPI?.logError?.('ImageFullscreenManager.ts', 'Failed to exit fullscreen:', error);
+      ErrorHandler.handleError(
+        { module: 'ImageFullscreenManager.ts', operation: 'exit fullscreen' },
+        error,
+        { showToast: false }
+      );
     }
   }
 

@@ -6,6 +6,7 @@
 import type { IApp } from '../app.types.ts';
 import type { IScanOrphanFilesResult, IExportOrphanFilesResult } from '../../types/entities.ts';
 import { progressDialog } from '../components/ProgressDialog.ts';
+import { ErrorHandler } from '../renderer_utils/index.ts';
 
 interface ImportExportManagerOptions {
   app: IApp;
@@ -72,9 +73,11 @@ export class ImportExportManager {
         throw new Error('导出失败');
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      window.electronAPI.logError('ImportExportManager.ts', 'Failed to export orphan files:', error);
-      this.app.showToast?.('导出失败：' + errorMessage, 'error');
+      ErrorHandler.handleError(
+        { module: 'ImportExportManager.ts', operation: 'export orphan files' },
+        error,
+        { userMessage: '导出失败' }
+      );
       return false;
     } finally {
       this.isExporting = false;

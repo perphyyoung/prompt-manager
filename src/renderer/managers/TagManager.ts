@@ -3,7 +3,7 @@ import { ElementId, Constants } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
 import { IDialogTemplate, IDialogContext } from '../../types/entities.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
-import { focusInput } from '../renderer_utils/index.ts';
+import { focusInput, ErrorHandler } from '../renderer_utils/index.ts';
 import { batchToolbarMiddle, type ToolbarContext, type BatchBusinessConfig } from '../../middle/index.ts';
 import { immediateDebounce } from '../../utils/debounce.ts';
 import { TagGroup, TagExistsError, InvalidTagNameError, TagOperationError, clearTagsCache, DataType, deleteTags } from '../../pyTagGroups/index.ts';
@@ -128,7 +128,11 @@ export abstract class TagManager {
             clearTagsCache(type);
             return { success: true, deleted: ids.length };
           } catch (error) {
-            window.electronAPI.logError('TagManager', 'Failed to delete tags', error);
+            ErrorHandler.handleError(
+              { module: 'TagManager', operation: 'delete tags' },
+              error,
+              { showToast: false }
+            );
             return { success: false, deleted: 0 };
           }
         }
@@ -282,8 +286,11 @@ export abstract class TagManager {
       // 更新选择模式类
       this.updateSelectionModeClass();
     } catch (error) {
-      window.electronAPI.logError('TagManager.ts', `Failed to render ${this.type} tag manager:`, error);
-      this.app.showToast(`加载${this.getTypeLabel()}标签失败`, 'error');
+      ErrorHandler.handleError(
+        { module: 'TagManager.ts', operation: `render ${this.type} tag manager` },
+        error,
+        { userMessage: `加载${this.getTypeLabel()}标签失败` }
+      );
     }
   }
 
@@ -321,8 +328,11 @@ export abstract class TagManager {
         this.app.showToast(`${result.errors.length} 个标签删除失败`, 'warning');
       }
     } catch (error) {
-      window.electronAPI.logError('TagManager.ts', 'Failed to delete tag:', error);
-      this.app.showToast('删除失败: ' + (error as Error).message, 'error');
+      ErrorHandler.handleError(
+        { module: 'TagManager.ts', operation: 'delete tag' },
+        error,
+        { userMessage: '删除失败' }
+      );
     } finally {
       this._isDeletingTag = false;
     }
@@ -754,8 +764,11 @@ export abstract class TagManager {
       this.app.showToast('标签组已删除');
       await this.renderTagListFromSearchInput();
     } catch (error) {
-      window.electronAPI.logError('TagManager.ts', 'Failed to delete tag group:', error);
-      this.app.showToast('删除失败: ' + (error as Error).message, 'error');
+      ErrorHandler.handleError(
+        { module: 'TagManager.ts', operation: 'delete tag group' },
+        error,
+        { userMessage: '删除失败' }
+      );
     }
   }
 
@@ -768,8 +781,11 @@ export abstract class TagManager {
       this.app.showToast('标签组已更新');
       await this.refreshAfterTagChange();
     } catch (error) {
-      window.electronAPI.logError('TagManager.ts', 'Failed to assign tag to group:', error);
-      this.app.showToast('更新失败: ' + (error as Error).message, 'error');
+      ErrorHandler.handleError(
+        { module: 'TagManager.ts', operation: 'assign tag to group' },
+        error,
+        { userMessage: '更新失败' }
+      );
     }
   }
 
@@ -814,8 +830,11 @@ export abstract class TagManager {
         await this.refreshAfterTagChange();
       }
     } catch (error) {
-      window.electronAPI.logError('TagManager.ts', 'Failed to pin tag group to top:', error);
-      this.app.showToast('固定失败: ' + (error as Error).message, 'error');
+      ErrorHandler.handleError(
+        { module: 'TagManager.ts', operation: 'pin tag group to top' },
+        error,
+        { userMessage: '固定失败' }
+      );
     }
   }
 
@@ -1084,9 +1103,12 @@ export abstract class TagManager {
             await this.tagService.assignTagToGroup({ type: this.getDataType(), tagName: tag, groupId: targetGroupId });
             successCount++;
           } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : '未知错误';
-            window.electronAPI.logError('TagManager.ts', `Failed to move tag ${tag}:`, error);
-            errors.push({ tag, error: errorMessage });
+            ErrorHandler.handleError(
+              { module: 'TagManager.ts', operation: `move tag ${tag}` },
+              error,
+              { showToast: false }
+            );
+            errors.push({ tag, error: ErrorHandler.extractErrorMessage(error) });
           }
         }
 
@@ -1298,10 +1320,12 @@ export abstract class TagManager {
 
       this.closeGroupEdit();
       this.app.showToast(groupIdStr ? '标签组已更新' : '标签组已创建', 'success');
-    } catch (error: any) {
-      window.electronAPI?.logError('TagManager.ts', 'Failed to save tag group:', error);
-      this.app.showToast('保存失败，请稍后重试', 'error');
-      // 不关闭对话框，让用户修改后重试
+    } catch (error) {
+      ErrorHandler.handleError(
+        { module: 'TagManager.ts', operation: 'save tag group' },
+        error,
+        { userMessage: '保存失败，请稍后重试' }
+      );
     }
   }
 
@@ -1433,8 +1457,11 @@ export abstract class TagManager {
         await TagManager.handleSyncResult(result, promptManager, imageManager);
         DialogService.showConfirmDialogByConfig(DialogConfig.SYNC_TAGS_BIDIRECTIONAL, result);
       } catch (error) {
-        window.electronAPI.logError('TagManager.ts', 'Failed to sync tags bidirectional', error);
-        app.showToast('同步标签失败: ' + (error as Error).message, 'error');
+        ErrorHandler.handleError(
+          { module: 'TagManager.ts', operation: 'sync tags bidirectional' },
+          error,
+          { userMessage: '同步标签失败', app }
+        );
       }
     });
   }

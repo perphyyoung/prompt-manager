@@ -3,6 +3,7 @@ import { DialogService, DialogConfig } from '../services/index.ts';
 import { ElectronDataClearApi } from '../services/ElectronDataClearApi.ts';
 import { DuplicatePreventionMixin } from '../../utils/index.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
+import { ErrorHandler } from '../renderer_utils/index.ts';
 import type { IClosableElement } from '../../types/entities.ts';
 
 /**
@@ -89,7 +90,11 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       const el = document.getElementById(Constants.Ids.CURRENT_DATA_PATH);
       if (el) el.textContent = dataPath;
     } catch (error) {
-      window.electronAPI.logError('SettingsManager', 'Failed to get data path:', error);
+      ErrorHandler.handleError(
+        { module: 'SettingsManager', operation: 'get data path' },
+        error,
+        { showToast: false }
+      );
       const el = document.getElementById(Constants.Ids.CURRENT_DATA_PATH);
       if (el) el.textContent = '获取失败';
     }
@@ -284,8 +289,11 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
 
       this.app.showToast?.(`字体 "${fontName}" 已导入并应用`, 'success');
     } catch (error) {
-      window.electronAPI.logError('SettingsManager.ts', 'Failed to select custom font:', error);
-      this.app.showToast?.('导入字体失败：' + (error instanceof Error ? error.message : String(error)), 'error');
+      ErrorHandler.handleError(
+        { module: 'SettingsManager.ts', operation: 'select custom font' },
+        error,
+        { userMessage: '导入字体失败' }
+      );
     }
   }
 
@@ -371,7 +379,11 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
         }
       }
     } catch (error) {
-      window.electronAPI.logError('SettingsManager.ts', 'Failed to load custom fonts:', error);
+      ErrorHandler.handleError(
+        { module: 'SettingsManager.ts', operation: 'load custom fonts' },
+        error,
+        { showToast: false }
+      );
     }
   }
 
@@ -389,8 +401,11 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
         this.app.showToast?.('数据目录已更改，重启应用后生效', 'success');
       }
     } catch (error) {
-      window.electronAPI.logError('SettingsManager.ts', 'Failed to change data path:', error);
-      this.app.showToast?.('更改失败：' + (error instanceof Error ? error.message : String(error)), 'error');
+      ErrorHandler.handleError(
+        { module: 'SettingsManager.ts', operation: 'change data path' },
+        error,
+        { userMessage: '更改失败' }
+      );
     }
   }
 
@@ -593,7 +608,11 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     try {
       await this.app.importExportManager?.exportOrphanFiles();
     } catch (error) {
-      window.electronAPI.logError('SettingsManager.ts', 'Failed to export orphan files:', error);
+      ErrorHandler.handleError(
+        { module: 'SettingsManager.ts', operation: 'export orphan files' },
+        error,
+        { showToast: false }
+      );
     }
   }
 
@@ -605,7 +624,11 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     try {
       await this.app.importExportManager?.exportFullBackup();
     } catch (error) {
-      window.electronAPI.logError('SettingsManager.ts', 'Failed to export full backup:', error);
+      ErrorHandler.handleError(
+        { module: 'SettingsManager.ts', operation: 'export full backup' },
+        error,
+        { showToast: false }
+      );
     }
   }
 
@@ -628,7 +651,11 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
 
       await this.app.importExportManager?.importFullBackup();
     } catch (error) {
-      window.electronAPI.logError('SettingsManager.ts', 'Failed to import full backup:', error);
+      ErrorHandler.handleError(
+        { module: 'SettingsManager.ts', operation: 'import full backup' },
+        error,
+        { showToast: false }
+      );
     }
   }
 }

@@ -5,7 +5,7 @@
 import { DetailViewManager } from './DetailViewManager.ts';
 import type { IDetailTagManager } from '../../types/entities.ts';
 import { validateTitle, cacheManager } from '../../utils/index.ts';
-import { SaveManager, PromptSaveStrategy } from '../renderer_utils/index.ts';
+import { SaveManager, PromptSaveStrategy, ErrorHandler } from '../renderer_utils/index.ts';
 import { Constants, Events } from '../../constants.ts';
 import { DirectSaveStrategy, TagAutocomplete, DialogService, DialogConfig } from '../services/index.ts';
 import { ImageContextMenuManager } from './ImageContextMenuManager.ts';
@@ -113,8 +113,11 @@ export class PromptDetailManager extends DetailViewManager {
 
       this.autoResizeAllTextareas();
     } catch (error) {
-      window.electronAPI.logError('PromptDetailManager.ts', 'Failed to open prompt detail modal:', error);
-      this.app.showToast('打开编辑界面失败', 'error');
+      ErrorHandler.handleError(
+        { module: 'PromptDetailManager.ts', operation: 'open prompt detail modal' },
+        error,
+        { userMessage: '打开编辑界面失败' }
+      );
     }
   }
 
@@ -226,7 +229,11 @@ export class PromptDetailManager extends DetailViewManager {
           }
           return success;
         } catch (error) {
-          this.app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+          ErrorHandler.handleError(
+            { module: 'PromptDetailManager.ts', operation: 'delete tag' },
+            error,
+            { userMessage: '删除标签失败', logError: false }
+          );
           return false;
         }
       },
@@ -242,7 +249,11 @@ export class PromptDetailManager extends DetailViewManager {
           }
           return { success: result.errors.length === 0, deleted: result.deleted };
         } catch (error) {
-          this.app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+          ErrorHandler.handleError(
+            { module: 'PromptDetailManager.ts', operation: 'delete tags' },
+            error,
+            { userMessage: '删除标签失败', logError: false }
+          );
           return { success: false, deleted: 0 };
         }
       },
@@ -989,7 +1000,11 @@ export class PromptDetailManager extends DetailViewManager {
       this.app.eventBus.emit(Events.IMAGES_CHANGED);
       this.app.eventBus.emit(Events.PROMPTS_CHANGED);
     } catch (error) {
-      window.electronAPI.logError('PromptDetailManager', `Failed to save prompt field: ${error instanceof Error ? error.message : String(error)}`, error);
+      ErrorHandler.handleError(
+        { module: 'PromptDetailManager', operation: 'save prompt field' },
+        error,
+        { showToast: false }
+      );
     }
   }
 

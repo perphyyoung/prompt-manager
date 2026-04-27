@@ -1,6 +1,7 @@
 import { DialogService, DialogConfig, DelaySaveStrategy } from '../services/index.ts';
 import { ImagePreviewManager } from './ImagePreviewManager.ts';
 import { cacheManager, DuplicatePreventionMixin } from '../../utils/index.ts';
+import { ErrorHandler } from '../renderer_utils/index.ts';
 import { IImage } from '../../types/entities.ts';
 import { Constants, Events } from '../../constants.ts';
 
@@ -126,8 +127,11 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
       }
 
     } catch (error) {
-      window.electronAPI.logError('NewPromptManager.ts', 'Failed to open new prompt page:', error);
-      this.app.showToast('Failed to open new prompt page', 'error');
+      ErrorHandler.handleError(
+        { module: 'NewPromptManager.ts', operation: 'open new prompt page' },
+        error,
+        { userMessage: 'Failed to open new prompt page' }
+      );
     }
   }
 
@@ -193,8 +197,11 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
           this.app.eventBus.emit(Events.PROMPTS_CHANGED);
           return { success: true };
         } catch (error) {
-          window.electronAPI.logError('NewPromptManager.ts', 'Failed to create prompt:', error);
-          this.app.showToast('Failed to create prompt', 'error');
+          ErrorHandler.handleError(
+            { module: 'NewPromptManager.ts', operation: 'create prompt' },
+            error,
+            { userMessage: 'Failed to create prompt' }
+          );
           return { success: false };
         }
       }, { errorMessage: '正在保存提示词中...' });
