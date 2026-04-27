@@ -39,7 +39,8 @@ test.describe('主界面重构功能', () => {
     return await firstPromptCard.getAttribute('data-id') || '';
   }
   test.describe('图像面板功能', () => {
-    test('图像卡片收藏按钮功能', async ({ _electronTest, page }) => {
+    test('图像卡片收藏按钮功能', async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
       // 获取测试图像ID
       testImageId = await getTestImageId(page);
 
@@ -73,7 +74,8 @@ test.describe('主界面重构功能', () => {
       }
     });
 
-    test('图像卡片复制按钮功能', async ({ _electronTest, page }) => {
+    test('图像卡片复制按钮功能', async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
       // 获取测试图像ID
       testImageId = await getTestImageId(page);
 
@@ -90,7 +92,8 @@ test.describe('主界面重构功能', () => {
       expect(toastVisible).toBe(true);
     });
 
-    test('图像列表视图收藏按钮功能', async ({ _electronTest, page }) => {
+    test('图像列表视图收藏按钮功能', async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
       // 获取测试图像ID
       testImageId = await getTestImageId(page);
 
@@ -120,7 +123,8 @@ test.describe('主界面重构功能', () => {
       }
     });
 
-    test('图像列表视图复制按钮功能', async ({ _electronTest, page }) => {
+    test('图像列表视图复制按钮功能', async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
       // 获取测试图像ID
       testImageId = await getTestImageId(page);
 
@@ -136,7 +140,8 @@ test.describe('主界面重构功能', () => {
       expect(toastVisible).toBe(true);
     });
 
-    test('图像标签筛选区域收起/展开切换', async ({ _electronTest, page }) => {
+    test('图像标签筛选区域收起/展开切换', async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
       await enterImageGridView(page);
 
       const tagFilterSection = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_SECTION}`);
@@ -169,7 +174,8 @@ test.describe('主界面重构功能', () => {
       expect(isCollapsed).toBe(false);
     });
 
-    test('图像收藏状态在卡片和列表视图间同步', async ({ _electronTest, page }) => {
+    test('图像收藏状态在卡片和列表视图间同步', async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
       const firstCard = await enterImageGridView(page);
       const imageId = await firstCard.getAttribute('data-id');
 
@@ -209,7 +215,8 @@ test.describe('主界面重构功能', () => {
   });
 
   test.describe('提示词面板功能', () => {
-    test('提示词卡片收藏按钮功能', async ({ _electronTest, page }) => {
+    test('提示词卡片收藏按钮功能', async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
       // 获取测试提示词ID
       testPromptId = await getTestPromptId(page);
 
@@ -245,7 +252,8 @@ test.describe('主界面重构功能', () => {
       }
     });
 
-    test('提示词卡片复制按钮功能', async ({ _electronTest, page }) => {
+    test('提示词卡片复制按钮功能', async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
       // 获取测试提示词ID
       testPromptId = await getTestPromptId(page);
 
@@ -262,7 +270,8 @@ test.describe('主界面重构功能', () => {
       expect(toastVisible).toBe(true);
     });
 
-    test('提示词列表视图收藏按钮功能', async ({ _electronTest, page }) => {
+    test('提示词列表视图收藏按钮功能', async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
       // 获取测试提示词ID
       testPromptId = await getTestPromptId(page);
 
@@ -294,7 +303,8 @@ test.describe('主界面重构功能', () => {
       }
     });
 
-    test('提示词列表视图复制按钮功能', async ({ _electronTest, page }) => {
+    test('提示词列表视图复制按钮功能', async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
       // 获取测试提示词ID
       testPromptId = await getTestPromptId(page);
 
@@ -310,7 +320,8 @@ test.describe('主界面重构功能', () => {
       expect(toastVisible).toBe(true);
     });
 
-    test('提示词标签筛选区域收起/展开切换', async ({ _electronTest, page }) => {
+    test('提示词标签筛选区域收起/展开切换', async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
       await enterPromptGridView(page);
 
       const tagFilterSection = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_SECTION}`);
@@ -343,7 +354,8 @@ test.describe('主界面重构功能', () => {
       expect(isCollapsed).toBe(false);
     });
 
-    test('提示词收藏状态在卡片和列表视图间同步', async ({ _electronTest, page }) => {
+    test('提示词收藏状态在卡片和列表视图间同步', async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
       const firstCard = await enterPromptGridView(page);
       const promptId = await firstCard.getAttribute('data-id');
 

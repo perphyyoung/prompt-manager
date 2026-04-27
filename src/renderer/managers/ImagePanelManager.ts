@@ -1,39 +1,16 @@
 import { cacheManager } from '../../utils/index.ts';
 import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
-import type { IEventBus } from '../app.types.ts';
+import type { IApp } from '../app.types.ts';
 import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig, UnifiedListRenderer, ImageListConfig } from './SharedComponents/index.ts';
 import { Constants, Events } from '../../constants.ts';
 import { DialogConfig } from '../services/index.ts';
 import { batchToolbarMiddle } from '../../middle/index.ts';
 
 import { IImage } from '../../types/entities.ts';
-import type { LRUCache } from '../../utils/LRUCache.ts';
 import { CardEventStrategy } from './Strategies/CardEventStrategy.ts';
 import { ListEventStrategy } from './Strategies/ListEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
-
-interface ImagePanelManagerOptions {
-  app: {
-    imageCache: LRUCache<IImage>;
-    searchSortManager?: { getImageSearchQuery: () => string } | null;
-    openImageDetailModal: (image: IImage, options: { filteredList: IImage[] }) => void;
-    showToast: (message: string, type: string) => void;
-    eventBus: IEventBus;
-    currentPanel: string;
-    viewMode: string;
-    trashManager?: { loadTrash: () => Promise<void> } | null;
-    renderStatistics?: () => Promise<void>;
-    promptHoverTooltip?: {
-      bind: (selector: string, options: {
-        getContent: (element: Element) => string;
-        getImageId: (element: Element) => string | null;
-        delay: number;
-      }) => void;
-    } | null;
-  };
-  tagManager?: unknown;
-}
 
 interface PromptRef {
   promptId: string;
@@ -62,10 +39,9 @@ export class ImagePanelManager extends PanelManagerBase {
     [Constants.NO_TAG_TAG, (img) => !img.tags || img.tags.length === 0]
   ]);
 
-  constructor(options: ImagePanelManagerOptions) {
+  constructor(app: IApp) {
     super({
-      app: options.app,
-      tagManager: options.tagManager,
+      app: app,
       storagePrefix: 'image',
       defaultCardSize: 180
     });
@@ -110,7 +86,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 打开标签管理器模态框（实现基类抽象方法）
    */
   protected async openTagManagerModal(): Promise<void> {
-    await this.app.openImageTagManagerModal?.();
+    await this.app.openImageTagManagerModal();
   }
 
   /**
@@ -159,18 +135,18 @@ export class ImagePanelManager extends PanelManagerBase {
    * 获取图像列表（从缓存读取）
    */
   get images(): IImage[] {
-    return Array.from((this.app as ImagePanelManagerOptions['app']).imageCache.values());
+    return Array.from(this.app.cacheManager.getImageCache().values());
   }
 
   getItems(): IImage[] {
-    return Array.from((this.app as ImagePanelManagerOptions['app']).imageCache.values());
+    return Array.from(this.app.cacheManager.getImageCache().values());
   }
 
   /**
    * 获取搜索查询（实现基类抽象方法）
    */
   getSearchQuery(): string {
-    return (this.app as ImagePanelManagerOptions['app']).searchSortManager?.getImageSearchQuery() || '';
+    return this.app.searchSortManager?.getImageSearchQuery() || '';
   }
 
   /**
@@ -371,7 +347,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 绑定 hover 预览事件（实现基类抽象方法）
    */
   bindHoverPreview(selector: string): void {
-    const tooltip = (this.app as ImagePanelManagerOptions['app']).promptHoverTooltip;
+    const tooltip = this.app.promptHoverTooltip;
     if (!tooltip) return;
 
     tooltip.bind(selector, {
@@ -472,7 +448,7 @@ export class ImagePanelManager extends PanelManagerBase {
     }
 
     // NSFW 模式下显示安全评级标签
-    if ((this.app as ImagePanelManagerOptions['app']).viewMode === 'nsfw') {
+    if (this.app.viewMode === 'nsfw') {
       const safeCount = visibleItems.filter(img => img.isSafe !== 0).length;
       const unsafeCount = visibleItems.filter(img => img.isSafe === 0).length;
       if (safeCount > 0) {
@@ -532,12 +508,12 @@ export class ImagePanelManager extends PanelManagerBase {
         img.isFavorite = isFavorite ? 1 : 0;
       }
 
-      (this.app as ImagePanelManagerOptions['app']).showToast(isFavorite ? '已收藏' : '已取消收藏', 'success');
+      this.app.showToast(isFavorite ? '已收藏' : '已取消收藏', 'success');
       this.updateFavoriteUI(id, isFavorite);
       this.renderTagFilters();
     } catch (error) {
       window.electronAPI.logError('ImagePanelManager.ts', 'toggleFavorite error:', error);
-      (this.app as ImagePanelManagerOptions['app']).showToast('操作失败：' + (error as Error).message, 'error');
+      this.app.showToast('操作失败：' + (error as Error).message, 'error');
     }
   }
 
@@ -625,7 +601,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 打开图像详情
    */
   openImageDetail(img: IImage): void {
-    (this.app as ImagePanelManagerOptions['app']).openImageDetailModal(img, { filteredList: this.filteredImages });
+    this.app.openImageDetailModal(img, { filteredList: this.filteredImages });
   }
 }
 

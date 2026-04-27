@@ -821,7 +821,10 @@ ipcMain.handle('soft-delete-image', async (event, id) => {
 // 批量软删除图像
 ipcMain.handle('soft-delete-images', async (event, ids) => {
   try {
-    return await db.softDeleteImages(ids);
+    logDebug('Main', `soft-delete-images called with ${ids.length} IDs: ${ids.join(', ')}`);
+    const result = await db.softDeleteImages(ids);
+    logDebug('Main', `soft-delete-images result: ${JSON.stringify(result)}`);
+    return result;
   } catch (error) {
     logError('Main', 'Batch soft delete images error:', error);
     throw error;
@@ -1140,6 +1143,13 @@ ipcMain.handle('save-image-file', async (event, sourcePath, fileName) => {
 
 // 打开图像文件对话框（支持多选）
 ipcMain.handle('dialog:open-image-files', async () => {
+  // 测试 mock 优先
+  const mockPath = (global as any).__testMockedImageFilePath as string | undefined;
+  if (mockPath) {
+    delete (global as any).__testMockedImageFilePath; // 一次性使用
+    return [mockPath];
+  }
+
   const result = await dialog.showOpenDialog({
     title: '选择图像',
     filters: [

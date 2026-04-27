@@ -256,6 +256,14 @@ export class DirectSaveStrategy extends UploadStrategy {
   }
 
   /**
+   * 设置已保存的图像（用于从缓存恢复）
+   * @param images - 图像数组
+   */
+  setSavedImages(images: unknown[]): void {
+    this.savedImages = [...images];
+  }
+
+  /**
    * 获取当前文件路径（直接保存策略返回空数组，因为文件已保存）
    * @returns 文件路径数组
    */

@@ -1,13 +1,7 @@
-import { isSameId, HtmlUtils } from '../../utils/index.ts';
+import { HtmlUtils } from '../../utils/index.ts';
 import { Constants } from '../../constants.ts';
 import { IImage } from '../../types/entities.ts';
-
-/**
- * App 类型定义
- */
-interface IApp {
-  viewMode: string;
-}
+import type { IApp } from '../app.types.ts';
 
 /**
  * ImageSelectorManager 构造选项
@@ -272,7 +266,7 @@ export class ImageSelectorManager {
     const modal = document.getElementById(Constants.Ids.IMAGE_SELECTOR_MODAL);
     if (modal) {
       modal.addEventListener('click', (e) => {
-        if (isSameId((e.target as HTMLElement).id, Constants.Ids.IMAGE_SELECTOR_MODAL)) this.close();
+        if (this.app.isSameId((e.target as HTMLElement).id, Constants.Ids.IMAGE_SELECTOR_MODAL)) this.close();
       });
     }
   }

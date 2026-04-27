@@ -30,9 +30,7 @@ test.describe("标签管理对话框失败重试功能", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart(
-        "新建标签时标签名已存在 - 对话框保持打开并保留输入",
-      );
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // 创建一个已存在的标签
@@ -101,9 +99,7 @@ test.describe("标签管理对话框失败重试功能", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart(
-        "重命名标签时标签名已存在 - 对话框保持打开并保留输入",
-      );
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // 创建两个标签
@@ -181,9 +177,7 @@ test.describe("标签管理对话框失败重试功能", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart(
-        "新建标签组时名称重复 - 对话框保持打开并保留输入",
-      );
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // 创建一个已存在的标签组
@@ -264,9 +258,7 @@ test.describe("标签管理对话框失败重试功能", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart(
-        "编辑标签组时名称重复 - 对话框保持打开并保留输入",
-      );
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // 创建两个标签组
@@ -359,9 +351,7 @@ test.describe("标签管理对话框失败重试功能", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart(
-        "新建标签时标签名已存在 - 对话框保持打开并保留输入（提示词）",
-      );
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // 创建一个已存在的标签
@@ -430,9 +420,7 @@ test.describe("标签管理对话框失败重试功能", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart(
-        "重命名标签时标签名已存在 - 对话框保持打开并保留输入（提示词）",
-      );
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // 创建两个标签
@@ -510,9 +498,7 @@ test.describe("标签管理对话框失败重试功能", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart(
-        "新建标签组时名称重复 - 对话框保持打开并保留输入（提示词）",
-      );
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // 创建一个已存在的标签组
@@ -594,9 +580,7 @@ test.describe("标签管理对话框失败重试功能", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart(
-        "编辑标签组时名称重复 - 对话框保持打开并保留输入（提示词）",
-      );
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // 创建两个标签组

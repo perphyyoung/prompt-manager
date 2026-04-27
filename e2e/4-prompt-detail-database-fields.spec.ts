@@ -4,6 +4,7 @@ import {
   test,
   enterPromptDetailView,
   getPromptFromDatabase,
+  findPromptWithImageCount,
 } from "./electron-test.ts";
 
 /**
@@ -23,7 +24,8 @@ import {
  * 4. 等待 #promptDetailModal 显示
  */
 test.describe("提示词详情界面数据库字段读取", () => {
-  test("ID 字段正确显示", async ({ _electronTest, page }) => {
+  test("ID 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -37,7 +39,8 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(displayedId).toBe(dbPrompt!.id);
   });
 
-  test("标题 (title) 字段正确显示", async ({ _electronTest, page }) => {
+  test("标题 (title) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -51,7 +54,8 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(displayedTitle).toBe(dbPrompt!.title);
   });
 
-  test("内容 (content) 字段正确显示", async ({ _electronTest, page }) => {
+  test("内容 (content) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -67,10 +71,8 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(displayedContent).toBe(dbPrompt!.content);
   });
 
-  test("翻译 (contentTranslate) 字段正确显示", async ({
-    _electronTest,
-    page,
-  }) => {
+  test("翻译 (contentTranslate) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -86,7 +88,8 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(displayedTranslate).toBe(dbPrompt!.contentTranslate || "");
   });
 
-  test("备注 (note) 字段正确显示", async ({ _electronTest, page }) => {
+  test("备注 (note) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -100,7 +103,8 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(displayedNote).toBe(dbPrompt!.note || "");
   });
 
-  test("标签 (tags) 字段正确显示", async ({ _electronTest, page }) => {
+  test("标签 (tags) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -137,7 +141,8 @@ test.describe("提示词详情界面数据库字段读取", () => {
     }
   });
 
-  test("安全状态 (isSafe) 字段正确显示", async ({ _electronTest, page }) => {
+  test("安全状态 (isSafe) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -159,7 +164,8 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(isChecked).toBe(expectedSafe);
   });
 
-  test("关联图像 (images) 字段正确显示", async ({ _electronTest, page }) => {
+  test("关联图像 (images) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -179,7 +185,358 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(displayedImageCount).toBe(dbImageCount);
   });
 
-  test("所有数据库字段一致性验证", async ({ _electronTest, page }) => {
+  test("点击眼睛图标进入图像详情界面且导航后依旧有效", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
+
+    // 查找有图像的提示词
+    const promptIdWithImage = await findPromptWithImageCount(page, 1);
+    if (!promptIdWithImage) {
+      await electronTest.logWarn(page, "跳过测试：没有找到有图像的提示词");
+      return;
+    }
+
+    // 进入提示词面板
+    const promptPanel = page.locator(`#${Constants.Ids.PROMPT_PANEL}`);
+    const isPromptPanelVisible = await promptPanel
+      .isVisible()
+      .catch(() => false);
+    if (!isPromptPanelVisible) {
+      await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
+        state: "visible",
+        timeout: 1000,
+      });
+    }
+
+    // 确保切换到网格视图
+    await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
+    await page.waitForSelector(
+      `#${Constants.Ids.PROMPT_GRID_VIEW_BTN}.active`,
+      {
+        state: "visible",
+        timeout: 1000,
+      },
+    );
+
+    // 等待提示词网格加载
+    await page.waitForSelector(".prompt-card", {
+      state: "visible",
+      timeout: 1000,
+    });
+
+    // 点击找到的有图像的提示词
+    const targetCard = page.locator(
+      `.prompt-card[data-id="${promptIdWithImage}"]`,
+    );
+    await expect(targetCard).toBeVisible({ timeout: 1000 });
+    await targetCard.scrollIntoViewIfNeeded();
+    await targetCard.click({ force: true });
+
+    // 等待详情模态框显示
+    const detailModal = page.locator(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
+    await expect(detailModal).toBeVisible({ timeout: 1000 });
+
+    // 等待模态框内容加载
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_TITLE}`, {
+      state: "visible",
+      timeout: 1000,
+    });
+
+    // 验证存在图像预览项
+    const imagePreviewItems = page.locator(".image-preview-item");
+    const imageCount = await imagePreviewItems.count();
+
+    // 断言必须有图像（因为已经查找过有图像的提示词）
+    expect(imageCount).toBeGreaterThan(0);
+
+    // 获取第一个图像的眼睛图标按钮
+    const firstImagePreview = imagePreviewItems.first();
+    const viewImageBtn = firstImagePreview.locator(".view-image");
+
+    // 验证眼睛图标按钮存在且可见
+    await expect(viewImageBtn).toBeVisible({ timeout: 1000 });
+
+    // 获取图像ID用于后续验证
+    const imageId = await firstImagePreview.getAttribute("data-image-id");
+    expect(imageId).toBeTruthy();
+
+    // 悬停在图像预览项上以显示眼睛图标（CSS hover 效果）
+    await firstImagePreview.hover();
+
+    // 点击眼睛图标
+    await viewImageBtn.click();
+
+    // 验证图像详情模态框显示
+    const imageDetailModal = page.locator(
+      `#${Constants.Ids.IMAGE_DETAIL_MODAL}`,
+    );
+    await expect(imageDetailModal).toBeVisible({ timeout: 1000 });
+
+    // 关闭图像详情模态框
+    const closeBtn = page.locator(`#${Constants.Ids.IMAGE_DETAIL_CLOSE_BTN}`);
+    await closeBtn.click();
+    await expect(imageDetailModal).toBeHidden({ timeout: 1000 });
+
+    // ===== 第二部分：导航到下一张有图的提示词，验证眼睛图标依旧有效 =====
+
+    // 获取当前提示词的ID
+    const firstPromptId = await page.inputValue(
+      `#${Constants.Ids.PROMPT_DETAIL_ID}`,
+    );
+
+    // 点击下一张按钮导航，直到找到有图像的提示词
+    const nextBtn = page.locator(
+      `#${Constants.Ids.PROMPT_DETAIL_NEXT_NAV_BTN}`,
+    );
+
+    let currentPromptId = firstPromptId;
+    let foundImage = false;
+    let navigationCount = 0;
+    const maxNavigation = 10; // 最多导航10次，防止无限循环
+
+    while (!foundImage && navigationCount < maxNavigation) {
+      // 检查下一张按钮是否可用
+      const isNextBtnDisabled = await nextBtn.evaluate(
+        (el: HTMLButtonElement) => el.disabled,
+      );
+
+      if (isNextBtnDisabled) {
+        break;
+      }
+
+      await nextBtn.click();
+      navigationCount++;
+
+      // 等待导航完成 - 验证ID已变化
+      await page.waitForFunction(
+        (params: { idFieldId: string; prevId: string }) => {
+          const currentId = (
+            document.getElementById(params.idFieldId) as HTMLInputElement
+          )?.value;
+          return currentId && currentId !== params.prevId;
+        },
+        { idFieldId: Constants.Ids.PROMPT_DETAIL_ID, prevId: currentPromptId },
+        { timeout: 1000 },
+      );
+
+      // 获取新的提示词ID
+      const newPromptId = await page.inputValue(
+        `#${Constants.Ids.PROMPT_DETAIL_ID}`,
+      );
+
+      currentPromptId = newPromptId;
+
+      // 检查当前提示词是否有图像
+      const currentImageCount = await imagePreviewItems.count();
+      if (currentImageCount > 0) {
+        foundImage = true;
+      }
+    }
+
+    // 断言必须找到有图像的提示词
+    expect(foundImage).toBe(true);
+
+    // 获取第二张提示词的第一个图像
+    const secondFirstImagePreview = imagePreviewItems.first();
+    const secondViewImageBtn = secondFirstImagePreview.locator(".view-image");
+
+    // 验证眼睛图标按钮存在且可见
+    await expect(secondViewImageBtn).toBeVisible({ timeout: 1000 });
+
+    // 获取图像ID
+    const secondImageId =
+      await secondFirstImagePreview.getAttribute("data-image-id");
+    expect(secondImageId).toBeTruthy();
+
+    // 悬停并点击眼睛图标
+    await secondFirstImagePreview.hover();
+    await secondViewImageBtn.click();
+
+    // 验证图像详情模态框显示
+    await expect(imageDetailModal).toBeVisible({ timeout: 1000 });
+  });
+
+  test("删除图像后通过图像管理重新加载原图像", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
+
+    // 查找有图像的提示词
+    const promptIdWithImage = await findPromptWithImageCount(page, 1);
+    if (!promptIdWithImage) {
+      await electronTest.logWarn(page, "跳过测试：没有找到有图像的提示词");
+      return;
+    }
+
+    // 进入提示词详情界面
+    await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
+      state: "visible",
+      timeout: 1000,
+    });
+    await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
+    await page.locator(`.prompt-card[data-id="${promptIdWithImage}"]`).click();
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`, {
+      state: "visible",
+      timeout: 1000,
+    });
+
+    // 验证存在图像并获取图像ID
+    const imagePreviewItems = page.locator(".image-preview-item");
+    const imageCountBefore = await imagePreviewItems.count();
+    expect(imageCountBefore).toBeGreaterThan(0);
+
+    const firstImagePreview = imagePreviewItems.first();
+    const deletedImageId =
+      await firstImagePreview.getAttribute("data-image-id");
+    expect(deletedImageId).toBeTruthy();
+
+    // 悬停并点击删除按钮
+    await firstImagePreview.hover();
+    await firstImagePreview.locator(".remove-image").click({ force: true });
+
+    // 等待确认对话框显示
+    await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, {
+      state: "visible",
+      timeout: 1000,
+    });
+
+    // 点击确认按钮
+    await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
+
+    // 等待确认对话框关闭
+    await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, {
+      state: "hidden",
+      timeout: 1000,
+    });
+
+    // 等待删除完成
+    await page.waitForFunction(
+      (expectedCount: number) =>
+        document.querySelectorAll(".image-preview-item").length ===
+        expectedCount,
+      imageCountBefore - 1,
+      { timeout: 2000 },
+    );
+
+    // 验证图像已被删除
+    expect(await imagePreviewItems.count()).toBe(imageCountBefore - 1);
+
+    // 点击"从图像管理选择"按钮
+    await page
+      .locator(`#${Constants.Ids.PROMPT_DETAIL_SELECT_FROM_IMAGE_MANAGER_BTN}`)
+      .click();
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_SELECTOR_MODAL}`, {
+      state: "visible",
+      timeout: 1000,
+    });
+
+    // 等待图像选择器中的图像项加载
+    await page.waitForSelector(
+      `#${Constants.Ids.IMAGE_SELECTOR_MODAL} .image-selector-item`,
+      { state: "visible", timeout: 2000 },
+    );
+
+    // 查找之前删除的图像项
+    const imageItem = page.locator(
+      `#${Constants.Ids.IMAGE_SELECTOR_MODAL} .image-selector-item[data-image-id="${deletedImageId}"]`,
+    );
+
+    // 检查图像项是否存在
+    const isImageItemVisible = await imageItem.isVisible().catch(() => false);
+    if (!isImageItemVisible) {
+      await page
+        .locator(`#${Constants.Ids.CLOSE_IMAGE_SELECTOR_MODAL}`)
+        .click();
+      await electronTest.logWarn(
+        page,
+        `跳过测试：原图像 ${deletedImageId} 不在选择器中`,
+      );
+      return;
+    }
+
+    // 选择图像并确认
+    await imageItem.click();
+    await page.locator(`#${Constants.Ids.CONFIRM_IMAGE_SELECTOR_BTN}`).click();
+
+    // 等待选择器关闭并验证图像已重新加载
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_SELECTOR_MODAL}`, {
+      state: "hidden",
+      timeout: 1000,
+    });
+
+    // 验证图像数量恢复
+    const imageCountAfterReload = await imagePreviewItems.count();
+    expect(imageCountAfterReload).toBe(imageCountBefore);
+
+    // 获取所有重新加载的图像ID
+    const reloadedImageIds = await page.evaluate(() => {
+      const items = document.querySelectorAll(".image-preview-item");
+      return Array.from(items).map((item) =>
+        item.getAttribute("data-image-id"),
+      );
+    });
+
+    // 验证重新加载的图像中包含之前删除的图像
+    expect(reloadedImageIds).toContain(deletedImageId);
+  });
+
+  test("双击图像进入全屏查看模式", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
+
+    // 查找有图像的提示词
+    const promptIdWithImage = await findPromptWithImageCount(page, 1);
+    if (!promptIdWithImage) {
+      await electronTest.logWarn(page, "跳过测试：没有找到有图像的提示词");
+      return;
+    }
+
+    // 进入提示词详情界面
+    await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
+      state: "visible",
+      timeout: 1000,
+    });
+    await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
+    await page.locator(`.prompt-card[data-id="${promptIdWithImage}"]`).click();
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`, {
+      state: "visible",
+      timeout: 1000,
+    });
+
+    // 验证存在图像
+    const imagePreviewItems = page.locator(".image-preview-item");
+    const imageCount = await imagePreviewItems.count();
+    expect(imageCount).toBeGreaterThan(0);
+
+    // 获取第一个图像的ID
+    const firstImagePreview = imagePreviewItems.first();
+    const firstImageId = await firstImagePreview.getAttribute("data-image-id");
+    expect(firstImageId).toBeTruthy();
+
+    // 双击图像
+    await firstImagePreview.locator("img").dblclick();
+
+    // 等待全屏查看器显示
+    const fullscreenViewer = page.locator(
+      `#${Constants.Ids.IMAGE_FULLSCREEN_VIEWER}`,
+    );
+    await expect(fullscreenViewer).toBeVisible({ timeout: 1000 });
+
+    // 验证全屏查看器中显示的图像ID与双击的图像一致
+    const fullscreenImageId = await page.evaluate((viewerId: string) => {
+      const viewer = document.getElementById(viewerId);
+      if (!viewer) return null;
+      const img = viewer.querySelector("img");
+      return img?.getAttribute("data-image-id");
+    }, Constants.Ids.IMAGE_FULLSCREEN_VIEWER);
+    expect(fullscreenImageId).toBe(firstImageId);
+
+    // 关闭全屏查看器
+    await page.click(`#${Constants.Ids.IMAGE_FULLSCREEN_VIEWER_CLOSE}`);
+    await expect(fullscreenViewer).toBeHidden({ timeout: 1000 });
+  });
+
+  test("所有数据库字段一致性验证", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取完整提示词信息

@@ -193,8 +193,11 @@ export interface IApp {
   promptPanelManager: IPanelManager | null;
   imagePanelManager: IPanelManager | null;
 
+  // 缓存
+  cacheManager: ICacheManager;  
+  currentImagesCache: LRUCache;
+
   // 其他管理器（在 init 后可用）
-  cacheManager: ICacheManager;
   trashManager: { loadTrash: () => Promise<void> } | null;
   toastManager: IToastManager | null;
   promptTagManager: any | null;
@@ -221,11 +224,6 @@ export interface IApp {
   selectedTags: Set<string>;
   imageSearchQuery: string;
 
-  // 缓存
-  promptCache: LRUCache;
-  imageCache: LRUCache;
-  currentImagesCache: LRUCache;
-
   // 标签排序状态
   promptTagSortBy: string;
   promptTagSortOrder: string;
@@ -238,6 +236,7 @@ export interface IApp {
   eventBus: IEventBus;
 
   // 方法
+  isSameId(id1: string | number, id2: string | number): boolean;
   showToast(message: string, type?: string): void;
   renderStatistics(): Promise<void>;
   refreshData(): Promise<void>;
@@ -246,6 +245,7 @@ export interface IApp {
   closeStatisticsModal(): void;
   openEditPromptModal(prompt: IPrompt, options?: unknown): Promise<void>;
   openImageDetailModal(image: IImage, options?: unknown): Promise<void>;
+  openFullscreen(images: Array<{ id?: string; relativePath?: string; fileName?: string }>, index: number): Promise<void>;
   findPromptById(id: string): unknown | null;
   findImageById(id: string, allImages?: Array<{ id: string }> | null): { id: string } | null;
   generateUniqueTimestamp(): string;
@@ -261,6 +261,8 @@ export interface IApp {
   emit(event: string, data?: unknown): void;
   updatePromptViewButtons(mode: string): void;
   updateImageViewButtons(mode: string): void;
+  openImageTagManagerModal: () => void;
+  openPromptTagManagerModal: () => void;
 }
 
 /**

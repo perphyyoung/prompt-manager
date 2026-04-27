@@ -45,30 +45,15 @@ description: 在编写或调试 Playwright E2E 测试时使用。症状包括：
 
    - 使用 ElectronTestHelper 的 logTestStart 方法
    - 所有描述都用简洁的中文
-   - 测试标题 和 测试描述 使用同一个字符串字面量
+   - logTestStart 自动从 Playwright 获取当前测试名，无需传参
 
    ```typescript
-   import { createElectronTest } from './electron-test.ts';
-
-   const electronTest = createElectronTest();
-
-   let desc: string;
-
    test.describe('提示词管理功能', () => {
-    desc = '应该创建新提示词';
-    test(desc, async ({ electronTest, page }) => {
-      await electronTest.logTestStart(desc);
+    test('应该创建新提示词', async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
       // ... 测试代码
     });
-
-    desc = '应该删除提示词';
-    test(desc, async ({ electronTest, page }) => {
-      await electronTest.logTestStart(desc);
-      // ... 测试代码
-    });
-
-  });
-
+   });
    ```
 
 3. **始终使用 Constants.Ids 进行 DOM 元素选择**

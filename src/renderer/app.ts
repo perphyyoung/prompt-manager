@@ -18,8 +18,8 @@ import {
 } from './managers/index.ts';
 
 import eventBus from '../utils/EventBus.ts';
-import { HtmlUtils, isSameId, cacheManager } from '../utils/index.ts';
-import { HoverTooltipManager, ShortcutManager, SaveManager, PromptSaveStrategy } from './renderer_utils/index.ts';
+import { HtmlUtils, cacheManager } from '../utils/index.ts';
+import { HoverTooltipManager, ShortcutManager } from './renderer_utils/index.ts';
 import type { IPrompt, IImage } from '../types/entities.ts';
 import type {
   IApp,
@@ -49,10 +49,6 @@ import type {
 class PromptManager implements IApp {
   // 缓存管理器
   cacheManager: ICacheManager;
-
-  // 缓存
-  promptCache: ReturnType<typeof cacheManager.getPromptCache>;
-  imageCache: ReturnType<typeof cacheManager.getImageCache>;
   currentImagesCache: ReturnType<typeof cacheManager.createCache>;
 
   // 状态
@@ -111,13 +107,11 @@ class PromptManager implements IApp {
 
   constructor() {
     // ========== 基本状态初始化 ==========
-
     // 缓存管理器
     this.cacheManager = cacheManager;
 
     // 使用 CacheManager 管理缓存
-    this.promptCache = cacheManager.getPromptCache();
-    this.imageCache = cacheManager.getImageCache();
+    this.cacheManager = cacheManager;
     this.currentImagesCache = cacheManager.createCache('currentImages', 100);
 
     // 从 localStorage 加载 viewMode（在创建面板管理器之前）
@@ -206,6 +200,7 @@ class PromptManager implements IApp {
   initHoverTooltips() {
     // 提示词预览 tooltip（左右布局，同时显示内容和图像）
     this.promptHoverTooltip = new HoverTooltipManager(
+      this,
       Constants.Ids.PROMPT_PREVIEW_TOOLTIP,
       Constants.Ids.PROMPT_PREVIEW_CONTENT,
       Constants.Ids.PROMPT_PREVIEW_IMAGE
@@ -240,23 +235,10 @@ class PromptManager implements IApp {
     // ========== 3. 面板层 ==========
 
     // 初始化提示词面板管理器
-    this.promptPanelManager = new PromptPanelManager({
-      app: this as IApp,
-      tagManager: this.promptTagManager,
-      saveManager: new SaveManager({
-        strategy: new PromptSaveStrategy(this as IApp),
-        itemId: '',
-        onAfterSave: () => {
-          this.showToast('保存成功', 'success');
-        }
-      })
-    });
+    this.promptPanelManager = new PromptPanelManager(app);
 
     // 初始化图像面板管理器
-    this.imagePanelManager = new ImagePanelManager({
-      app: this as IApp,
-      tagManager: this.imageTagManager
-    });
+    this.imagePanelManager = new ImagePanelManager(app);
 
     // ========== 4. 功能管理器 ==========
 
@@ -274,11 +256,9 @@ class PromptManager implements IApp {
     // 初始化详情管理器
     this.promptDetailManager = new PromptDetailManager({
       app: this as IApp,
-      tagRegistry: this.promptTagManager
     });
     this.imageDetailManager = new ImageDetailManager({
       app: this as IApp,
-      tagRegistry: this.imageTagManager
     });
 
     // 初始化导航管理器
@@ -511,6 +491,16 @@ class PromptManager implements IApp {
   }
 
   /**
+ * 比较两个 ID 是否相等（统一转换为字符串比较）
+ * @param id1 - 第一个 ID
+ * @param id2 - 第二个 ID
+ * @returns 是否相等
+ */
+  isSameId(id1: string | number, id2: string | number): boolean {
+    return String(id1) === String(id2);
+  }
+
+  /**
    * 显示提示消息
    * @param message - 消息内容
    * @param type - 类型 (success, error, info, warning)
@@ -594,6 +584,15 @@ class PromptManager implements IApp {
   }
 
   /**
+   * 打开全屏图像查看器
+   * @param images - 图像数组
+   * @param index - 当前索引
+   */
+  async openFullscreen(images: Array<{ id?: string; relativePath?: string; fileName?: string }>, index: number) {
+    this.imageFullscreenManager?.open(images, index);
+  }
+
+  /**
    * 更新图像详情界面收藏按钮的 UI 状态
    * @param isFavorite - 是否收藏
    */
@@ -657,7 +656,7 @@ class PromptManager implements IApp {
           const itemsSnapshot = this.imageDetailManager?.getItemsSnapshot();
           if (itemsSnapshot && itemsSnapshot.length > 0) {
             // 找到当前图像在列表中的索引
-            const currentIndex = itemsSnapshot.findIndex(i => isSameId((i as { id: string }).id, image.id));
+            const currentIndex = itemsSnapshot.findIndex(i => this.isSameId((i as { id: string }).id, image.id));
             this.imageFullscreenManager?.open(itemsSnapshot, currentIndex >= 0 ? currentIndex : 0);
           } else {
             // 如果没有快照，只显示当前图像
@@ -687,7 +686,7 @@ class PromptManager implements IApp {
     const cached = cacheManager.getCachedImage(id);
     if (cached) return cached;
     if (allImages) {
-      return allImages.find(img => isSameId(img.id, id)) || null;
+      return allImages.find(img => this.isSameId(img.id, id)) || null;
     }
     return null;
   }

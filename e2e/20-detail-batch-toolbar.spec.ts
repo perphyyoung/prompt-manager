@@ -18,7 +18,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像详情界面-全选按钮功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图并打开详情
     await enterImageGridView(page);
@@ -64,7 +64,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像详情界面-反选按钮功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图并打开详情
     await enterImageGridView(page);
@@ -118,7 +118,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像详情界面-删除按钮功能");
+    await electronTest.logTestStart();
 
     // 先进入图像标签管理器创建测试标签
     await enterImageTagManager(page);
@@ -280,7 +280,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
 
   // ==================== 图像详情界面 - 单选（点击标签） ====================
   test("图像详情界面-点击标签应该单选", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("图像详情界面-点击标签单选功能");
+    await electronTest.logTestStart();
 
     // 先进入图像标签管理器创建测试标签
     await enterImageTagManager(page);
@@ -381,7 +381,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
 
   // ==================== 图像详情界面 - 多选（Ctrl+点击标签） ====================
   test("图像详情界面-Ctrl+点击标签应该多选", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("图像详情界面-Ctrl+点击多选功能");
+    await electronTest.logTestStart();
 
     // 先进入图像标签管理器创建测试标签
     await enterImageTagManager(page);
@@ -489,7 +489,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像详情界面-取消按钮功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图并打开详情
     await enterImageGridView(page);
@@ -519,7 +519,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
 
   // ==================== 图像详情界面 - ESC键退出 ====================
   test("图像详情界面-ESC键应该退出批量模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("图像详情界面-ESC键退出功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图并打开详情
     await enterImageGridView(page);
@@ -552,7 +552,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词详情界面-全选按钮功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图并打开详情
     await enterPromptGridView(page);
@@ -598,7 +598,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词详情界面-反选按钮功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图并打开详情
     await enterPromptGridView(page);
@@ -652,7 +652,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词详情界面-删除按钮功能");
+    await electronTest.logTestStart();
 
     // 先进入提示词标签管理器创建测试标签
     await enterPromptTagManager(page);
@@ -807,7 +807,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
 
   // ==================== 提示词详情界面 - 单选（点击标签） ====================
   test("提示词详情界面-点击标签应该单选", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("提示词详情界面-点击标签单选功能");
+    await electronTest.logTestStart();
 
     // 先进入提示词标签管理器创建测试标签
     await enterPromptTagManager(page);
@@ -911,7 +911,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词详情界面-Ctrl+点击多选功能");
+    await electronTest.logTestStart();
 
     // 先进入提示词标签管理器创建测试标签
     await enterPromptTagManager(page);
@@ -1019,7 +1019,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词详情界面-取消按钮功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图并打开详情
     await enterPromptGridView(page);
@@ -1052,7 +1052,7 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词详情界面-ESC键退出功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图并打开详情
     await enterPromptGridView(page);

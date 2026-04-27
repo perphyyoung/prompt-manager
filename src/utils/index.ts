@@ -39,9 +39,6 @@ export { default as TimeUtils } from './TimeUtils.ts';
 // ========== ID 生成器 ==========
 export { generatePromptId, generateImageId } from './idGenerator.ts';
 
-// ========== ID 比较工具 ==========
-export { isSameId } from './isSameId.ts';
-
 // ========== 防重复提交工具 ==========
 export {
   withDuplicatePrevention,

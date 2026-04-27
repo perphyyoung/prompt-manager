@@ -1,9 +1,8 @@
 import { HtmlUtils } from '../../utils/index.ts';
 import { cacheManager } from '../../utils/CacheManager.ts';
-import { LRUCache } from '../../utils/LRUCache.ts';
 import { TagUI } from './TagUI.ts';
 import { TopGroupManager } from '../../pyTagGroups/TopGroupManager.ts';
-import { ITagWithGroup, ITagGroup, IImage, IPrompt } from '../../types/entities.ts';
+import { ITagWithGroup, ITagGroup } from '../../types/entities.ts';
 import { IEventStrategy, EventContext } from './Strategies/IEventStrategy.ts';
 import { batchToolbarMiddle, type BatchBusinessConfig } from '../../middle/index.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
@@ -11,69 +10,15 @@ import type { IDialogTemplate } from '../../types/entities.ts';
 import { Constants, Events } from '../../constants.ts';
 import { TagService } from '../services/index.ts';
 import { buildTagsWithGroupInfo } from '../../pyTagGroups/utils.ts';
+import { IApp } from '../app.types.ts';
 
 // 卡片大小限制常量
 const MIN_CARD_SIZE = 100;
 const MAX_CARD_SIZE = 350;
 
-import type { IEventBus } from '../app.types.ts';
-
-/**
- * 面板管理器宿主接口
- * 包含所有面板管理器需要的 app 属性
- */
-interface IPanelManagerHost {
-  // 通用属性
-  showToast: (message: string, type: string) => void;
-  viewMode: string;
-  currentPanel: string;
-  eventBus: IEventBus;
-
-  // 可选的模态框管理器
-  openPromptTagManagerModal?: () => void;
-  openImageTagManagerModal?: () => void;
-  newPromptManager?: {
-    open: () => Promise<void>;
-  } | null;
-  imageUploadManager?: {
-    open: () => void;
-  } | null;
-
-  // 回收站和统计
-  trashManager?: { loadTrash: () => Promise<void> } | null;
-  renderStatistics?: () => Promise<void>;
-
-  // 缓存
-  imageCache?: LRUCache<IImage>;
-  promptCache?: LRUCache<IPrompt>;
-
-  // 搜索排序
-  searchSortManager?: {
-    getImageSearchQuery?: () => string;
-    getPromptSearchQuery?: () => string;
-  } | null;
-
-  // 模态框打开方法
-  openImageDetailModal?: (image: IImage, options: { filteredList: IImage[] }) => void;
-  openEditPromptModal?: (prompt: IPrompt, options: { filteredList: IPrompt[] }) => void;
-
-  // 工具提示
-  promptHoverTooltip?: {
-    bind: (selector: string, options: {
-      getContent: (element: Element) => string;
-      getImageId: (element: Element) => string | null;
-      delay: number;
-    }) => void;
-  } | null;
-
-  // 图像查找
-  findImageById?: (imageId: string, allImages?: Array<{ id: string }> | null) => { id: string } | null;
-}
-
 // 面板管理器基类选项接口
 interface PanelManagerBaseOptions {
-  app: IPanelManagerHost;
-  tagManager?: unknown;
+  app: IApp;
   storagePrefix: string;
   defaultCardSize?: number;
   onSelectionChange?: () => void;
@@ -142,7 +87,7 @@ interface IUIConfig {
  */
 export abstract class PanelManagerBase {
   [key: string]: unknown;
-  app: IPanelManagerHost;
+  app: IApp;
   protected tagManager?: unknown;
   protected storagePrefix: string;
   protected defaultCardSize: number;
@@ -195,7 +140,6 @@ export abstract class PanelManagerBase {
       throw new Error('PanelManagerBase requires app instance');
     }
     this.app = options.app;
-    this.tagManager = options.tagManager;
     // eventBus 通过 app 访问
     this.storagePrefix = options.storagePrefix;
     this.defaultCardSize = options.defaultCardSize || 200;
@@ -1444,8 +1388,13 @@ export abstract class PanelManagerBase {
         await this.refreshAfterUpdate();
         this.app.eventBus.emit(isPrompt ? Events.PROMPTS_CHANGED : Events.IMAGES_CHANGED);
       },
-      showToast: (msg, type) => this.app.showToast?.(msg, type),
-      successMessage: (deleted) => `${deleted} 个${isPrompt ? '提示词' : '图像'}已删除`,
+      showToast: (msg, type) => {
+        this.app.showToast?.(msg, type);
+      },
+      successMessage: (deleted) => {
+        const msg = `${deleted} 个${isPrompt ? '提示词' : '图像'}已删除`;
+        return msg;
+      },
     });
   }
 

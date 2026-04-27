@@ -1,41 +1,16 @@
 import { cacheManager } from '../../utils/index.ts';
 import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
-import type { IEventBus } from '../app.types.ts';
+import type { IApp } from '../app.types.ts';
 import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig, UnifiedListRenderer, PromptListConfig } from './SharedComponents/index.ts';
 import { Constants, Events } from '../../constants.ts';
 import { DialogConfig } from '../services/index.ts';
 import { batchToolbarMiddle } from '../../middle/index.ts';
 
 import { IPrompt } from '../../types/entities.ts';
-import type { LRUCache } from '../../utils/LRUCache.ts';
 import { CardEventStrategy } from './Strategies/CardEventStrategy.ts';
 import { ListEventStrategy } from './Strategies/ListEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
-
-interface PromptPanelManagerOptions {
-  app: {
-    promptCache: LRUCache<IPrompt>;
-    searchSortManager?: { getPromptSearchQuery: () => string } | null;
-    openEditPromptModal: (prompt: IPrompt, options: { filteredList: IPrompt[] }) => void;
-    showToast: (message: string, type: string) => void;
-    eventBus: IEventBus;
-    currentPanel: string;
-    viewMode: string;
-    trashManager?: { loadTrash: () => Promise<void> } | null;
-    renderStatistics?: () => Promise<void>;
-    promptHoverTooltip?: {
-      bind: (selector: string, options: {
-        getContent: (element: Element) => string;
-        getImageId: (element: Element) => string | null;
-        delay: number;
-      }) => void;
-    } | null;
-    findImageById: (imageId: string, allImages?: Array<{ id: string }> | null) => { id: string } | null;
-  };
-  tagManager?: unknown;
-  saveManager?: unknown;
-}
 
 interface ImageInfo {
   id?: string;
@@ -48,7 +23,6 @@ interface ImageInfo {
  * 负责提示词列表的渲染、筛选、排序、标签管理等功能
  */
 export class PromptPanelManager extends PanelManagerBase {
-  private saveManager?: unknown;
   filteredPrompts: IPrompt[] = [];
   private isInitialized = false;
 
@@ -62,14 +36,12 @@ export class PromptPanelManager extends PanelManagerBase {
     [Constants.NO_TAG_TAG, (p) => !p.tags || p.tags.length === 0]
   ]);
 
-  constructor(options: PromptPanelManagerOptions) {
+  constructor(app: IApp) {
     super({
-      app: options.app,
-      tagManager: options.tagManager,
+      app: app,
       storagePrefix: 'prompt',
       defaultCardSize: 260
     });
-    this.saveManager = options.saveManager;
     this.filteredPrompts = [];
     this.bindTagFilterActionEvent();
     this.bindTagFilterToggleEvents();
@@ -146,7 +118,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 获取提示词列表（从缓存读取）
    */
   get prompts(): IPrompt[] {
-    return Array.from((this.app as PromptPanelManagerOptions['app']).promptCache.values());
+    return Array.from(this.app.cacheManager.getPromptCache().values());
   }
 
   /**
@@ -160,7 +132,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 获取搜索查询（实现基类抽象方法）
    */
   getSearchQuery(): string {
-    return (this.app as PromptPanelManagerOptions['app']).searchSortManager?.getPromptSearchQuery() || '';
+    return this.app.searchSortManager?.getPromptSearchQuery() || '';
   }
 
   /**
@@ -325,7 +297,7 @@ export class PromptPanelManager extends PanelManagerBase {
       if (!prompt || !prompt.images || prompt.images.length === 0) continue;
 
       const firstImageId = typeof prompt.images[0] === 'object' ? (prompt.images[0] as ImageInfo).id : prompt.images[0];
-      const img = (this.app as PromptPanelManagerOptions['app']).findImageById(String(firstImageId), allImages) as ImageInfo | undefined;
+      const img = this.app.findImageById(String(firstImageId), allImages) as ImageInfo | undefined;
       if (!img) continue;
 
       const imagePath = img.thumbnailPath || img.relativePath;
@@ -347,7 +319,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 绑定 hover 预览事件（实现基类抽象方法）
    */
   bindHoverPreview(selector: string): void {
-    const tooltip = (this.app as PromptPanelManagerOptions['app']).promptHoverTooltip;
+    const tooltip = this.app.promptHoverTooltip;
     if (!tooltip) return;
 
     tooltip.bind(selector, {
@@ -403,7 +375,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 打开标签管理器模态框（实现基类抽象方法）
    */
   protected async openTagManagerModal(): Promise<void> {
-    await this.app.openPromptTagManagerModal?.();
+    await this.app.openPromptTagManagerModal();
   }
 
   /**
@@ -465,7 +437,7 @@ export class PromptPanelManager extends PanelManagerBase {
     }
 
     // NSFW 模式下显示安全评级标签
-    if ((this.app as PromptPanelManagerOptions['app']).viewMode === 'nsfw') {
+    if (this.app.viewMode === 'nsfw') {
       const safeCount = visibleItems.filter(p => p.isSafe !== 0).length;
       const unsafeCount = visibleItems.filter(p => p.isSafe === 0).length;
       if (safeCount > 0) {
@@ -526,12 +498,12 @@ export class PromptPanelManager extends PanelManagerBase {
         prompt.isFavorite = isFavorite ? 1 : 0;
       }
 
-      (this.app as PromptPanelManagerOptions['app']).showToast(isFavorite ? '已收藏' : '已取消收藏', 'success');
+      this.app.showToast(isFavorite ? '已收藏' : '已取消收藏', 'success');
       this.updateFavoriteUI(id, isFavorite);
       this.renderTagFilters();
     } catch (error) {
       window.electronAPI.logError('PromptPanelManager.ts', 'toggleFavorite error:', error);
-      (this.app as PromptPanelManagerOptions['app']).showToast('操作失败：' + (error as Error).message, 'error');
+      this.app.showToast('操作失败：' + (error as Error).message, 'error');
     }
   }
 
@@ -607,7 +579,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 打开提示词编辑
    */
   openPromptDetail(prompt: IPrompt): void {
-    (this.app as PromptPanelManagerOptions['app']).openEditPromptModal(prompt, { filteredList: this.filteredPrompts });
+    this.app.openEditPromptModal(prompt, { filteredList: this.filteredPrompts });
   }
 }
 

@@ -29,7 +29,7 @@ import { Constants } from "../src/constants.ts";
 test.describe("标签管理器搜索状态保持功能", () => {
   test.describe("图像标签管理 - 搜索状态保持", () => {
     test("搜索后单个删除保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("搜索后单个删除保持搜索状态（图像）");
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       const searchKeyword = "persist_single_delete";
@@ -129,7 +129,7 @@ test.describe("标签管理器搜索状态保持功能", () => {
     });
 
     test("搜索后单个编辑保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("搜索后单个编辑保持搜索状态（图像）");
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       const searchKeyword = "persist_single_edit";
@@ -227,7 +227,7 @@ test.describe("标签管理器搜索状态保持功能", () => {
     });
 
     test("搜索后批量删除保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("搜索后批量删除保持搜索状态（图像）");
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       const searchKeyword = "persist_test";
@@ -332,7 +332,7 @@ test.describe("标签管理器搜索状态保持功能", () => {
     });
 
     test("搜索后批量移动到组保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("搜索后批量移动到组保持搜索状态（图像）");
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       const searchKeyword = "persist_move";
@@ -445,7 +445,7 @@ test.describe("标签管理器搜索状态保持功能", () => {
 
   test.describe("提示词标签管理 - 搜索状态保持", () => {
     test("搜索后单个删除保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("搜索后单个删除保持搜索状态（提示词）");
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       const searchKeyword = "persist_single_delete";
@@ -545,7 +545,7 @@ test.describe("标签管理器搜索状态保持功能", () => {
     });
 
     test("搜索后单个编辑保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("搜索后单个编辑保持搜索状态（提示词）");
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       const searchKeyword = "persist_single_edit";
@@ -643,7 +643,7 @@ test.describe("标签管理器搜索状态保持功能", () => {
     });
 
     test("搜索后批量删除保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("搜索后批量删除保持搜索状态（提示词）");
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       const searchKeyword = "persist_test";
@@ -748,9 +748,7 @@ test.describe("标签管理器搜索状态保持功能", () => {
     });
 
     test("搜索后批量移动到组保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "搜索后批量移动到组保持搜索状态（提示词）",
-      );
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       const searchKeyword = "persist_move";

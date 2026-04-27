@@ -8,6 +8,7 @@ interface ImageFullscreenManagerOptions {
 }
 
 interface ViewerImage {
+  id?: string;
   path?: string;
   relativePath?: string;
   fileName?: string;
@@ -126,8 +127,9 @@ export class ImageFullscreenManager {
    * @param images - 原始图像数组
    * @returns 格式化后的图像数组
    */
-  buildViewerImages(images: Array<{ relativePath?: string; fileName?: string }>): ViewerImage[] {
+  buildViewerImages(images: Array<{ id?: string; relativePath?: string; fileName?: string }>): ViewerImage[] {
     return images.map(img => ({
+      id: img.id,
       path: img.relativePath,
       relativePath: img.relativePath,
       fileName: img.fileName
@@ -157,6 +159,9 @@ export class ImageFullscreenManager {
     const imagePath = await window.electronAPI.getImagePath(currentImage.relativePath);
     img!.src = `file://${imagePath}`;
     img!.alt = currentImage.fileName || '';
+    if (currentImage.id) {
+      img!.dataset.imageId = currentImage.id;
+    }
 
     // 更新文件名和索引
     const fileNameEl = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_FILE_NAME);

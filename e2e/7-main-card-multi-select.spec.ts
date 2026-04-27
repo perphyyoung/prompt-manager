@@ -22,10 +22,11 @@ import { Constants } from "../src/constants.ts";
  */
 test.describe("主界面卡片视图多选功能", () => {
   test.describe("图像面板多选功能", () => {
-    test("图像复选框选中后进入多选模式", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "图像复选框选中后进入多选模式 - 验证点击复选框后显示批量工具栏并进入多选模式",
-      );
+    test("图像复选框选中后进入多选模式 - 验证点击复选框后显示批量工具栏并进入多选模式", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
       const firstCard = await enterImageGridView(page);
 
       await firstCard.hover();
@@ -49,10 +50,11 @@ test.describe("主界面卡片视图多选功能", () => {
       expect(hasSelectionMode).toBe(true);
     });
 
-    test("图像多选模式下复选框一直显示", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "图像多选模式下复选框一直显示 - 验证进入多选模式后复选框始终可见",
-      );
+    test("图像多选模式下复选框一直显示 - 验证进入多选模式后复选框始终可见", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
       await enterImageGridView(page);
 
       const firstCard = page.locator(".image-card").first();
@@ -68,10 +70,11 @@ test.describe("主界面卡片视图多选功能", () => {
       await expect(secondCheckbox).toBeVisible();
     });
 
-    test("图像批量工具栏 - 反选功能", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "图像批量工具栏 - 反选功能 - 验证反选按钮正确切换选择状态",
-      );
+    test("图像批量工具栏 - 反选功能 - 验证反选按钮正确切换选择状态", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
       await enterImageGridView(page);
 
       const searchInput = page.locator(`#${Constants.Ids.IMAGE_SEARCH_INPUT}`);
@@ -138,10 +141,11 @@ test.describe("主界面卡片视图多选功能", () => {
       }
     });
 
-    test("图像批量工具栏 - 取消选择功能", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "图像批量工具栏 - 取消选择功能 - 验证取消按钮清除选择并退出多选模式",
-      );
+    test("图像批量工具栏 - 取消选择功能 - 验证取消按钮清除选择并退出多选模式", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
       await enterImageGridView(page);
 
       const firstCard = page.locator(".image-card").first();
@@ -166,10 +170,11 @@ test.describe("主界面卡片视图多选功能", () => {
       expect(hasSelectionMode).toBe(false);
     });
 
-    test("图像 Ctrl+A 全选功能", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "图像 Ctrl+A 全选功能 - 验证 Ctrl+A 快捷键全选所有可见图像",
-      );
+    test("图像 Ctrl+A 全选功能 - 验证 Ctrl+A 快捷键全选所有可见图像", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
       await enterImageGridView(page);
 
       const totalImages = await page.evaluate(async () => {
@@ -213,10 +218,11 @@ test.describe("主界面卡片视图多选功能", () => {
       expect(countText).toContain(`${totalImages}`);
     });
 
-    test("图像批量收藏功能", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "图像批量收藏功能 - 验证批量收藏按钮切换图像收藏状态",
-      );
+    test("图像批量收藏功能 - 验证批量收藏按钮切换图像收藏状态", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
 
       // 先清除可能遗留的选择状态
       await page.keyboard.press("Escape");
@@ -293,10 +299,11 @@ test.describe("主界面卡片视图多选功能", () => {
       await batchToolbar.waitFor({ state: "hidden", timeout: 1000 });
     });
 
-    test("图像多选后切换视图保留选择状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "图像多选后切换视图保留选择状态 - 验证网格视图和列表视图之间切换时保留选择状态",
-      );
+    test("图像多选后切换视图保留选择状态 - 验证网格视图和列表视图之间切换时保留选择状态", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
       await enterImageGridView(page);
 
       const firstCard = page.locator(".image-card").first();
@@ -333,10 +340,11 @@ test.describe("主界面卡片视图多选功能", () => {
   });
 
   test.describe("提示词面板多选功能", () => {
-    test("提示词复选框选中后进入多选模式", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "提示词复选框选中后进入多选模式 - 验证点击复选框后显示批量工具栏并进入多选模式",
-      );
+    test("提示词复选框选中后进入多选模式 - 验证点击复选框后显示批量工具栏并进入多选模式", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
       const firstCard = await enterPromptGridView(page);
 
       await firstCard.hover();
@@ -360,10 +368,11 @@ test.describe("主界面卡片视图多选功能", () => {
       expect(hasSelectionMode).toBe(true);
     });
 
-    test("提示词多选模式下复选框一直显示", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "提示词多选模式下复选框一直显示 - 验证进入多选模式后复选框始终可见",
-      );
+    test("提示词多选模式下复选框一直显示 - 验证进入多选模式后复选框始终可见", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
       await enterPromptGridView(page);
 
       const firstCard = page.locator(".prompt-card").first();
@@ -380,10 +389,11 @@ test.describe("主界面卡片视图多选功能", () => {
       await expect(secondCheckbox).toBeVisible();
     });
 
-    test("提示词批量工具栏 - 反选功能", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "提示词批量工具栏 - 反选功能 - 验证反选按钮正确切换选择状态",
-      );
+    test("提示词批量工具栏 - 反选功能 - 验证反选按钮正确切换选择状态", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
       await enterPromptGridView(page);
 
       const searchInput = page.locator(`#${Constants.Ids.PROMPT_SEARCH_INPUT}`);
@@ -451,10 +461,11 @@ test.describe("主界面卡片视图多选功能", () => {
       }
     });
 
-    test("提示词批量工具栏 - 取消选择功能", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "提示词批量工具栏 - 取消选择功能 - 验证取消按钮清除选择并退出多选模式",
-      );
+    test("提示词批量工具栏 - 取消选择功能 - 验证取消按钮清除选择并退出多选模式", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
       await enterPromptGridView(page);
 
       const firstCard = page.locator(".prompt-card").first();
@@ -480,10 +491,11 @@ test.describe("主界面卡片视图多选功能", () => {
       expect(hasSelectionMode).toBe(false);
     });
 
-    test("提示词 Ctrl+A 全选功能", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "提示词 Ctrl+A 全选功能 - 验证 Ctrl+A 快捷键全选所有可见提示词",
-      );
+    test("提示词 Ctrl+A 全选功能 - 验证 Ctrl+A 快捷键全选所有可见提示词", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
       await enterPromptGridView(page);
 
       const totalPrompts = await page.evaluate(async () => {
@@ -531,10 +543,11 @@ test.describe("主界面卡片视图多选功能", () => {
       expect(countText).toContain(`${totalPrompts}`);
     });
 
-    test("提示词批量收藏功能", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "提示词批量收藏功能 - 验证批量收藏按钮切换提示词收藏状态",
-      );
+    test("提示词批量收藏功能 - 验证批量收藏按钮切换提示词收藏状态", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
 
       // 先切换到提示词面板，再清除可能遗留的选择状态
       await page.click("#promptManagerBtn");
@@ -628,10 +641,11 @@ test.describe("主界面卡片视图多选功能", () => {
       await batchToolbar.waitFor({ state: "hidden", timeout: 1000 });
     });
 
-    test("提示词多选后切换视图保留选择状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart(
-        "提示词多选后切换视图保留选择状态 - 验证网格视图和列表视图之间切换时保留选择状态",
-      );
+    test("提示词多选后切换视图保留选择状态 - 验证网格视图和列表视图之间切换时保留选择状态", async ({
+      electronTest,
+      page,
+    }) => {
+      await electronTest.logTestStart();
       await enterPromptGridView(page);
 
       const firstCard = page.locator(".prompt-card").first();

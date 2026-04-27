@@ -31,7 +31,7 @@ test.describe('TagService 操作测试', () => {
 
   test.describe('标签组管理', () => {
     test('图像标签组 - 创建、编辑、删除完整流程', async ({ electronTest, page }) => {
-      await electronTest.logTestStart('图像标签组 - 创建、编辑、删除完整流程');
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // 1. 创建标签组
@@ -83,7 +83,7 @@ test.describe('TagService 操作测试', () => {
     });
 
     test('提示词标签组 - 创建、编辑、删除完整流程', async ({ electronTest, page }) => {
-      await electronTest.logTestStart('提示词标签组 - 创建、编辑、删除完整流程');
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // 1. 创建标签组
@@ -139,7 +139,7 @@ test.describe('TagService 操作测试', () => {
 
   test.describe('标签分配到组', () => {
     test('图像标签 - 创建并分配到组', async ({ electronTest, page }) => {
-      await electronTest.logTestStart('图像标签 - 创建并分配到组');
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // 1. 创建标签组
@@ -179,7 +179,7 @@ test.describe('TagService 操作测试', () => {
     });
 
     test('提示词标签 - 创建并分配到组', async ({ electronTest, page }) => {
-      await electronTest.logTestStart('提示词标签 - 创建并分配到组');
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // 1. 创建标签组
@@ -223,7 +223,7 @@ test.describe('TagService 操作测试', () => {
 
   test.describe('标签重命名', () => {
     test('图像标签 - 重命名标签', async ({ electronTest, page }) => {
-      await electronTest.logTestStart('图像标签 - 重命名标签');
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // 1. 创建标签
@@ -270,7 +270,7 @@ test.describe('TagService 操作测试', () => {
     });
 
     test('提示词标签 - 重命名标签', async ({ electronTest, page }) => {
-      await electronTest.logTestStart('提示词标签 - 重命名标签');
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // 1. 创建标签
@@ -321,7 +321,7 @@ test.describe('TagService 操作测试', () => {
 
   test.describe('标签搜索功能', () => {
     test('图像标签管理器 - 搜索标签', async ({ electronTest, page }) => {
-      await electronTest.logTestStart('图像标签管理器 - 搜索标签');
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // 创建测试标签
@@ -365,7 +365,7 @@ test.describe('TagService 操作测试', () => {
     });
 
     test('提示词标签管理器 - 搜索标签', async ({ electronTest, page }) => {
-      await electronTest.logTestStart('提示词标签管理器 - 搜索标签');
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // 创建测试标签
@@ -413,7 +413,7 @@ test.describe('TagService 操作测试', () => {
 
   test.describe('批量标签操作', () => {
     test('图像标签 - 批量删除', async ({ electronTest, page }) => {
-      await electronTest.logTestStart('图像标签 - 批量删除');
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // 创建多个测试标签（使用相同前缀以便搜索）
@@ -482,7 +482,7 @@ test.describe('TagService 操作测试', () => {
     });
 
     test('提示词标签 - 批量删除', async ({ electronTest, page }) => {
-      await electronTest.logTestStart('提示词标签 - 批量删除');
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // 创建多个测试标签（使用相同前缀以便搜索）

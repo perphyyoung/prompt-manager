@@ -12,7 +12,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像主界面-全选按钮功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -61,7 +61,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像主界面-反选按钮功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -106,7 +106,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像主界面-添加标签按钮功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -164,7 +164,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像主界面-收藏按钮功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -209,7 +209,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像主界面-取消按钮功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -240,7 +240,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
 
   // ==================== 图像主界面 - ESC键退出 ====================
   test("图像主界面-ESC键应该退出批量模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("图像主界面-ESC键退出功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -284,7 +284,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
 
   // ==================== 图像主界面 - Shift+范围选择 ====================
   test("图像主界面-Shift+点击应该范围选择", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("图像主界面-Shift+范围选择功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -340,7 +340,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像主界面-Ctrl+A全选功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -396,7 +396,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像主界面-搜索改变退出功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -442,7 +442,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像主界面-添加标签空输入功能");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -504,7 +504,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词主界面-全选按钮功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -545,7 +545,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词主界面-反选按钮功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -590,7 +590,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词主界面-添加标签按钮功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -651,7 +651,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词主界面-收藏按钮功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -696,7 +696,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词主界面-取消按钮功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -727,7 +727,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
 
   // ==================== 提示词主界面 - ESC键退出 ====================
   test("提示词主界面-ESC键应该退出批量模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("提示词主界面-ESC键退出功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -755,7 +755,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词主界面-Shift+范围选择功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -809,7 +809,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词主界面-Ctrl+A全选功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -859,7 +859,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词主界面-搜索改变退出功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -905,7 +905,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词主界面-添加标签空输入功能");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -965,7 +965,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像主界面-删除按钮完整流程");
+    await electronTest.logTestStart();
 
     // 创建2个测试图像
     const testImages = await electronTest.createTestImages(2, "batch_delete");
@@ -1073,7 +1073,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词主界面-删除按钮完整流程");
+    await electronTest.logTestStart();
 
     // 创建2个测试提示词
     const testPrompt1 = await electronTest.createTestPrompt("batch_delete_1");
@@ -1175,7 +1175,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像主界面-视图模式切换保留选择");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -1244,7 +1244,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词主界面-视图模式切换保留选择");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -1313,7 +1313,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像主界面-展开状态点击标签退出批量模式");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -1384,9 +1384,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart(
-      "提示词主界面-展开状态点击标签退出批量模式",
-    );
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -1457,7 +1455,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像主界面-收起状态点击标签退出批量模式");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -1528,9 +1526,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart(
-      "提示词主界面-收起状态点击标签退出批量模式",
-    );
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -1601,7 +1597,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像主界面-紧凑视图切换保留选择");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -1670,7 +1666,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词主界面-紧凑视图切换保留选择");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);

@@ -10,9 +10,9 @@ import { Constants, Events } from '../../constants.ts';
 import { DirectSaveStrategy, TagAutocomplete, DialogService, DialogConfig } from '../services/index.ts';
 import { ImageContextMenuManager } from './ImageContextMenuManager.ts';
 import { IPrompt, IImage } from '../../types/entities.ts';
-import type { LRUCache } from '../../utils/LRUCache.ts';
 import { TagExistsError, InvalidTagNameError, TagOperationError } from '../../pyTagGroups/index.ts';
 import { TagService } from '../services/index.ts';
+import type { IApp } from '../app.types.ts';
 
 // 扩展 IPrompt 接口以包含更多字段
 interface IPromptExtended extends IPrompt {
@@ -27,12 +27,6 @@ interface IImageSelectionResult {
   images: IImage[];
 }
 
-// 图像操作结果
-interface IImageOperationResult {
-  success: boolean;
-  images: IImage[];
-}
-
 // 选项接口
 interface IOpenOptions {
   filteredList?: IPromptExtended[];
@@ -40,34 +34,12 @@ interface IOpenOptions {
   returnToItem?: unknown;
 }
 
-// 可刷新面板管理器接口
-interface IRefreshablePanelManager {
-  refreshAfterUpdate: () => Promise<void>;
-}
-
-// App 类型定义
-interface IApp {
-  isFromDetailJump: boolean;
-  currentImagesCache: LRUCache<IImage>;
-  promptPanelManager: IRefreshablePanelManager | null;
-  eventBus: {
-    emit: (event: string) => void;
-  };
-  showToast: (message: string, type?: string) => void;
-  autoResizeTextarea: (element: HTMLElement) => void;
-  imageSelectorManager?: {
-    open: (options: { onConfirm: (image: IImage) => void }) => void;
-  } | null;
-}
-
 // PromptDetailManager 构造选项
 interface IPromptDetailManagerOptions {
   app: IApp;
-  tagRegistry: unknown;
 }
 
 export class PromptDetailManager extends DetailViewManager {
-  private tagManager: unknown;
   private uploadStrategy: DirectSaveStrategy;
   private isOpeningDialog: boolean;
   private tagAutocomplete: TagAutocomplete | null = null;
@@ -77,22 +49,21 @@ export class PromptDetailManager extends DetailViewManager {
   private returnToItem: unknown = null;
   private imageContextMenuManager: ImageContextMenuManager | null = null;
   private currentTags: string[] = [];
+  protected app: IApp;
 
   /**
    * @param options - 配置选项
    */
   constructor(options: IPromptDetailManagerOptions) {
     super({
-      app: options.app as unknown as { constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean }; showToast: (message: string, type?: string) => void; eventBus: { emit: (event: string, data?: unknown) => void }; [key: string]: unknown },
+      app: options.app,
       modalId: Constants.Ids.PROMPT_DETAIL_MODAL,
       closeBtnId: Constants.Ids.PROMPT_DETAIL_CLOSE_BTN
     });
 
-    this.tagManager = options.tagRegistry;
-
+    this.app = options.app;
     // 图像上传策略（直接保存，适合频繁操作）
-    this.uploadStrategy = new DirectSaveStrategy(this.app as unknown as { eventBus: { emit: (event: string, data?: unknown) => void }; [key: string]: unknown });
-
+    this.uploadStrategy = new DirectSaveStrategy(this.app);
     // 防抖标志：防止重复打开文件对话框
     this.isOpeningDialog = false;
   }
@@ -109,10 +80,9 @@ export class PromptDetailManager extends DetailViewManager {
       return;
     }
 
-    const app = this.app as unknown as IApp;
     this.returnToManager = options.returnToManager || null;
     this.returnToItem = options.returnToItem;
-    app.isFromDetailJump = !!options.returnToManager;
+    this.app.isFromDetailJump = !!options.returnToManager;
 
     try {
       // 从缓存获取最新的提示词数据，确保 isSafe 是最新的
@@ -144,7 +114,7 @@ export class PromptDetailManager extends DetailViewManager {
       this.autoResizeAllTextareas();
     } catch (error) {
       window.electronAPI.logError('PromptDetailManager.ts', 'Failed to open prompt detail modal:', error);
-      (this.app as unknown as IApp).showToast('打开编辑界面失败', 'error');
+      this.app.showToast('打开编辑界面失败', 'error');
     }
   }
 
@@ -197,16 +167,22 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private async loadImages(prompt: IPromptExtended): Promise<void> {
-    const app = this.app as unknown as IApp;
     // 清空 currentImages 缓存
-    app.currentImagesCache.clear();
+    this.app.currentImagesCache.clear();
+
+    // 同步图像到 uploadStrategy
+    const images: unknown[] = [];
     if (prompt.images && Array.isArray(prompt.images)) {
       prompt.images.forEach(img => {
         if (img && img.id) {
-          app.currentImagesCache.set(String(img.id), img as unknown as IImage);
+          this.app.currentImagesCache.set(String(img.id), img as unknown as IImage);
+          images.push(img);
         }
       });
     }
+
+    // 同步到 uploadStrategy，使删除功能正常工作
+    this.uploadStrategy.setSavedImages(images);
 
     // 渲染图像预览
     await this.renderImagePreviews();
@@ -218,7 +194,6 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private initTagManager(prompt: IPromptExtended): void {
-    const app = this.app as unknown as IApp;
     this.currentTags = [...(prompt.tags || [])];
 
     const detailTagManager: IDetailTagManager = {
@@ -245,13 +220,13 @@ export class PromptDetailManager extends DetailViewManager {
           });
           if (success) {
             this.currentTags = this.currentTags.filter(t => t !== tagName);
-            app.eventBus.emit(Events.PROMPTS_CHANGED);
+            this.app.eventBus.emit(Events.PROMPTS_CHANGED);
             // 触发重新渲染标签列表
             detailTagManager.onRender?.();
           }
           return success;
         } catch (error) {
-          app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+          this.app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
           return false;
         }
       },
@@ -263,11 +238,11 @@ export class PromptDetailManager extends DetailViewManager {
             for (const tagName of tagNames) {
               this.currentTags = this.currentTags.filter(t => t !== tagName);
             }
-            app.eventBus.emit(Events.PROMPTS_CHANGED);
+            this.app.eventBus.emit(Events.PROMPTS_CHANGED);
           }
           return { success: result.errors.length === 0, deleted: result.deleted };
         } catch (error) {
-          app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+          this.app.showToast(`删除标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
           return { success: false, deleted: 0 };
         }
       },
@@ -291,19 +266,19 @@ export class PromptDetailManager extends DetailViewManager {
             }
             // 触发重新渲染
             detailTagManager.onRender?.();
-            app.eventBus.emit(Events.PROMPTS_CHANGED);
+            this.app.eventBus.emit(Events.PROMPTS_CHANGED);
           }
           return { success: result.success, added: result.created?.length || 0 };
         } catch (error) {
           // 根据错误类型显示不同的提示
           if (error instanceof TagExistsError) {
-            app.showToast('标签已存在', 'warning');
+            this.app.showToast('标签已存在', 'warning');
           } else if (error instanceof InvalidTagNameError) {
-            app.showToast('标签名无效: ' + (error as Error).message, 'warning');
+            this.app.showToast('标签名无效: ' + (error as Error).message, 'warning');
           } else if (error instanceof TagOperationError) {
-            app.showToast('操作失败: ' + (error as Error).message, 'error');
+            this.app.showToast('操作失败: ' + (error as Error).message, 'error');
           } else {
-            app.showToast(`添加标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+            this.app.showToast(`添加标签失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
           }
           return { success: false, added: 0 };
         }
@@ -335,8 +310,6 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private bindTagInputEvents(): void {
-    const app = this.app as unknown as IApp;
-
     // 清理旧的自动完成组件
     if (this.tagAutocomplete) {
       this.tagAutocomplete.destroy();
@@ -366,7 +339,7 @@ export class PromptDetailManager extends DetailViewManager {
             }
             // 触发重新渲染
             this.detailTagManager?.onRender?.();
-            app.eventBus.emit(Events.PROMPTS_CHANGED);
+            this.app.eventBus.emit(Events.PROMPTS_CHANGED);
           }
           return result.success;
         } catch (error) {
@@ -374,13 +347,13 @@ export class PromptDetailManager extends DetailViewManager {
 
           // 根据错误类型显示不同的提示
           if (error instanceof TagExistsError) {
-            app.showToast('标签已存在', 'warning');
+            this.app.showToast('标签已存在', 'warning');
           } else if (error instanceof InvalidTagNameError) {
-            app.showToast('标签名无效: ' + (error as Error).message, 'warning');
+            this.app.showToast('标签名无效: ' + (error as Error).message, 'warning');
           } else if (error instanceof TagOperationError) {
-            app.showToast('操作失败: ' + (error as Error).message, 'error');
+            this.app.showToast('操作失败: ' + (error as Error).message, 'error');
           } else {
-            app.showToast(error instanceof Error ? error.message : '添加标签失败', 'error');
+            this.app.showToast(error instanceof Error ? error.message : '添加标签失败', 'error');
           }
           return false;
         }
@@ -405,7 +378,7 @@ export class PromptDetailManager extends DetailViewManager {
             }
             // 触发重新渲染
             this.detailTagManager?.onRender?.();
-            app.eventBus.emit(Events.PROMPTS_CHANGED);
+            this.app.eventBus.emit(Events.PROMPTS_CHANGED);
           }
           return result.success;
         } catch (error) {
@@ -413,13 +386,13 @@ export class PromptDetailManager extends DetailViewManager {
 
           // 根据错误类型显示不同的提示
           if (error instanceof TagExistsError) {
-            app.showToast('标签已存在', 'warning');
+            this.app.showToast('标签已存在', 'warning');
           } else if (error instanceof InvalidTagNameError) {
-            app.showToast('标签名无效: ' + (error as Error).message, 'warning');
+            this.app.showToast('标签名无效: ' + (error as Error).message, 'warning');
           } else if (error instanceof TagOperationError) {
-            app.showToast('操作失败: ' + (error as Error).message, 'error');
+            this.app.showToast('操作失败: ' + (error as Error).message, 'error');
           } else {
-            app.showToast(error instanceof Error ? error.message : '添加标签失败', 'error');
+            this.app.showToast(error instanceof Error ? error.message : '添加标签失败', 'error');
           }
           return false;
         }
@@ -437,8 +410,6 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private initSaveManager(prompt: IPromptExtended): void {
-    const app = this.app as unknown as IApp;
-
     // 清理旧的
     if (this.promptSaveManager) {
       this.promptSaveManager.destroy();
@@ -454,7 +425,7 @@ export class PromptDetailManager extends DetailViewManager {
     }
 
     // 创建保存策略
-    const strategy = new PromptSaveStrategy(app as unknown as Record<string, unknown>);
+    const strategy = new PromptSaveStrategy(this.app);
 
     // 创建保存管理器
     this.promptSaveManager = new SaveManager({
@@ -462,8 +433,8 @@ export class PromptDetailManager extends DetailViewManager {
       itemId: prompt.id,
       onAfterSave: async () => {
         // 通过事件通知刷新，避免直接调用导致的重复刷新
-        app.eventBus.emit(Events.PROMPTS_CHANGED);
-        app.eventBus.emit(Events.IMAGES_CHANGED);
+        this.app.eventBus.emit(Events.PROMPTS_CHANGED);
+        this.app.eventBus.emit(Events.IMAGES_CHANGED);
       }
     });
 
@@ -476,8 +447,6 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private registerFields(): void {
-    const app = this.app as unknown as IApp;
-
     if (!this.promptSaveManager) return;
 
     // 1. 标题 - 防抖保存
@@ -523,7 +492,7 @@ export class PromptDetailManager extends DetailViewManager {
       elementId: Constants.Ids.PROMPT_DETAIL_SAFE_TOGGLE,
       getValue: (element: HTMLElement) => (element as HTMLInputElement).checked ? 1 : 0,
       onChange: (value: unknown) => {
-        app.showToast(value ? '已标记为安全' : '已标记为不安全', 'success');
+        this.app.showToast(value ? '已标记为安全' : '已标记为不安全', 'success');
       }
     });
 
@@ -538,7 +507,7 @@ export class PromptDetailManager extends DetailViewManager {
           (this.currentItem as unknown as IPromptExtended).isFavorite = boolValue ? 1 : 0;
         }
         this.updateFavoriteBtnUI(boolValue);
-        app.showToast(boolValue ? '已收藏' : '已取消收藏', 'success');
+        this.app.showToast(boolValue ? '已收藏' : '已取消收藏', 'success');
       }
     });
 
@@ -580,8 +549,7 @@ export class PromptDetailManager extends DetailViewManager {
       const nextPrompt = latestPrompt ? { ...targetPrompt, images: latestPrompt.images } : targetPrompt;
 
       // 强制重置 currentImages 缓存，确保导航时不会残留旧数据
-      const app = this.app as unknown as IApp;
-      app.currentImagesCache.clear();
+      this.app.currentImagesCache.clear();
 
       await this.updateView(nextPrompt);
     };
@@ -637,11 +605,10 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private autoResizeAllTextareas(): void {
-    const app = this.app as unknown as IApp;
     [Constants.Ids.PROMPT_DETAIL_CONTENT, Constants.Ids.PROMPT_DETAIL_TRANSLATE, Constants.Ids.PROMPT_DETAIL_NOTE].forEach(id => {
       const textarea = document.getElementById(id);
       if (textarea) {
-        app.autoResizeTextarea(textarea);
+        this.app.autoResizeTextarea(textarea);
       }
     });
   }
@@ -655,7 +622,9 @@ export class PromptDetailManager extends DetailViewManager {
     const uploadArea = document.getElementById(Constants.Ids.IMAGE_UPLOAD_AREA);
     if (uploadArea) {
       uploadArea.addEventListener('click', async (e) => {
-        if ((e.target as HTMLElement).closest('.remove-image')) return;
+        const target = e.target as HTMLElement;
+        if (target.closest('.remove-image')) return;
+        if (target.closest('.view-image')) return;
         await this.handleSelectImages();
       });
 
@@ -681,8 +650,6 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private initImageContextMenu(): void {
-    const app = this.app as unknown as IApp;
-
     // 如果已存在右键菜单管理器，先销毁旧的以避免重复创建DOM元素
     if (this.imageContextMenuManager) {
       this.imageContextMenuManager.destroy();
@@ -693,7 +660,7 @@ export class PromptDetailManager extends DetailViewManager {
     this.imageContextMenuManager = new ImageContextMenuManager({
       onSetAsFirst: async (image: IImage) => {
         // 获取当前图像在列表中的索引
-        const images = Array.from(app.currentImagesCache.values());
+        const images = Array.from(this.app.currentImagesCache.values());
         const index = images.findIndex(img => String(img.id) === String(image.id));
         if (index <= 0) return; // 已经是首图或找不到
 
@@ -718,7 +685,7 @@ export class PromptDetailManager extends DetailViewManager {
         if (!imageId) return;
 
         // 获取图像数据
-        const images = Array.from(app.currentImagesCache.values());
+        const images = Array.from(this.app.currentImagesCache.values());
         const image = images.find(img => String(img.id) === String(imageId));
         if (!image) return;
 
@@ -742,8 +709,6 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private async handleSelectImages(): Promise<void> {
-    const app = this.app as unknown as IApp;
-
     // 防抖保护：防止重复打开文件对话框
     if (this.isOpeningDialog) {
       return;
@@ -757,14 +722,14 @@ export class PromptDetailManager extends DetailViewManager {
       const result = await this.uploadStrategy.selectFiles(filePaths, 'prompt-detail') as IImageSelectionResult;
       if (!result.success) {
         if (result.message) {
-          app.showToast(result.message, 'error');
+          this.app.showToast(result.message, 'error');
         }
         return;
       }
 
       // 更新缓存并保存
       for (const image of result.images) {
-        app.currentImagesCache.set(String(image.id), {
+        this.app.currentImagesCache.set(String(image.id), {
           id: image.id,
           fileName: image.fileName
         } as IImage);
@@ -776,7 +741,7 @@ export class PromptDetailManager extends DetailViewManager {
       const promptIdInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
       const promptId = promptIdInput?.value;
       if (promptId) {
-        const updatedImages = Array.from(app.currentImagesCache.values());
+        const updatedImages = Array.from(this.app.currentImagesCache.values());
         await this.savePromptField('images', updatedImages);
       }
 
@@ -791,31 +756,56 @@ export class PromptDetailManager extends DetailViewManager {
 
   /**
    * 处理删除图像
+   * 注意：这里只是从提示词中移除图像关联，不会彻底删除图像
+   * 图像仍然保留在图像管理中，可以通过"从图像管理选择"重新添加
    * @param index - 图像索引
    * @private
    */
   async handleRemoveImage(index: number): Promise<void> {
-    const app = this.app as unknown as IApp;
+    // 从缓存中获取当前所有图像
+    const currentImages = Array.from(this.app.currentImagesCache.values());
 
-    const result = await this.uploadStrategy.removeFile(index) as IImageOperationResult;
-    if (result.success) {
-      // 更新缓存
-      app.currentImagesCache.clear();
-      result.images.forEach(img => {
-        app.currentImagesCache.set(String(img.id), img);
-      });
-
-      // 保存到数据库
-      const promptIdInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
-      const promptId = promptIdInput?.value;
-      if (promptId) {
-        const updatedImages = Array.from(app.currentImagesCache.values());
-        await this.savePromptField('images', updatedImages);
-      }
-
-      // 重新渲染
-      await this.renderImagePreviews();
+    if (index < 0 || index >= currentImages.length) {
+      window.electronAPI.logError('PromptDetailManager', `Invalid index: ${index}, current images count: ${currentImages.length}`);
+      return;
     }
+
+    // 获取要移除的图像信息
+    const removedImage = currentImages[index];
+    const imageName = removedImage?.fileName || removedImage?.id || '未知图像';
+
+    // 显示确认对话框
+    const confirmed = await DialogService.showConfirmDialogByConfig(
+      DialogConfig.DELETE_IMAGE,
+      { name: imageName }
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    // 从数组中移除指定索引的图像
+    currentImages.splice(index, 1);
+
+    // 更新缓存
+    this.app.currentImagesCache.clear();
+    currentImages.forEach(img => {
+      this.app.currentImagesCache.set(String(img.id), img);
+    });
+
+    // 同步到 uploadStrategy
+    this.uploadStrategy.setSavedImages(currentImages);
+
+    // 保存到数据库
+    const promptIdInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
+    const promptId = promptIdInput?.value;
+
+    if (promptId) {
+      await this.savePromptField('images', currentImages);
+    }
+
+    // 重新渲染
+    await this.renderImagePreviews();
   }
 
   /**
@@ -824,10 +814,8 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   async handleSetFirst(index: number): Promise<void> {
-    const app = this.app as unknown as IApp;
-
     // 从缓存获取当前图像列表
-    const images = Array.from(app.currentImagesCache.values());
+    const images = Array.from(this.app.currentImagesCache.values());
 
     // 验证索引有效性
     if (index <= 0 || index >= images.length) {
@@ -839,9 +827,9 @@ export class PromptDetailManager extends DetailViewManager {
     images.unshift(item);
 
     // 更新缓存
-    app.currentImagesCache.clear();
+    this.app.currentImagesCache.clear();
     images.forEach(img => {
-      app.currentImagesCache.set(String(img.id), img);
+      this.app.currentImagesCache.set(String(img.id), img);
     });
 
     // 保存到数据库
@@ -862,10 +850,8 @@ export class PromptDetailManager extends DetailViewManager {
     const container = document.getElementById(Constants.Ids.IMAGE_PREVIEW_LIST);
     if (!container) return;
 
-    const app = this.app as unknown as IApp;
-
     // 从 CacheManager 获取当前图像列表
-    const cachedImages = Array.from(app.currentImagesCache.values());
+    const cachedImages = Array.from(this.app.currentImagesCache.values());
     const validImages = cachedImages.filter((img: { id?: string }) => img.id);
 
     // 提取有效图像 ID
@@ -904,7 +890,7 @@ export class PromptDetailManager extends DetailViewManager {
         const imgPath = (img.relativePath || img.thumbnailPath) as string | undefined;
         if (!imgPath) return '';
         const imagePath = await window.electronAPI.getImagePath(imgPath);
-        const isFromDetailJump = app.isFromDetailJump;
+        const isFromDetailJump = this.app.isFromDetailJump;
 
         // 生成标签 HTML（使用展示标签样式）
         const tagsHtml = this.generateTagsHtml(img.tags, 'tag-display', 'tag-display-empty');
@@ -930,7 +916,8 @@ export class PromptDetailManager extends DetailViewManager {
     container.innerHTML = previews.filter(p => p).join('');
 
     // 绑定删除事件
-    container.querySelectorAll('.remove-image').forEach(btn => {
+    const removeButtons = container.querySelectorAll('.remove-image');
+    removeButtons.forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const index = parseInt((btn as HTMLElement).dataset.index || '0');
@@ -939,18 +926,21 @@ export class PromptDetailManager extends DetailViewManager {
     });
 
     // 绑定查看事件
-    container.querySelectorAll('.view-image').forEach(btn => {
+    const viewButtons = container.querySelectorAll('.view-image');
+    viewButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (app.isFromDetailJump) return;
+        if (this.app.isFromDetailJump) {
+          return;
+        }
         const imageId = (btn as HTMLElement).dataset.imageId;
-        if (!imageId) return;
+        if (!imageId) {
+          return;
+        }
         const image = cacheManager.getCachedImage(imageId);
         if (image) {
-          app.isFromDetailJump = true;
-          // 打开图像详情
-          const event = new CustomEvent('openImageDetail', { detail: { image } });
-          document.dispatchEvent(event);
+          this.app.isFromDetailJump = true;
+          this.app.openImageDetailModal?.(image);
         }
       });
     });
@@ -961,9 +951,8 @@ export class PromptDetailManager extends DetailViewManager {
         e.stopPropagation();
         const item = img.closest('.image-preview-item');
         const index = parseInt((item as HTMLElement).dataset.index || '0');
-        const images = Array.from(app.currentImagesCache.values());
-        const event = new CustomEvent('openFullscreen', { detail: { images, index } });
-        document.dispatchEvent(event);
+        const images = Array.from(this.app.currentImagesCache.values());
+        this.app.openFullscreen?.(images, index);
       });
     });
   }
@@ -989,8 +978,6 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private async savePromptField(field: string, value: unknown): Promise<void> {
-    const app = this.app as unknown as IApp;
-
     const promptIdInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
     const promptId = promptIdInput?.value;
     if (!promptId) return;
@@ -999,8 +986,8 @@ export class PromptDetailManager extends DetailViewManager {
       const updates = { [field]: value };
       await window.electronAPI.updatePrompt(promptId, updates);
 
-      app.eventBus.emit(Events.IMAGES_CHANGED);
-      app.eventBus.emit(Events.PROMPTS_CHANGED);
+      this.app.eventBus.emit(Events.IMAGES_CHANGED);
+      this.app.eventBus.emit(Events.PROMPTS_CHANGED);
     } catch (error) {
       window.electronAPI.logError('PromptDetailManager', `Failed to save prompt field: ${error instanceof Error ? error.message : String(error)}`, error);
     }
@@ -1011,14 +998,12 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private async openImageSelectorForPrompt(): Promise<void> {
-    const app = this.app as unknown as IApp;
-
-    if (app.imageSelectorManager) {
-      app.imageSelectorManager.open({
+    if (this.app.imageSelectorManager) {
+      this.app.imageSelectorManager.open({
         onConfirm: (selectedImage: IImage) => {
           if (selectedImage && selectedImage.id) {
-            if (!app.currentImagesCache.has(String(selectedImage.id))) {
-              app.currentImagesCache.set(String(selectedImage.id), selectedImage);
+            if (!this.app.currentImagesCache.has(String(selectedImage.id))) {
+              this.app.currentImagesCache.set(String(selectedImage.id), selectedImage);
             }
 
             this.renderImagePreviews();
@@ -1026,7 +1011,7 @@ export class PromptDetailManager extends DetailViewManager {
             const promptIdInput = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
             const promptId = promptIdInput?.value;
             if (promptId) {
-              const updatedImages = Array.from(app.currentImagesCache.values());
+              const updatedImages = Array.from(this.app.currentImagesCache.values());
               this.savePromptField('images', updatedImages);
             }
           }
@@ -1038,12 +1023,11 @@ export class PromptDetailManager extends DetailViewManager {
   async close(): Promise<void> {
     const returnToManager = this.returnToManager;
     const returnToItem = this.returnToItem;
-    const app = this.app as unknown as IApp;
 
-    app.isFromDetailJump = false;
+    this.app.isFromDetailJump = false;
 
     // 清理图像缓存
-    app.currentImagesCache.clear();
+    this.app.currentImagesCache.clear();
 
     await super.close();
 

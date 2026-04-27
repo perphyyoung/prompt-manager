@@ -19,9 +19,10 @@ import type { IImage, IPrompt } from "../src/preload/index.ts";
  */
 test.describe("Shift 范围选择", () => {
   test("图像列表视图 - Shift+ 点击范围选择", async ({
-    _electronTest,
+    electronTest,
     page,
   }) => {
+    await electronTest.logTestStart();
     // 验证有图像数据
     const totalImages = await page.evaluate(async () => {
       const images = await window.electronAPI.getImages("createdAt", "desc");
@@ -84,9 +85,10 @@ test.describe("Shift 范围选择", () => {
   });
 
   test("提示词列表视图 - Shift+ 点击范围选择", async ({
-    _electronTest,
+    electronTest,
     page,
   }) => {
+    await electronTest.logTestStart();
     // 验证有提示词数据
     const totalPrompts = await page.evaluate(async () => {
       const prompts = await window.electronAPI.getPrompts("createdAt", "desc");

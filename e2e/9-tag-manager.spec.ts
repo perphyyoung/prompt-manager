@@ -34,7 +34,7 @@ import { Constants } from "../src/constants.ts";
 test.describe("标签管理功能", () => {
   test.describe("图像标签管理 - 非批量功能", () => {
     test("打开和关闭标签管理器", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("打开和关闭标签管理器");
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // Verify modal is active
@@ -62,7 +62,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("新建标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("新建标签");
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       const testTagName = electronTest.generateE2ePrefixName("img_tag");
@@ -87,7 +87,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("编辑标签（重命名）", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("编辑标签（重命名）");
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // Create a test tag first
@@ -143,7 +143,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("删除标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("删除标签");
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // Create a test tag first
@@ -191,7 +191,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("排序标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("排序标签");
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // Change sort order
@@ -213,7 +213,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("新建标签组", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("新建标签组");
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       const { groupId } = await createImageTagGroup(page, "img_group");
@@ -239,7 +239,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("编辑标签组", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("编辑标签组");
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // Create a test group first
@@ -299,7 +299,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("删除标签组", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("删除标签组");
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // Create a test group first
@@ -344,7 +344,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("搜索并批量删除 e2e 标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("搜索并批量删除 e2e 标签");
+      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // Create multiple e2e test tags with specific keyword
@@ -521,7 +521,7 @@ test.describe("标签管理功能", () => {
 
   test.describe("提示词标签管理 - 非批量功能", () => {
     test("打开和关闭标签管理器", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("打开和关闭标签管理器（提示词）");
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // Verify modal is active
@@ -549,7 +549,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("新建标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("新建标签（提示词）");
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       const testTagName = electronTest.generateE2ePrefixName("prompt_tag");
@@ -574,7 +574,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("编辑标签（重命名）", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("编辑标签（重命名）（提示词）");
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // Create a test tag first
@@ -630,7 +630,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("删除标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("删除标签（提示词）");
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // Create a test tag first
@@ -678,7 +678,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("排序标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("排序标签（提示词）");
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // Change sort order
@@ -700,7 +700,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("新建标签组", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("新建标签组（提示词）");
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       const { groupId } = await createPromptTagGroup(page, "prompt_group");
@@ -726,7 +726,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("编辑标签组", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("编辑标签组（提示词）");
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // Create a test group first
@@ -787,7 +787,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("删除标签组", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("删除标签组（提示词）");
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // Create a test group first
@@ -835,7 +835,7 @@ test.describe("标签管理功能", () => {
     });
 
     test("搜索并批量删除 e2e 标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("搜索并批量删除 e2e 标签（提示词）");
+      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // Create multiple e2e test tags

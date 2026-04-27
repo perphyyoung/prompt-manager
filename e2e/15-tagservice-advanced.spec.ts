@@ -31,7 +31,7 @@ test.describe("TagService 高级功能测试", () => {
 
   test.describe("详情界面标签删除", () => {
     test("图像详情界面 - 删除已关联的标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("图像详情界面 - 删除已关联的标签");
+      await electronTest.logTestStart();
 
       // 1. 进入图像详情界面
       const { firstImageId } = await enterImageDetailView(page);
@@ -98,7 +98,7 @@ test.describe("TagService 高级功能测试", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart("提示词详情界面 - 删除已关联的标签");
+      await electronTest.logTestStart();
 
       // 1. 进入提示词详情界面
       const { firstPromptId } = await enterPromptDetailView(page);
@@ -169,7 +169,7 @@ test.describe("TagService 高级功能测试", () => {
 
   test.describe("标签存在检查", () => {
     test("图像标签 - 检查标签是否存在", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("图像标签 - 检查标签是否存在");
+      await electronTest.logTestStart();
 
       await enterImageTagManager(page);
 
@@ -201,7 +201,7 @@ test.describe("TagService 高级功能测试", () => {
     });
 
     test("提示词标签 - 检查标签是否存在", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("提示词标签 - 检查标签是否存在");
+      await electronTest.logTestStart();
 
       await enterPromptTagManager(page);
 
@@ -240,7 +240,7 @@ test.describe("TagService 高级功能测试", () => {
 
   test.describe("获取组内标签", () => {
     test("图像标签组 - 获取组内所有标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("图像标签组 - 获取组内所有标签");
+      await electronTest.logTestStart();
 
       await enterImageTagManager(page);
 
@@ -272,7 +272,7 @@ test.describe("TagService 高级功能测试", () => {
     });
 
     test("提示词标签组 - 获取组内所有标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("提示词标签组 - 获取组内所有标签");
+      await electronTest.logTestStart();
 
       await enterPromptTagManager(page);
 
@@ -308,7 +308,7 @@ test.describe("TagService 高级功能测试", () => {
 
   test.describe("标签输入解析", () => {
     test("图像标签 - 解析多种分隔符的输入", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("图像标签 - 解析多种分隔符的输入");
+      await electronTest.logTestStart();
 
       await enterImageDetailView(page);
 
@@ -341,7 +341,7 @@ test.describe("TagService 高级功能测试", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart("提示词标签 - 解析多种分隔符的输入");
+      await electronTest.logTestStart();
 
       await enterPromptDetailView(page);
 
@@ -371,7 +371,7 @@ test.describe("TagService 高级功能测试", () => {
     });
 
     test("图像标签 - 解析中文逗号分隔", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("图像标签 - 解析中文逗号分隔");
+      await electronTest.logTestStart();
 
       await enterImageDetailView(page);
 
@@ -401,7 +401,7 @@ test.describe("TagService 高级功能测试", () => {
     });
 
     test("提示词标签 - 解析中文逗号分隔", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("提示词标签 - 解析中文逗号分隔");
+      await electronTest.logTestStart();
 
       await enterPromptDetailView(page);
 
@@ -438,7 +438,7 @@ test.describe("TagService 高级功能测试", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart("图像 - 添加标签时 updated_at 更新");
+      await electronTest.logTestStart();
 
       // 1. 进入图像详情界面
       const { firstImageId } = await enterImageDetailView(page);
@@ -474,7 +474,7 @@ test.describe("TagService 高级功能测试", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart("提示词 - 添加标签时 updated_at 更新");
+      await electronTest.logTestStart();
 
       // 1. 进入提示词详情界面
       const { firstPromptId } = await enterPromptDetailView(page);
@@ -514,7 +514,7 @@ test.describe("TagService 高级功能测试", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart("图像 - 批量添加标签时 updated_at 更新");
+      await electronTest.logTestStart();
 
       // 1. 进入图像详情界面
       const { firstImageId } = await enterImageDetailView(page);
@@ -557,9 +557,7 @@ test.describe("TagService 高级功能测试", () => {
       electronTest,
       page,
     }) => {
-      await electronTest.logTestStart(
-        "提示词 - 批量添加标签时 updated_at 更新",
-      );
+      await electronTest.logTestStart();
 
       // 1. 进入提示词详情界面
       const { firstPromptId } = await enterPromptDetailView(page);

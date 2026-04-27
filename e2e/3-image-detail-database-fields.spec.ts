@@ -25,7 +25,8 @@ import type { IImage } from "../src/preload/index.ts";
  * 4. 等待 #imageDetailModal 显示
  */
 test.describe("图像详情界面数据库字段读取", () => {
-  test("文件名 (fileName) 字段正确显示", async ({ _electronTest, page }) => {
+  test("文件名 (fileName) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstImageId } = await enterImageDetailView(page);
 
     // 从数据库获取图像信息
@@ -41,7 +42,8 @@ test.describe("图像详情界面数据库字段读取", () => {
     expect(displayedFileName).toBe(dbImage!.fileName);
   });
 
-  test("文件大小 (fileSize) 字段正确显示", async ({ _electronTest, page }) => {
+  test("文件大小 (fileSize) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstImageId } = await enterImageDetailView(page);
 
     // 从数据库获取图像信息
@@ -63,9 +65,10 @@ test.describe("图像详情界面数据库字段读取", () => {
   });
 
   test("图像尺寸 (width/height) 字段正确显示", async ({
-    _electronTest,
+    electronTest,
     page,
   }) => {
+    await electronTest.logTestStart();
     const { firstImageId } = await enterImageDetailView(page);
 
     // 从数据库获取图像信息
@@ -89,7 +92,8 @@ test.describe("图像详情界面数据库字段读取", () => {
     }
   });
 
-  test("上传时间 (createdAt) 字段正确显示", async ({ _electronTest, page }) => {
+  test("上传时间 (createdAt) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstImageId } = await enterImageDetailView(page);
 
     // 从数据库获取图像信息
@@ -112,7 +116,8 @@ test.describe("图像详情界面数据库字段读取", () => {
     }
   });
 
-  test("更新时间 (updatedAt) 字段正确显示", async ({ _electronTest, page }) => {
+  test("更新时间 (updatedAt) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstImageId } = await enterImageDetailView(page);
 
     // 从数据库获取图像信息
@@ -135,7 +140,8 @@ test.describe("图像详情界面数据库字段读取", () => {
     }
   });
 
-  test("备注 (note) 字段正确显示", async ({ _electronTest, page }) => {
+  test("备注 (note) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstImageId } = await enterImageDetailView(page);
 
     // 从数据库获取图像信息
@@ -151,7 +157,8 @@ test.describe("图像详情界面数据库字段读取", () => {
     expect(displayedNote).toBe(dbImage!.note || "");
   });
 
-  test("图像标签 (tags) 字段正确显示", async ({ _electronTest, page }) => {
+  test("图像标签 (tags) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstImageId } = await enterImageDetailView(page);
 
     // 从数据库获取图像信息
@@ -191,7 +198,8 @@ test.describe("图像详情界面数据库字段读取", () => {
     }
   });
 
-  test("安全状态 (isSafe) 字段正确显示", async ({ _electronTest, page }) => {
+  test("安全状态 (isSafe) 字段正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstImageId } = await enterImageDetailView(page);
 
     // 从数据库获取图像信息
@@ -213,7 +221,8 @@ test.describe("图像详情界面数据库字段读取", () => {
     expect(isChecked).toBe(expectedSafe);
   });
 
-  test("关联提示词信息正确显示", async ({ _electronTest, page }) => {
+  test("关联提示词信息正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstImageId } = await enterImageDetailView(page);
 
     // 从数据库获取图像信息（包含关联提示词）
@@ -299,7 +308,8 @@ test.describe("图像详情界面数据库字段读取", () => {
     }
   });
 
-  test("图像预览正确加载", async ({ _electronTest, page }) => {
+  test("图像预览正确加载", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstImageId } = await enterImageDetailView(page);
 
     // 从数据库获取图像信息
@@ -320,7 +330,8 @@ test.describe("图像详情界面数据库字段读取", () => {
     expect(imgAlt).toBe(dbImage!.fileName || "图像");
   });
 
-  test("所有数据库字段一致性验证", async ({ _electronTest, page }) => {
+  test("所有数据库字段一致性验证", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
     const { firstImageId } = await enterImageDetailView(page);
 
     // 从数据库获取完整图像信息

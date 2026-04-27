@@ -17,9 +17,9 @@ import type { IImage, IPrompt } from "../src/preload/index.ts";
  * 标签拖拽功能 E2E 测试
  *
  * 测试场景：
- * 1. 通过标签管理器创建测试标签
- * 2. 将标签拖拽到图像卡片
- * 3. 将标签拖拽到提示词卡片
+ * 1. 通过 UI 创建测试图像/提示词
+ * 2. 通过标签管理器创建测试标签
+ * 3. 将标签拖拽到图像/提示词卡片
  * 4. 验证标签添加成功
  * 5. 重复拖拽相同标签，验证提示"标签已存在"
  */
@@ -28,48 +28,18 @@ test.describe("标签拖拽功能", () => {
   let testImageId: string = "";
   let testPromptId: string = "";
 
-  // 辅助函数：获取测试图像ID
-  async function getTestImageId(page: any): Promise<string> {
-    await page.click("#imageManagerBtn");
-    await page.waitForSelector("#imagePanel", {
-      state: "visible",
-      timeout: 1000,
-    });
-    await page.click("#imageGridViewBtn");
-    await page.waitForSelector("#imageGridViewBtn.active", { timeout: 1000 });
+  test.afterEach(async ({ electronTest }) => {
+    // 清理测试创建的图像和提示词
+    await electronTest.cleanupTestImages();
+    await electronTest.cleanupTestPrompts();
+  });
 
-    const images = await page.evaluate(async () => {
-      const allImages = await window.electronAPI.getImages("date", "desc");
-      return allImages[0];
-    });
-    return String(images.id);
-  }
-
-  // 辅助函数：获取测试提示词ID
-  async function getTestPromptId(page: any): Promise<string> {
-    await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
-      state: "visible",
-      timeout: 1000,
-    });
-    await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
-    await page.waitForSelector(
-      `#${Constants.Ids.PROMPT_GRID_VIEW_BTN}.active`,
-      { timeout: 1000 },
-    );
-
-    const prompts = await page.evaluate(async () => {
-      const allPrompts = await window.electronAPI.getPrompts("date", "desc");
-      return allPrompts[0];
-    });
-    return String(prompts.id);
-  }
   test.describe("图像标签拖拽", () => {
     test("标签拖拽到图像卡片 - 展开状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("标签拖拽到图像卡片 - 展开状态");
+      await electronTest.logTestStart();
 
-      // 获取测试图像ID
-      testImageId = await getTestImageId(page);
+      // 通过 UI 创建测试图像
+      testImageId = await electronTest.createTestImageViaUI();
 
       // 先在标签管理器中创建测试标签
       await enterImageTagManager(page);
@@ -179,10 +149,10 @@ test.describe("标签拖拽功能", () => {
     });
 
     test("标签拖拽到图像卡片 - 收起状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("标签拖拽到图像卡片 - 收起状态");
+      await electronTest.logTestStart();
 
-      // 获取测试图像ID
-      testImageId = await getTestImageId(page);
+      // 通过 UI 创建测试图像
+      testImageId = await electronTest.createTestImageViaUI();
 
       await enterImageGridView(page);
 
@@ -286,10 +256,10 @@ test.describe("标签拖拽功能", () => {
 
   test.describe("提示词标签拖拽", () => {
     test("标签拖拽到提示词卡片 - 展开状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("标签拖拽到提示词卡片 - 展开状态");
+      await electronTest.logTestStart();
 
-      // 获取测试提示词ID
-      testPromptId = await getTestPromptId(page);
+      // 通过 UI 创建测试提示词
+      testPromptId = await electronTest.createTestPromptViaUI();
 
       // 先在提示词标签管理器中创建测试标签
       await enterPromptTagManager(page);
@@ -407,10 +377,10 @@ test.describe("标签拖拽功能", () => {
     });
 
     test("标签拖拽到提示词卡片 - 收起状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart("标签拖拽到提示词卡片 - 收起状态");
+      await electronTest.logTestStart();
 
-      // 获取测试提示词ID
-      testPromptId = await getTestPromptId(page);
+      // 通过 UI 创建测试提示词
+      testPromptId = await electronTest.createTestPromptViaUI();
 
       // 先在提示词标签管理器中创建测试标签
       await enterPromptTagManager(page);

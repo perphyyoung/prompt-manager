@@ -13,16 +13,10 @@ import type {
   IDetailTagManager,
   IBatchTagManagerConfig,
 } from "../../types/entities.ts";
+import type { IApp } from '../app.types.ts';
 import { cacheManager } from "../../utils/CacheManager.ts";
 interface DetailViewManagerOptions {
-  app: {
-    constructor: { isSameId?: (id1: unknown, id2: unknown) => boolean };
-    showToast: (message: string, type?: string) => void;
-    eventBus: {
-      emit: (event: string, data?: unknown) => void;
-    };
-    [key: string]: unknown;
-  };
+  app: IApp;
   modalId: string;
   closeBtnId: string;
 }
@@ -44,7 +38,7 @@ interface Item {
  * 提供详情模态框的通用功能
  */
 export abstract class DetailViewManager {
-  protected app: DetailViewManagerOptions["app"];
+  protected app: IApp;
   protected modalId: string;
   protected closeBtnId: string;
 
@@ -364,9 +358,7 @@ export abstract class DetailViewManager {
     // 记录快照
     this.itemsSnapshot = [...items];
     this.currentIndex = this.itemsSnapshot.findIndex((i) =>
-      this.app.constructor.isSameId
-        ? this.app.constructor.isSameId(i.id, item.id)
-        : String(i.id) === String(item.id),
+      this.app.isSameId(i.id, item.id)
     );
 
     // 填充导航按钮 SVGs

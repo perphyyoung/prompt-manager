@@ -160,6 +160,7 @@ export class CacheManager {
    */
   cachePrompts(prompts: IPrompt[]): void {
     const cache = this.getPromptCache();
+    cache.clear();
     prompts.forEach(prompt => {
       if (prompt && prompt.id) {
         cache.set(String(prompt.id), prompt);
@@ -173,6 +174,7 @@ export class CacheManager {
    */
   cacheImages(images: IImage[]): void {
     const cache = this.getImageCache();
+    cache.clear();
     images.forEach(image => {
       if (image && image.id) {
         cache.set(String(image.id), image);

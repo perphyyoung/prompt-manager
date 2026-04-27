@@ -32,7 +32,7 @@ import {
 
 test.describe("图像标签筛选区", () => {
   test('应该能通过特殊标签"收藏"筛选图像', async ({ electronTest, page }) => {
-    await electronTest.logTestStart("图像标签筛选区-特殊标签筛选");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -68,7 +68,7 @@ test.describe("图像标签筛选区", () => {
   });
 
   test("应该能通过普通标签筛选图像", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("图像标签筛选区-普通标签筛选");
+    await electronTest.logTestStart();
 
     // 进入图像标签管理器并创建测试标签
     await enterImageTagManager(page);
@@ -117,7 +117,7 @@ test.describe("图像标签筛选区", () => {
   });
 
   test("排序选择器应该能切换标签排序方式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("图像标签筛选区-排序选择器");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -166,7 +166,7 @@ test.describe("图像标签筛选区", () => {
   });
 
   test("逆序按钮应该能切换排序顺序", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("图像标签筛选区-逆序按钮");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -211,7 +211,7 @@ test.describe("图像标签筛选区", () => {
   });
 
   test("标签管理器按钮应该能打开标签管理器", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("图像标签筛选区-标签管理器按钮");
+    await electronTest.logTestStart();
 
     // 进入图像网格视图
     await enterImageGridView(page);
@@ -238,7 +238,7 @@ test.describe("图像标签筛选区", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像标签筛选区-收起展开按钮");
+    await electronTest.logTestStart();
 
     // 切换到图像面板（不依赖卡片存在）
     await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
@@ -285,7 +285,7 @@ test.describe("图像标签筛选区", () => {
   });
 
   test("收起时应该能点击头部标签进行筛选", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("图像标签筛选区-收起时头部标签筛选");
+    await electronTest.logTestStart();
 
     // 切换到图像面板（不依赖卡片存在）
     await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
@@ -360,7 +360,7 @@ test.describe("图像标签筛选区", () => {
 
 test.describe("提示词标签筛选区", () => {
   test('应该能通过特殊标签"收藏"筛选提示词', async ({ electronTest, page }) => {
-    await electronTest.logTestStart("提示词标签筛选区-特殊标签筛选");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -396,7 +396,7 @@ test.describe("提示词标签筛选区", () => {
   });
 
   test("应该能通过普通标签筛选提示词", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("提示词标签筛选区-普通标签筛选");
+    await electronTest.logTestStart();
 
     // 在标签管理器中创建测试标签
     await enterPromptTagManager(page);
@@ -445,7 +445,7 @@ test.describe("提示词标签筛选区", () => {
   });
 
   test("排序选择器应该能切换标签排序方式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("提示词标签筛选区-排序选择器");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -494,7 +494,7 @@ test.describe("提示词标签筛选区", () => {
   });
 
   test("逆序按钮应该能切换排序顺序", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("提示词标签筛选区-逆序按钮");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -539,7 +539,7 @@ test.describe("提示词标签筛选区", () => {
   });
 
   test("标签管理器按钮应该能打开标签管理器", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("提示词标签筛选区-标签管理器按钮");
+    await electronTest.logTestStart();
 
     // 进入提示词网格视图
     await enterPromptGridView(page);
@@ -566,7 +566,7 @@ test.describe("提示词标签筛选区", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词标签筛选区-收起展开按钮");
+    await electronTest.logTestStart();
 
     // 切换到提示词面板（不依赖卡片存在）
     await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
@@ -613,7 +613,7 @@ test.describe("提示词标签筛选区", () => {
   });
 
   test("收起时应该能点击头部标签进行筛选", async ({ electronTest, page }) => {
-    await electronTest.logTestStart("提示词标签筛选区-收起时头部标签筛选");
+    await electronTest.logTestStart();
 
     // 切换到提示词面板（不依赖卡片存在）
     await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);

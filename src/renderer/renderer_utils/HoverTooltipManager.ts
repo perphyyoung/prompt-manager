@@ -1,4 +1,5 @@
-import { isSameId, cacheManager } from '../../utils/index.ts';
+import { cacheManager } from '../../utils/index.ts';
+import { IApp } from '../app.types.ts';
 
 interface HoverTooltipOptions {
   getContent?: (element: Element) => string | null;
@@ -21,8 +22,10 @@ export class HoverTooltipManager {
   private imageEl: HTMLImageElement | null;
   private hoverTimer: ReturnType<typeof setTimeout> | null = null;
   private currentElement: Element | null = null;
+  private app: IApp;
 
-  constructor(tooltipId: string, contentId: string, imageId: string) {
+  constructor(app: IApp, tooltipId: string, contentId: string, imageId: string) {
+    this.app = app;
     this.tooltip = document.getElementById(tooltipId);
     this.contentEl = document.getElementById(contentId);
     this.imageEl = document.getElementById(imageId) as HTMLImageElement | null;
@@ -44,7 +47,7 @@ export class HoverTooltipManager {
     // 如果缓存中没有，异步获取并缓存
     if (!thumbnailPath && !originalPath) {
       const allImages = await window.electronAPI.getImages('updatedAt', 'desc');
-      const img = allImages.find((i: { id: string }) => isSameId(i.id, imageId));
+      const img = allImages.find((i: { id: string }) => this.app.isSameId(i.id, imageId));
       if (img) {
         const imgWithPaths = img as { thumbnailPath?: string; relativePath?: string };
         if (imgWithPaths.thumbnailPath) {

@@ -18,7 +18,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像标签管理界面-全选按钮功能");
+    await electronTest.logTestStart();
 
     // 进入图像标签管理器
     await enterImageTagManager(page);
@@ -86,7 +86,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像标签管理界面-反选按钮功能");
+    await electronTest.logTestStart();
 
     // 进入图像标签管理器
     await enterImageTagManager(page);
@@ -132,7 +132,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像标签管理界面-移动到组完整流程");
+    await electronTest.logTestStart();
 
     // 先进入标签管理器
     await enterImageTagManager(page);
@@ -210,7 +210,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像标签管理界面-取消按钮功能");
+    await electronTest.logTestStart();
 
     // 进入图像标签管理器
     await enterImageTagManager(page);
@@ -234,7 +234,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像标签管理界面-ESC键退出功能");
+    await electronTest.logTestStart();
 
     // 进入图像标签管理器
     await enterImageTagManager(page);
@@ -258,7 +258,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词标签管理界面-全选按钮功能");
+    await electronTest.logTestStart();
 
     // 进入提示词标签管理器
     await enterPromptTagManager(page);
@@ -321,7 +321,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词标签管理界面-反选按钮功能");
+    await electronTest.logTestStart();
 
     // 进入提示词标签管理器
     await enterPromptTagManager(page);
@@ -367,7 +367,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词标签管理界面-移动到组完整流程");
+    await electronTest.logTestStart();
 
     // 先进入标签管理器
     await enterPromptTagManager(page);
@@ -445,7 +445,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词标签管理界面-取消按钮功能");
+    await electronTest.logTestStart();
 
     // 进入提示词标签管理器
     await enterPromptTagManager(page);
@@ -469,7 +469,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词标签管理界面-ESC键退出功能");
+    await electronTest.logTestStart();
 
     // 进入提示词标签管理器
     await enterPromptTagManager(page);
@@ -493,9 +493,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart(
-      "图像标签管理界面-删除按钮功能（实际执行删除）",
-    );
+    await electronTest.logTestStart();
 
     // 进入图像标签管理器
     await enterImageTagManager(page);
@@ -643,9 +641,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart(
-      "提示词标签管理界面-删除按钮功能（实际执行删除）",
-    );
+    await electronTest.logTestStart();
 
     // 使用特定的搜索关键词
     const searchKeyword = "batch_delete_test";
@@ -797,7 +793,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像标签管理界面-单击标签项单选功能");
+    await electronTest.logTestStart();
 
     // 进入图像标签管理器
     await enterImageTagManager(page);
@@ -857,7 +853,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词标签管理界面-单击标签项单选功能");
+    await electronTest.logTestStart();
 
     // 进入提示词标签管理器
     await enterPromptTagManager(page);
@@ -917,7 +913,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像标签管理界面-复选框切换选择");
+    await electronTest.logTestStart();
 
     // 进入图像标签管理器
     await enterImageTagManager(page);
@@ -981,7 +977,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词标签管理界面-复选框切换选择");
+    await electronTest.logTestStart();
 
     // 进入提示词标签管理器
     await enterPromptTagManager(page);
@@ -1045,7 +1041,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像标签管理界面-搜索改变退出批量模式");
+    await electronTest.logTestStart();
 
     // 进入图像标签管理器
     await enterImageTagManager(page);
@@ -1112,7 +1108,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词标签管理界面-搜索改变退出批量模式");
+    await electronTest.logTestStart();
 
     // 进入提示词标签管理器
     await enterPromptTagManager(page);
@@ -1179,7 +1175,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像标签管理界面-删除取消保持选中集");
+    await electronTest.logTestStart();
 
     // 进入图像标签管理器
     await enterImageTagManager(page);
@@ -1254,7 +1250,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词标签管理界面-删除取消保持选中集");
+    await electronTest.logTestStart();
 
     // 进入提示词标签管理器
     await enterPromptTagManager(page);
@@ -1329,7 +1325,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像标签管理界面-自动显示工具栏");
+    await electronTest.logTestStart();
 
     // 进入图像标签管理器
     await enterImageTagManager(page);
@@ -1388,7 +1384,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词标签管理界面-自动显示工具栏");
+    await electronTest.logTestStart();
 
     // 进入提示词标签管理器
     await enterPromptTagManager(page);
@@ -1447,7 +1443,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("图像标签管理界面-无可选组提示");
+    await electronTest.logTestStart();
 
     // Mock API 返回空数组（模拟没有可用组）
     await electronTest.mockImageTagGroupsEmpty();
@@ -1530,7 +1526,7 @@ test.describe("批量工具栏 - 标签管理界面功能测试", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart("提示词标签管理界面-无可选组提示");
+    await electronTest.logTestStart();
 
     // Mock API 返回空数组（模拟没有可用组）
     await electronTest.mockPromptTagGroupsEmpty();

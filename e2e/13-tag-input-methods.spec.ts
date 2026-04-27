@@ -26,9 +26,7 @@ test("图像详情界面 - 直接回车添加单个标签（无下拉建议）",
   electronTest,
   page,
 }) => {
-  await electronTest.logTestStart(
-    "图像详情界面 - 直接回车添加单个标签（无下拉建议）",
-  );
+  await electronTest.logTestStart();
 
   // 进入图像详情界面
   const { firstImageId } = await enterImageDetailView(page);
@@ -77,7 +75,7 @@ test("图像详情界面 - 点击下拉建议项添加标签", async ({
   electronTest,
   page,
 }) => {
-  await electronTest.logTestStart("图像详情界面 - 点击下拉建议项添加标签");
+  await electronTest.logTestStart();
 
   // 首先进入标签管理器并创建一个标签
   await enterImageTagManager(page);
@@ -128,9 +126,7 @@ test("图像详情界面 - 使用键盘导航选择下拉建议并回车添加",
   electronTest,
   page,
 }) => {
-  await electronTest.logTestStart(
-    "图像详情界面 - 使用键盘导航选择下拉建议并回车添加",
-  );
+  await electronTest.logTestStart();
 
   // 创建多个标签
   const tagNames = await electronTest.createImageTags(3, "keyboard_nav");
@@ -196,9 +192,7 @@ test("图像详情界面 - 批量添加多个标签（使用空格分隔）", as
   electronTest,
   page,
 }) => {
-  await electronTest.logTestStart(
-    "图像详情界面 - 批量添加多个标签（使用空格分隔）",
-  );
+  await electronTest.logTestStart();
 
   // 进入图像详情界面
   await enterImageDetailView(page);
@@ -254,9 +248,7 @@ test("图像详情界面 - 下拉框激活时回车添加当前输入（无选�
   electronTest,
   page,
 }) => {
-  await electronTest.logTestStart(
-    "图像详情界面 - 下拉框激活时回车添加当前输入（无选中项）",
-  );
+  await electronTest.logTestStart();
 
   // 进入标签管理器并创建一个标签以触发下拉框
   await enterImageTagManager(page);
@@ -321,9 +313,7 @@ test("提示词详情界面 - 直接回车添加单个标签（无下拉建议�
   electronTest,
   page,
 }) => {
-  await electronTest.logTestStart(
-    "提示词详情界面 - 直接回车添加单个标签（无下拉建议）",
-  );
+  await electronTest.logTestStart();
 
   // 进入提示词详情界面
   const { firstPromptId } = await enterPromptDetailView(page);
@@ -372,7 +362,7 @@ test("提示词详情界面 - 点击下拉建议项添加标签", async ({
   electronTest,
   page,
 }) => {
-  await electronTest.logTestStart("提示词详情界面 - 点击下拉建议项添加标签");
+  await electronTest.logTestStart();
 
   // 首先在标签管理器中创建标签，以便有建议可显示
   await enterPromptTagManager(page);
@@ -423,9 +413,7 @@ test("提示词详情界面 - 使用键盘导航选择下拉建议并回车添�
   electronTest,
   page,
 }) => {
-  await electronTest.logTestStart(
-    "提示词详情界面 - 使用键盘导航选择下拉建议并回车添加",
-  );
+  await electronTest.logTestStart();
 
   // 创建多个标签以便有多个建议
   await electronTest.createPromptTags(3, "keyboard_nav");
@@ -485,9 +473,7 @@ test("提示词详情界面 - 批量添加多个标签（使用逗号分隔）",
   electronTest,
   page,
 }) => {
-  await electronTest.logTestStart(
-    "提示词详情界面 - 批量添加多个标签（使用逗号分隔）",
-  );
+  await electronTest.logTestStart();
 
   // 进入提示词详情界面
   await enterPromptDetailView(page);
@@ -549,9 +535,7 @@ test("提示词详情界面 - 下拉框激活时回车添加当前输入（无�
   electronTest,
   page,
 }) => {
-  await electronTest.logTestStart(
-    "提示词详情界面 - 下拉框激活时回车添加当前输入（无选中项）",
-  );
+  await electronTest.logTestStart();
 
   // 在标签管理器中创建标签以触发下拉框
   await enterPromptTagManager(page);

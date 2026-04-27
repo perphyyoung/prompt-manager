@@ -10,8 +10,10 @@ import path from 'path';
 let logFilePath: string;
 
 // 配置日志级别
-log.transports.file.level = 'debug';
-log.transports.console.level = 'debug';
+const logLevel = 'debug';
+// const logLevel = 'warn';
+log.transports.file.level = logLevel;
+log.transports.console.level = logLevel;
 
 // 配置日志文件大小限制（超过后自动轮转）
 log.transports.file.maxSize = 10 * 1024 * 1024; // 10MB
