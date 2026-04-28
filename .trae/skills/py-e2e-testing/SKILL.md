@@ -461,7 +461,7 @@ test('应该显示新创建的提示词', async () => {
    - 在运行测试之前验证测试文件通过 类型检查 和 eslint 检查：
 
      ```bash
-     npm run check
+     bun run check
      ```
 
    - 首先修复所有类型错误
@@ -469,7 +469,7 @@ test('应该显示新创建的提示词', async () => {
 
 7. **每次修改后进行类型检查**
    - 在对测试代码进行任何更改后：
-     1. 运行 `npm run check` 类型验证和 lint 检查
+     1. 运行 `bun run check` 类型验证和 lint 检查
      2. 仅在类型检查通过后运行测试
    - 工作流程：
 
@@ -487,7 +487,7 @@ test('应该显示新创建的提示词', async () => {
    - 使用 `--grep` 仅运行失败的测试：
 
      ```bash
-     npx playwright test e2e/<测试文件>.spec.ts --grep "测试名称" --reporter=list
+     bun playwright test e2e/<测试文件>.spec.ts --grep "测试名称" --reporter=list
      ```
 
    - 修复问题并验证通过
@@ -496,7 +496,7 @@ test('应该显示新创建的提示词', async () => {
 2. **运行所有测试**（修复后或初始编写后）
 
    ```bash
-   npx playwright test e2e/<测试文件>.spec.ts --reporter=list
+   bun playwright test e2e/<测试文件>.spec.ts --reporter=list
    ```
 
 3. **验证所有测试通过**
@@ -556,7 +556,7 @@ test('应该显示新创建的提示词', async () => {
      ```
 
 2. **验证构建是最新的**
-   - 运行 `npm run check; npm run build` 确保没有类型错误, 没有 eslint 错误, 且最新代码已编译
+   - 运行 `bun run check; bun run build` 确保没有类型错误, 没有 eslint 错误, 且最新代码已编译
    - 测试前检查是否有任何构建错误
 
 ## 可靠验证（无任意等待时间）
@@ -647,5 +647,5 @@ await page.waitForSelector('#toastContainer:has-text("标签已创建")', { time
    - 验证清理后所有测试仍然通过
 
 3. **最终类型检查验证**
-   - 在整个项目上运行 `npm run check`
+   - 在整个项目上运行 `bun run check`
    - 确保没有类型错误残留
