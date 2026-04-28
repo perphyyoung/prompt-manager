@@ -24,7 +24,8 @@ async function getAllJsFiles(dir, files = []) {
 
 async function checkFile(filePath) {
   try {
-    // 尝试动态导入
+    // 尝试动态导入 - 这是故意的，用于验证文件是否可导入
+    // oxlint-disable-next-line prompt-manager-custom/no-dynamic-import, no-unsanitized/method
     await import(`file://${filePath}`);
     return { path: filePath, status: 'OK', error: null };
   } catch (error) {

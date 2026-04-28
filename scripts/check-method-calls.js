@@ -70,7 +70,7 @@ function checkFile(filePath) {
     // 检查 window.electronAPI.xxx 调用
     const ipcCall = /window\.electronAPI\.(\w+)\s*\(/g;
     while ((match = ipcCall.exec(line)) !== null) {
-      const [, methodName] = match;
+      const [, _methodName] = match;
       // 这里可以添加已知的 IPC 方法列表检查
     }
   });

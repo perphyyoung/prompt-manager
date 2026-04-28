@@ -1,0 +1,22 @@
+{
+  "jsPlugins": [
+    "./oxlint-rules/custom-rules.js",
+    "eslint-plugin-no-unsanitized"
+  ],
+  "ignorePatterns": [
+    "out/**",
+    "dist/**",
+    "node_modules/**",
+    ".git/**",
+    ".trae/**",
+    "testing-playwright/**",
+    "py-data*/**"
+  ],
+  "rules": {
+    "no-unused-vars": "error",
+    "no-unused-expressions": "error",
+    "prompt-manager-custom/no-dynamic-import": "error",
+    "prompt-manager-custom/no-hardcoded-element-ids": "error",
+    "no-unsanitized/method": "error"
+  }
+}
