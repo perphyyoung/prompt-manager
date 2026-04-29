@@ -14,6 +14,7 @@ declare global {
   }
 }
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { promises as fs } from 'fs';
 import os from 'os';
 import sharp from 'sharp';
@@ -58,6 +59,9 @@ let allTagsCache: string[] | null = null;
 // 检测是否为测试模式
 const isTestMode = process.env.PLAYWRIGHT_TEST === 'true' || process.env.NODE_ENV === 'test';
 
+// 检测是否为 E2E 测试模式（使用独立的数据目录）
+const e2eTestDataDir = process.env.E2E_TEST_DATA_DIR;
+
 // 解析命令行参数
 function parseArgs() {
   const args = process.argv.slice(1);
@@ -74,9 +78,18 @@ parseArgs();
 /**
  * 加载应用配置
  * 从 config.json 读取数据目录设置
+ * E2E 测试模式下使用独立的数据目录
  * @returns {Promise<{rootDir: string, dataDir: string}>} 配置对象
  */
 async function loadConfig() {
+  // E2E 测试模式下使用独立的数据目录
+  if (e2eTestDataDir) {
+    currentDataDir = e2eTestDataDir;
+    // E2E 测试模式下，日志写入项目根目录，便于查看
+    const projectRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '../..');
+    return { rootDir: projectRoot, dataDir: e2eTestDataDir };
+  }
+  
   const config = await configManager.loadConfig();
   currentDataDir = config.dataDir;
   return config;
