@@ -7,6 +7,8 @@ import {
   ensureTagFilterCollapsed,
   createImageTagInManager,
   createPromptTagInManager,
+  createImageTagGroup,
+  createPromptTagGroup,
   enterImageTagManager,
   enterPromptTagManager,
 } from "./electron-test.ts";
@@ -22,41 +24,68 @@ import type { IImage, IPrompt } from "../src/preload/index.ts";
  * 3. 将标签拖拽到图像/提示词卡片
  * 4. 验证标签添加成功
  * 5. 重复拖拽相同标签，验证提示"标签已存在"
+ *
+ * 数据管理：
+ * - 使用测试专用数据库，每个测试文件独立
+ * - beforeAll 创建共享基础数据（图像、提示词、标签组、标签）
+ * - 各测试项复用共享数据，不手动清理
  */
 test.describe("标签拖拽功能", () => {
-  // 存储测试用图像和提示词的 ID
-  let testImageId: string = "";
-  let testPromptId: string = "";
+  // 共享测试数据（在 beforeAll 中初始化）
+  let sharedImageTagName: string;
+  let sharedPromptTagName: string;
 
-  test.afterEach(async ({ electronTest }) => {
-    // 清理测试创建的图像和提示词
-    await electronTest.cleanupTestImages();
-    await electronTest.cleanupTestPrompts();
+  // ========== 初始化 ==========
+  test.beforeAll(async ({ electronTest, page }) => {
+    // 创建基础测试数据（图像/提示词）
+    await electronTest.createTestImages(2, "drag");
+    await electronTest.createTestPrompts(2, "drag");
+
+    // 创建共享的图像标签组和标签（所有图像拖拽测试复用）
+    await enterImageTagManager(page);
+    const imageGroup = await createImageTagGroup(page, "drag_shared");
+    sharedImageTagName = electronTest.generateE2ePrefixName("drag_shared");
+    await createImageTagInManager(
+      page,
+      sharedImageTagName,
+      imageGroup.groupId?.toString(),
+    );
+    await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, {
+      state: "hidden",
+      timeout: 1000,
+    });
+
+    // 创建共享的提示词标签组和标签（所有提示词拖拽测试复用）
+    await enterPromptTagManager(page);
+    const promptGroup = await createPromptTagGroup(page, "drag_shared");
+    sharedPromptTagName = electronTest.generateE2ePrefixName("drag_shared");
+    await createPromptTagInManager(
+      page,
+      sharedPromptTagName,
+      promptGroup.groupId?.toString(),
+    );
+    await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, {
+      state: "hidden",
+      timeout: 1000,
+    });
+
+    // 刷新界面以显示新数据
+    await electronTest.refreshData();
   });
 
   test.describe("图像标签拖拽", () => {
     test("标签拖拽到图像卡片 - 展开状态", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
-      // 通过 UI 创建测试图像
-      testImageId = await electronTest.createTestImageViaUI();
-
-      // 先在标签管理器中创建测试标签
-      await enterImageTagManager(page);
-      const firstGroupId = await electronTest.getFirstImageTagGroupId();
-      const testTagName = electronTest.generateE2ePrefixName("drag_expanded");
-      await createImageTagInManager(
-        page,
-        testTagName,
-        firstGroupId?.toString(),
-      );
-
-      // 关闭标签管理器并返回图像网格视图
-      await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
-      await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, {
-        state: "hidden",
-        timeout: 1000,
+      // 获取第一张测试图像的 ID（使用 beforeAll 创建的数据）
+      const images = await page.evaluate(async () => {
+        return await window.electronAPI.getImages("updatedAt", "desc");
       });
+      const testImageId = String(images[0]?.id);
+      expect(testImageId).toBeTruthy();
+
       await enterImageGridView(page);
 
       const targetCard = page.locator(`.image-card[data-id="${testImageId}"]`);
@@ -77,7 +106,7 @@ test.describe("标签拖拽功能", () => {
       await electronTest.clearTagCache("image");
       await electronTest.refreshTagFilters();
 
-      // 等待标签出现在筛选列表中（使用 waitForFunction 轮询检查）
+      // 等待共享标签出现在筛选列表中
       await page.waitForFunction(
         (tagName: string) => {
           const tagElement = document.querySelector(
@@ -85,12 +114,12 @@ test.describe("标签拖拽功能", () => {
           );
           return tagElement !== null;
         },
-        testTagName,
+        sharedImageTagName,
         { timeout: 1000 },
       );
 
       const newTagElement = page.locator(
-        `#imageTagFilterList .tag-filter-item[data-tag="${testTagName}"]`,
+        `#imageTagFilterList .tag-filter-item[data-tag="${sharedImageTagName}"]`,
       );
       await expect(newTagElement).toBeVisible({ timeout: 1000 });
 
@@ -108,7 +137,7 @@ test.describe("标签拖拽功能", () => {
           const image = await window.electronAPI.getImageById(params.id);
           return (image as IImage)?.tags?.includes(params.tag);
         },
-        { id: testImageId, tag: testTagName },
+        { id: testImageId, tag: sharedImageTagName },
         { timeout: 1000 },
       );
 
@@ -119,7 +148,7 @@ test.describe("标签拖拽功能", () => {
       }, testImageId);
 
       expect(newTags.length).toBeGreaterThan(originalTags.length);
-      expect(newTags).toContain(testTagName);
+      expect(newTags).toContain(sharedImageTagName);
 
       // 验证成功提示
       await page.waitForSelector(
@@ -143,16 +172,17 @@ test.describe("标签拖拽功能", () => {
       );
       const toastMessageAfterSecondDrop = await toastContainer.textContent();
       expect(toastMessageAfterSecondDrop).toContain("该标签已存在");
-
-      // 清理测试标签
-      await electronTest.cleanupImageTagsAndGroups();
     });
 
     test("标签拖拽到图像卡片 - 收起状态", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
-      // 通过 UI 创建测试图像
-      testImageId = await electronTest.createTestImageViaUI();
+      // 获取第二张测试图像的 ID（使用 beforeAll 创建的数据）
+      const images = await page.evaluate(async () => {
+        return await window.electronAPI.getImages("updatedAt", "desc");
+      });
+      const testImageId = String(images[1]?.id);
+      expect(testImageId).toBeTruthy();
 
       await enterImageGridView(page);
 
@@ -166,23 +196,6 @@ test.describe("标签拖拽功能", () => {
         Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN,
       );
 
-      // 进入标签管理器并创建测试标签
-      await enterImageTagManager(page);
-      const firstGroupId = await electronTest.getFirstImageTagGroupId();
-      const testTagName = electronTest.generateE2ePrefixName("drag_collapsed");
-      await createImageTagInManager(
-        page,
-        testTagName,
-        firstGroupId?.toString(),
-      );
-
-      // 关闭标签管理器
-      await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
-      await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, {
-        state: "hidden",
-        timeout: 1000,
-      });
-
       // 清除标签缓存并刷新标签筛选区
       await electronTest.clearTagCache("image");
       await electronTest.refreshTagFilters();
@@ -194,7 +207,7 @@ test.describe("标签拖拽功能", () => {
         Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN,
       );
 
-      // 等待首位组的标签出现在 header tags 中（收起状态下只显示首位组标签）
+      // 等待共享标签出现在 header tags 中（收起状态下只显示首位组标签）
       await page.waitForFunction(
         (tagName: string) => {
           const tagElement = document.querySelector(
@@ -202,12 +215,12 @@ test.describe("标签拖拽功能", () => {
           );
           return tagElement !== null;
         },
-        testTagName,
+        sharedImageTagName,
         { timeout: 1000 },
       );
 
       const newTagElement = page.locator(
-        `#imageTagFilterHeaderTags .tag-filter-item[data-tag="${testTagName}"]`,
+        `#imageTagFilterHeaderTags .tag-filter-item[data-tag="${sharedImageTagName}"]`,
       );
       await expect(newTagElement).toBeVisible({ timeout: 1000 });
 
@@ -225,7 +238,7 @@ test.describe("标签拖拽功能", () => {
           const image = await window.electronAPI.getImageById(params.id);
           return (image as IImage)?.tags?.includes(params.tag);
         },
-        { id: testImageId, tag: testTagName },
+        { id: testImageId, tag: sharedImageTagName },
         { timeout: 1000 },
       );
 
@@ -248,9 +261,6 @@ test.describe("标签拖拽功能", () => {
         `#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`,
         { timeout: 1000 },
       );
-
-      // 清理测试标签
-      await electronTest.cleanupImageTagsAndGroups();
     });
   });
 
@@ -258,25 +268,13 @@ test.describe("标签拖拽功能", () => {
     test("标签拖拽到提示词卡片 - 展开状态", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
-      // 通过 UI 创建测试提示词
-      testPromptId = await electronTest.createTestPromptViaUI();
-
-      // 先在提示词标签管理器中创建测试标签
-      await enterPromptTagManager(page);
-      const firstGroupId = await electronTest.getFirstPromptTagGroupId();
-      const testTagName = electronTest.generateE2ePrefixName("drag_expanded");
-      await createPromptTagInManager(
-        page,
-        testTagName,
-        firstGroupId?.toString(),
-      );
-
-      // 关闭标签管理器并返回提示词网格视图
-      await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
-      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, {
-        state: "hidden",
-        timeout: 1000,
+      // 获取第一张测试提示词的 ID（使用 beforeAll 创建的数据）
+      const prompts = await page.evaluate(async () => {
+        return await window.electronAPI.getPrompts("updatedAt", "desc");
       });
+      const testPromptId = String(prompts[0]?.id);
+      expect(testPromptId).toBeTruthy();
+
       await enterPromptGridView(page);
 
       const targetCard = page.locator(
@@ -305,7 +303,7 @@ test.describe("标签拖拽功能", () => {
         Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN,
       );
 
-      // 等待标签出现在筛选列表中（使用 waitForFunction 轮询检查）
+      // 等待共享标签出现在筛选列表中
       await page.waitForFunction(
         (tagName: string) => {
           const tagElement = document.querySelector(
@@ -313,12 +311,12 @@ test.describe("标签拖拽功能", () => {
           );
           return tagElement !== null;
         },
-        testTagName,
+        sharedPromptTagName,
         { timeout: 1000 },
       );
 
       const newTagElement = page.locator(
-        `#promptTagFilterList .tag-filter-item[data-tag="${testTagName}"]`,
+        `#promptTagFilterList .tag-filter-item[data-tag="${sharedPromptTagName}"]`,
       );
       await expect(newTagElement).toBeVisible({ timeout: 1000 });
 
@@ -336,7 +334,7 @@ test.describe("标签拖拽功能", () => {
           const prompt = await window.electronAPI.getPromptById(params.id);
           return (prompt as IPrompt)?.tags?.includes(params.tag);
         },
-        { id: testPromptId, tag: testTagName },
+        { id: testPromptId, tag: sharedPromptTagName },
         { timeout: 1000 },
       );
 
@@ -347,7 +345,7 @@ test.describe("标签拖拽功能", () => {
       }, testPromptId);
 
       expect(newTags.length).toBeGreaterThan(originalTags.length);
-      expect(newTags).toContain(testTagName);
+      expect(newTags).toContain(sharedPromptTagName);
 
       // 验证成功提示
       await page.waitForSelector(
@@ -371,33 +369,18 @@ test.describe("标签拖拽功能", () => {
       );
       const toastMessageAfterSecondDrop = await toastContainer.textContent();
       expect(toastMessageAfterSecondDrop).toContain("该标签已存在");
-
-      // 清理测试标签
-      await electronTest.cleanupPromptTagsAndGroups();
     });
 
     test("标签拖拽到提示词卡片 - 收起状态", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
-      // 通过 UI 创建测试提示词
-      testPromptId = await electronTest.createTestPromptViaUI();
-
-      // 先在提示词标签管理器中创建测试标签
-      await enterPromptTagManager(page);
-      const firstGroupId = await electronTest.getFirstPromptTagGroupId();
-      const testTagName = electronTest.generateE2ePrefixName("drag_collapsed");
-      await createPromptTagInManager(
-        page,
-        testTagName,
-        firstGroupId?.toString(),
-      );
-
-      // 关闭标签管理器并返回提示词网格视图
-      await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
-      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, {
-        state: "hidden",
-        timeout: 1000,
+      // 获取第二张测试提示词的 ID（使用 beforeAll 创建的数据）
+      const prompts = await page.evaluate(async () => {
+        return await window.electronAPI.getPrompts("updatedAt", "desc");
       });
+      const testPromptId = String(prompts[1]?.id);
+      expect(testPromptId).toBeTruthy();
+
       await enterPromptGridView(page);
 
       const targetCard = page.locator(
@@ -423,7 +406,7 @@ test.describe("标签拖拽功能", () => {
         Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN,
       );
 
-      // 等待首位组的标签出现在 header tags 中（收起状态下只显示首位组标签）
+      // 等待共享标签出现在 header tags 中（收起状态下只显示首位组标签）
       await page.waitForFunction(
         (tagName: string) => {
           const tagElement = document.querySelector(
@@ -431,12 +414,12 @@ test.describe("标签拖拽功能", () => {
           );
           return tagElement !== null;
         },
-        testTagName,
+        sharedPromptTagName,
         { timeout: 1000 },
       );
 
       const newTagElement = page.locator(
-        `#promptTagFilterHeaderTags .tag-filter-item[data-tag="${testTagName}"]`,
+        `#promptTagFilterHeaderTags .tag-filter-item[data-tag="${sharedPromptTagName}"]`,
       );
       await expect(newTagElement).toBeVisible({ timeout: 1000 });
 
@@ -454,7 +437,7 @@ test.describe("标签拖拽功能", () => {
           const prompt = await window.electronAPI.getPromptById(params.id);
           return (prompt as IPrompt)?.tags?.includes(params.tag);
         },
-        { id: testPromptId, tag: testTagName },
+        { id: testPromptId, tag: sharedPromptTagName },
         { timeout: 1000 },
       );
 
@@ -477,9 +460,6 @@ test.describe("标签拖拽功能", () => {
         `#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`,
         { timeout: 1000 },
       );
-
-      // 清理测试标签
-      await electronTest.cleanupPromptTagsAndGroups();
     });
   });
 });
