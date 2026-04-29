@@ -69,11 +69,9 @@ export class TagUI {
     const sortedGroups = groups.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     sortedGroups.forEach((group, index) => {
       const tags = groupedTags[group.id] || [];
-      // 搜索模式下只显示有标签的组，非搜索模式显示所有组
-      if (tags.length > 0 || !searchTerm) {
-        html += this.generateTagGroupCard(group, tags, tagCounts, index === 0, isBatchMode, selectedTags, globalIndex);
-        globalIndex += tags.length;
-      }
+      // 始终显示标签组，即使没有标签
+      html += this.generateTagGroupCard(group, tags, tagCounts, index === 0, isBatchMode, selectedTags, globalIndex);
+      globalIndex += tags.length;
     });
 
     return html;
@@ -164,8 +162,11 @@ export class TagUI {
       `;
     }
 
+    // 确保 groupId 是有效的字符串，避免 undefined 或 null 导致 data-group-id 为空
+    const safeGroupId = groupId?.toString() ?? '';
+
     return `
-      <div class="tag-group-card" data-group-id="${groupId}" data-drop-target="true">
+      <div class="tag-group-card" data-group-id="${safeGroupId}" data-drop-target="true">
         <div class="tag-group-card-header">
           <div class="tag-group-card-header-left">
             ${sortBadge}
@@ -176,13 +177,13 @@ export class TagUI {
           </div>
           <div class="tag-group-card-header-right">
             <div class="tag-group-card-actions">
-              <button class="tag-group-btn edit" data-id="${groupId}" title="编辑">
+              <button class="tag-group-btn edit" data-id="${safeGroupId}" title="编辑">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
               </button>
-              <button class="tag-group-btn delete" data-id="${groupId}" title="删除">
+              <button class="tag-group-btn delete" data-id="${safeGroupId}" title="删除">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
