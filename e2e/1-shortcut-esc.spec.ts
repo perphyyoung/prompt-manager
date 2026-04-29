@@ -12,12 +12,25 @@ import {
 } from "./electron-test.ts";
 
 test.describe("Esc 键快捷键功能", () => {
+  // ========== 初始化和清理 ==========
+  test.beforeAll(async ({ electronTest }) => {
+    // 创建基础测试数据（用于打开详情视图、批量选择等操作）
+    await electronTest.createTestImages(3, "esc");
+    await electronTest.createTestPrompts(3, "esc");
+
+    // 刷新界面以显示新数据
+    await electronTest.refreshData();
+  });
+
+  // ========== Esc 关闭统计视图 ==========
   test.describe("Esc 关闭统计视图", () => {
     test("图像面板 - Esc 关闭统计视图", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterImageGridView(page);
-      await page.click("#statisticsBtn");
-      await page.waitForSelector("#statisticsModal.active", { timeout: 1000 });
+      await page.click(`#${Constants.Ids.STATISTICS_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.STATISTICS_MODAL}.active`, {
+        timeout: 1000,
+      });
 
       const statisticsModal = page.locator(
         `#${Constants.Ids.STATISTICS_MODAL}`,
@@ -25,7 +38,7 @@ test.describe("Esc 键快捷键功能", () => {
       await expect(statisticsModal).toHaveClass(/active/);
 
       await page.keyboard.press("Escape");
-      await page.waitForSelector("#statisticsModal", {
+      await page.waitForSelector(`#${Constants.Ids.STATISTICS_MODAL}`, {
         state: "hidden",
         timeout: 1000,
       });
@@ -36,8 +49,10 @@ test.describe("Esc 键快捷键功能", () => {
     test("提示词面板 - Esc 关闭统计视图", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterPromptGridView(page);
-      await page.click("#statisticsBtn");
-      await page.waitForSelector("#statisticsModal.active", { timeout: 1000 });
+      await page.click(`#${Constants.Ids.STATISTICS_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.STATISTICS_MODAL}.active`, {
+        timeout: 1000,
+      });
 
       const statisticsModal = page.locator(
         `#${Constants.Ids.STATISTICS_MODAL}`,
@@ -45,7 +60,7 @@ test.describe("Esc 键快捷键功能", () => {
       await expect(statisticsModal).toHaveClass(/active/);
 
       await page.keyboard.press("Escape");
-      await page.waitForSelector("#statisticsModal", {
+      await page.waitForSelector(`#${Constants.Ids.STATISTICS_MODAL}`, {
         state: "hidden",
         timeout: 1000,
       });
@@ -58,14 +73,16 @@ test.describe("Esc 键快捷键功能", () => {
     test("图像面板 - Esc 关闭设置视图", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterImageGridView(page);
-      await page.click("#settingsBtn");
-      await page.waitForSelector("#settingsModal.active", { timeout: 1000 });
+      await page.click(`#${Constants.Ids.SETTINGS_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.SETTINGS_MODAL}.active`, {
+        timeout: 1000,
+      });
 
       const settingsModal = page.locator(`#${Constants.Ids.SETTINGS_MODAL}`);
       await expect(settingsModal).toHaveClass(/active/);
 
       await page.keyboard.press("Escape");
-      await page.waitForSelector("#settingsModal", {
+      await page.waitForSelector(`#${Constants.Ids.SETTINGS_MODAL}`, {
         state: "hidden",
         timeout: 1000,
       });
@@ -76,14 +93,16 @@ test.describe("Esc 键快捷键功能", () => {
     test("提示词面板 - Esc 关闭设置视图", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterPromptGridView(page);
-      await page.click("#settingsBtn");
-      await page.waitForSelector("#settingsModal.active", { timeout: 1000 });
+      await page.click(`#${Constants.Ids.SETTINGS_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.SETTINGS_MODAL}.active`, {
+        timeout: 1000,
+      });
 
       const settingsModal = page.locator(`#${Constants.Ids.SETTINGS_MODAL}`);
       await expect(settingsModal).toHaveClass(/active/);
 
       await page.keyboard.press("Escape");
-      await page.waitForSelector("#settingsModal", {
+      await page.waitForSelector(`#${Constants.Ids.SETTINGS_MODAL}`, {
         state: "hidden",
         timeout: 1000,
       });
@@ -245,18 +264,24 @@ test.describe("Esc 键快捷键功能", () => {
       const firstCard = page.locator(".image-card").first();
       await firstCard.hover();
       await firstCard.locator(".card-checkbox").click();
-      await page.waitForSelector("#imageGrid.selection-mode", {
-        timeout: 1000,
-      });
+      await page.waitForSelector(
+        `#${Constants.Ids.IMAGE_GRID}.selection-mode`,
+        {
+          timeout: 1000,
+        },
+      );
 
       const batchToolbar = page.locator(".batch-toolbar.visible");
       await expect(batchToolbar).toBeVisible();
 
       await page.keyboard.press("Escape");
-      await page.waitForSelector("#imageGrid.selection-mode", {
-        state: "detached",
-        timeout: 1000,
-      });
+      await page.waitForSelector(
+        `#${Constants.Ids.IMAGE_GRID}.selection-mode`,
+        {
+          state: "detached",
+          timeout: 1000,
+        },
+      );
 
       await expect(batchToolbar).not.toBeVisible();
 
@@ -274,18 +299,24 @@ test.describe("Esc 键快捷键功能", () => {
       const firstCard = page.locator(".prompt-card").first();
       await firstCard.hover();
       await firstCard.locator(".card-checkbox").click();
-      await page.waitForSelector("#promptGrid.selection-mode", {
-        timeout: 1000,
-      });
+      await page.waitForSelector(
+        `#${Constants.Ids.PROMPT_GRID}.selection-mode`,
+        {
+          timeout: 1000,
+        },
+      );
 
       const batchToolbar = page.locator(".batch-toolbar.visible");
       await expect(batchToolbar).toBeVisible();
 
       await page.keyboard.press("Escape");
-      await page.waitForSelector("#promptGrid.selection-mode", {
-        state: "detached",
-        timeout: 1000,
-      });
+      await page.waitForSelector(
+        `#${Constants.Ids.PROMPT_GRID}.selection-mode`,
+        {
+          state: "detached",
+          timeout: 1000,
+        },
+      );
 
       await expect(batchToolbar).not.toBeVisible();
 
@@ -314,7 +345,7 @@ test.describe("Esc 键快捷键功能", () => {
     const batchToolbar = page.locator(".batch-toolbar.visible");
     const deleteBtn = batchToolbar.locator('[data-action="Delete"]');
     await deleteBtn.click();
-    await page.waitForSelector("#confirmModal", {
+    await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, {
       state: "visible",
       timeout: 1000,
     });
@@ -326,7 +357,7 @@ test.describe("Esc 键快捷键功能", () => {
     expect(confirmModalVisible).toBe(true);
 
     await page.keyboard.press("Escape");
-    await page.waitForSelector("#confirmModal", {
+    await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, {
       state: "hidden",
       timeout: 1000,
     });
@@ -346,7 +377,7 @@ test.describe("Esc 键快捷键功能", () => {
     test("图像回收站 - Esc 关闭回收站视图", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterImageGridView(page);
-      await page.click("#imageTrashBtn");
+      await page.click(`#${Constants.Ids.IMAGE_TRASH_BTN}`);
       await page.waitForFunction(
         (modalId) => {
           const modal = document.getElementById(modalId);
@@ -384,7 +415,7 @@ test.describe("Esc 键快捷键功能", () => {
     }) => {
       await electronTest.logTestStart();
       await enterPromptGridView(page);
-      await page.click("#promptTrashBtn");
+      await page.click(`#${Constants.Ids.PROMPT_TRASH_BTN}`);
       await page.waitForFunction(
         (modalId) => {
           const modal = document.getElementById(modalId);
@@ -427,9 +458,12 @@ test.describe("Esc 键快捷键功能", () => {
 
     const image = page.locator(`#${Constants.Ids.IMAGE_DETAIL_IMG}`);
     await image.dblclick();
-    await page.waitForSelector("#imageFullscreenViewer.active", {
-      timeout: 1000,
-    });
+    await page.waitForSelector(
+      `#${Constants.Ids.IMAGE_FULLSCREEN_VIEWER}.active`,
+      {
+        timeout: 1000,
+      },
+    );
 
     const fullscreenViewer = page.locator(
       `#${Constants.Ids.IMAGE_FULLSCREEN_VIEWER}`,
@@ -437,7 +471,7 @@ test.describe("Esc 键快捷键功能", () => {
     await expect(fullscreenViewer).toHaveClass(/active/);
 
     await page.keyboard.press("Escape");
-    await page.waitForSelector("#imageFullscreenViewer", {
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_FULLSCREEN_VIEWER}`, {
       state: "hidden",
       timeout: 1000,
     });
@@ -456,6 +490,7 @@ test.describe("Esc 键快捷键功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
+
       // 先进入图像标签管理器创建测试标签
       await enterImageGridView(page);
       await enterImageTagManager(page);
@@ -514,9 +549,6 @@ test.describe("Esc 键快捷键功能", () => {
         state: "hidden",
         timeout: 1000,
       });
-
-      // 手动清理：删除测试创建的图像标签
-      await electronTest.cleanupImageTagsAndGroups();
     });
 
     test("提示词详情 - Esc 关闭标签自动完成下拉", async ({
@@ -575,9 +607,6 @@ test.describe("Esc 键快捷键功能", () => {
         state: "hidden",
         timeout: 1000,
       });
-
-      // 手动清理：删除测试创建的提示词标签
-      await electronTest.cleanupPromptTagsAndGroups();
     });
   });
 });
