@@ -1246,6 +1246,42 @@ export abstract class PanelManagerBase {
     batchToolbarMiddle.hide(this.toolbarContext);
     batchToolbarMiddle.clearSelection(this.toolbarContext);
     this.updateSelectionModeClass();
+    this.clearAllItemSelectionState();
+  }
+
+  /**
+   * 清除所有卡片/列表项的选中状态
+   * 在退出批量模式时调用，确保复选框和选中样式被清除
+   */
+  protected clearAllItemSelectionState(): void {
+    // 根据当前面板类型获取选择器
+    const isImagePanel = this.storagePrefix === 'image';
+    const cardSelector = isImagePanel ? '.image-card' : '.prompt-card';
+    const listItemSelector = isImagePanel ? '.list-item--image' : '.list-item--prompt';
+    const compactItemSelector = isImagePanel ? '.list-item--image.list-item--compact' : '.list-item--prompt.list-item--compact';
+
+    // 清除网格视图中的卡片选中状态
+    document.querySelectorAll(cardSelector).forEach((card) => {
+      card.classList.remove('is-selected');
+      const checkbox = card.querySelector('.card-checkbox') as HTMLInputElement;
+      if (checkbox) {
+        checkbox.checked = false;
+      }
+    });
+
+    // 清除列表视图中的项选中状态
+    document.querySelectorAll(listItemSelector).forEach((item) => {
+      item.classList.remove('is-selected');
+      const checkbox = item.querySelector('.list-item__checkbox') as HTMLInputElement;
+      if (checkbox) {
+        checkbox.checked = false;
+      }
+    });
+
+    // 清除紧凑视图中的项选中状态
+    document.querySelectorAll(compactItemSelector).forEach((item) => {
+      item.classList.remove('is-selected');
+    });
   }
 
   /**
