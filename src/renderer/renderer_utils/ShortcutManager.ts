@@ -70,8 +70,9 @@ export class ShortcutManager {
     // 刷新
     this.register('F5', 'refresh', '刷新数据');
 
-    // 卡片信息显示
-    this.register('Ctrl+I', 'toggleCardInfo', '切换卡片信息显示');
+    // 面板切换
+    this.register('Ctrl+I', 'switchToImagePanel', '切换到图像主界面');
+    this.register('Ctrl+P', 'switchToPromptPanel', '切换到提示词主界面');
   }
 
   /**
@@ -295,9 +296,12 @@ export class ShortcutManager {
           this.refreshData();
           break;
 
-        // 卡片信息显示
-        case 'toggleCardInfo':
-          this.toggleCardInfo();
+        // 面板切换
+        case 'switchToImagePanel':
+          this.switchToImagePanel();
+          break;
+        case 'switchToPromptPanel':
+          this.switchToPromptPanel();
           break;
 
         default:
@@ -313,13 +317,13 @@ export class ShortcutManager {
    */
   navigateEditor(direction: string): void {
     const promptDetailModal = document.querySelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`);
-    const imageEditModal = document.querySelector('#imageEditModal.active');
+    const imageDetailModal = document.querySelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`);
 
     if (promptDetailModal) {
       if (this.app.promptNavigator) {
         this.app.promptNavigator.navigateTo(direction);
       }
-    } else if (imageEditModal) {
+    } else if (imageDetailModal) {
       if (this.app.imageNavigator) {
         this.app.imageNavigator.navigateTo(direction);
       }
@@ -331,11 +335,11 @@ export class ShortcutManager {
    */
   async saveCurrent(): Promise<void> {
     const promptDetailModal = document.querySelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`);
-    const imageEditModal = document.querySelector('#imageEditModal.active');
+    const imageDetailModal = document.querySelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`);
 
     if (promptDetailModal && this.app.savePromptWithoutClosing) {
       await this.app.savePromptWithoutClosing();
-    } else if (imageEditModal && this.app.saveImageWithoutClosing) {
+    } else if (imageDetailModal && this.app.saveImageWithoutClosing) {
       await this.app.saveImageWithoutClosing();
     }
   }
@@ -345,11 +349,11 @@ export class ShortcutManager {
    */
   async saveAndClose(): Promise<void> {
     const promptDetailModal = document.querySelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`);
-    const imageEditModal = document.querySelector('#imageEditModal.active');
+    const imageDetailModal = document.querySelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`);
 
     if (promptDetailModal && this.app.saveAndClosePromptDetail) {
       await this.app.saveAndClosePromptDetail();
-    } else if (imageEditModal && this.app.saveAndCloseImageDetail) {
+    } else if (imageDetailModal && this.app.saveAndCloseImageDetail) {
       await this.app.saveAndCloseImageDetail();
     }
   }
@@ -412,12 +416,68 @@ export class ShortcutManager {
   }
 
   /**
-   * 切换卡片信息显示
+   * 切换到图像主界面
+   * 先关闭所有模态框，然后切换到图像面板
    */
-  toggleCardInfo(): void {
-    const cardInfoToggleBtn = document.getElementById(Constants.Ids.CARD_INFO_TOGGLE_BTN);
-    if (cardInfoToggleBtn) {
-      cardInfoToggleBtn.click();
+  switchToImagePanel(): void {
+    // 先关闭所有模态框直到主面板
+    this.closeAllModalsUntilMainPanel();
+    // 切换到图像面板
+    const imageManagerBtn = document.getElementById(Constants.Ids.IMAGE_MANAGER_BTN);
+    if (imageManagerBtn) {
+      imageManagerBtn.click();
+    }
+  }
+
+  /**
+   * 切换到提示词主界面
+   * 先关闭所有模态框，然后切换到提示词面板
+   */
+  switchToPromptPanel(): void {
+    // 先关闭所有模态框直到主面板
+    this.closeAllModalsUntilMainPanel();
+    // 切换到提示词面板
+    const promptManagerBtn = document.getElementById(Constants.Ids.PROMPT_MANAGER_BTN);
+    if (promptManagerBtn) {
+      promptManagerBtn.click();
+    }
+  }
+
+  /**
+   * 关闭所有模态框直到主面板（基于上下文堆栈）
+   * 连续关闭多层模态框，直到到达主面板或堆栈为空
+   */
+  private closeAllModalsUntilMainPanel(): void {
+    const MAX_ITERATIONS = 10; // 防止无限循环
+    let iterations = 0;
+
+    while (iterations < MAX_ITERATIONS) {
+      const id = contextStack.peekId();
+
+      // 没有更多元素或已到主面板，停止关闭
+      if (!id) {
+        break;
+      }
+
+      // 主面板不需要关闭，停止循环
+      if (id === Constants.Ids.IMAGE_PANEL || id === Constants.Ids.PROMPT_PANEL) {
+        break;
+      }
+
+      const element = document.getElementById(id) as IClosableElement;
+      if (!element) {
+        break;
+      }
+
+      if (typeof element.close === 'function') {
+        element.close();
+        iterations++;
+        // 给 DOM 更新一点时间
+        continue;
+      }
+
+      // 没有 close 方法，停止循环
+      break;
     }
   }
 
