@@ -35,6 +35,17 @@ const noHardcodedElementIdsRule = {
       'Autocomplete', 'Suggestions'
     ];
 
+    const idPropertyNames = {
+      'id': 1, 'elementId': 1, 'modalId': 1, 'containerId': 1, 'toolbarId': 1,
+      'gridId': 1, 'listId': 1, 'inputId': 1, 'statusId': 1
+    };
+
+    const playwrightMethods = {
+      'click': 1, 'fill': 1, 'press': 1, 'waitForSelector': 1, 'waitForFunction': 1,
+      'selectOption': 1, 'check': 1, 'uncheck': 1, 'dblclick': 1, 'hover': 1,
+      'waitFor': 1, 'focus': 1, 'blur': 1, 'dragTo': 1, 'tap': 1
+    };
+
     function isLikelyDomId(str) {
       if (!idPattern.test(str)) return false;
       if (str.length < 3) return false;
@@ -47,85 +58,68 @@ const noHardcodedElementIdsRule = {
         .toUpperCase();
     }
 
+    function extractIdFromSelector(selector) {
+      // 处理 "#id", "#id.class", "#id[attr]" 等格式
+      if (!selector.startsWith('#')) return null;
+      const idPart = selector.slice(1).split(/[.\s[]/)[0];
+      return idPart || null;
+    }
+
+    function reportHardcodedId(node, id) {
+      if (isLikelyDomId(id)) {
+        context.report({
+          node,
+          message: `禁止使用硬编码的 DOM ID '${id}'，请使用 Constants.Ids.${toConstantName(id)}`
+        });
+      }
+    }
+
+    function reportHardcodedSelector(node, selector) {
+      const id = extractIdFromSelector(selector);
+      if (id) {
+        reportHardcodedId(node, id);
+      }
+    }
+
     return {
       CallExpression(node) {
         const { callee } = node;
 
-        if (
-          callee.type === 'MemberExpression' &&
-          callee.property.type === 'Identifier' &&
-          callee.property.name === 'getElementById' &&
-          node.arguments.length > 0 &&
-          node.arguments[0].type === 'Literal' &&
-          typeof node.arguments[0].value === 'string'
-        ) {
-          const id = node.arguments[0].value;
-          if (isLikelyDomId(id)) {
-            context.report({
-              node: node.arguments[0],
-              message: `禁止使用硬编码的 DOM ID '${id}'，请使用 Constants.Ids.${toConstantName(id)}`
-            });
-          }
+        if (callee.type !== 'MemberExpression') return;
+        if (callee.property.type !== 'Identifier') return;
+        if (node.arguments.length === 0) return;
+        if (node.arguments[0].type !== 'Literal') return;
+        if (typeof node.arguments[0].value !== 'string') return;
+
+        const methodName = callee.property.name;
+        const argValue = node.arguments[0].value;
+
+        // 检查 getElementById
+        if (methodName === 'getElementById') {
+          reportHardcodedId(node.arguments[0], argValue);
+          return;
         }
 
-        if (
-          callee.type === 'MemberExpression' &&
-          callee.property.type === 'Identifier' &&
-          (callee.property.name === 'querySelector' || callee.property.name === 'querySelectorAll') &&
-          node.arguments.length > 0 &&
-          node.arguments[0].type === 'Literal' &&
-          typeof node.arguments[0].value === 'string'
-        ) {
-          const selector = node.arguments[0].value;
-          if (selector.startsWith('#')) {
-            const id = selector.slice(1);
-            if (isLikelyDomId(id)) {
-              context.report({
-                node: node.arguments[0],
-                message: `禁止使用硬编码的选择器 '#${id}'，请使用 Constants.Ids.${toConstantName(id)}`
-              });
-            }
-          }
+        // 检查 querySelector / querySelectorAll / locator
+        if (methodName in { querySelector: 1, querySelectorAll: 1, locator: 1 }) {
+          reportHardcodedSelector(node.arguments[0], argValue);
+          return;
         }
 
-        if (
-          callee.type === 'MemberExpression' &&
-          callee.property.type === 'Identifier' &&
-          callee.property.name === 'locator' &&
-          node.arguments.length > 0 &&
-          node.arguments[0].type === 'Literal' &&
-          typeof node.arguments[0].value === 'string'
-        ) {
-          const selector = node.arguments[0].value;
-          if (selector.startsWith('#')) {
-            const id = selector.slice(1);
-            if (isLikelyDomId(id)) {
-              context.report({
-                node: node.arguments[0],
-                message: `禁止使用硬编码的选择器 '#${id}'，请使用 Constants.Ids.${toConstantName(id)}`
-              });
-            }
-          }
+        // 检查 Playwright page 方法
+        if (methodName in playwrightMethods) {
+          reportHardcodedSelector(node.arguments[0], argValue);
+          return;
         }
       },
 
       Property(node) {
-        if (
-          node.key.type === 'Identifier' &&
-          (node.key.name === 'id' || node.key.name === 'elementId' || node.key.name === 'modalId' ||
-           node.key.name === 'containerId' || node.key.name === 'toolbarId' || node.key.name === 'gridId' ||
-           node.key.name === 'listId' || node.key.name === 'inputId' || node.key.name === 'statusId') &&
-          node.value.type === 'Literal' &&
-          typeof node.value.value === 'string'
-        ) {
-          const id = node.value.value;
-          if (isLikelyDomId(id)) {
-            context.report({
-              node: node.value,
-              message: `禁止使用硬编码的 DOM ID '${id}'，请使用 Constants.Ids.${toConstantName(id)}`
-            });
-          }
-        }
+        if (node.key.type !== 'Identifier') return;
+        if (!(node.key.name in idPropertyNames)) return;
+        if (node.value.type !== 'Literal') return;
+        if (typeof node.value.value !== 'string') return;
+
+        reportHardcodedId(node.value, node.value.value);
       }
     };
   }
