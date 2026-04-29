@@ -283,5 +283,3 @@ declare global {
     dialogService: typeof DialogService;
   }
 }
-
-export {};
