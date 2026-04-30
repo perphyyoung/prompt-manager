@@ -91,13 +91,13 @@ await page.waitForFunction(() => {
 });
 
 // ✅ 正确：将常量值作为参数传递
-// 注意：即使只有一个参数，也建议使用对象形式，以便后续扩展
+// 单参数可以直接传递，多参数建议使用对象形式
 await page.waitForFunction(
-  (params: { containerId: string }) => {
-    const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+  (containerId: string) => {
+    const items = document.querySelectorAll(`#${containerId} .tag-manager-item`);
     return items.length > 0;
   },
-  { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS }
+  Constants.Ids.IMAGE_TAG_GROUP_CARDS
 );
 ```
 
