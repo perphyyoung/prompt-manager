@@ -24,6 +24,40 @@ import {
  * 4. 等待 #promptDetailModal 显示
  */
 test.describe("提示词详情界面数据库字段读取", () => {
+  // ========== 初始化 ==========
+  test.beforeAll(async ({ electronTest }) => {
+    // 创建基础测试数据（至少2个带图像的提示词用于导航测试）
+    // 创建第一个带有关联图像的提示词
+    const result1 = await electronTest.createTestImageViaUI({
+      withPrompt: true,
+      promptOverrides: {
+        content: "e2e_test_prompt_with_image_1",
+      },
+    });
+    expect(typeof result1).toBe("object");
+    const { promptId: _promptId1 } = result1 as { imageId: string; promptId: string };
+    expect(_promptId1).toBeTruthy();
+
+    // 创建第二个带有关联图像的提示词（用于导航测试）
+    const result2 = await electronTest.createTestImageViaUI({
+      withPrompt: true,
+      promptOverrides: {
+        content: "e2e_test_prompt_with_image_2",
+      },
+    });
+    expect(typeof result2).toBe("object");
+    const { promptId: _promptId2 } = result2 as { imageId: string; promptId: string };
+    expect(_promptId2).toBeTruthy();
+
+    // 再创建一个普通提示词（用于测试无图像的情况）
+    await electronTest.createTestPrompt("detail_no_image", {
+      content: "e2e_test_prompt_no_image",
+    });
+
+    // 刷新界面以显示新数据
+    await electronTest.refreshData();
+  });
+
   test("ID 字段正确显示", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
     const { firstPromptId } = await enterPromptDetailView(page);
@@ -118,8 +152,8 @@ test.describe("提示词详情界面数据库字段读取", () => {
     await expect(tagsContainer).toBeVisible();
 
     // 获取显示的标签（去除删除按钮文本）
-    const displayedTags = await page.evaluate((containerId) => {
-      const container = document.getElementById(containerId);
+    const displayedTags = await page.evaluate((params) => {
+      const container = document.getElementById(params.containerId);
       if (!container) return [];
       return Array.from(container.querySelectorAll(".tag-editable")).map(
         (el) => {
@@ -127,7 +161,7 @@ test.describe("提示词详情界面数据库字段读取", () => {
           return text.replace(/[\s×]+$/, "").trim();
         },
       );
-    }, Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER);
+    }, { containerId: Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER });
 
     // 验证标签数量匹配
     const dbTags = dbPrompt!.tags || [];
@@ -195,18 +229,12 @@ test.describe("提示词详情界面数据库字段读取", () => {
       return;
     }
 
-    // 进入提示词面板
-    const promptPanel = page.locator(`#${Constants.Ids.PROMPT_PANEL}`);
-    const isPromptPanelVisible = await promptPanel
-      .isVisible()
-      .catch(() => false);
-    if (!isPromptPanelVisible) {
-      await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
-      await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
-        state: "visible",
-        timeout: 1000,
-      });
-    }
+    // 使用快捷键切换到提示词主界面（自动关闭可能打开的模态框）
+    await page.keyboard.press("Control+p");
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
+      state: "visible",
+      timeout: 1000,
+    });
 
     // 确保切换到网格视图
     await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
@@ -366,8 +394,8 @@ test.describe("提示词详情界面数据库字段读取", () => {
       return;
     }
 
-    // 进入提示词详情界面
-    await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+    // 使用快捷键切换到提示词主界面（自动关闭可能打开的模态框）
+    await page.keyboard.press("Control+p");
     await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
       state: "visible",
       timeout: 1000,
@@ -414,7 +442,7 @@ test.describe("提示词详情界面数据库字段读取", () => {
         document.querySelectorAll(".image-preview-item").length ===
         expectedCount,
       imageCountBefore - 1,
-      { timeout: 2000 },
+      { timeout: 1000 },
     );
 
     // 验证图像已被删除
@@ -432,7 +460,7 @@ test.describe("提示词详情界面数据库字段读取", () => {
     // 等待图像选择器中的图像项加载
     await page.waitForSelector(
       `#${Constants.Ids.IMAGE_SELECTOR_MODAL} .image-selector-item`,
-      { state: "visible", timeout: 2000 },
+      { state: "visible", timeout: 1000 },
     );
 
     // 查找之前删除的图像项
@@ -489,8 +517,8 @@ test.describe("提示词详情界面数据库字段读取", () => {
       return;
     }
 
-    // 进入提示词详情界面
-    await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+    // 使用快捷键切换到提示词主界面（自动关闭可能打开的模态框）
+    await page.keyboard.press("Control+p");
     await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
       state: "visible",
       timeout: 1000,
