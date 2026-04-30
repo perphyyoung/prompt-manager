@@ -43,9 +43,9 @@ test.describe("功能模块名称", () => {
 
 timeout 时间不要超过 1000 毫秒, 超过时需要充足理由
 
-### 1. 日志记录
+### 1. 调试日志记录
 
-使用 `window.electronAPI.logInfo()` 将测试日志记录到 `pm.log`：
+调试时, 使用 `window.electronAPI.logInfo()` 将测试日志记录到 `pm.log`：
 
 ```typescript
 await page.evaluate((params) => {
