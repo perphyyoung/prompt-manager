@@ -32,6 +32,12 @@ import { Constants } from "../src/constants.ts";
  * 2. 提示词标签管理 - 非批量功能
  */
 test.describe("标签管理功能", () => {
+  test.beforeAll(async ({ electronTest }) => {
+    await electronTest.createImageTags(7, "shared");
+    await electronTest.createPromptTags(7, "shared");
+    await electronTest.refreshData();
+  });
+
   test.describe("图像标签管理 - 非批量功能", () => {
     test("打开和关闭标签管理器", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
@@ -81,9 +87,6 @@ test.describe("标签管理功能", () => {
       );
 
       await closeImageTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupImageTagsAndGroups();
     });
 
     test("编辑标签（重命名）", async ({ electronTest, page }) => {
@@ -137,9 +140,6 @@ test.describe("标签管理功能", () => {
       );
 
       await closeImageTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupImageTagsAndGroups();
     });
 
     test("删除标签", async ({ electronTest, page }) => {
@@ -233,9 +233,6 @@ test.describe("标签管理功能", () => {
       );
 
       await closeImageTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupImageTagsAndGroups();
     });
 
     test("编辑标签组", async ({ electronTest, page }) => {
@@ -293,9 +290,6 @@ test.describe("标签管理功能", () => {
       );
 
       await closeImageTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupImageTagsAndGroups();
     });
 
     test("删除标签组", async ({ electronTest, page }) => {
@@ -443,9 +437,6 @@ test.describe("标签管理功能", () => {
 
       // Confirm deletion
       await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
-      await page.evaluate(() =>
-        window.electronAPI.logInfo("E2E-Test", "已点击确认删除按钮"),
-      );
 
       // Wait for deletion via API
       await page.waitForFunction(
@@ -456,24 +447,15 @@ test.describe("标签管理功能", () => {
         [testTagName1, testTagName2],
         { timeout: 1000 },
       );
-      await page.evaluate(() =>
-        window.electronAPI.logInfo("E2E-Test", "API验证标签已删除"),
-      );
 
       // Verify toast message
       await page.waitForSelector(
         `#${Constants.Ids.TOAST_CONTAINER}:has-text("已删除")`,
         { timeout: 1000 },
       );
-      await page.evaluate(() =>
-        window.electronAPI.logInfo("E2E-Test", "Toast消息验证通过"),
-      );
 
       // CRITICAL: Clear search first, then verify deleted tags don't exist in full list
       await page.click(`#${Constants.Ids.CLEAR_IMAGE_TAG_MANAGER_SEARCH_BTN}`);
-      await page.evaluate(() =>
-        window.electronAPI.logInfo("E2E-Test", "已点击清除搜索按钮"),
-      );
 
       // Verify e2e tags are removed (in the full list)
       await expect(
@@ -486,9 +468,6 @@ test.describe("标签管理功能", () => {
           `#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${testTagName2}"]`,
         ),
       ).not.toBeVisible({ timeout: 1000 });
-      await page.evaluate(() =>
-        window.electronAPI.logInfo("E2E-Test", "已验证被删除标签不存在"),
-      );
 
       // CRITICAL: Verify control group still exists
       await page.waitForFunction(
@@ -511,9 +490,6 @@ test.describe("标签管理功能", () => {
           `#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${controlTagName}"]`,
         ),
       ).toBeVisible({ timeout: 1000 });
-      await page.evaluate(() =>
-        window.electronAPI.logInfo("E2E-Test", "已验证对照组标签存在"),
-      );
 
       await closeImageTagManager(page);
     });
@@ -568,9 +544,6 @@ test.describe("标签管理功能", () => {
       );
 
       await closePromptTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupPromptTagsAndGroups();
     });
 
     test("编辑标签（重命名）", async ({ electronTest, page }) => {
@@ -624,9 +597,6 @@ test.describe("标签管理功能", () => {
       );
 
       await closePromptTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupPromptTagsAndGroups();
     });
 
     test("删除标签", async ({ electronTest, page }) => {
@@ -720,9 +690,6 @@ test.describe("标签管理功能", () => {
       );
 
       await closePromptTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupPromptTagsAndGroups();
     });
 
     test("编辑标签组", async ({ electronTest, page }) => {
@@ -781,9 +748,6 @@ test.describe("标签管理功能", () => {
       );
 
       await closePromptTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupPromptTagsAndGroups();
     });
 
     test("删除标签组", async ({ electronTest, page }) => {
@@ -838,31 +802,43 @@ test.describe("标签管理功能", () => {
       await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
-      // Create multiple e2e test tags
-      const testTagName1 = electronTest.generateE2ePrefixName("prompt_e2e");
-      const testTagName2 = electronTest.generateE2ePrefixName("prompt_e2e");
-      await createPromptTagsInManagerBatch(page, [testTagName1, testTagName2]);
+      // Create multiple e2e test tags with specific keyword
+      const searchKeyword = "prompt_e2e_batch";
+      const testTagName1 = electronTest.generateE2ePrefixName(searchKeyword);
+      const testTagName2 = electronTest.generateE2ePrefixName(searchKeyword);
+      // CRITICAL: Create control group that does NOT match search keyword
+      const controlTagName = electronTest.generateE2ePrefixName(
+        "control_not_deleted",
+      );
+      await createPromptTagsInManagerBatch(page, [
+        testTagName1,
+        testTagName2,
+        controlTagName,
+      ]);
 
-      // Search for e2e tags
+      // Search for specific keyword (not just 'e2e')
       await page.fill(
         `#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`,
-        "e2e",
+        searchKeyword,
       );
 
-      // Wait for search results to update - verify only e2e tags are visible
+      // Wait for search results to update - verify only matching tags are visible
       await page.waitForFunction(
-        (containerId: string) => {
+        (params: { containerId: string; keyword: string }) => {
           const items = document.querySelectorAll(
-            `#${containerId} .tag-manager-item`,
+            `#${params.containerId} .tag-manager-item`,
           );
           return (
             items.length >= 2 &&
             Array.from(items).every((item) =>
-              item.getAttribute("data-tag")?.includes("e2e"),
+              item.getAttribute("data-tag")?.includes(params.keyword),
             )
           );
         },
-        Constants.Ids.PROMPT_TAG_GROUP_CARDS,
+        {
+          containerId: Constants.Ids.PROMPT_TAG_GROUP_CARDS,
+          keyword: searchKeyword,
+        },
         { timeout: 1000 },
       );
 
@@ -939,6 +915,28 @@ test.describe("标签管理功能", () => {
           `#${Constants.Ids.PROMPT_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${testTagName2}"]`,
         ),
       ).not.toBeVisible({ timeout: 1000 });
+
+      // CRITICAL: Verify control group still exists
+      await page.waitForFunction(
+        (params: { containerId: string; tagName: string }) => {
+          const items = document.querySelectorAll(
+            `#${params.containerId} .tag-manager-item`,
+          );
+          return Array.from(items).some(
+            (item) => item.getAttribute("data-tag") === params.tagName,
+          );
+        },
+        {
+          containerId: Constants.Ids.PROMPT_TAG_GROUP_CARDS,
+          tagName: controlTagName,
+        },
+        { timeout: 1000 },
+      );
+      await expect(
+        page.locator(
+          `#${Constants.Ids.PROMPT_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${controlTagName}"]`,
+        ),
+      ).toBeVisible({ timeout: 1000 });
 
       await closePromptTagManager(page);
     });
