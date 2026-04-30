@@ -16,6 +16,15 @@ import { Constants } from "../src/constants.ts";
  * 4. 点击第一个图像打开详情
  */
 test.describe("新建提示词防重复提交", () => {
+  // ========== 初始化 ==========
+  test.beforeAll(async ({ electronTest }) => {
+    // 创建测试数据：至少1个图像（用于新建提示词测试）
+    await electronTest.createTestImages(1, "duplicate_test");
+
+    // 刷新界面以显示新数据
+    await electronTest.refreshData();
+  });
+
   test("快速点击完成按钮应该只创建一个提示词", async ({
     electronTest,
     page,
@@ -29,7 +38,9 @@ test.describe("新建提示词防重复提交", () => {
     await firstImage.click();
 
     // 等待图像详情页面加载
-    await page.waitForSelector("#imageDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 检查按钮状态，如有"编辑"则先解除关联
     const editPromptBtn = page.locator(
@@ -51,11 +62,11 @@ test.describe("新建提示词防重复提交", () => {
       await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
       await page.waitForFunction(
-        (btnTextId) => {
-          const text = document.getElementById(btnTextId)?.textContent;
+        (params: { btnTextId: string }) => {
+          const text = document.getElementById(params.btnTextId)?.textContent;
           return text === "添加提示词";
         },
-        Constants.Ids.EDIT_PROMPT_BTN_TEXT,
+        { btnTextId: Constants.Ids.EDIT_PROMPT_BTN_TEXT },
         { timeout: 1500 }, // 连续测试时容易超时, 1000 -> 1500
       );
     }
@@ -81,24 +92,27 @@ test.describe("新建提示词防重复提交", () => {
     // 使用 page.evaluate 在浏览器端快速点击完成按钮多次
     // 这样可以在防重复提交机制生效前连续触发多次点击
 
-    await page.evaluate((doneBtnId) => {
-      const doneBtn = document.getElementById(doneBtnId);
-      if (doneBtn) {
-        // 快速连续触发5次点击事件
-        for (let i = 0; i < 5; i++) {
-          doneBtn.click();
+    await page.evaluate(
+      (params: { doneBtnId: string }) => {
+        const doneBtn = document.getElementById(params.doneBtnId);
+        if (doneBtn) {
+          // 快速连续触发5次点击事件
+          for (let i = 0; i < 5; i++) {
+            doneBtn.click();
+          }
         }
-      }
-    }, Constants.Ids.NEW_PROMPT_DONE_BTN);
+      },
+      { doneBtnId: Constants.Ids.NEW_PROMPT_DONE_BTN },
+    );
 
     // 等待操作完成 - 页面应该关闭
     await page.waitForFunction(
-      (pageId) => {
-        const page = document.getElementById(pageId);
+      (params: { pageId: string }) => {
+        const page = document.getElementById(params.pageId);
         return !page?.classList.contains("active");
       },
-      Constants.Ids.NEW_PROMPT_PAGE,
-      { timeout: 3000 },
+      { pageId: Constants.Ids.NEW_PROMPT_PAGE },
+      { timeout: 1000 },
     );
 
     // 验证只创建了一个提示词
@@ -111,23 +125,18 @@ test.describe("新建提示词防重复提交", () => {
 
     // 验证创建的提示词内容正确
     const createdPrompt = await page.evaluate(
-      async (content): Promise<IPrompt | undefined> => {
+      async (params: { content: string }): Promise<IPrompt | undefined> => {
         const prompts = await window.electronAPI.getPrompts(
           "createdAt",
           "desc",
         );
-        return prompts.find((p: IPrompt) => p.content === content);
+        return prompts.find((p: IPrompt) => p.content === params.content);
       },
-      testContent,
+      { content: testContent },
     );
 
     expect(createdPrompt).toBeDefined();
     expect(createdPrompt?.content).toBe(testContent);
-
-    // 清理测试数据 - 删除创建的提示词
-    if (createdPrompt?.id) {
-      await electronTest.deleteTestPrompt(createdPrompt.id);
-    }
   });
 
   test("重复点击完成按钮时应该只执行一次保存", async ({
@@ -143,7 +152,9 @@ test.describe("新建提示词防重复提交", () => {
     await firstImage.click();
 
     // 等待图像详情页面加载
-    await page.waitForSelector("#imageDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 检查按钮状态，如有"编辑"则先解除关联
     const editPromptBtn = page.locator(
@@ -165,11 +176,11 @@ test.describe("新建提示词防重复提交", () => {
       await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
       await page.waitForFunction(
-        (btnTextId) => {
-          const text = document.getElementById(btnTextId)?.textContent;
+        (params: { btnTextId: string }) => {
+          const text = document.getElementById(params.btnTextId)?.textContent;
           return text === "添加提示词";
         },
-        Constants.Ids.EDIT_PROMPT_BTN_TEXT,
+        { btnTextId: Constants.Ids.EDIT_PROMPT_BTN_TEXT },
         { timeout: 1000 },
       );
     }
@@ -193,24 +204,27 @@ test.describe("新建提示词防重复提交", () => {
     });
 
     // 在浏览器端快速点击完成按钮多次
-    await page.evaluate((doneBtnId) => {
-      const doneBtn = document.getElementById(doneBtnId);
-      if (doneBtn) {
-        // 快速连续触发10次点击事件
-        for (let i = 0; i < 10; i++) {
-          doneBtn.click();
+    await page.evaluate(
+      (params: { doneBtnId: string }) => {
+        const doneBtn = document.getElementById(params.doneBtnId);
+        if (doneBtn) {
+          // 快速连续触发10次点击事件
+          for (let i = 0; i < 10; i++) {
+            doneBtn.click();
+          }
         }
-      }
-    }, Constants.Ids.NEW_PROMPT_DONE_BTN);
+      },
+      { doneBtnId: Constants.Ids.NEW_PROMPT_DONE_BTN },
+    );
 
     // 等待页面关闭
     await page.waitForFunction(
-      (pageId) => {
-        const page = document.getElementById(pageId);
+      (params: { pageId: string }) => {
+        const page = document.getElementById(params.pageId);
         return !page?.classList.contains("active");
       },
-      Constants.Ids.NEW_PROMPT_PAGE,
-      { timeout: 3000 },
+      { pageId: Constants.Ids.NEW_PROMPT_PAGE },
+      { timeout: 1000 },
     );
 
     // 验证只创建了一个提示词
@@ -222,17 +236,18 @@ test.describe("新建提示词防重复提交", () => {
     expect(finalPromptCount).toBe(initialPromptCount + 1);
 
     // 验证只创建了指定内容的提示词
-    const createdPrompts = await page.evaluate(async (content) => {
-      const prompts = await window.electronAPI.getPrompts("createdAt", "desc");
-      return prompts.filter((p: IPrompt) => p.content === content);
-    }, testContent);
+    const createdPrompts = await page.evaluate(
+      async (params: { content: string }) => {
+        const prompts = await window.electronAPI.getPrompts(
+          "createdAt",
+          "desc",
+        );
+        return prompts.filter((p: IPrompt) => p.content === params.content);
+      },
+      { content: testContent },
+    );
 
     expect(createdPrompts.length).toBe(1);
-
-    // 清理测试数据 - 删除创建的提示词
-    if (createdPrompts.length > 0 && createdPrompts[0]?.id) {
-      await electronTest.deleteTestPrompt(createdPrompts[0].id);
-    }
   });
 
   test("空内容时不应该创建提示词", async ({ electronTest, page }) => {
@@ -245,7 +260,9 @@ test.describe("新建提示词防重复提交", () => {
     await firstImage.click();
 
     // 等待图像详情页面加载
-    await page.waitForSelector("#imageDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 检查按钮状态，如有"编辑"则先解除关联
     const editPromptBtn = page.locator(
@@ -267,11 +284,11 @@ test.describe("新建提示词防重复提交", () => {
       await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
       await page.waitForFunction(
-        (btnTextId) => {
-          const text = document.getElementById(btnTextId)?.textContent;
+        (params: { btnTextId: string }) => {
+          const text = document.getElementById(params.btnTextId)?.textContent;
           return text === "添加提示词";
         },
-        Constants.Ids.EDIT_PROMPT_BTN_TEXT,
+        { btnTextId: Constants.Ids.EDIT_PROMPT_BTN_TEXT },
         { timeout: 1000 },
       );
     }
@@ -297,19 +314,22 @@ test.describe("新建提示词防重复提交", () => {
 
     // 等待页面保持打开状态（验证空内容不会关闭页面）
     await page.waitForFunction(
-      (pageId) => {
-        const page = document.getElementById(pageId);
+      (params: { pageId: string }) => {
+        const page = document.getElementById(params.pageId);
         return page?.classList.contains("active");
       },
-      Constants.Ids.NEW_PROMPT_PAGE,
+      { pageId: Constants.Ids.NEW_PROMPT_PAGE },
       { timeout: 3000 },
     );
 
     // 验证页面没有关闭（因为内容为空）
-    const isPageActive = await page.evaluate((pageId) => {
-      const page = document.getElementById(pageId);
-      return page?.classList.contains("active");
-    }, Constants.Ids.NEW_PROMPT_PAGE);
+    const isPageActive = await page.evaluate(
+      (params: { pageId: string }) => {
+        const page = document.getElementById(params.pageId);
+        return page?.classList.contains("active");
+      },
+      { pageId: Constants.Ids.NEW_PROMPT_PAGE },
+    );
 
     expect(isPageActive).toBe(true);
 
@@ -324,12 +344,12 @@ test.describe("新建提示词防重复提交", () => {
     // 取消关闭页面
     await page.click(`#${Constants.Ids.NEW_PROMPT_CANCEL_BTN}`);
     await page.waitForFunction(
-      (pageId) => {
-        const page = document.getElementById(pageId);
+      (params: { pageId: string }) => {
+        const page = document.getElementById(params.pageId);
         return !page?.classList.contains("active");
       },
-      Constants.Ids.NEW_PROMPT_PAGE,
-      { timeout: 3000 },
+      { pageId: Constants.Ids.NEW_PROMPT_PAGE },
+      { timeout: 1000 },
     );
   });
 });
