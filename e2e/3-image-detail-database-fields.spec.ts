@@ -25,6 +25,15 @@ import type { IImage } from "../src/preload/index.ts";
  * 4. 等待 #imageDetailModal 显示
  */
 test.describe("图像详情界面数据库字段读取", () => {
+  // ========== 初始化 ==========
+  test.beforeAll(async ({ electronTest }) => {
+    // 创建基础测试数据（至少1个图像用于详情查看）
+    await electronTest.createTestImages(1, "detail");
+
+    // 刷新界面以显示新数据
+    await electronTest.refreshData();
+  });
+
   test("文件名 (fileName) 字段正确显示", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
     const { firstImageId } = await enterImageDetailView(page);
@@ -241,7 +250,7 @@ test.describe("图像详情界面数据库字段读取", () => {
           }>;
         };
       } catch (error) {
-        console.error("Failed to get image:", error);
+        await window.electronAPI.logError("E2E-Test", "获取图像失败", { error: String(error) });
         return null;
       }
     }, firstImageId);
@@ -339,7 +348,7 @@ test.describe("图像详情界面数据库字段读取", () => {
     expect(dbImage).toBeTruthy();
 
     // 收集所有界面显示的值
-    const uiValues = await page.evaluate((containerId) => {
+    const uiValues = await page.evaluate((params) => {
       const getValue = (id: string): string => {
         const el = document.getElementById(id);
         if (!el) return "";
@@ -353,7 +362,7 @@ test.describe("图像详情界面数据库字段读取", () => {
       };
 
       const getTags = (): string[] => {
-        const container = document.getElementById(containerId);
+        const container = document.getElementById(params.containerId);
         if (!container) return [];
         return Array.from(container.querySelectorAll(".tag-editable")).map(
           (el) => {
@@ -365,15 +374,25 @@ test.describe("图像详情界面数据库字段读取", () => {
       };
 
       return {
-        fileName: getValue("imageDetailFileName"),
-        note: getValue("imageDetailNote"),
-        fileSize: getValue("imageDetailFileSize"),
-        dimensions: getValue("imageDetailDimensions"),
-        createdAt: getValue("imageDetailCreatedAt"),
-        updatedAt: getValue("imageDetailUpdatedAt"),
+        fileName: getValue(params.ids.fileName),
+        note: getValue(params.ids.note),
+        fileSize: getValue(params.ids.fileSize),
+        dimensions: getValue(params.ids.dimensions),
+        createdAt: getValue(params.ids.createdAt),
+        updatedAt: getValue(params.ids.updatedAt),
         tags: getTags(),
       };
-    }, Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER);
+    }, {
+      containerId: Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER,
+      ids: {
+        fileName: Constants.Ids.IMAGE_DETAIL_FILE_NAME,
+        note: Constants.Ids.IMAGE_DETAIL_NOTE,
+        fileSize: Constants.Ids.IMAGE_DETAIL_FILE_SIZE,
+        dimensions: Constants.Ids.IMAGE_DETAIL_DIMENSIONS,
+        createdAt: Constants.Ids.IMAGE_DETAIL_CREATED_AT,
+        updatedAt: Constants.Ids.IMAGE_DETAIL_UPDATED_AT,
+      }
+    });
 
     // 验证所有字段一致性（不包含 isSafe，因为它是特殊标签）
     expect(uiValues.fileName).toBe(dbImage!.fileName || "");
@@ -395,5 +414,115 @@ test.describe("图像详情界面数据库字段读取", () => {
       expect(uiValues.dimensions).toContain(String(dbImage!.width));
       expect(uiValues.dimensions).toContain(String(dbImage!.height));
     }
+  });
+
+  test("有关联提示词时信息正确显示", async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
+
+    // 创建带关联提示词的图像
+    const result = await electronTest.createTestImageViaUI({
+      withPrompt: true,
+      promptOverrides: {
+        content: "e2e_test_prompt_content",
+        contentTranslate: "e2e_test_prompt_translate",
+        note: "e2e_test_prompt_note",
+      },
+    });
+
+    // 确保返回的是对象格式
+    expect(typeof result).toBe("object");
+    const { imageId, promptId } = result as { imageId: string; promptId: string };
+    expect(imageId).toBeTruthy();
+    expect(promptId).toBeTruthy();
+
+    // 刷新界面以显示新数据
+    await electronTest.refreshData();
+
+    // 使用快捷键切换到图像主界面（自动关闭可能打开的模态框）
+    await page.keyboard.press("Control+i");
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
+      state: "visible",
+      timeout: 1000,
+    });
+
+    // 确保切换到网格视图
+    await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}.active`, {
+      state: "visible",
+      timeout: 1000,
+    });
+
+    // 直接点击自己创建的图像卡片
+    const targetCard = page.locator(`.image-card[data-id="${imageId}"]`);
+    await expect(targetCard).toBeVisible({ timeout: 1000 });
+    await targetCard.click();
+
+    // 等待详情模态框显示
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}`, {
+      state: "visible",
+      timeout: 1000,
+    });
+
+    // 从数据库获取图像信息（包含关联提示词）
+    const dbImage = await page.evaluate(async (id: string) => {
+      try {
+        const image = await window.electronAPI.getImageById(id);
+        return image as IImage & {
+          promptRefs?: Array<{
+            promptId: string;
+            promptTitle?: string;
+            promptContent?: string;
+            promptContentTranslate?: string;
+            promptNote?: string;
+          }>;
+        };
+      } catch (error) {
+        await window.electronAPI.logError("E2E-Test", "获取图像失败", { error: String(error) });
+        return null;
+      }
+    }, imageId);
+
+    expect(dbImage).toBeTruthy();
+
+    // 验证有关联提示词
+    expect(dbImage!.promptRefs).toBeTruthy();
+    expect(dbImage!.promptRefs!.length).toBeGreaterThan(0);
+
+    const firstPrompt = dbImage!.promptRefs![0];
+
+    // 验证提示词标题显示（不为"-"）
+    const promptTitleEl = page.locator(
+      `#${Constants.Ids.IMAGE_DETAIL_PROMPT_TITLE}`,
+    );
+    await expect(promptTitleEl).toBeVisible();
+    const promptTitleText = await promptTitleEl.textContent();
+    expect(promptTitleText).not.toBe("-");
+
+    // 验证提示词内容显示
+    const promptContentEl = page.locator(
+      `#${Constants.Ids.IMAGE_DETAIL_PROMPT_CONTENT}`,
+    );
+    await expect(promptContentEl).toBeVisible();
+    const promptContentText = await promptContentEl.textContent();
+    expect(promptContentText).toBe(firstPrompt.promptContent || "");
+
+    // 验证提示词翻译区域显示
+    const promptTranslateEl = page.locator(
+      `#${Constants.Ids.IMAGE_DETAIL_PROMPT_TRANSLATE}`,
+    );
+    await expect(promptTranslateEl).toBeVisible();
+    const promptTranslateText = await promptTranslateEl.textContent();
+    // 翻译内容可能是实际值或"-"
+    expect(promptTranslateText).toBeTruthy();
+
+    // 验证提示词备注区域显示
+    const promptNoteEl = page.locator(
+      `#${Constants.Ids.IMAGE_DETAIL_PROMPT_NOTE}`,
+    );
+    await expect(promptNoteEl).toBeVisible();
+
+    // 验证提示词标签区域存在
+    const promptTagsEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAGS}`);
+    await expect(promptTagsEl).toBeVisible();
   });
 });
