@@ -27,6 +27,15 @@ import { Constants } from "../src/constants.ts";
  * 8. 提示词标签管理 - 搜索后批量移动到组保持搜索状态
  */
 test.describe("标签管理器搜索状态保持功能", () => {
+  // 文件级别：创建基础测试数据
+  test.beforeAll(async ({ electronTest }) => {
+    // 创建图像标签基础数据
+    await electronTest.createImageTags(5, "persist_shared");
+    // 创建提示词标签基础数据
+    await electronTest.createPromptTags(5, "persist_shared");
+    await electronTest.refreshData();
+  });
+
   test.describe("图像标签管理 - 搜索状态保持", () => {
     test("搜索后单个删除保持搜索状态", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
@@ -123,9 +132,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
       ).toBeVisible({ timeout: 1000 });
 
       await closeImageTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupImageTagsAndGroups();
     });
 
     test("搜索后单个编辑保持搜索状态", async ({ electronTest, page }) => {
@@ -221,9 +227,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
       ).toBeVisible({ timeout: 1000 });
 
       await closeImageTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupImageTagsAndGroups();
     });
 
     test("搜索后批量删除保持搜索状态", async ({ electronTest, page }) => {
@@ -326,9 +329,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
       ).toBeVisible({ timeout: 1000 });
 
       await closeImageTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupImageTagsAndGroups();
     });
 
     test("搜索后批量移动到组保持搜索状态", async ({ electronTest, page }) => {
@@ -437,9 +437,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
       );
 
       await closeImageTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupImageTagsAndGroups();
     });
   });
 
@@ -540,8 +537,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
 
       await closePromptTagManager(page);
 
-      // 清理测试数据
-      await electronTest.cleanupPromptTagsAndGroups();
     });
 
     test("搜索后单个编辑保持搜索状态", async ({ electronTest, page }) => {
@@ -637,9 +632,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
       ).toBeVisible({ timeout: 1000 });
 
       await closePromptTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupPromptTagsAndGroups();
     });
 
     test("搜索后批量删除保持搜索状态", async ({ electronTest, page }) => {
@@ -742,9 +734,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
       ).toBeVisible({ timeout: 1000 });
 
       await closePromptTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupPromptTagsAndGroups();
     });
 
     test("搜索后批量移动到组保持搜索状态", async ({ electronTest, page }) => {
@@ -852,9 +841,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
       );
 
       await closePromptTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupPromptTagsAndGroups();
     });
   });
 });
