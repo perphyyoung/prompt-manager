@@ -8,7 +8,9 @@ import {
   openPromptDetailById,
   waitForImageOrderChange,
   waitForDatabaseImageOrder,
+  enterPromptGridView,
 } from "./electron-test.ts";
+import { Constants } from "../src/constants.ts";
 
 /**
  * 提示词详情界面"设为首张"功能 E2E 测试
@@ -22,6 +24,35 @@ import {
  * 4. 三图像测试组（≥3张图像）
  */
 test.describe('提示词详情界面"设首张"功能', () => {
+  // 每个测试后关闭可能打开的模态框，防止影响后续测试
+  test.afterEach(async ({ page }) => {
+    const modal = page.locator(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
+    const isVisible = await modal.isVisible().catch(() => false);
+    if (isVisible) {
+      await page.click(`#${Constants.Ids.PROMPT_DETAIL_CLOSE_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`, {
+        state: "hidden",
+        timeout: 1000,
+      });
+    }
+  });
+
+  // 文件级别：创建基础测试数据
+  test.beforeAll(async ({ electronTest, page }) => {
+    // 使用 createTestPromptViaUI 创建带图像的提示词
+    // 0张图像的提示词
+    await electronTest.createTestPromptViaUI({ imageCount: 0 });
+    // 1张图像的提示词
+    await electronTest.createTestPromptViaUI({ imageCount: 1 });
+    // 2张图像的提示词
+    await electronTest.createTestPromptViaUI({ imageCount: 2 });
+    // 3张图像的提示词
+    await electronTest.createTestPromptViaUI({ imageCount: 3 });
+    // 返回提示词面板并刷新
+    await enterPromptGridView(page);
+    await electronTest.refreshData();
+  });
+
   // ========== 空图像测试组（0张图像）==========
 
   test("空图像：验证界面正常显示无错误", async ({ electronTest, page }) => {
@@ -66,7 +97,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
     // 右键点击首张图像
     const firstImageItem = page.locator(
-      `#imagePreviewList .image-preview-item[data-image-id="${firstImageId}"]`,
+      `#${Constants.Ids.IMAGE_PREVIEW_LIST} .image-preview-item[data-image-id="${firstImageId}"]`,
     );
     await firstImageItem.click({ button: "right" });
 
@@ -182,8 +213,8 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(afterSetFirstIds[0]).toBe(targetImageId);
 
     // 关闭详情模态框
-    await page.click("#promptDetailCloseBtn");
-    await page.waitForSelector("#promptDetailModal", {
+    await page.click(`#${Constants.Ids.PROMPT_DETAIL_CLOSE_BTN}`);
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`, {
       state: "hidden",
       timeout: 1000,
     });
@@ -256,7 +287,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
     // 右键点击第二张图像
     const secondImageItem = page.locator(
-      `#imagePreviewList .image-preview-item[data-image-id="${secondImageId}"]`,
+      `#${Constants.Ids.IMAGE_PREVIEW_LIST} .image-preview-item[data-image-id="${secondImageId}"]`,
     );
     await secondImageItem.click({ button: "right" });
 
@@ -282,7 +313,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(menuText).toBe("设为首张");
 
     // 关闭菜单（点击其他地方）
-    await page.click("#promptDetailModal");
+    await page.click(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
     await page.waitForSelector(
       '.context-menu-item[data-item-id="setAsFirst"]',
       { state: "hidden", timeout: 1000 },
@@ -305,7 +336,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
     // 右键点击第二张图像
     const secondImageItem = page.locator(
-      `#imagePreviewList .image-preview-item[data-image-id="${secondImageId}"]`,
+      `#${Constants.Ids.IMAGE_PREVIEW_LIST} .image-preview-item[data-image-id="${secondImageId}"]`,
     );
     await secondImageItem.click({ button: "right" });
 

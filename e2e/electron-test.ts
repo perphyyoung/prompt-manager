@@ -7,10 +7,11 @@ import {
 } from "@playwright/test";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { mkdirSync, existsSync } from "fs";
+import { mkdirSync, existsSync, rmSync } from "fs";
 import sharp from "sharp";
 import { Constants } from "../src/constants.ts";
 import type { IImage, IPrompt, IElectronAPI } from "../src/preload/index.ts";
+import { tmpdir } from "os";
 
 declare global {
   interface Window {
@@ -28,6 +29,11 @@ const __dirname = dirname(__filename);
 export class ElectronTestHelper {
   electronApp: ElectronApplication | null = null;
   page: Page | null = null;
+  testDataDir?: string;
+
+  constructor(testDataDir?: string) {
+    this.testDataDir = testDataDir;
+  }
 
   /**
    * 启动 Electron 应用
@@ -36,13 +42,18 @@ export class ElectronTestHelper {
     const electronPath = join(__dirname, "../node_modules/.bin/electron.cmd");
     const mainPath = join(__dirname, "../out/main/index.js");
 
+    const env: Record<string, string> = {
+      ...process.env,
+      NODE_ENV: "test",
+    };
+    if (this.testDataDir) {
+      env.E2E_TEST_DATA_DIR = this.testDataDir;
+    }
+
     this.electronApp = await electron.launch({
       executablePath: electronPath,
       args: [mainPath],
-      env: {
-        ...process.env,
-        NODE_ENV: "test",
-      },
+      env,
     });
 
     this.page = await this.electronApp.firstWindow();
@@ -184,21 +195,87 @@ export class ElectronTestHelper {
     }, testName);
   }
 
-  async logWarn(page: Page, message: string, data?: Record<string, unknown>): Promise<void> {
+  async logWarn(
+    page: Page,
+    message: string,
+    data?: Record<string, unknown>,
+  ): Promise<void> {
     await page.evaluate(
-      (params: { component: string; message: string; data?: Record<string, unknown> }) => {
-        window.electronAPI.logWarn(params.component, params.message, params.data);
+      (params: {
+        component: string;
+        message: string;
+        data?: Record<string, unknown>;
+      }) => {
+        window.electronAPI.logWarn(
+          params.component,
+          params.message,
+          params.data,
+        );
       },
-      { component: "E2E-Test", message, data }
+      { component: "E2E-Test", message, data },
     );
   }
 
-  async logError(page: Page, message: string, data?: Record<string, unknown>): Promise<void> {
+  async logError(
+    page: Page,
+    message: string,
+    data?: Record<string, unknown>,
+  ): Promise<void> {
     await page.evaluate(
-      (params: { component: string; message: string; data?: Record<string, unknown> }) => {
-        window.electronAPI.logError(params.component, params.message, params.data);
+      (params: {
+        component: string;
+        message: string;
+        data?: Record<string, unknown>;
+      }) => {
+        window.electronAPI.logError(
+          params.component,
+          params.message,
+          params.data,
+        );
       },
-      { component: "E2E-Test", message, data }
+      { component: "E2E-Test", message, data },
+    );
+  }
+
+  async logInfo(
+    page: Page,
+    message: string,
+    data?: Record<string, unknown>,
+  ): Promise<void> {
+    await page.evaluate(
+      (params: {
+        component: string;
+        message: string;
+        data?: Record<string, unknown>;
+      }) => {
+        window.electronAPI.logInfo(
+          params.component,
+          params.message,
+          params.data,
+        );
+      },
+      { component: "E2E-Test", message, data },
+    );
+  }
+
+  async logDebug(
+    page: Page,
+    message: string,
+    data?: Record<string, unknown>,
+  ): Promise<void> {
+    await page.evaluate(
+      (params: {
+        component: string;
+        message: string;
+        data?: Record<string, unknown>;
+      }) => {
+        window.electronAPI.logDebug(
+          params.component,
+          params.message,
+          params.data,
+        );
+      },
+      { component: "E2E-Test", message, data },
     );
   }
 
@@ -394,7 +471,7 @@ export class ElectronTestHelper {
 
     const promptData: Omit<IPrompt, "id"> = {
       title,
-      content: `Test content for ${title}`,
+      content: `e2e_${title}`,
       contentTranslate: "",
       note: "",
       isSafe: 1,
@@ -431,52 +508,69 @@ export class ElectronTestHelper {
    * @returns 临时文件路径
    */
   private async _generateTempTestImage(): Promise<string> {
+    const paths = await this._generateTempTestImages(1);
+    return paths[0];
+  }
+
+  /**
+   * 生成多个临时纯色测试图像
+   * 使用随机颜色，确保每次生成 MD5 唯一
+   * @param count - 图像数量
+   * @returns 临时文件路径数组
+   */
+  private async _generateTempTestImages(count: number): Promise<string[]> {
     const testDir = join(__dirname, "..", "test-data");
     if (!existsSync(testDir)) {
       mkdirSync(testDir, { recursive: true });
     }
 
-    const timestamp = Date.now();
-    const uniqueId = Math.random().toString(36).slice(2, 8);
-    const fileName = `e2e_test_${timestamp}-${uniqueId}.png`;
-    const outputPath = join(testDir, fileName);
+    const paths: string[] = [];
+    const baseTimestamp = Date.now();
 
-    // 随机颜色背景
-    const r = Math.floor(Math.random() * 256);
-    const g = Math.floor(Math.random() * 256);
-    const b = Math.floor(Math.random() * 256);
+    for (let i = 0; i < count; i++) {
+      const uniqueId = Math.random().toString(36).slice(2, 8);
+      const fileName = `e2e_${baseTimestamp}_${i}_${uniqueId}.png`;
+      const outputPath = join(testDir, fileName);
 
-    // 生成带时间戳文本的 PNG 图像
-    await sharp({
-      create: {
-        width: 200,
-        height: 100,
-        channels: 3,
-        background: `rgb(${r}, ${g}, ${b})`,
-      },
-    })
-      .composite([
-        {
-          input: Buffer.from(
-            `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100">
-            <text x="100" y="55" font-size="12" fill="white" text-anchor="middle" font-family="monospace">
-              ${timestamp}-${uniqueId}
-            </text>
-          </svg>`,
-          ),
-          top: 0,
-          left: 0,
+      // 随机颜色背景
+      const r = Math.floor(Math.random() * 256);
+      const g = Math.floor(Math.random() * 256);
+      const b = Math.floor(Math.random() * 256);
+
+      // 生成带时间戳文本的 PNG 图像
+      await sharp({
+        create: {
+          width: 200,
+          height: 100,
+          channels: 3,
+          background: `rgb(${r}, ${g}, ${b})`,
         },
-      ])
-      .png()
-      .toFile(outputPath);
+      })
+        .composite([
+          {
+            input: Buffer.from(
+              `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100">
+              <text x="100" y="55" font-size="12" fill="white" text-anchor="middle" font-family="monospace">
+                ${baseTimestamp}-${i}-${uniqueId}
+              </text>
+            </svg>`,
+            ),
+            top: 0,
+            left: 0,
+          },
+        ])
+        .png()
+        .toFile(outputPath);
 
-    // 验证文件存在且可读
-    if (!existsSync(outputPath)) {
-      throw new Error(`Failed to generate test image: ${outputPath}`);
+      // 验证文件存在且可读
+      if (!existsSync(outputPath)) {
+        throw new Error(`Failed to generate test image: ${outputPath}`);
+      }
+
+      paths.push(outputPath);
     }
 
-    return outputPath;
+    return paths;
   }
 
   /**
@@ -540,11 +634,20 @@ export class ElectronTestHelper {
    * 通过 UI 创建测试提示词并返回其 ID
    * 流程: 点击新建按钮 → 填写内容 → 保存 → 等待新卡片出现 → 获取 ID
    * 提示词内容使用 e2e_ 前缀标识, 便于测试后清理
-   * @returns 新创建的提示词 ID
+   * @param options - 可选配置
+   * @param options.imageCount - 关联的图像数量（默认 0）
+   * @param options.promptOverrides - 提示词的自定义字段
+   * @returns 新创建的提示词 ID，如果 imageCount > 0 则返回 { promptId, imageIds }
    */
-  async createTestPromptViaUI(): Promise<string> {
+  async createTestPromptViaUI(
+    options: {
+      imageCount?: number;
+      promptOverrides?: Partial<Omit<IPrompt, "id" | "images">>;
+    } = {},
+  ): Promise<string | { promptId: string; imageIds: string[] }> {
     const page = this.getPage();
-    const content = `e2e_test_${Date.now()}`;
+    const { imageCount = 0 } = options;
+    const content = `e2e_${Date.now()}`;
 
     // 1. 确保在提示词面板
     await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
@@ -553,9 +656,12 @@ export class ElectronTestHelper {
       timeout: 1000,
     });
     await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}.active`, {
-      timeout: 1000,
-    });
+    await page.waitForSelector(
+      `#${Constants.Ids.PROMPT_GRID_VIEW_BTN}.active`,
+      {
+        timeout: 1000,
+      },
+    );
 
     // 2. 获取创建前的提示词数量
     const promptCountBefore = await page.evaluate(async () => {
@@ -575,16 +681,47 @@ export class ElectronTestHelper {
     // 5. 填写提示词内容
     await page.fill(`#${Constants.Ids.NEW_PROMPT_CONTENT}`, content);
 
-    // 6. 点击完成按钮保存
+    // 6. 如果需要关联图像，在新建提示词页面一次性选择所有图像文件（在保存前）
+    // 注意：在新建提示词页面，图像是和提示词一起创建的，不是单独上传
+    const electronApp = this.getElectronApp();
+    if (imageCount > 0) {
+      // 生成所有测试图像文件
+      const testImagePaths = await this._generateTempTestImages(imageCount);
+
+      // 设置 mock 路径数组（支持多文件）
+      await electronApp.evaluate(async (app, paths: string[]) => {
+        (global as any).__testMockedImageFilePaths = paths;
+      }, testImagePaths);
+
+      // 点击上传区域触发文件选择（一次选择所有文件）
+      await page.click(`#${Constants.Ids.NEW_PROMPT_IMAGE_UPLOAD_AREA}`);
+
+      // 等待所有预览图出现（表示文件选择成功）
+      await page.waitForFunction(
+        (params: { previewListId: string; expectedCount: number }) => {
+          const count = document.querySelectorAll(
+            `#${params.previewListId} .image-preview-item`,
+          ).length;
+          return count >= params.expectedCount;
+        },
+        {
+          previewListId: Constants.Ids.NEW_PROMPT_IMAGE_PREVIEW_LIST,
+          expectedCount: imageCount,
+        },
+        { timeout: 1000 },
+      );
+    }
+
+    // 7. 点击完成按钮保存（提示词和图像一起创建）
     await page.click(`#${Constants.Ids.NEW_PROMPT_DONE_BTN}`);
 
-    // 7. 等待页面关闭
+    // 8. 等待页面关闭
     await page.waitForSelector(`#${Constants.Ids.NEW_PROMPT_PAGE}`, {
       state: "hidden",
       timeout: 1000,
     });
 
-    // 8. 等待提示词数量增加
+    // 9. 等待提示词数量增加
     await page.waitForFunction(
       (countBefore: number) => {
         return window.electronAPI
@@ -595,19 +732,27 @@ export class ElectronTestHelper {
       { timeout: 1000 },
     );
 
-    // 9. 获取新创建的提示词 ID(最新创建的)
+    // 10. 获取新创建的提示词（最新创建的）及其关联的图像
     const newPrompt = await page.evaluate(async () => {
       const prompts = await window.electronAPI.getPrompts("updatedAt", "desc");
       return prompts[0];
     });
 
     const newPromptId = String(newPrompt.id);
+    const imageIds = (newPrompt.images || []).map(
+      (img: { id: string }) => img.id,
+    );
 
-    // 10. 等待新卡片出现在视图中
+    // 11. 等待新卡片出现在视图中
     await page.waitForSelector(`.prompt-card[data-id="${newPromptId}"]`, {
       state: "visible",
       timeout: 1000,
     });
+
+    // 12. 如果创建了图像，返回图像 ID
+    if (imageIds.length > 0) {
+      return { promptId: newPromptId, imageIds };
+    }
 
     return newPromptId;
   }
@@ -617,98 +762,176 @@ export class ElectronTestHelper {
    * 流程: 点击上传按钮 → 选择文件(mock dialog) → 确认上传 → 等待新卡片出现 → 获取 ID
    * 使用 Electron 主进程 mock dialog.showOpenDialog 绕过原生对话框，但仍走完整 UI 流程
    * 图像文件名使用 e2e_ 前缀标识, 便于测试后清理
-   * @returns 新创建的图像 ID
+   * @param options - 可选配置
+   * @param options.withPrompt - 是否同时创建关联的提示词
+   * @param options.promptOverrides - 提示词的自定义字段
+   * @returns 新创建的图像 ID，如果 withPrompt 为 true 则返回 { imageId, promptId }
    */
-  async createTestImageViaUI(): Promise<string> {
+  async createTestImageViaUI(
+    options: {
+      withPrompt?: boolean;
+      promptOverrides?: Partial<Omit<IPrompt, "id" | "images">>;
+    } = {},
+  ): Promise<string | { imageId: string; promptId: string }> {
     const page = this.getPage();
-    const electronApp = this.getElectronApp();
+    const { withPrompt = false, promptOverrides = {} } = options;
 
-    // 1. 确保在图像面板
-    await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
+    // 0. 使用快捷键切换到图像主界面（会自动关闭可能打开的模态框）
+    await page.keyboard.press("Control+i");
     await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
       state: "visible",
       timeout: 1000,
     });
+
+    // 1. 确保切换到网格视图
     await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
     await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}.active`, {
       timeout: 1000,
     });
 
-    // 2. 获取创建前的图像数量
+    // 2. 点击上传图像按钮, 打开上传模态框
+    await page.click(`#${Constants.Ids.IMAGE_ADD_BTN}`);
+
+    // 3. 等待上传模态框出现
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_UPLOAD_MODAL}.active`, {
+      state: "visible",
+      timeout: 1000,
+    });
+
+    // 4. 使用通用辅助方法上传图像
+    const newImageId = await this._uploadSingleImageViaUI(
+      `#${Constants.Ids.MODAL_IMAGE_UPLOAD_AREA}`,
+      `#${Constants.Ids.MODAL_IMAGE_PREVIEW_LIST}`,
+      `#${Constants.Ids.CONFIRM_IMAGE_UPLOAD_BTN}`,
+    );
+
+    // 5. 等待模态框关闭
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_UPLOAD_MODAL}`, {
+      state: "hidden",
+      timeout: 1000,
+    });
+
+    // 6. 等待新卡片出现在视图中
+    await page.waitForSelector(`.image-card[data-id="${newImageId}"]`, {
+      state: "visible",
+      timeout: 1000,
+    });
+
+    // 7. 如果需要，创建关联的提示词
+    if (withPrompt) {
+      const promptData: Omit<IPrompt, "id"> = {
+        title: this.generatePromptTitle("linked"),
+        content: `e2e_linked_prompt_content_${Date.now()}`,
+        contentTranslate: "",
+        note: "",
+        isSafe: 1,
+        isFavorite: 0,
+        tags: [],
+        ...promptOverrides,
+      };
+
+      const prompt = await page.evaluate(async (data) => {
+        return await window.electronAPI.addPrompt(data);
+      }, promptData);
+
+      // 建立提示词和图像的关联
+      await page.evaluate(
+        async (params: { promptId: string; imageId: string }) => {
+          await window.electronAPI.updatePrompt(params.promptId, {
+            images: [{ id: params.imageId }],
+          });
+        },
+        { promptId: prompt.id, imageId: newImageId },
+      );
+
+      return { imageId: newImageId, promptId: prompt.id };
+    }
+
+    return newImageId;
+  }
+
+  /**
+   * 上传单个图像的通用辅助方法
+   * 流程: 设置 mock → 点击上传按钮 → 选择文件 → 确认上传 → 获取图像 ID
+   * @param uploadAreaSelector - 上传区域选择器
+   * @param previewListSelector - 预览列表选择器
+   * @param confirmBtnSelector - 确认按钮选择器
+   * @returns 新创建的图像 ID
+   */
+  private async _uploadSingleImageViaUI(
+    uploadAreaSelector: string,
+    previewListSelector: string,
+    confirmBtnSelector: string,
+  ): Promise<string> {
+    const page = this.getPage();
+    const electronApp = this.getElectronApp();
+
+    // 生成测试图像文件
+    const testImagePath = await this._generateTempTestImage();
+
+    // 设置 mock 路径
+    await electronApp.evaluate(async (app, testPath: string) => {
+      (global as any).__testMockedImageFilePath = testPath;
+    }, testImagePath);
+
+    // 获取创建前的图像数量
     const imageCountBefore = await page.evaluate(async () => {
       const images = await window.electronAPI.getImages("updatedAt", "desc");
       return images.length;
     });
 
-    // 3. 生成测试图像文件
-    const testImagePath = await this._generateTempTestImage();
+    // 点击上传区域触发文件选择
+    await page.click(uploadAreaSelector);
 
-    // 4. 设置 mock 路径（通过全局变量）
-    await electronApp.evaluate(async (app, testPath: string) => {
-      // 通过设置 global 变量来 mock，主进程 handler 会检查此变量
-      (global as any).__testMockedImageFilePath = testPath;
-    }, testImagePath);
+    // 等待预览图出现
+    await page.waitForSelector(`${previewListSelector} .image-preview-item`, {
+      state: "visible",
+      timeout: 1000,
+    });
 
-    try {
-      // 5. 点击上传图像按钮, 打开上传模态框
-      await page.click(`#${Constants.Ids.IMAGE_ADD_BTN}`);
+    // 先点击确认按钮
+    await page.click(confirmBtnSelector);
 
-      // 6. 等待上传模态框出现
-      await page.waitForSelector(`#${Constants.Ids.IMAGE_UPLOAD_MODAL}.active`, {
-        state: "visible",
-        timeout: 1000,
-      });
+    // 使用轮询等待图像数量增加（更可靠的方式）
+    const startTime = Date.now();
+    const maxWaitTime = 5000;
+    let currentCount = imageCountBefore;
 
-      // 7. 点击上传区域触发文件选择(会命中 mock)
-      await page.click(`#${Constants.Ids.MODAL_IMAGE_UPLOAD_AREA}`);
-
-      // 8. 等待预览图出现(表示文件选择成功)
-      await page.waitForSelector(`#${Constants.Ids.MODAL_IMAGE_PREVIEW_LIST} .image-preview-item`, {
-        state: "visible",
-        timeout: 1000,
-      });
-
-      // 9. 点击确认上传按钮
-      await page.click(`#${Constants.Ids.CONFIRM_IMAGE_UPLOAD_BTN}`);
-
-      // 10. 等待模态框关闭
-      await page.waitForSelector(`#${Constants.Ids.IMAGE_UPLOAD_MODAL}`, {
-        state: "hidden",
-        timeout: 1000,
-      });
-
-      // 11. 等待图像数量增加
-      await page.waitForFunction(
-        (countBefore: number) => {
-          return window.electronAPI
-            .getImages("updatedAt", "desc")
-            .then((images) => images.length > countBefore);
-        },
-        imageCountBefore,
-        { timeout: 1000 },
-      );
-
-      // 12. 获取新创建的图像 ID(最新创建的)
-      const newImage = await page.evaluate(async () => {
+    while (
+      currentCount <= imageCountBefore &&
+      Date.now() - startTime < maxWaitTime
+    ) {
+      currentCount = await page.evaluate(async () => {
         const images = await window.electronAPI.getImages("updatedAt", "desc");
-        return images[0];
-      });
-
-      const newImageId = String(newImage.id);
-
-      // 13. 等待新卡片出现在视图中
-      await page.waitForSelector(`.image-card[data-id="${newImageId}"]`, {
-        state: "visible",
-        timeout: 1000,
-      });
-
-      return newImageId;
-    } finally {
-      // 12. 清除 mock
-      await electronApp.evaluate(async () => {
-        delete (global as any).__testMockedImageFilePath;
+        return images.length;
       });
     }
+
+    if (currentCount <= imageCountBefore) {
+      throw new Error(
+        `Timeout waiting for image to be created. Before: ${imageCountBefore}, After: ${currentCount}`,
+      );
+    }
+
+    // 清除 mock（在获取图像之前清除，但图像已经创建完成）
+    await electronApp.evaluate(async () => {
+      delete (global as any).__testMockedImageFilePath;
+    });
+
+    // 获取新创建的图像 ID
+    const images = await page.evaluate(async () => {
+      return await window.electronAPI.getImages("updatedAt", "desc");
+    });
+
+    const newImage = images[0];
+
+    if (!newImage) {
+      throw new Error(
+        `Failed to get newly created image from database. Images count: ${images.length}`,
+      );
+    }
+
+    return String(newImage.id);
   }
 
   /**
@@ -781,6 +1004,17 @@ export class ElectronTestHelper {
   private async _cleanupE2eTagsAndGroups(): Promise<void> {
     await this.cleanupImageTagsAndGroups();
     await this.cleanupPromptTagsAndGroups();
+  }
+
+  /**
+   * 清理所有 e2e 测试数据
+   * 包括：图像标签、提示词标签、图像标签组、提示词标签组、测试图像、测试提示词
+   * 标签和标签组直接删除，图像和提示词软删除到回收站
+   */
+  async cleanupAllE2eTestData(): Promise<void> {
+    await this._cleanupE2eTagsAndGroups();
+    await this.cleanupTestImages();
+    await this.cleanupTestPrompts();
   }
 
   /**
@@ -888,14 +1122,14 @@ export class ElectronTestHelper {
 
   /**
    * 清理测试创建的图像
-   * 通过文件名前缀 e2e_test_ 筛选测试数据
+   * 通过文件名前缀 e2e_筛选测试数据
    */
   async cleanupTestImages(): Promise<void> {
     const page = this.getPage();
     await page.evaluate(async () => {
       const images = await window.electronAPI.getImages("updatedAt", "desc");
       const testImages = images.filter((img) =>
-        img.fileName?.startsWith("e2e_test_"),
+        img.fileName?.startsWith("e2e_"),
       );
       for (const img of testImages) {
         await window.electronAPI.softDeleteImage(String(img.id));
@@ -905,19 +1139,35 @@ export class ElectronTestHelper {
 
   /**
    * 清理测试创建的提示词
-   * 通过内容包含 e2e_test_ 前缀筛选测试数据
+   * 通过内容包含 e2e_ 前缀筛选测试数据
    */
   async cleanupTestPrompts(): Promise<void> {
     const page = this.getPage();
     await page.evaluate(async () => {
       const prompts = await window.electronAPI.getPrompts("updatedAt", "desc");
-      const testPrompts = prompts.filter((p) =>
-        p.content?.includes("e2e_test_"),
-      );
+      const testPrompts = prompts.filter((p) => p.content?.includes("e2e_"));
       for (const prompt of testPrompts) {
         await window.electronAPI.softDeletePrompt(String(prompt.id));
       }
     });
+  }
+
+  /**
+   * 点击刷新按钮刷新数据
+   * 通过点击左下角刷新按钮触发数据刷新
+   */
+  async refreshData(): Promise<void> {
+    const page = this.getPage();
+    await page.click(`#${Constants.Ids.REFRESH_DATA_BTN}`);
+    // 等待数据刷新完成（通过 toast 提示判断）
+    await page.waitForFunction(
+      (toastId: string) => {
+        const toast = document.getElementById(toastId);
+        return toast && toast.textContent?.includes("数据已刷新");
+      },
+      Constants.Ids.TOAST_CONTAINER,
+      { timeout: 1000 },
+    );
   }
 
   /**
@@ -1102,9 +1352,10 @@ export class ElectronTestHelper {
 
 /**
  * 创建测试辅助实例
+ * @param testDataDir - 测试数据目录（可选，用于 E2E 测试隔离）
  */
-export function createElectronTest() {
-  return new ElectronTestHelper();
+export function createElectronTest(testDataDir?: string) {
+  return new ElectronTestHelper(testDataDir);
 }
 
 // ========== 标签管理器测试辅助函数 ==========
@@ -1142,21 +1393,11 @@ export async function enterImageTagManager(page: any) {
     timeout: 1000,
   });
 
-  // 等待标签列表加载完成（至少有一个标签项或空状态）
-  await page.waitForFunction(
-    (containerId: string) => {
-      const container = document.getElementById(containerId);
-      if (!container) return false;
-      const items = container.querySelectorAll(".tag-manager-item");
-      const emptyState = document.querySelector(".tag-manager-empty-state");
-      return (
-        items.length > 0 ||
-        (emptyState && (emptyState as HTMLElement).style.display !== "none")
-      );
-    },
-    Constants.Ids.IMAGE_TAG_GROUP_CARDS,
-    { timeout: 1000 },
-  );
+  // 等待标签管理器内容区域加载（不强制要求有数据）
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS}`, {
+    state: "attached",
+    timeout: 1000,
+  });
 }
 
 /**
@@ -1192,21 +1433,11 @@ export async function enterPromptTagManager(page: any) {
     timeout: 1000,
   });
 
-  // 等待标签列表加载完成（至少有一个标签项或空状态）
-  await page.waitForFunction(
-    (containerId: string) => {
-      const container = document.getElementById(containerId);
-      if (!container) return false;
-      const items = container.querySelectorAll(".tag-manager-item");
-      const emptyState = document.querySelector(".tag-manager-empty-state");
-      return (
-        items.length > 0 ||
-        (emptyState && (emptyState as HTMLElement).style.display !== "none")
-      );
-    },
-    Constants.Ids.PROMPT_TAG_GROUP_CARDS,
-    { timeout: 1000 },
-  );
+  // 等待标签列表区域加载（不强制要求有数据）
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_GROUP_CARDS}`, {
+    state: "attached",
+    timeout: 1000,
+  });
 }
 
 /**
@@ -1721,7 +1952,8 @@ export async function createPromptTagGroup(
  * 3. Wait for image grid container to be visible
  */
 export async function enterImageGridView(page: any, screenshotPath?: string) {
-  await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
+  // 使用快捷键切换到图像主界面（自动关闭可能打开的模态框）
+  await page.keyboard.press("Control+i");
   await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
     state: "visible",
     timeout: 1000,
@@ -1749,7 +1981,8 @@ export async function enterImageGridView(page: any, screenshotPath?: string) {
  * 3. Wait for prompt panel to be active
  */
 export async function enterPromptGridView(page: any, screenshotPath?: string) {
-  await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+  // 使用快捷键切换到提示词主界面（自动关闭可能打开的模态框）
+  await page.keyboard.press("Control+p");
   await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
     state: "visible",
     timeout: 1000,
@@ -1777,18 +2010,12 @@ export async function enterPromptGridView(page: any, screenshotPath?: string) {
  * 3. Wait for list-item--image elements to be visible
  */
 export async function enterImageListView(page: any, screenshotPath?: string) {
-  // 点击图像管理器按钮
-  await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
+  // 使用快捷键切换到图像主界面（自动关闭可能打开的模态框）
+  await page.keyboard.press("Control+i");
   await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
     state: "visible",
     timeout: 1000,
   });
-  await page
-    .waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
-      state: "hidden",
-      timeout: 1000,
-    })
-    .catch(() => {});
 
   // 点击列表视图按钮
   await page.click(`#${Constants.Ids.IMAGE_LIST_VIEW_BTN}`);
@@ -1824,18 +2051,12 @@ export async function enterImageListView(page: any, screenshotPath?: string) {
  * 3. Wait for list-item--prompt elements to be visible
  */
 export async function enterPromptListView(page: any, screenshotPath?: string) {
-  // 点击提示词管理器按钮
-  await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+  // 使用快捷键切换到提示词主界面（自动关闭可能打开的模态框）
+  await page.keyboard.press("Control+p");
   await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
     state: "visible",
     timeout: 1000,
   });
-  await page
-    .waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
-      state: "hidden",
-      timeout: 1000,
-    })
-    .catch(() => {});
 
   // 点击列表视图按钮
   await page.click(`#${Constants.Ids.PROMPT_LIST_VIEW_BTN}`);
@@ -2020,16 +2241,12 @@ export async function openPromptDetail(page: any, screenshotPath?: string) {
  * 6. Wait for detail modal to show
  */
 export async function enterImageDetailView(page: any, screenshotPath?: string) {
-  // 检查是否已经在图像面板，如果不在则切换
-  const imagePanel = page.locator(`#${Constants.Ids.IMAGE_PANEL}`);
-  const isImagePanelVisible = await imagePanel.isVisible().catch(() => false);
-  if (!isImagePanelVisible) {
-    await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
-      state: "visible",
-      timeout: 1000,
-    });
-  }
+  // 使用快捷键切换到图像主界面（自动关闭可能打开的模态框）
+  await page.keyboard.press("Control+i");
+  await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
+    state: "visible",
+    timeout: 1000,
+  });
 
   // 确保切换到网格视图（点击网格视图按钮）
   await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
@@ -2088,16 +2305,12 @@ export async function enterPromptDetailView(
   page: any,
   screenshotPath?: string,
 ) {
-  // 检查是否已经在提示词面板，如果不在则切换
-  const promptPanel = page.locator(`#${Constants.Ids.PROMPT_PANEL}`);
-  const isPromptPanelVisible = await promptPanel.isVisible().catch(() => false);
-  if (!isPromptPanelVisible) {
-    await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
-      state: "visible",
-      timeout: 1000,
-    });
-  }
+  // 使用快捷键切换到提示词主界面（自动关闭可能打开的模态框）
+  await page.keyboard.press("Control+p");
+  await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
+    state: "visible",
+    timeout: 1000,
+  });
 
   // 确保切换到网格视图（点击网格视图按钮）
   await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
@@ -2468,31 +2681,62 @@ export async function openPromptDetailById(
 // ========== 共用 Fixture ==========
 
 /**
- * 共用的 Playwright fixture
- * 每个测试独立启动和关闭应用，page fixture 接管应用关闭，避免超时冲突
+ * 生成测试专用数据目录路径
+ * 使用临时目录，确保测试数据隔离
  */
-export const test = base.extend<{
-  _electronTest: ReturnType<typeof createElectronTest>;
-  electronTest: ReturnType<typeof createElectronTest>;
-  page: ReturnType<ReturnType<typeof createElectronTest>["getPage"]>;
-}>({
-  // 核心 fixture：管理应用生命周期，但不在此处关闭
-  _electronTest: async ({}, use) => {
-    const electronTest = createElectronTest();
-    await electronTest.launch();
-    await use(electronTest);
-    // 不在这里关闭，避免超时冲突
+function getTestDataDir(): string {
+  const timestamp = Date.now();
+  const randomId = Math.random().toString(36).slice(2, 8);
+  return join(tmpdir(), `prompt-manager-e2e-${timestamp}-${randomId}`);
+}
+
+/**
+ * 共用的 Playwright fixture
+ * 使用 worker-scoped fixture 管理应用生命周期
+ * 每个测试文件只启动和关闭一次应用
+ */
+export const test = base.extend<
+  {
+    electronTest: ReturnType<typeof createElectronTest>;
+    page: ReturnType<ReturnType<typeof createElectronTest>["getPage"]>;
   },
-  // 别名：供测试显式使用 electronTest 方法
+  {
+    _electronTest: ReturnType<typeof createElectronTest>;
+    _testDataDir: string;
+  }
+>({
+  // worker-scoped fixture：测试数据目录
+  _testDataDir: [
+    // oxlint-disable-next-line no-empty-pattern
+    async ({}, use) => {
+      const testDataDir = getTestDataDir();
+      await use(testDataDir);
+      // 测试完成后清理测试数据目录
+      try {
+        rmSync(testDataDir, { recursive: true, force: true });
+      } catch {
+        // 忽略清理错误
+      }
+    },
+    { scope: "worker" },
+  ],
+  // worker-scoped fixture：在 worker 级别管理应用生命周期
+  _electronTest: [
+    async ({ _testDataDir }, use) => {
+      const electronTest = createElectronTest(_testDataDir);
+      await electronTest.launch();
+      await use(electronTest);
+      await electronTest.close();
+    },
+    { scope: "worker" },
+  ],
+  // test-scoped fixture：传递 electronTest 给测试使用
   electronTest: async ({ _electronTest }, use) => {
     await use(_electronTest);
   },
-  // page 接管关闭逻辑，确保 page 操作完成后再关闭应用
+  // test-scoped fixture：传递 page 给测试使用
   page: async ({ _electronTest }, use) => {
-    const page = _electronTest.getPage();
-    await use(page);
-    // 测试完成后关闭应用
-    await _electronTest.close();
+    await use(_electronTest.getPage());
   },
 });
 
@@ -2510,15 +2754,15 @@ export async function waitForImageOrderChange(
   timeout = 5000,
 ): Promise<void> {
   await page.waitForFunction(
-    (expectedId: string) => {
+    (params: { expectedId: string; listId: string }) => {
       const items = document.querySelectorAll(
-        "#imagePreviewList .image-preview-item",
+        `#${params.listId} .image-preview-item`,
       );
       if (items.length === 0) return false;
       const firstId = items[0]?.getAttribute("data-image-id");
-      return firstId === expectedId;
+      return firstId === params.expectedId;
     },
-    expectedFirstId,
+    { expectedId: expectedFirstId, listId: Constants.Ids.IMAGE_PREVIEW_LIST },
     { timeout },
   );
 }

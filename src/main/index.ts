@@ -1156,8 +1156,15 @@ ipcMain.handle('save-image-file', async (event, sourcePath, fileName) => {
 
 // 打开图像文件对话框（支持多选）
 ipcMain.handle('dialog:open-image-files', async () => {
-  // 测试 mock 优先
+  // 测试 mock 优先（支持单路径或多路径）
   const mockPath = (global as any).__testMockedImageFilePath as string | undefined;
+  const mockPaths = (global as any).__testMockedImageFilePaths as string[] | undefined;
+  
+  if (mockPaths && mockPaths.length > 0) {
+    delete (global as any).__testMockedImageFilePaths; // 一次性使用
+    return mockPaths;
+  }
+  
   if (mockPath) {
     delete (global as any).__testMockedImageFilePath; // 一次性使用
     return [mockPath];
