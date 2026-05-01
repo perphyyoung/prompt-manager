@@ -1,18 +1,47 @@
 import { expect } from "@playwright/test";
+import { Constants } from "../src/constants.ts";
 import {
-  test,
   createImageTagsInManagerBatch,
   createPromptTagsInManagerBatch,
   enterImageGridView,
-  enterPromptGridView,
   enterImageTagManager,
+  enterPromptGridView,
   enterPromptTagManager,
   openImageDetail,
   openPromptDetail,
+  test,
 } from "./electron-test.ts";
-import { Constants } from "../src/constants.ts";
 
-test.describe("批量工具栏 - 详情界面功能测试", () => {
+test.describe("批量工具栏 - 图像详情界面功能测试", () => {
+  // 共享的测试数据
+  let sharedImageId: string;
+
+  // 文件级别：创建基础测试数据
+  test.beforeAll(async ({ electronTest }) => {
+    // 创建测试图像（用于详情界面测试）
+    const result = await electronTest.createTestImageViaUI({
+      withPrompt: false,
+    });
+    sharedImageId = typeof result === "string" ? result : result.imageId;
+
+    // 创建共享的测试标签并关联到图像
+    const tagNames = await electronTest.createImageTags(2, "shared");
+    await electronTest.linkTagsToImage(sharedImageId, tagNames);
+
+    // 刷新界面以显示新数据
+    await electronTest.refreshData();
+  });
+
+  // 每个测试后使用快捷键切换到图像主界面，自动关闭可能打开的模态框
+  test.afterEach(async ({ page }) => {
+    // 使用快捷键切换到图像主界面（会自动关闭所有模态框）
+    await page.keyboard.press("Control+i");
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
+      state: "visible",
+      timeout: 1000,
+    });
+  });
+
   // ==================== 图像详情界面 - 全选按钮 ====================
   test("图像详情界面-全选按钮应该选中所有标签", async ({
     electronTest,
@@ -20,12 +49,14 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
   }) => {
     await electronTest.logTestStart();
 
-    // 进入图像网格视图并打开详情
+    // 进入图像网格视图并打开详情（标签已在 beforeAll 中关联）
     await enterImageGridView(page);
     await openImageDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#imageDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 点击批量按钮进入批量模式
     const batchBtn = page.locator(
@@ -42,17 +73,23 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     // 点击"全选"按钮
     await toolbar.locator('[data-action="SelectAll"]').click();
 
-    // 验证所有标签都被选中
+    // 验证所有标签都被选中（至少有2个）
     await page.waitForFunction(
       () => {
         const tags = document.querySelectorAll(".tag-batch-selectable");
         const selectedTags = document.querySelectorAll(
           ".tag-batch-selectable.tag-selected",
         );
-        return selectedTags.length === tags.length;
+        return tags.length >= 2 && selectedTags.length === tags.length;
       },
       { timeout: 1000 },
     );
+
+    // 验证计数显示正确
+    const countText = await toolbar
+      .locator(".batch-toolbar-count")
+      .textContent();
+    expect(countText).toContain("已选择 2 个标签");
 
     // 点击取消退出批量模式
     await toolbar.locator('[data-action="Cancel"]').click();
@@ -66,12 +103,14 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
   }) => {
     await electronTest.logTestStart();
 
-    // 进入图像网格视图并打开详情
+    // 进入图像网格视图并打开详情（标签已在 beforeAll 中关联）
     await enterImageGridView(page);
     await openImageDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#imageDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 点击批量按钮进入批量模式
     const batchBtn = page.locator(
@@ -140,7 +179,9 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     await openImageDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#imageDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 在详情中添加测试标签和对照组标签
     const tagInput = page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`);
@@ -216,11 +257,22 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
     await expect(confirmModal).toBeHidden({ timeout: 1000 });
 
-    // PRD: 验证清空选择（选中数=0）
-    const countText = await toolbar
-      .locator(".batch-toolbar-count")
-      .textContent();
-    expect(countText).toContain("已选择 0 个标签");
+    // PRD: 验证清空选择（选中数=0）- 等待计数更新
+    await expect
+      .poll(
+        async () => {
+          const text = await toolbar
+            .locator(".batch-toolbar-count")
+            .textContent();
+          return text || "";
+        },
+        {
+          message: "等待工具栏计数更新为 0",
+          timeout: 3000,
+          intervals: [100, 200, 300],
+        },
+      )
+      .toContain("已选择 0 个标签");
 
     // PRD: 验证 Toast 提示 - 等待包含"已删除"的特定 Toast
     // 使用 expect.poll 等待 Toast 出现并包含预期文本
@@ -266,16 +318,6 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
       { testTag: testTagName, otherTag: otherTagName },
       { timeout: 1000 },
     );
-
-    // 确保模态框已关闭（如果删除导致模态框关闭，则等待其关闭；否则手动关闭）
-    const modalLocator = page.locator("#imageDetailModal");
-    if (await modalLocator.isVisible()) {
-      await page.keyboard.press("Escape");
-      await expect(modalLocator).toBeHidden({ timeout: 1000 });
-    }
-
-    // 手动清理测试数据：删除图像测试标签
-    await electronTest.cleanupImageTagsAndGroups();
   });
 
   // ==================== 图像详情界面 - 单选（点击标签） ====================
@@ -302,7 +344,9 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     await openImageDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#imageDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 在详情中添加测试标签
     const tagInput = page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`);
@@ -374,9 +418,6 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     // 点击取消退出批量模式
     await toolbar.locator('[data-action="Cancel"]').click();
     await expect(toolbar).toBeHidden({ timeout: 1000 });
-
-    // 手动清理测试数据：删除图像测试标签
-    await electronTest.cleanupImageTagsAndGroups();
   });
 
   // ==================== 图像详情界面 - 多选（Ctrl+点击标签） ====================
@@ -403,7 +444,9 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     await openImageDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#imageDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 在详情中添加测试标签
     const tagInput = page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`);
@@ -479,9 +522,6 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     // 点击取消退出批量模式
     await toolbar.locator('[data-action="Cancel"]').click();
     await expect(toolbar).toBeHidden({ timeout: 1000 });
-
-    // 手动清理测试数据：删除图像测试标签
-    await electronTest.cleanupImageTagsAndGroups();
   });
 
   // ==================== 图像详情界面 - 取消按钮 ====================
@@ -491,12 +531,14 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
   }) => {
     await electronTest.logTestStart();
 
-    // 进入图像网格视图并打开详情
+    // 进入图像网格视图并打开详情（标签已在 beforeAll 中关联）
     await enterImageGridView(page);
     await openImageDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#imageDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 点击批量按钮进入批量模式
     const batchBtn = page.locator(
@@ -521,12 +563,14 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
   test("图像详情界面-ESC键应该退出批量模式", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
-    // 进入图像网格视图并打开详情
+    // 进入图像网格视图并打开详情（标签已在 beforeAll 中关联）
     await enterImageGridView(page);
     await openImageDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#imageDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 点击批量按钮进入批量模式
     const batchBtn = page.locator(
@@ -546,6 +590,35 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     // 验证工具栏隐藏
     await expect(toolbar).toBeHidden({ timeout: 1000 });
   });
+});
+
+test.describe("批量工具栏 - 提示词详情界面功能测试", () => {
+  // 共享的测试数据
+  let sharedPromptId: string;
+
+  // 文件级别：创建基础测试数据
+  test.beforeAll(async ({ electronTest }) => {
+    // 创建测试提示词（用于详情界面测试）
+    const result = await electronTest.createTestPromptViaUI({ imageCount: 0 });
+    sharedPromptId = typeof result === "string" ? result : result.promptId;
+
+    // 创建共享的测试标签并关联到提示词
+    const tagNames = await electronTest.createPromptTags(2, "shared");
+    await electronTest.linkTagsToPrompt(sharedPromptId, tagNames);
+
+    // 刷新界面以显示新数据
+    await electronTest.refreshData();
+  });
+
+  // 每个测试后使用快捷键切换到提示词主界面，自动关闭可能打开的模态框
+  test.afterEach(async ({ page }) => {
+    // 使用快捷键切换到提示词主界面（会自动关闭所有模态框）
+    await page.keyboard.press("Control+p");
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
+      state: "visible",
+      timeout: 1000,
+    });
+  });
 
   // ==================== 提示词详情界面 - 全选按钮 ====================
   test("提示词详情界面-全选按钮应该选中所有标签", async ({
@@ -554,12 +627,14 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
   }) => {
     await electronTest.logTestStart();
 
-    // 进入提示词网格视图并打开详情
+    // 进入提示词网格视图并打开详情（标签已在 beforeAll 中关联）
     await enterPromptGridView(page);
     await openPromptDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#promptDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 点击批量按钮进入批量模式
     const batchBtn = page.locator(
@@ -576,17 +651,23 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     // 点击"全选"按钮
     await toolbar.locator('[data-action="SelectAll"]').click();
 
-    // 验证所有标签都被选中
+    // 验证所有标签都被选中（至少有2个）
     await page.waitForFunction(
       () => {
         const tags = document.querySelectorAll(".tag-batch-selectable");
         const selectedTags = document.querySelectorAll(
           ".tag-batch-selectable.tag-selected",
         );
-        return selectedTags.length === tags.length;
+        return tags.length >= 2 && selectedTags.length === tags.length;
       },
       { timeout: 1000 },
     );
+
+    // 验证计数显示正确
+    const countText = await toolbar
+      .locator(".batch-toolbar-count")
+      .textContent();
+    expect(countText).toContain("已选择 2 个标签");
 
     // 点击取消退出批量模式
     await toolbar.locator('[data-action="Cancel"]').click();
@@ -600,12 +681,14 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
   }) => {
     await electronTest.logTestStart();
 
-    // 进入提示词网格视图并打开详情
+    // 进入提示词网格视图并打开详情（标签已在 beforeAll 中关联）
     await enterPromptGridView(page);
     await openPromptDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#promptDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 点击批量按钮进入批量模式
     const batchBtn = page.locator(
@@ -674,7 +757,9 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     await openPromptDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#promptDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 在详情中添加测试标签和对照组标签
     const tagInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`);
@@ -724,7 +809,6 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     );
     await testTagItem.click();
 
-    // 验证只选中了测试标签
     await page.waitForFunction(
       (tagName: string) => {
         const selectedTags = document.querySelectorAll(
@@ -750,11 +834,22 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
     await expect(confirmModal).toBeHidden({ timeout: 1000 });
 
-    // PRD: 验证清空选择（选中数=0）
-    const countText = await toolbar
-      .locator(".batch-toolbar-count")
-      .textContent();
-    expect(countText).toContain("已选择 0 个标签");
+    // PRD: 验证清空选择（选中数=0）- 等待计数更新
+    await expect
+      .poll(
+        async () => {
+          const text = await toolbar
+            .locator(".batch-toolbar-count")
+            .textContent();
+          return text || "";
+        },
+        {
+          message: "等待工具栏计数更新为 0",
+          timeout: 3000,
+          intervals: [100, 200, 300],
+        },
+      )
+      .toContain("已选择 0 个标签");
 
     // PRD: 验证 Toast 提示 - 等待包含"已删除"的特定 Toast
     // 使用 expect.poll 等待 Toast 出现并包含预期文本
@@ -786,23 +881,22 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     expect(toastText).toMatch(/删除成功 | 已删除 | 成功/);
 
     // 验证测试标签已删除，对照组标签仍然存在
-    await page.waitForFunction(
+    const verifyResult = await page.evaluate(
       (params: { testTag: string; otherTag: string }) => {
         const tags = document.querySelectorAll(".tag-editable");
         const tagNames = Array.from(tags).map((tag) =>
           tag.getAttribute("data-tag"),
         );
-        return (
-          !tagNames.includes(params.testTag) &&
-          tagNames.includes(params.otherTag)
-        );
+        return {
+          allTagNames: tagNames,
+          testTagDeleted: !tagNames.includes(params.testTag),
+          otherTagExists: tagNames.includes(params.otherTag),
+        };
       },
       { testTag: testTagName, otherTag: otherTagName },
-      { timeout: 1000 },
     );
-
-    // 手动清理测试数据：删除提示词测试标签
-    await electronTest.cleanupPromptTagsAndGroups();
+    expect(verifyResult.testTagDeleted).toBe(true);
+    expect(verifyResult.otherTagExists).toBe(true);
   });
 
   // ==================== 提示词详情界面 - 单选（点击标签） ====================
@@ -829,7 +923,9 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     await openPromptDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#promptDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 在详情中添加测试标签
     const tagInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`);
@@ -901,9 +997,6 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     // 点击取消退出批量模式
     await toolbar.locator('[data-action="Cancel"]').click();
     await expect(toolbar).toBeHidden({ timeout: 1000 });
-
-    // 手动清理测试数据：删除提示词测试标签
-    await electronTest.cleanupPromptTagsAndGroups();
   });
 
   // ==================== 提示词详情界面 - 多选（Ctrl+点击标签） ====================
@@ -933,7 +1026,9 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     await openPromptDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#promptDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 在详情中添加测试标签
     const tagInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`);
@@ -1009,9 +1104,6 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
     // 点击取消退出批量模式
     await toolbar.locator('[data-action="Cancel"]').click();
     await expect(toolbar).toBeHidden({ timeout: 1000 });
-
-    // 手动清理测试数据：删除提示词测试标签
-    await electronTest.cleanupPromptTagsAndGroups();
   });
 
   // ==================== 提示词详情界面 - 取消按钮 ====================
@@ -1021,12 +1113,14 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
   }) => {
     await electronTest.logTestStart();
 
-    // 进入提示词网格视图并打开详情
+    // 进入提示词网格视图并打开详情（标签已在 beforeAll 中关联）
     await enterPromptGridView(page);
     await openPromptDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#promptDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 点击批量按钮进入批量模式
     const batchBtn = page.locator(
@@ -1054,12 +1148,14 @@ test.describe("批量工具栏 - 详情界面功能测试", () => {
   }) => {
     await electronTest.logTestStart();
 
-    // 进入提示词网格视图并打开详情
+    // 进入提示词网格视图并打开详情（标签已在 beforeAll 中关联）
     await enterPromptGridView(page);
     await openPromptDetail(page);
 
     // 等待详情模态框打开
-    await page.waitForSelector("#promptDetailModal.active", { timeout: 1000 });
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`, {
+      timeout: 1000,
+    });
 
     // 点击批量按钮进入批量模式
     const batchBtn = page.locator(
