@@ -255,7 +255,8 @@ export abstract class TagManager {
         ? tags.filter((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
         : tags;
 
-      if (filteredTags.length === 0) {
+      // 当没有标签但有标签组时，仍然显示标签组
+      if (filteredTags.length === 0 && groups.length === 0) {
         container.style.display = 'none';
         if (emptyState) {
           emptyState.style.display = 'flex';

@@ -107,14 +107,14 @@ export abstract class BaseTestDataFactory<T> {
    * @param groupName - 组名称
    * @param tagLabel - 标签后缀（将生成 e2e_{tagLabel}_{timestamp}_{random} 格式的名称）
    * @param isTop - 是否为首位组
-   * @returns 创建的标签名称
+   * @returns 创建的标签组信息和标签名
    */
-  async createTagInGroup(groupName: string, tagLabel: string, isTop?: boolean): Promise<string> {
+  async createTagInGroup(groupName: string, tagLabel: string, isTop?: boolean): Promise<{ group: { id: number; name: string; sortOrder: number }; tagName: string }> {
     const tagName = this.generateName(tagLabel);
     await this.createTag(tagName);
     const group = await this.createTagGroup(groupName, isTop);
     await this._assignTagToGroup(tagName, group.id);
-    return tagName;
+    return { group, tagName };
   }
 
   /**

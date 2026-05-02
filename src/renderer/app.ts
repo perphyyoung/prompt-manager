@@ -19,6 +19,7 @@ import {
 
 import eventBus from '../utils/EventBus.ts';
 import { HtmlUtils, cacheManager } from '../utils/index.ts';
+import { clearTagsCache } from '../pyTagGroups/operations.ts';
 import { HoverTooltipManager, ShortcutManager } from './renderer_utils/index.ts';
 import type { IPrompt, IImage } from '../types/entities.ts';
 import type {
@@ -460,6 +461,10 @@ class PromptManager implements IApp {
       // 刷新标签筛选
       await this.promptPanelManager?.renderTagFilters();
       await this.imagePanelManager?.renderTagFilters();
+
+      // 清除 PyTagGroups 缓存，确保下次打开标签管理器时加载最新数据
+      clearTagsCache('prompt');
+      clearTagsCache('image');
 
       // 刷新统计
       await this.renderStatistics();

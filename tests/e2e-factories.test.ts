@@ -285,7 +285,8 @@ describe("PromptApiFactory", () => {
     const factory = new PromptApiFactory(page as any);
     const result = await factory.createTagInGroup("test_group", "my_tag");
 
-    expect(result.startsWith("e2e_my_tag_")).toBe(true);
+    expect(result.group).toEqual(groupResult);
+    expect(result.tagName.startsWith("e2e_my_tag_")).toBe(true);
     expect(addPromptTag).toHaveBeenCalledTimes(1);
     expect(createPromptTagGroup).toHaveBeenCalledWith("test_group", 0);
     expect(assignPromptTagToBelongGroup).toHaveBeenCalledWith(addedTag, 1);
@@ -310,7 +311,8 @@ describe("PromptApiFactory", () => {
     const factory = new PromptApiFactory(page as any);
     const result = await factory.createTagInGroup("top_group", "my_tag", true);
 
-    expect(result.startsWith("e2e_my_tag_")).toBe(true);
+    expect(result.group.sortOrder).toBe(1);
+    expect(result.tagName.startsWith("e2e_my_tag_")).toBe(true);
   });
 });
 
@@ -489,7 +491,8 @@ describe("ImageApiFactory", () => {
     const factory = new ImageApiFactory(page as any);
     const result = await factory.createTagInGroup("test_group", "my_tag");
 
-    expect(result.startsWith("e2e_my_tag_")).toBe(true);
+    expect(result.group).toEqual(groupResult);
+    expect(result.tagName.startsWith("e2e_my_tag_")).toBe(true);
     expect(addImageTag).toHaveBeenCalledTimes(1);
     expect(createImageTagGroup).toHaveBeenCalledWith("test_group", 0);
     expect(assignImageTagToBelongGroup).toHaveBeenCalledWith(addedTag, 1);
@@ -515,7 +518,8 @@ describe("ImageApiFactory", () => {
     const factory = new ImageApiFactory(page as any);
     const result = await factory.createTagInGroup("top_group", "my_tag", true);
 
-    expect(result.startsWith("e2e_my_tag_")).toBe(true);
+    expect(result.group.sortOrder).toBe(1);
+    expect(result.tagName.startsWith("e2e_my_tag_")).toBe(true);
   });
 });
 

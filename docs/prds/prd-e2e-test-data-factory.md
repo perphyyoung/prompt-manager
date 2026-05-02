@@ -41,7 +41,7 @@
 - `PromptApiFactory.createTag(tagName)` 调用 `window.electronAPI.addPromptTag()` 创建独立标签
 - `PromptApiFactory.createTags(count, label)` 批量创建独立标签
 - `PromptApiFactory.createTagGroup(name, isTop?)` 调用 `window.electronAPI.createPromptTagGroup()` 创建标签组，`isTop` 为 true 时查询现有组最小 `sortOrder`，取 `min(现有) - 1`（无现有组时为 `-1`）使其成为首位组
-- `PromptApiFactory.createTagInGroup(groupName, tagLabel, isTop?)` 创建标签组并在其中创建一个标签，返回标签名称
+- `PromptApiFactory.createTagInGroup(groupName, tagLabel, isTop?)` 创建标签组并在其中创建一个标签，返回 `{ group: { id, name, sortOrder }, tagName }`
 - `PromptApiFactory.createWithTags(data, tagNames)` 创建提示词并关联标签
 - `PromptApiFactory.createWithImages(data, imageIds)` 创建提示词时直接设置 `images` 字段关联图像
 - `PromptApiFactory.createWithImageCount(label, imageCount, imageLabelPrefix?)` 创建带指定数量图像的提示词，图像通过内部 API 直接创建，不依赖图像工厂
@@ -53,7 +53,7 @@
 - `ImageApiFactory.createTag(tagName)` 调用 `window.electronAPI.addImageTag()` 创建独立标签
 - `ImageApiFactory.createTags(count, label)` 批量创建独立标签
 - `ImageApiFactory.createTagGroup(name, isTop?)` 调用 `window.electronAPI.createImageTagGroup()` 创建标签组，`isTop` 为 true 时查询现有组最小 `sortOrder`，取 `min(现有) - 1`（无现有组时为 `-1`）使其成为首位组
-- `ImageApiFactory.createTagInGroup(groupName, tagLabel, isTop?)` 创建标签组并在其中创建一个标签，返回标签名称
+- `ImageApiFactory.createTagInGroup(groupName, tagLabel, isTop?)` 创建标签组并在其中创建一个标签，返回 `{ group: { id, name, sortOrder }, tagName }`
 - `ImageApiFactory.createWithTags(data, tagNames)` 创建图像并关联标签
 - `ImageApiFactory.createWithPromptCount(label, promptCount, promptLabelPrefix?)` 创建带指定数量提示词的图像，提示词通过内部 API 直接创建，不依赖提示词工厂
 

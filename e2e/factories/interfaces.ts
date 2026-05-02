@@ -37,7 +37,7 @@ export interface IPromptDataFactory {
   createTag(tagName: string): Promise<void>;
   createTags(count: number, label: string): Promise<string[]>;
   createTagGroup(name: string, isTop?: boolean): Promise<{ id: number; name: string; sortOrder: number }>;
-  createTagInGroup(groupName: string, tagLabel: string, isTop?: boolean): Promise<string>;
+  createTagInGroup(groupName: string, tagLabel: string, isTop?: boolean): Promise<{ group: { id: number; name: string; sortOrder: number }; tagName: string }>;
   createWithTags(data: PromptCreateData, tagNames: string[]): Promise<IPrompt>;
   createWithImages(data: PromptCreateData, imageIds: string[]): Promise<IPrompt>;
 }
@@ -51,7 +51,7 @@ export interface IImageDataFactory {
   createTag(tagName: string): Promise<void>;
   createTags(count: number, label: string): Promise<string[]>;
   createTagGroup(name: string, isTop?: boolean): Promise<{ id: number; name: string; sortOrder: number }>;
-  createTagInGroup(groupName: string, tagLabel: string, isTop?: boolean): Promise<string>;
+  createTagInGroup(groupName: string, tagLabel: string, isTop?: boolean): Promise<{ group: { id: number; name: string; sortOrder: number }; tagName: string }>;
   createWithTags(data: ImageCreateData, tagNames: string[]): Promise<IImage>;
   createWithPromptCount(
     label: string,

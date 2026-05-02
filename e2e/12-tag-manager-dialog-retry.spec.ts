@@ -5,12 +5,6 @@ import {
   enterPromptTagManager,
   closeImageTagManager,
   closePromptTagManager,
-  createImageTagInManager,
-  createPromptTagInManager,
-  createImageTagsInManagerBatch,
-  createPromptTagsInManagerBatch,
-  createImageTagGroup,
-  createPromptTagGroup,
 } from "./electron-test.ts";
 
 import { Constants } from "../src/constants.ts";
@@ -31,12 +25,16 @@ test.describe("标签管理对话框失败重试功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      await enterImageTagManager(page);
 
       // 创建一个已存在的标签
+      const factory = electronTest.getApiFactory();
       const existingTagName =
         electronTest.generateE2ePrefixName("img_existing");
-      await createImageTagInManager(page, existingTagName);
+      await factory.createImageFactory().createTag(existingTagName);
+
+      // F5 刷新数据后打开标签管理器
+      await electronTest.refreshData();
+      await enterImageTagManager(page);
 
       // 再次尝试创建同名标签
       await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_IN_MANAGER_BTN}`);
@@ -90,9 +88,6 @@ test.describe("标签管理对话框失败重试功能", () => {
       await expect(newTagElement).toBeVisible({ timeout: 1000 });
 
       await closeImageTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupImageTagsAndGroups();
     });
 
     test("重命名标签时标签名已存在 - 对话框保持打开并保留输入", async ({
@@ -100,12 +95,17 @@ test.describe("标签管理对话框失败重试功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      await enterImageTagManager(page);
 
       // 创建两个标签
+      const factory = electronTest.getApiFactory();
       const tagName1 = electronTest.generateE2ePrefixName("img_rename1");
       const tagName2 = electronTest.generateE2ePrefixName("img_rename2");
-      await createImageTagsInManagerBatch(page, [tagName1, tagName2]);
+      await factory.createImageFactory().createTag(tagName1);
+      await factory.createImageFactory().createTag(tagName2);
+
+      // F5 刷新数据后打开标签管理器
+      await electronTest.refreshData();
+      await enterImageTagManager(page);
 
       // 点击编辑第一个标签
       const tagItem = page.locator(
@@ -168,9 +168,6 @@ test.describe("标签管理对话框失败重试功能", () => {
       await expect(renamedTag).toBeVisible({ timeout: 1000 });
 
       await closeImageTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupImageTagsAndGroups();
     });
 
     test("新建标签组时名称重复 - 对话框保持打开并保留输入", async ({
@@ -178,13 +175,18 @@ test.describe("标签管理对话框失败重试功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      await enterImageTagManager(page);
 
-      // 创建一个已存在的标签组
-      const { groupName: existingGroupName } = await createImageTagGroup(
-        page,
+      // 创建一个已存在的标签组并添加一个标签（空标签组不显示）
+      const factory = electronTest.getApiFactory();
+      const { group, tagName: _tagName } = await factory.createImageFactory().createTagInGroup(
         "img_group_existing",
+        "tag_in_group",
       );
+      const existingGroupName = group.name;
+
+      // F5 刷新数据后打开标签管理器
+      await electronTest.refreshData();
+      await enterImageTagManager(page);
 
       // 再次尝试创建同名标签组
       await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_GROUP_BTN}`);
@@ -223,7 +225,7 @@ test.describe("标签管理对话框失败重试功能", () => {
       await page.click(`#${Constants.Ids.SAVE_IMAGE_TAG_GROUP_BTN}`);
 
       // 验证标签组创建成功
-      const groupId = await page.waitForFunction(
+      const createdGroupId = await page.waitForFunction(
         async (name: string) => {
           const groups = await window.electronAPI.getImageTagGroups();
           const group = groups.find(
@@ -235,7 +237,7 @@ test.describe("标签管理对话框失败重试功能", () => {
         { timeout: 1000 },
       );
 
-      expect(groupId).toBeTruthy();
+      expect(createdGroupId).toBeTruthy();
 
       // 验证对话框关闭
       await expect(
@@ -244,14 +246,11 @@ test.describe("标签管理对话框失败重试功能", () => {
 
       // 验证新标签组出现在列表中
       const newGroupCard = page.locator(
-        `#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-group-card[data-group-id="${groupId}"]`,
+        `#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-group-card[data-group-id="${createdGroupId}"]`,
       );
       await expect(newGroupCard).toBeVisible({ timeout: 1000 });
 
       await closeImageTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupImageTagsAndGroups();
     });
 
     test("编辑标签组时名称重复 - 对话框保持打开并保留输入", async ({
@@ -259,17 +258,23 @@ test.describe("标签管理对话框失败重试功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      await enterImageTagManager(page);
 
-      // 创建两个标签组
-      const { groupId: groupId1 } = await createImageTagGroup(
-        page,
+      // 创建两个标签组（带标签才能在UI中显示）
+      const factory = electronTest.getApiFactory();
+      const { group: group1 } = await factory.createImageFactory().createTagInGroup(
         "img_edit_group1",
+        "tag1",
       );
-      const { groupName: actualGroupName2 } = await createImageTagGroup(
-        page,
+      const { group: group2 } = await factory.createImageFactory().createTagInGroup(
         "img_edit_group2",
+        "tag2",
       );
+      const groupId1 = group1.id;
+      const actualGroupName2 = group2.name;
+
+      // F5 刷新数据后打开标签管理器
+      await electronTest.refreshData();
+      await enterImageTagManager(page);
 
       // 点击编辑第一个标签组
       const groupCard = page.locator(
@@ -340,9 +345,6 @@ test.describe("标签管理对话框失败重试功能", () => {
       await expect(renamedGroup).toContainText(newGroupName);
 
       await closeImageTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupImageTagsAndGroups();
     });
   });
 
@@ -352,12 +354,16 @@ test.describe("标签管理对话框失败重试功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      await enterPromptTagManager(page);
 
       // 创建一个已存在的标签
+      const factory = electronTest.getApiFactory();
       const existingTagName =
         electronTest.generateE2ePrefixName("prompt_existing");
-      await createPromptTagInManager(page, existingTagName);
+      await factory.createPromptFactory().createTag(existingTagName);
+
+      // F5 刷新数据后打开标签管理器
+      await electronTest.refreshData();
+      await enterPromptTagManager(page);
 
       // 再次尝试创建同名标签
       await page.click(`#${Constants.Ids.ADD_PROMPT_TAG_IN_MANAGER_BTN}`);
@@ -411,9 +417,6 @@ test.describe("标签管理对话框失败重试功能", () => {
       await expect(newTagElement).toBeVisible({ timeout: 1000 });
 
       await closePromptTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupPromptTagsAndGroups();
     });
 
     test("重命名标签时标签名已存在 - 对话框保持打开并保留输入", async ({
@@ -421,12 +424,17 @@ test.describe("标签管理对话框失败重试功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      await enterPromptTagManager(page);
 
       // 创建两个标签
+      const factory = electronTest.getApiFactory();
       const tagName1 = electronTest.generateE2ePrefixName("prompt_rename1");
       const tagName2 = electronTest.generateE2ePrefixName("prompt_rename2");
-      await createPromptTagsInManagerBatch(page, [tagName1, tagName2]);
+      await factory.createPromptFactory().createTag(tagName1);
+      await factory.createPromptFactory().createTag(tagName2);
+
+      // F5 刷新数据后打开标签管理器
+      await electronTest.refreshData();
+      await enterPromptTagManager(page);
 
       // 点击编辑第一个标签
       const tagItem = page.locator(
@@ -489,9 +497,6 @@ test.describe("标签管理对话框失败重试功能", () => {
       await expect(renamedTag).toBeVisible({ timeout: 1000 });
 
       await closePromptTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupPromptTagsAndGroups();
     });
 
     test("新建标签组时名称重复 - 对话框保持打开并保留输入", async ({
@@ -499,13 +504,18 @@ test.describe("标签管理对话框失败重试功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      await enterPromptTagManager(page);
 
-      // 创建一个已存在的标签组
-      const { groupName: existingGroupName } = await createPromptTagGroup(
-        page,
+      // 创建一个已存在的标签组并添加一个标签（空标签组不显示）
+      const factory = electronTest.getApiFactory();
+      const { group } = await factory.createPromptFactory().createTagInGroup(
         "prompt_group_existing",
+        "tag_in_group",
       );
+      const existingGroupName = group.name;
+
+      // F5 刷新数据后打开标签管理器
+      await electronTest.refreshData();
+      await enterPromptTagManager(page);
 
       // 再次尝试创建同名标签组
       await page.click(`#${Constants.Ids.ADD_PROMPT_TAG_GROUP_BTN}`);
@@ -571,9 +581,6 @@ test.describe("标签管理对话框失败重试功能", () => {
       await expect(newGroupCard).toBeVisible({ timeout: 1000 });
 
       await closePromptTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupPromptTagsAndGroups();
     });
 
     test("编辑标签组时名称重复 - 对话框保持打开并保留输入", async ({
@@ -581,17 +588,23 @@ test.describe("标签管理对话框失败重试功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      await enterPromptTagManager(page);
 
-      // 创建两个标签组
-      const { groupId: groupId1 } = await createPromptTagGroup(
-        page,
+      // 创建两个标签组（带标签才能在UI中显示）
+      const factory = electronTest.getApiFactory();
+      const { group: group1 } = await factory.createPromptFactory().createTagInGroup(
         "prompt_edit_group1",
+        "tag1",
       );
-      const { groupName: actualGroupName2 } = await createPromptTagGroup(
-        page,
+      const { group: group2 } = await factory.createPromptFactory().createTagInGroup(
         "prompt_edit_group2",
+        "tag2",
       );
+      const groupId1 = group1.id;
+      const actualGroupName2 = group2.name;
+
+      // F5 刷新数据后打开标签管理器
+      await electronTest.refreshData();
+      await enterPromptTagManager(page);
 
       // 点击编辑第一个标签组
       const groupCard = page.locator(
@@ -662,9 +675,6 @@ test.describe("标签管理对话框失败重试功能", () => {
       await expect(renamedGroup).toContainText(newGroupName);
 
       await closePromptTagManager(page);
-
-      // 清理测试数据
-      await electronTest.cleanupPromptTagsAndGroups();
     });
   });
 });

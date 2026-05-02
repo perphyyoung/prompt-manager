@@ -101,8 +101,8 @@ await imageFactory.createTagGroup("e2e_test_group");
 await promptFactory.createTagGroup("e2e_test_group");
 
 // 创建标签组并在其中添加标签（一步到位）
-const tagName = await imageFactory.createTagInGroup("drag_group", "drag_shared", true);
-const promptTagName = await promptFactory.createTagInGroup("prompt_drag_group", "drag_shared", true);
+const { group, tagName } = await imageFactory.createTagInGroup("drag_group", "drag_shared", true);
+const { group: promptGroup, tagName: promptTagName } = await promptFactory.createTagInGroup("prompt_drag_group", "drag_shared", true);
 
 // 创建首位组（sortOrder 取现有最小值 - 1，无现有组时为 -1）
 await imageFactory.createTagGroup("e2e_top_group", true);

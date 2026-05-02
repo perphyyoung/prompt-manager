@@ -40,10 +40,10 @@ test.describe("标签拖拽功能", () => {
     await promptFactory.createBatch(2, "drag");
 
     // 创建共享的图像标签组和标签（所有图像拖拽测试复用）
-    sharedImageTagName = await imageFactory.createTagInGroup("drag_shared", "drag_shared", true);
+    ({ tagName: sharedImageTagName } = await imageFactory.createTagInGroup("drag_shared", "drag_shared", true));
 
     // 创建共享的提示词标签组和标签（所有提示词拖拽测试复用）
-    sharedPromptTagName = await promptFactory.createTagInGroup("drag_shared", "drag_shared", true);
+    ({ tagName: sharedPromptTagName } = await promptFactory.createTagInGroup("drag_shared", "drag_shared", true));
 
     // 刷新界面以显示新数据
     await electronTest.refreshData();
