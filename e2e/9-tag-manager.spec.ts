@@ -1,19 +1,18 @@
 import { expect } from "@playwright/test";
+import { Constants } from "../src/constants.ts";
 import {
-  test,
-  enterImageTagManager,
-  enterPromptTagManager,
   closeImageTagManager,
   closePromptTagManager,
-  createImageTagInManager,
-  createPromptTagInManager,
-  createImageTagsInManagerBatch,
-  createPromptTagsInManagerBatch,
   createImageTagGroup,
+  createImageTagInManager,
+  createImageTagsInManagerBatch,
   createPromptTagGroup,
+  createPromptTagInManager,
+  createPromptTagsInManagerBatch,
+  enterImageTagManager,
+  enterPromptTagManager,
+  test,
 } from "./electron-test.ts";
-
-import { Constants } from "../src/constants.ts";
 
 /**
  * 标签管理功能 E2E 测试
@@ -33,8 +32,9 @@ import { Constants } from "../src/constants.ts";
  */
 test.describe("标签管理功能", () => {
   test.beforeAll(async ({ electronTest }) => {
-    await electronTest.createImageTags(7, "shared");
-    await electronTest.createPromptTags(7, "shared");
+    const factory = electronTest.getApiFactory();
+    await factory.createImageFactory().createTags(7, "shared");
+    await factory.createPromptFactory().createTags(7, "shared");
     await electronTest.refreshData();
   });
 
