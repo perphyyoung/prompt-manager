@@ -422,16 +422,10 @@ test.describe("图像详情界面数据库字段读取", () => {
 
     // 创建带关联提示词的图像
     const factory = electronTest.getApiFactory();
-    const result = await factory.createImageFactory().createWithPrompts(
-      { label: "detail_prompt" },
-      [
-        {
-          label: "test_prompt",
-          content: "e2e_test_prompt_content",
-          contentTranslate: "e2e_test_prompt_translate",
-          note: "e2e_test_prompt_note",
-        },
-      ],
+    const result = await factory.createImageFactory().createWithPromptCount(
+      "detail_prompt",
+      1,
+      "test_prompt",
     );
 
     const imageId = result.image.id;

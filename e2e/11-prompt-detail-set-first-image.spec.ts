@@ -8,7 +8,6 @@ import {
   openPromptDetailById,
   waitForImageOrderChange,
   waitForDatabaseImageOrder,
-  enterPromptGridView,
 } from "./electron-test.ts";
 import { Constants } from "../src/constants.ts";
 
@@ -39,17 +38,21 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
   // 文件级别：创建基础测试数据
   test.beforeAll(async ({ electronTest, page }) => {
-    // 使用 createTestPromptViaUI 创建带图像的提示词
-    // 0张图像的提示词
-    await electronTest.createTestPromptViaUI({ imageCount: 0 });
-    // 1张图像的提示词
-    await electronTest.createTestPromptViaUI({ imageCount: 1 });
-    // 2张图像的提示词
-    await electronTest.createTestPromptViaUI({ imageCount: 2 });
-    // 3张图像的提示词
-    await electronTest.createTestPromptViaUI({ imageCount: 3 });
+    // 使用工厂方法创建带不同数量图像的提示词
+    const promptFactory = electronTest.getApiFactory().createPromptFactory();
+
+    await promptFactory.createWithImageCount("set_first_0_images", 0);
+    await promptFactory.createWithImageCount("set_first_1_image", 1);
+    await promptFactory.createWithImageCount("set_first_2_images", 2);
+    await promptFactory.createWithImageCount("set_first_3_images", 3);
+
     // 返回提示词面板并刷新
-    await enterPromptGridView(page);
+    await page.keyboard.press("Control+p");
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
+      state: "visible",
+      timeout: 1000,
+    });
+    await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
     await electronTest.refreshData();
   });
 

@@ -44,6 +44,7 @@
 - `PromptApiFactory.createTagInGroup(groupName, tagLabel, isTop?)` 创建标签组并在其中创建一个标签，返回标签名称
 - `PromptApiFactory.createWithTags(data, tagNames)` 创建提示词并关联标签
 - `PromptApiFactory.createWithImages(data, imageIds)` 创建提示词时直接设置 `images` 字段关联图像
+- `PromptApiFactory.createWithImageCount(label, imageCount, imageLabelPrefix?)` 创建带指定数量图像的提示词，图像通过内部 API 直接创建，不依赖图像工厂
 
 ### 功能-图像数据工厂
 
@@ -54,7 +55,7 @@
 - `ImageApiFactory.createTagGroup(name, isTop?)` 调用 `window.electronAPI.createImageTagGroup()` 创建标签组，`isTop` 为 true 时查询现有组最小 `sortOrder`，取 `min(现有) - 1`（无现有组时为 `-1`）使其成为首位组
 - `ImageApiFactory.createTagInGroup(groupName, tagLabel, isTop?)` 创建标签组并在其中创建一个标签，返回标签名称
 - `ImageApiFactory.createWithTags(data, tagNames)` 创建图像并关联标签
-- `ImageApiFactory.createWithPrompts(data, promptDataList)` 创建图像并同时创建关联的提示词
+- `ImageApiFactory.createWithPromptCount(label, promptCount, promptLabelPrefix?)` 创建带指定数量提示词的图像，提示词通过内部 API 直接创建，不依赖提示词工厂
 
 ### 功能-工厂集成到 ElectronTestHelper
 
@@ -65,7 +66,7 @@
 
 - 对 `ApiTestFactory`、`PromptApiFactory`、`ImageApiFactory` 编写单元测试
 - 使用 `tests/mocks/electronAPI.ts` 中的 mock 机制模拟 `window.electronAPI`
-- 测试覆盖：name 生成、create、createBatch、createWithTags、createWithImages、createWithPrompts
+- 测试覆盖：name 生成、create、createBatch、createWithTags、createWithImages、createWithPromptCount、createWithImageCount
 
 ## 实现决策
 
@@ -73,7 +74,7 @@
 - **单元测试**：放在 `tests/e2e-factories/` 目录下，使用 vitest 框架
 - **错误处理**：创建失败直接抛出异常，异常信息包含操作类型和实体类型，不定义自定义异常类
 - **返回值**：所有 `create*` 方法返回非 null 值，失败即抛异常
-- **关联创建**：`createWithImages` 直接设置 `promptData.images` 字段；`createWithPrompts` 创建图像后调用 `addPrompt` 并设置 `images` 关联
+- **关联创建**：`createWithImages` 直接设置 `promptData.images` 字段；`createWithPromptCount` 创建图像后调用 `addPrompt` 并设置 `images` 关联
 - **Tag 关联**：作为 `BaseTestDataFactory` 的内部方法实现，不独立暴露
 
 ## 行为约束矩阵
@@ -95,7 +96,7 @@
 | 创建图像标签组 | 调用 `imageFactory.createTagGroup("组名")` | 应用已启动 | 调用 `createImageTagGroup` API | 标签组创建成功 |
 | 创建首位图像标签组 | 调用 `imageFactory.createTagGroup("组名", true)` | 应用已启动 | 查询现有组最小 sortOrder，取 min(现有) - 1 后调用 API | 标签组 sortOrder 小于所有现有组 |
 | 创建带标签的图像 | 调用 `imageFactory.createWithTags(data, ["tag1"])` | 应用已启动 | 先创建图像，再调用 `addImageTags` | 返回带标签的 `IImage` |
-| 创建带提示词的图像 | 调用 `imageFactory.createWithPrompts(data, [data])` | 应用已启动 | 创建图像，再创建提示词并关联 | 返回 `{image, prompts}` |
+| 创建带提示词的图像 | 调用 `imageFactory.createWithPromptCount("img", 2, "prompt")` | 应用已启动 | 创建图像，再创建指定数量的提示词并关联 | 返回 `{image, prompts}` |
 | API 调用失败 | 网络或后端错误 | 应用已启动 | 抛出异常 | 异常信息包含操作详情 |
 
 ## 状态流转
@@ -121,7 +122,7 @@
 - [ ] `ApiTestFactory` 正确实现 `ITestDataFactory`
 - [ ] `BaseTestDataFactory` 封装通用逻辑（name 生成、batch、tag 关联）
 - [ ] `PromptApiFactory` 实现 `create`、`createWithImages`、`createTag`、`createTags`、`_linkTagsToEntity`
-- [ ] `ImageApiFactory` 实现 `create`、`createWithPrompts`、`createTag`、`createTags`、`_linkTagsToEntity`
+- [ ] `ImageApiFactory` 实现 `create`、`createWithPromptCount`、`createWithImageCount`、`createTag`、`createTags`、`_linkTagsToEntity`
 - [ ] `ElectronTestHelper.getApiFactory()` 返回正确实例
 - [ ] 单元测试覆盖所有工厂方法
 - [ ] `bun run test` 通过

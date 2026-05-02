@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import type { IPrompt } from "../../src/types/entities.ts";
 import { BaseTestDataFactory } from "./base-factory.ts";
 import type { PromptCreateData } from "./interfaces.ts";
+import { generateTempImage } from "./image-utils.ts";
 
 /**
  * 提示词 API 数据工厂
@@ -120,6 +121,45 @@ export class PromptApiFactory extends BaseTestDataFactory<IPrompt> {
       images: imageIds.map((id) => ({ id })),
     };
     return this.create(promptData);
+  }
+
+  /**
+   * 创建带指定数量图像的提示词
+   */
+  async createWithImageCount(
+    label: string,
+    imageCount: number,
+    imageLabelPrefix?: string,
+  ): Promise<IPrompt> {
+    if (imageCount === 0) {
+      return this.create({ label });
+    }
+
+    const prefix = imageLabelPrefix || label;
+    const imageIds: string[] = [];
+
+    for (let i = 0; i < imageCount; i++) {
+      const imgLabel = `${prefix}_${i}`;
+      const image = await this._createImageDirect(imgLabel);
+      imageIds.push(String(image.id));
+    }
+
+    return this.createWithImages({ label }, imageIds);
+  }
+
+  /**
+   * 直接创建图像（通过 API，不依赖图像工厂）
+   */
+  private async _createImageDirect(label: string): Promise<{ id: string }> {
+    const fileName = `e2e_${label}_${Date.now()}.png`;
+    const tempPath = await generateTempImage();
+
+    return await this.page.evaluate(
+      async (params: { path: string; fileName: string }) => {
+        return await window.electronAPI.saveImageFile(params.path, params.fileName);
+      },
+      { path: tempPath, fileName },
+    );
   }
 
   /**

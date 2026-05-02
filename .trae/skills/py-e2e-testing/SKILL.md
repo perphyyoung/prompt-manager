@@ -47,7 +47,8 @@ PromptApiFactory extends BaseTestDataFactory<IPrompt>
     ├── createTagGroup(name, isTop?) → electronAPI.createPromptTagGroup()
     ├── createTagInGroup(groupName, tagLabel, isTop?) → 创建标签组并在其中添加标签
     ├── createWithTags(data, tagNames)
-    └── createWithImages(data, imageIds)
+    ├── createWithImages(data, imageIds)
+    └── createWithImageCount(label, imageCount, imageLabelPrefix?) → 创建带指定数量图像的提示词
 
 ImageApiFactory extends BaseTestDataFactory<IImage>
     ├── create(data)           → saveImageFile() + getImageById()
@@ -57,7 +58,7 @@ ImageApiFactory extends BaseTestDataFactory<IImage>
     ├── createTagGroup(name, isTop?) → electronAPI.createImageTagGroup()
     ├── createTagInGroup(groupName, tagLabel, isTop?) → 创建标签组并在其中添加标签
     ├── createWithTags(data, tagNames)
-    └── createWithPrompts(data, promptDataList)
+    └── createWithPromptCount(label, promptCount, promptLabelPrefix?) → 创建带指定数量提示词的图像
 ```
 
 **使用方式**：
@@ -73,7 +74,15 @@ await promptFactory.createBatch(2, "test");
 
 // 关联创建
 await promptFactory.createWithImages({ label: "test" }, ["img1", "img2"]);
-await imageFactory.createWithPrompts({ label: "test" }, [{ label: "prompt1" }]);
+await imageFactory.createWithPromptCount("test", 2, "prompt");
+
+// 创建带指定数量关联实体的提示词/图像
+await promptFactory.createWithImageCount("prompt_0_img", 0);
+await promptFactory.createWithImageCount("prompt_1_img", 1);
+await promptFactory.createWithImageCount("prompt_2_imgs", 2);
+await imageFactory.createWithPromptCount("img_0_prompt", 0);
+await imageFactory.createWithPromptCount("img_1_prompt", 1);
+await imageFactory.createWithPromptCount("img_2_prompts", 2);
 
 // 带标签创建
 await promptFactory.createWithTags({ label: "test" }, ["tag1"]);

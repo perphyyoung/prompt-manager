@@ -30,26 +30,18 @@ test.describe("提示词详情界面数据库字段读取", () => {
     const factory = electronTest.getApiFactory();
 
     // 创建第一个带有关联图像的提示词
-    const result1 = await factory.createImageFactory().createWithPrompts(
-      { label: "test_image_1" },
-      [
-        {
-          label: "test_prompt_1",
-          content: "e2e_test_prompt_with_image_1",
-        },
-      ],
+    const result1 = await factory.createImageFactory().createWithPromptCount(
+      "test_image_1",
+      1,
+      "test_prompt_1",
     );
     expect(result1.prompts.length).toBeGreaterThan(0);
 
     // 创建第二个带有关联图像的提示词（用于导航测试）
-    const result2 = await factory.createImageFactory().createWithPrompts(
-      { label: "test_image_2" },
-      [
-        {
-          label: "test_prompt_2",
-          content: "e2e_test_prompt_with_image_2",
-        },
-      ],
+    const result2 = await factory.createImageFactory().createWithPromptCount(
+      "test_image_2",
+      1,
+      "test_prompt_2",
     );
     expect(result2.prompts.length).toBeGreaterThan(0);
 

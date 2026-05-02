@@ -6,6 +6,10 @@ import { BaseTestDataFactory } from "../e2e/factories/base-factory.ts";
 import { ElectronTestHelper } from "../e2e/electron-test.ts";
 import type { IPrompt, IImage } from "../src/types/entities.ts";
 
+vi.mock("../e2e/factories/image-utils.ts", () => ({
+  generateTempImage: vi.fn(() => Promise.resolve("/tmp/test.png")),
+}));
+
 /**
  * 模拟 window.electronAPI
  */
@@ -317,7 +321,6 @@ describe("ImageApiFactory", () => {
     setupMockApi({ saveImageFile, getImageById });
 
     const page = createMockPage();
-    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
 
     const factory = new ImageApiFactory(page as any);
     const result = await factory.create({ label: "test" });
@@ -332,7 +335,6 @@ describe("ImageApiFactory", () => {
     setupMockApi({ saveImageFile });
 
     const page = createMockPage();
-    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
 
     const factory = new ImageApiFactory(page as any);
 
@@ -348,7 +350,6 @@ describe("ImageApiFactory", () => {
     setupMockApi({ saveImageFile, getImageById });
 
     const page = createMockPage();
-    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
 
     const factory = new ImageApiFactory(page as any);
     const result = await factory.createBatch(2, "batch");
@@ -364,7 +365,6 @@ describe("ImageApiFactory", () => {
     setupMockApi({ saveImageFile, getImageById, addImageTags });
 
     const page = createMockPage();
-    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
 
     const factory = new ImageApiFactory(page as any);
     await factory.createWithTags({ label: "test" }, ["tag1", "tag2"]);
@@ -373,26 +373,38 @@ describe("ImageApiFactory", () => {
     expect(addImageTags).toHaveBeenCalledWith("456", ["tag1", "tag2"]);
   });
 
-  it("createWithPrompts 应创建图像并关联提示词", async () => {
+  it("createWithPromptCount 应创建图像并关联指定数量的提示词", async () => {
     const saveImageFile = vi.fn(() => Promise.resolve({ id: "img1" }));
     const getImageById = vi.fn(() => Promise.resolve({ id: "img1" } as IImage));
     const addPrompt = vi.fn((data: any) => Promise.resolve({ id: "prompt1", ...data, isDeleted: false } as IPrompt));
     setupMockApi({ saveImageFile, getImageById, addPrompt });
 
     const page = createMockPage();
-    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
 
     const factory = new ImageApiFactory(page as any);
-    const result = await factory.createWithPrompts(
-      { label: "test" },
-      [{ label: "prompt1" }],
-    );
+    const result = await factory.createWithPromptCount("test", 2, "prompt");
 
     expect(result.image).toEqual({ id: "img1" });
-    expect(result.prompts).toHaveLength(1);
-    expect(addPrompt).toHaveBeenCalledTimes(1);
+    expect(result.prompts).toHaveLength(2);
+    expect(addPrompt).toHaveBeenCalledTimes(2);
     const promptCallArg = addPrompt.mock.calls[0][0];
     expect(promptCallArg.images).toEqual([{ id: "img1" }]);
+  });
+
+  it("createWithPromptCount 为 0 时应只创建图像", async () => {
+    const saveImageFile = vi.fn(() => Promise.resolve({ id: "img1" }));
+    const getImageById = vi.fn(() => Promise.resolve({ id: "img1" } as IImage));
+    const addPrompt = vi.fn(() => Promise.resolve({ id: "prompt1" } as IPrompt));
+    setupMockApi({ saveImageFile, getImageById, addPrompt });
+
+    const page = createMockPage();
+
+    const factory = new ImageApiFactory(page as any);
+    const result = await factory.createWithPromptCount("test", 0);
+
+    expect(result.image).toEqual({ id: "img1" });
+    expect(result.prompts).toHaveLength(0);
+    expect(addPrompt).not.toHaveBeenCalled();
   });
 
   it("createTagGroup 应调用 createImageTagGroup API 并返回结果", async () => {
@@ -401,7 +413,6 @@ describe("ImageApiFactory", () => {
     setupMockApi({ createImageTagGroup });
 
     const page = createMockPage();
-    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
 
     const factory = new ImageApiFactory(page as any);
     const result = await factory.createTagGroup("test_group");
@@ -424,7 +435,6 @@ describe("ImageApiFactory", () => {
     setupMockApi({ getImageTagGroups, createImageTagGroup });
 
     const page = createMockPage();
-    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
 
     const factory = new ImageApiFactory(page as any);
     const result = await factory.createTagGroup("top_group", true);
@@ -443,7 +453,6 @@ describe("ImageApiFactory", () => {
     setupMockApi({ getImageTagGroups, createImageTagGroup });
 
     const page = createMockPage();
-    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
 
     const factory = new ImageApiFactory(page as any);
     await factory.createTagGroup("first_group", true);
@@ -454,7 +463,6 @@ describe("ImageApiFactory", () => {
     setupMockApi({ createImageTagGroup });
 
     const page = createMockPage();
-    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
 
     const factory = new ImageApiFactory(page as any);
 
@@ -477,7 +485,6 @@ describe("ImageApiFactory", () => {
     vi.spyOn(global.Date, "now").mockReturnValue(1718307600000);
 
     const page = createMockPage();
-    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
 
     const factory = new ImageApiFactory(page as any);
     const result = await factory.createTagInGroup("test_group", "my_tag");
@@ -504,7 +511,6 @@ describe("ImageApiFactory", () => {
     vi.spyOn(global.Date, "now").mockReturnValue(1718307600000);
 
     const page = createMockPage();
-    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
 
     const factory = new ImageApiFactory(page as any);
     const result = await factory.createTagInGroup("top_group", "my_tag", true);

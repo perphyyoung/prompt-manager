@@ -53,9 +53,10 @@ export interface IImageDataFactory {
   createTagGroup(name: string, isTop?: boolean): Promise<{ id: number; name: string; sortOrder: number }>;
   createTagInGroup(groupName: string, tagLabel: string, isTop?: boolean): Promise<string>;
   createWithTags(data: ImageCreateData, tagNames: string[]): Promise<IImage>;
-  createWithPrompts(
-    data: ImageCreateData,
-    promptDataList: PromptCreateData[],
+  createWithPromptCount(
+    label: string,
+    promptCount: number,
+    promptLabelPrefix?: string,
   ): Promise<{ image: IImage; prompts: IPrompt[] }>;
 }
 

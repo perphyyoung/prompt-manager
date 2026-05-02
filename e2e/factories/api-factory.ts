@@ -1,9 +1,5 @@
 import type { Page } from "@playwright/test";
-import type {
-  ITestDataFactory,
-  IPromptDataFactory,
-  IImageDataFactory,
-} from "./interfaces.ts";
+import type { ITestDataFactory } from "./interfaces.ts";
 import { PromptApiFactory } from "./prompt-factory.ts";
 import { ImageApiFactory } from "./image-factory.ts";
 
@@ -13,8 +9,8 @@ import { ImageApiFactory } from "./image-factory.ts";
  */
 export class ApiTestFactory implements ITestDataFactory {
   private page: Page;
-  private promptFactory: IPromptDataFactory | null = null;
-  private imageFactory: IImageDataFactory | null = null;
+  private promptFactory: PromptApiFactory | null = null;
+  private imageFactory: ImageApiFactory | null = null;
 
   constructor(page: Page) {
     this.page = page;
@@ -23,7 +19,7 @@ export class ApiTestFactory implements ITestDataFactory {
   /**
    * 创建提示词数据工厂
    */
-  createPromptFactory(): IPromptDataFactory {
+  createPromptFactory(): PromptApiFactory {
     if (!this.promptFactory) {
       this.promptFactory = new PromptApiFactory(this.page);
     }
@@ -33,7 +29,7 @@ export class ApiTestFactory implements ITestDataFactory {
   /**
    * 创建图像数据工厂
    */
-  createImageFactory(): IImageDataFactory {
+  createImageFactory(): ImageApiFactory {
     if (!this.imageFactory) {
       this.imageFactory = new ImageApiFactory(this.page);
     }
