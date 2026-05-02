@@ -17,22 +17,9 @@ test.describe("Shift 范围选择", () => {
   // ========== 初始化 ==========
   test.beforeAll(async ({ electronTest }) => {
     // 创建测试数据：5个图像和5个提示词（用于Shift范围选择测试）
-    await electronTest.createTestImages(5, "shift_select");
-    await electronTest.createTestPrompt("shift_select", {
-      content: "e2e_test_prompt_shift_select_1",
-    });
-    await electronTest.createTestPrompt("shift_select", {
-      content: "e2e_test_prompt_shift_select_2",
-    });
-    await electronTest.createTestPrompt("shift_select", {
-      content: "e2e_test_prompt_shift_select_3",
-    });
-    await electronTest.createTestPrompt("shift_select", {
-      content: "e2e_test_prompt_shift_select_4",
-    });
-    await electronTest.createTestPrompt("shift_select", {
-      content: "e2e_test_prompt_shift_select_5",
-    });
+    const factory = electronTest.getApiFactory();
+    await factory.createImageFactory().createBatch(5, "shift_select");
+    await factory.createPromptFactory().createBatch(5, "shift_select");
 
     // 刷新界面以显示新数据
     await electronTest.refreshData();
