@@ -18,16 +18,9 @@ test.describe("主界面卡片视图多选功能", () => {
   // ========== 初始化 ==========
   test.beforeAll(async ({ electronTest, page }) => {
     // 创建测试数据：至少3个图像和3个提示词（用于多选测试）
-    await electronTest.createTestImages(3, "multi_select");
-    await electronTest.createTestPrompt("multi_select", {
-      content: "e2e_test_prompt_multi_select",
-    });
-    await electronTest.createTestPrompt("multi_select", {
-      content: "e2e_test_prompt_multi_select_2",
-    });
-    await electronTest.createTestPrompt("multi_select", {
-      content: "e2e_test_prompt_multi_select_3",
-    });
+    const factory = electronTest.getApiFactory();
+    await factory.createImageFactory().createBatch(3, "multi_select");
+    await factory.createPromptFactory().createBatch(3, "multi_select");
 
     // 刷新界面以显示新数据
     await electronTest.refreshData();
