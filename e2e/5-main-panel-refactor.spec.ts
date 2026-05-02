@@ -27,8 +27,10 @@ test.describe("主界面重构功能", () => {
   // ========== 初始化 ==========
   test.beforeAll(async ({ electronTest, page }) => {
     // 创建测试数据：至少1个图像和1个提示词
-    await electronTest.createTestImages(2, "main_panel");
-    await electronTest.createTestPrompt("main_panel", {
+    const factory = electronTest.getApiFactory();
+    await factory.createImageFactory().createBatch(2, "main_panel");
+    await factory.createPromptFactory().create({
+      label: "main_panel",
       content: "e2e_test_prompt_main_panel",
     });
 
