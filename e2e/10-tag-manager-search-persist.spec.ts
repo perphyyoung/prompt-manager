@@ -30,9 +30,10 @@ test.describe("标签管理器搜索状态保持功能", () => {
   // 文件级别：创建基础测试数据
   test.beforeAll(async ({ electronTest }) => {
     // 创建图像标签基础数据
-    await electronTest.createImageTags(5, "persist_shared");
+    const factory = electronTest.getApiFactory();
+    await factory.createImageFactory().createTags(5, "persist_shared");
     // 创建提示词标签基础数据
-    await electronTest.createPromptTags(5, "persist_shared");
+    await factory.createPromptFactory().createTags(5, "persist_shared");
     await electronTest.refreshData();
   });
 
