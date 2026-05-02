@@ -7,6 +7,14 @@ import {
 import { Constants } from "../src/constants.ts";
 
 test.describe("批量工具栏 - 列表视图功能测试", () => {
+  // 文件级别：创建基础测试数据（所有测试复用）
+  test.beforeAll(async ({ electronTest }) => {
+    const factory = electronTest.getApiFactory();
+    await factory.createImageFactory().createBatch(3, "shared");
+    await factory.createPromptFactory().createBatch(3, "shared");
+    await electronTest.refreshData();
+  });
+
   // ==================== 图像列表视图 - 全选按钮 ====================
   test("图像列表视图-全选按钮应该选中所有列表项", async ({
     electronTest,
@@ -99,6 +107,10 @@ test.describe("批量工具栏 - 列表视图功能测试", () => {
       .locator(".batch-toolbar-count")
       .textContent();
     expect(countText).toContain("已选择 0 个图像");
+
+    // 点击取消退出批量模式，避免干扰后续测试
+    await toolbar.locator('[data-action="Cancel"]').click();
+    await expect(toolbar).toBeHidden({ timeout: 1000 });
   });
 
   // ==================== 图像列表视图 - 添加标签按钮 ====================
@@ -154,9 +166,6 @@ test.describe("批量工具栏 - 列表视图功能测试", () => {
     // 点击取消退出批量模式
     await toolbar.locator('[data-action="Cancel"]').click();
     await expect(toolbar).toBeHidden({ timeout: 1000 });
-
-    // 清理测试标签
-    await electronTest.cleanupImageTagsAndGroups();
   });
 
   // ==================== 图像列表视图 - 收藏按钮 ====================
@@ -282,6 +291,7 @@ test.describe("批量工具栏 - 列表视图功能测试", () => {
 
     // 清理
     await toolbar.locator('[data-action="Cancel"]').click();
+    await expect(toolbar).toBeHidden({ timeout: 1000 });
   });
 
   // ==================== 图像列表视图 - Shift+范围选择 ====================
@@ -588,6 +598,10 @@ test.describe("批量工具栏 - 列表视图功能测试", () => {
       .locator(".batch-toolbar-count")
       .textContent();
     expect(countText).toContain("已选择 0 个提示词");
+
+    // 点击取消退出批量模式，避免干扰后续测试
+    await toolbar.locator('[data-action="Cancel"]').click();
+    await expect(toolbar).toBeHidden({ timeout: 1000 });
   });
 
   // ==================== 提示词列表视图 - 添加标签按钮 ====================
@@ -646,9 +660,6 @@ test.describe("批量工具栏 - 列表视图功能测试", () => {
     // 点击取消退出批量模式
     await toolbar.locator('[data-action="Cancel"]').click();
     await expect(toolbar).toBeHidden({ timeout: 1000 });
-
-    // 清理测试标签
-    await electronTest.cleanupPromptTagsAndGroups();
   });
 
   // ==================== 提示词列表视图 - 收藏按钮 ====================
@@ -977,15 +988,17 @@ test.describe("批量工具栏 - 列表视图功能测试", () => {
   }) => {
     await electronTest.logTestStart();
 
-    // 创建2个测试图像
-    const testImages = await electronTest.createTestImages(2, "batch_delete");
+    // 使用 API 工厂创建2个测试图像
+    const factory = electronTest.getApiFactory();
+    const imageFactory = factory.createImageFactory();
+    const testImages = await imageFactory.createBatch(2, "batch_delete");
     expect(testImages.length).toBe(2);
+    const testImageIds = testImages.map((img) => img.id);
+
+    await electronTest.refreshData();
 
     // 进入图像列表视图
     await enterImageListView(page);
-
-    // 点击刷新按钮确保新创建的测试数据加载到视图中
-    await page.click(`#${Constants.Ids.REFRESH_DATA_BTN}`);
 
     // 验证测试图像已显示（显式等待条件）
     await page.waitForFunction(
@@ -996,20 +1009,14 @@ test.describe("批量工具栏 - 列表视图功能测试", () => {
         );
         return ids.every((id) => foundIds.includes(id));
       },
-      [testImages[0].id, testImages[1].id],
+      testImageIds,
       { timeout: 1000 },
     );
 
     // 进入批量模式 - 选中测试图像
     await page.keyboard.down("Control");
-    const item1 = page.locator(
-      `.list-item--image[data-id="${testImages[0].id}"]`,
-    );
-    const item2 = page.locator(
-      `.list-item--image[data-id="${testImages[1].id}"]`,
-    );
-    await item1.click();
-    await item2.click();
+    await page.click(`.list-item--image[data-id="${testImageIds[0]}"]`);
+    await page.click(`.list-item--image[data-id="${testImageIds[1]}"]`);
     await page.keyboard.up("Control");
 
     // 等待工具栏出现
@@ -1063,23 +1070,16 @@ test.describe("批量工具栏 - 列表视图功能测试", () => {
 
     // 通过 API 验证图像已移到回收站（isDeleted = true）
     await page.waitForFunction(
-      async (ids: readonly string[]) => {
+      async (ids: string[]) => {
         const images = await window.electronAPI.getImages("createdAt", "desc");
         const testImages = images.filter((img: { id: string }) =>
           ids.includes(img.id),
         );
         return testImages.every((img: { isDeleted: boolean }) => img.isDeleted);
       },
-      [testImages[0].id, testImages[1].id] as const,
+      testImageIds,
       { timeout: 1000 },
     );
-
-    // 清理：彻底删除测试图像
-    for (const image of testImages) {
-      if (image?.id) {
-        await electronTest.deleteTestImage(image.id);
-      }
-    }
   });
 
   // ==================== 提示词列表视图 - 删除按钮（完整流程） ====================
@@ -1089,15 +1089,17 @@ test.describe("批量工具栏 - 列表视图功能测试", () => {
   }) => {
     await electronTest.logTestStart();
 
-    // 创建2个测试提示词
-    const testPrompt1 = await electronTest.createTestPrompt("batch_delete_1");
-    const testPrompt2 = await electronTest.createTestPrompt("batch_delete_2");
+    // 使用 API 工厂创建2个测试提示词
+    const factory = electronTest.getApiFactory();
+    const promptFactory = factory.createPromptFactory();
+    const testPrompts = await promptFactory.createBatch(2, "batch_delete");
+    expect(testPrompts.length).toBe(2);
+    const testPromptIds = testPrompts.map((p) => p.id);
+
+    await electronTest.refreshData();
 
     // 进入提示词列表视图
     await enterPromptListView(page);
-
-    // 点击刷新按钮加载最新数据
-    await page.click(`#${Constants.Ids.REFRESH_DATA_BTN}`);
 
     // 验证测试提示词已显示
     await page.waitForFunction(
@@ -1108,20 +1110,14 @@ test.describe("批量工具栏 - 列表视图功能测试", () => {
         );
         return ids.every((id) => foundIds.includes(id));
       },
-      [testPrompt1.id, testPrompt2.id],
+      testPromptIds,
       { timeout: 1000 },
     );
 
     // 进入批量模式
     await page.keyboard.down("Control");
-    const item1 = page.locator(
-      `.list-item--prompt[data-id="${testPrompt1.id}"]`,
-    );
-    const item2 = page.locator(
-      `.list-item--prompt[data-id="${testPrompt2.id}"]`,
-    );
-    await item1.click();
-    await item2.click();
+    await page.click(`.list-item--prompt[data-id="${testPromptIds[0]}"]`);
+    await page.click(`.list-item--prompt[data-id="${testPromptIds[1]}"]`);
     await page.keyboard.up("Control");
 
     // 等待工具栏出现
@@ -1169,7 +1165,7 @@ test.describe("批量工具栏 - 列表视图功能测试", () => {
 
     // 通过 API 验证提示词已移到回收站（isDeleted = true）
     await page.waitForFunction(
-      async (ids: readonly string[]) => {
+      async (ids: string[]) => {
         const prompts = await window.electronAPI.getPrompts(
           "createdAt",
           "desc",
@@ -1179,13 +1175,9 @@ test.describe("批量工具栏 - 列表视图功能测试", () => {
         );
         return testPrompts.every((p: { isDeleted: boolean }) => p.isDeleted);
       },
-      [testPrompt1.id, testPrompt2.id] as const,
+      testPromptIds,
       { timeout: 1000 },
     );
-
-    // 清理：彻底删除测试提示词
-    await electronTest.deleteTestPrompt(testPrompt1.id);
-    await electronTest.deleteTestPrompt(testPrompt2.id);
   });
 
   // ==================== 图像列表视图 - 切换到网格视图保留选择状态 ====================
