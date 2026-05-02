@@ -104,8 +104,8 @@
 - [ ] `ImageApiFactory` 实现 `create`、`createWithPrompts`、`_createTags`
 - [ ] `ElectronTestHelper.getApiFactory()` 返回正确实例
 - [ ] 单元测试覆盖所有工厂方法
-- [ ] `npm run test` 通过
-- [ ] `npm run check` 通过
+- [ ] `bun run test` 通过
+- [ ] `bun run check` 通过
 
 ## 测试决策
 

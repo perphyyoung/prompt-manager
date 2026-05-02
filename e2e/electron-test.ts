@@ -12,6 +12,7 @@ import sharp from "sharp";
 import { Constants } from "../src/constants.ts";
 import type { IImage, IPrompt, IElectronAPI } from "../src/preload/index.ts";
 import { tmpdir } from "os";
+import { ApiTestFactory } from "./factories/api-factory.ts";
 
 declare global {
   interface Window {
@@ -30,9 +31,23 @@ export class ElectronTestHelper {
   electronApp: ElectronApplication | null = null;
   page: Page | null = null;
   testDataDir?: string;
+  private apiFactory: ApiTestFactory | null = null;
 
   constructor(testDataDir?: string) {
     this.testDataDir = testDataDir;
+  }
+
+  /**
+   * 获取 API 测试数据工厂
+   */
+  getApiFactory(): ApiTestFactory {
+    if (!this.page) {
+      throw new Error("Electron app not launched, call launch() first");
+    }
+    if (!this.apiFactory) {
+      this.apiFactory = new ApiTestFactory(this.page);
+    }
+    return this.apiFactory;
   }
 
   /**
