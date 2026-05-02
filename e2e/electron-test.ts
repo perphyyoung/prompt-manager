@@ -1168,12 +1168,12 @@ export class ElectronTestHelper {
   }
 
   /**
-   * 点击刷新按钮刷新数据
-   * 通过点击左下角刷新按钮触发数据刷新
+   * 按 F5 刷新数据
+   * 不受当前界面状态影响
    */
   async refreshData(): Promise<void> {
     const page = this.getPage();
-    await page.click(`#${Constants.Ids.REFRESH_DATA_BTN}`);
+    await page.keyboard.press("F5");
     // 等待数据刷新完成（通过 toast 提示判断）
     await page.waitForFunction(
       (toastId: string) => {

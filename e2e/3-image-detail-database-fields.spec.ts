@@ -27,8 +27,9 @@ import type { IImage } from "../src/preload/index.ts";
 test.describe("图像详情界面数据库字段读取", () => {
   // ========== 初始化 ==========
   test.beforeAll(async ({ electronTest }) => {
+    const factory = electronTest.getApiFactory();
     // 创建基础测试数据（至少1个图像用于详情查看）
-    await electronTest.createTestImages(1, "detail");
+    await factory.createImageFactory().createBatch(1, "detail");
 
     // 刷新界面以显示新数据
     await electronTest.refreshData();
@@ -420,18 +421,21 @@ test.describe("图像详情界面数据库字段读取", () => {
     await electronTest.logTestStart();
 
     // 创建带关联提示词的图像
-    const result = await electronTest.createTestImageViaUI({
-      withPrompt: true,
-      promptOverrides: {
-        content: "e2e_test_prompt_content",
-        contentTranslate: "e2e_test_prompt_translate",
-        note: "e2e_test_prompt_note",
-      },
-    });
+    const factory = electronTest.getApiFactory();
+    const result = await factory.createImageFactory().createWithPrompts(
+      { label: "detail_prompt" },
+      [
+        {
+          label: "test_prompt",
+          content: "e2e_test_prompt_content",
+          contentTranslate: "e2e_test_prompt_translate",
+          note: "e2e_test_prompt_note",
+        },
+      ],
+    );
 
-    // 确保返回的是对象格式
-    expect(typeof result).toBe("object");
-    const { imageId, promptId } = result as { imageId: string; promptId: string };
+    const imageId = result.image.id;
+    const promptId = result.prompts[0].id;
     expect(imageId).toBeTruthy();
     expect(promptId).toBeTruthy();
 
