@@ -6,6 +6,15 @@
 import type { ElementId } from '../../constants.ts';
 import { TagService } from './TagService.ts';
 
+// Symbol 标记，用于防止重复绑定
+const AUTOCOMPLETE_INSTANCE = Symbol('autocompleteInstance');
+
+declare global {
+  interface HTMLElement {
+    [AUTOCOMPLETE_INSTANCE]?: TagAutocomplete;
+  }
+}
+
 // 配置选项接口
 interface TagAutocompleteOptions {
   inputId: string;
@@ -60,8 +69,17 @@ export class TagAutocomplete {
       return;
     }
 
+    // 检查是否已有实例绑定到该输入框
+    const existingInstance = this.input[AUTOCOMPLETE_INSTANCE];
+    if (existingInstance && existingInstance !== this) {
+      existingInstance.destroy();
+    }
+
     this.destroy(); // 清理旧的事件监听
     this.bindEvents();
+
+    // 标记当前实例到输入框
+    this.input[AUTOCOMPLETE_INSTANCE] = this;
   }
 
   /**
@@ -187,6 +205,20 @@ export class TagAutocomplete {
    * @private
    */
   private handleKeydown(e: KeyboardEvent): void {
+    // Escape键：如果下拉框激活，关闭它并阻止传播；否则允许传播到ShortcutManager
+    if (e.key === 'Escape') {
+      const isDropdownActive = this.dropdown?.classList.contains('active');
+      if (isDropdownActive) {
+        // 下拉框激活时，关闭它并阻止事件传播
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        this.hideDropdown();
+        return;
+      }
+      // 下拉框未激活时，允许Escape传播到ShortcutManager关闭详情界面
+      return;
+    }
+
     // 下拉框激活时处理导航和选择
     if (this.dropdown?.classList.contains('active')) {
       const items = this.dropdown.querySelectorAll('.tag-autocomplete-item');
@@ -214,10 +246,6 @@ export class TagAutocomplete {
             }
           }
           break;
-        case 'Escape':
-          e.stopPropagation();
-          this.hideDropdown();
-          return;
       }
     }
 

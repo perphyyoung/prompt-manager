@@ -963,6 +963,12 @@ export class ImageDetailManager extends DetailViewManager {
     const returnToItem = this.returnToItem;
     const returnToOptions = this.returnToOptions;
 
+    // 销毁 TagAutocomplete，防止事件监听器残留
+    if (this.tagAutocomplete) {
+      this.tagAutocomplete.destroy();
+      this.tagAutocomplete = null;
+    }
+
     this.app.isFromDetailJump = false;
 
     await super.close();

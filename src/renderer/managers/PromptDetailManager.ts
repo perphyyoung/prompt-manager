@@ -1039,6 +1039,12 @@ export class PromptDetailManager extends DetailViewManager {
     const returnToManager = this.returnToManager;
     const returnToItem = this.returnToItem;
 
+    // 销毁 TagAutocomplete，防止事件监听器残留
+    if (this.tagAutocomplete) {
+      this.tagAutocomplete.destroy();
+      this.tagAutocomplete = null;
+    }
+
     this.app.isFromDetailJump = false;
 
     // 清理图像缓存

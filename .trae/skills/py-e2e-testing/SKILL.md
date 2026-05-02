@@ -184,15 +184,13 @@ timeout 时间不要超过 1000 毫秒, 超过时需要充足理由
 
 ### 1. 调试日志记录
 
-调试时, 使用 `window.electronAPI.logInfo()` 将测试日志记录到 `pm.log`：
+调试时, 使用 `electronTest.logDebug()` 将测试日志记录到 `pm.log`：
 
 ```typescript
-await page.evaluate((params) => {
-  window.electronAPI.logInfo('E2E-Test', '测试操作', {
-    param1: params.value1,
-    param2: params.value2
-  });
-}, testData);
+await electronTest.logDebug(page, '测试操作描述', {
+  param1: value1,
+  param2: value2
+});
 ```
 
 ### 2. 测试描述
@@ -283,16 +281,45 @@ await enterImageGridView(page);
 
 ### 7. 测试数据管理
 
-使用工厂方法创建测试数据：
+**核心原则：`beforeAll` 创建文件级共享的基础测试数据**
+
+每个测试文件应使用 `test.describe` 包裹所有测试，并在其中通过 `beforeAll` 创建共享的基础测试数据：
 
 ```typescript
-test.describe('标签管理', () => {
+test.describe('功能模块名称', () => {
+  // 文件级别：创建基础测试数据（所有测试复用）
   test.beforeAll(async ({ electronTest }) => {
     const factory = electronTest.getApiFactory();
     await factory.createImageFactory().createBatch(3, "shared");
+    await factory.createPromptFactory().createBatch(3, "shared");
     await electronTest.refreshData();
   });
 
+  test('不涉及数据操作的测试项', async ({ electronTest, page }) => {
+    await electronTest.logTestStart();
+    // 复用 beforeAll 创建的数据
+  });
+});
+```
+
+**数据创建原则**：
+
+- ✅ **`beforeAll` 中创建文件级共享的基础测试数据**：如基础图像、提示词、标签等
+- ✅ **不涉及数据操作的测试项复用 `beforeAll` 创建的基础数据**：如界面展示、交互测试
+- ✅ **新建类测试跳过 `beforeAll` 创建，直接测试新建功能**：如创建新图像、新提示词、新标签
+- ✅ **删除类测试在 `beforeAll` 创建足够数据，删除后不影响后续**：确保删除操作有足够数据可用
+
+**测试运行先决条件**：
+
+- 使用 `enterImageDetailView` 或 `enterImageGridView` 前，**必须在 `beforeAll` 中创建至少 1 个图像**
+- 使用 `enterPromptDetailView` 或 `enterPromptGridView` 前，**必须在 `beforeAll` 中创建至少 1 个提示词**
+- 使用标签相关功能前，**必须在 `beforeAll` 中创建所需标签**
+- 创建数据后**必须调用 `electronTest.refreshData()`** 刷新界面显示
+
+**使用工厂方法创建测试数据**：
+
+```typescript
+test.describe('标签管理', () => {
   test('创建标签', async ({ electronTest, page }) => {
     // ✅ 正确：通过工厂创建独立标签
     const factory = electronTest.getApiFactory();
