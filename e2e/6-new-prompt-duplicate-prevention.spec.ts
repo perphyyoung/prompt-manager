@@ -19,7 +19,8 @@ test.describe("新建提示词防重复提交", () => {
   // ========== 初始化 ==========
   test.beforeAll(async ({ electronTest }) => {
     // 创建测试数据：至少1个图像（用于新建提示词测试）
-    await electronTest.createTestImages(1, "duplicate_test");
+    const factory = electronTest.getApiFactory();
+    await factory.createImageFactory().createBatch(1, "duplicate_test");
 
     // 刷新界面以显示新数据
     await electronTest.refreshData();
