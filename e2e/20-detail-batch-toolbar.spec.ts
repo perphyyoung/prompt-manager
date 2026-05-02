@@ -1,12 +1,8 @@
 import { expect } from "@playwright/test";
 import { Constants } from "../src/constants.ts";
 import {
-  createImageTagsInManagerBatch,
-  createPromptTagsInManagerBatch,
   enterImageGridView,
-  enterImageTagManager,
   enterPromptGridView,
-  enterPromptTagManager,
   openImageDetail,
   openPromptDetail,
   test,
@@ -18,14 +14,15 @@ test.describe("批量工具栏 - 图像详情界面功能测试", () => {
 
   // 文件级别：创建基础测试数据
   test.beforeAll(async ({ electronTest }) => {
+    const factory = electronTest.getApiFactory();
+
     // 创建测试图像（用于详情界面测试）
-    const result = await electronTest.createTestImageViaUI({
-      withPrompt: false,
-    });
-    sharedImageId = typeof result === "string" ? result : result.imageId;
+    const imageFactory = factory.createImageFactory();
+    const images = await imageFactory.createBatch(1, "shared");
+    sharedImageId = images[0].id;
 
     // 创建共享的测试标签并关联到图像
-    const tagNames = await electronTest.createImageTags(2, "shared");
+    const tagNames = await imageFactory.createTags(2, "shared");
     await electronTest.linkTagsToImage(sharedImageId, tagNames);
 
     // 刷新界面以显示新数据
@@ -159,20 +156,15 @@ test.describe("批量工具栏 - 图像详情界面功能测试", () => {
   }) => {
     await electronTest.logTestStart();
 
-    // 先进入图像标签管理器创建测试标签
-    await enterImageTagManager(page);
-
-    // 创建1个测试标签和1个对照组标签
+    // 使用 API 工厂创建测试标签
+    const factory = electronTest.getApiFactory();
+    const imageFactory = factory.createImageFactory();
     const testTagName = electronTest.generateE2ePrefixName("detail_delete");
     const otherTagName = electronTest.generateE2ePrefixName("other");
-    await createImageTagsInManagerBatch(page, [testTagName, otherTagName]);
+    await imageFactory.createTag(testTagName);
+    await imageFactory.createTag(otherTagName);
 
-    // 关闭标签管理器，返回主界面
-    await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
-    await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, {
-      state: "hidden",
-      timeout: 1000,
-    });
+    await electronTest.refreshData();
 
     // 进入图像网格视图并打开详情
     await enterImageGridView(page);
@@ -325,19 +317,15 @@ test.describe("批量工具栏 - 图像详情界面功能测试", () => {
     await electronTest.logTestStart();
 
     // 先进入图像标签管理器创建测试标签
-    await enterImageTagManager(page);
-
-    // 创建2个测试标签
+    // 使用 API 工厂创建测试标签
+    const factory = electronTest.getApiFactory();
+    const imageFactory = factory.createImageFactory();
     const testTagName1 = electronTest.generateE2ePrefixName("detail_single_1");
     const testTagName2 = electronTest.generateE2ePrefixName("detail_single_2");
-    await createImageTagsInManagerBatch(page, [testTagName1, testTagName2]);
+    await imageFactory.createTag(testTagName1);
+    await imageFactory.createTag(testTagName2);
 
-    // 关闭标签管理器，返回主界面
-    await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
-    await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, {
-      state: "hidden",
-      timeout: 1000,
-    });
+    await electronTest.refreshData();
 
     // 进入图像网格视图并打开详情
     await enterImageGridView(page);
@@ -424,20 +412,15 @@ test.describe("批量工具栏 - 图像详情界面功能测试", () => {
   test("图像详情界面-Ctrl+点击标签应该多选", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
-    // 先进入图像标签管理器创建测试标签
-    await enterImageTagManager(page);
-
-    // 创建2个测试标签
+    // 使用 API 工厂创建测试标签
+    const factory = electronTest.getApiFactory();
+    const imageFactory = factory.createImageFactory();
     const testTagName1 = electronTest.generateE2ePrefixName("detail_multi_1");
     const testTagName2 = electronTest.generateE2ePrefixName("detail_multi_2");
-    await createImageTagsInManagerBatch(page, [testTagName1, testTagName2]);
+    await imageFactory.createTag(testTagName1);
+    await imageFactory.createTag(testTagName2);
 
-    // 关闭标签管理器，返回主界面
-    await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
-    await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, {
-      state: "hidden",
-      timeout: 1000,
-    });
+    await electronTest.refreshData();
 
     // 进入图像网格视图并打开详情
     await enterImageGridView(page);
@@ -598,12 +581,15 @@ test.describe("批量工具栏 - 提示词详情界面功能测试", () => {
 
   // 文件级别：创建基础测试数据
   test.beforeAll(async ({ electronTest }) => {
+    const factory = electronTest.getApiFactory();
+
     // 创建测试提示词（用于详情界面测试）
-    const result = await electronTest.createTestPromptViaUI({ imageCount: 0 });
-    sharedPromptId = typeof result === "string" ? result : result.promptId;
+    const promptFactory = factory.createPromptFactory();
+    const prompts = await promptFactory.createBatch(1, "shared");
+    sharedPromptId = prompts[0].id;
 
     // 创建共享的测试标签并关联到提示词
-    const tagNames = await electronTest.createPromptTags(2, "shared");
+    const tagNames = await promptFactory.createTags(2, "shared");
     await electronTest.linkTagsToPrompt(sharedPromptId, tagNames);
 
     // 刷新界面以显示新数据
@@ -737,20 +723,15 @@ test.describe("批量工具栏 - 提示词详情界面功能测试", () => {
   }) => {
     await electronTest.logTestStart();
 
-    // 先进入提示词标签管理器创建测试标签
-    await enterPromptTagManager(page);
-
-    // 创建2个测试标签和1个对照组标签
+    // 使用 API 工厂创建测试标签
+    const factory = electronTest.getApiFactory();
+    const promptFactory = factory.createPromptFactory();
     const testTagName = electronTest.generateE2ePrefixName("detail_delete");
     const otherTagName = electronTest.generateE2ePrefixName("other");
-    await createPromptTagsInManagerBatch(page, [testTagName, otherTagName]);
+    await promptFactory.createTag(testTagName);
+    await promptFactory.createTag(otherTagName);
 
-    // 关闭标签管理器，返回主界面
-    await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
-    await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, {
-      state: "hidden",
-      timeout: 1000,
-    });
+    await electronTest.refreshData();
 
     // 进入提示词网格视图并打开详情
     await enterPromptGridView(page);
@@ -903,20 +884,15 @@ test.describe("批量工具栏 - 提示词详情界面功能测试", () => {
   test("提示词详情界面-点击标签应该单选", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
-    // 先进入提示词标签管理器创建测试标签
-    await enterPromptTagManager(page);
-
-    // 创建2个测试标签
+    // 使用 API 工厂创建测试标签
+    const factory = electronTest.getApiFactory();
+    const promptFactory = factory.createPromptFactory();
     const testTagName1 = electronTest.generateE2ePrefixName("detail_single_1");
     const testTagName2 = electronTest.generateE2ePrefixName("detail_single_2");
-    await createPromptTagsInManagerBatch(page, [testTagName1, testTagName2]);
+    await promptFactory.createTag(testTagName1);
+    await promptFactory.createTag(testTagName2);
 
-    // 关闭标签管理器，返回主界面
-    await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
-    await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, {
-      state: "hidden",
-      timeout: 1000,
-    });
+    await electronTest.refreshData();
 
     // 进入提示词网格视图并打开详情
     await enterPromptGridView(page);
@@ -1006,20 +982,15 @@ test.describe("批量工具栏 - 提示词详情界面功能测试", () => {
   }) => {
     await electronTest.logTestStart();
 
-    // 先进入提示词标签管理器创建测试标签
-    await enterPromptTagManager(page);
-
-    // 创建2个测试标签
+    // 使用 API 工厂创建测试标签
+    const factory = electronTest.getApiFactory();
+    const promptFactory = factory.createPromptFactory();
     const testTagName1 = electronTest.generateE2ePrefixName("detail_multi_1");
     const testTagName2 = electronTest.generateE2ePrefixName("detail_multi_2");
-    await createPromptTagsInManagerBatch(page, [testTagName1, testTagName2]);
+    await promptFactory.createTag(testTagName1);
+    await promptFactory.createTag(testTagName2);
 
-    // 关闭标签管理器，返回主界面
-    await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
-    await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, {
-      state: "hidden",
-      timeout: 1000,
-    });
+    await electronTest.refreshData();
 
     // 进入提示词网格视图并打开详情
     await enterPromptGridView(page);
