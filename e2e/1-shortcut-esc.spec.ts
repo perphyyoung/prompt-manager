@@ -4,21 +4,19 @@ import {
   test,
   enterImageGridView,
   enterPromptGridView,
-  enterImageTagManager,
   openImageDetail,
   openPromptDetail,
-  createImageTagInManager,
-  createPromptTagInDetail,
 } from "./electron-test.ts";
 
 test.describe("Esc 键快捷键功能", () => {
   // ========== 初始化和清理 ==========
   test.beforeAll(async ({ electronTest }) => {
-    // 创建基础测试数据（用于打开详情视图、批量选择等操作）
-    await electronTest.createTestImages(3, "esc");
-    await electronTest.createTestPrompts(3, "esc");
+    const factory = electronTest.getApiFactory();
+    await factory.createImageFactory().createBatch(3, "esc");
+    await factory.createPromptFactory().createBatch(3, "esc");
+    await factory.createImageFactory().createTag("e2e_esc_autocomplete");
+    await factory.createPromptFactory().createTag("e2e_esc_autocomplete");
 
-    // 刷新界面以显示新数据
     await electronTest.refreshData();
   });
 
@@ -490,21 +488,7 @@ test.describe("Esc 键快捷键功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-
-      // 先进入图像标签管理器创建测试标签
       await enterImageGridView(page);
-      await enterImageTagManager(page);
-      const tagName = electronTest.generateE2ePrefixName("esc_autocomplete");
-      await createImageTagInManager(page, tagName);
-
-      // 关闭标签管理器，返回主界面
-      await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
-      await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, {
-        state: "hidden",
-        timeout: 2000,
-      });
-
-      // 打开详情界面
       await openImageDetail(page);
 
       // 使用测试标签的前缀触发自动完成
@@ -559,11 +543,6 @@ test.describe("Esc 键快捷键功能", () => {
       await enterPromptGridView(page);
       await openPromptDetail(page);
 
-      // 在提示词详情界面创建测试标签
-      const tagName = electronTest.generateE2ePrefixName("esc_autocomplete");
-      await createPromptTagInDetail(page, tagName);
-
-      // 使用测试标签的前缀触发自动完成
       const tagInput = page.locator(
         `#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`,
       );
