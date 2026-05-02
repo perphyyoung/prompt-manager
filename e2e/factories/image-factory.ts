@@ -113,6 +113,22 @@ export class ImageApiFactory extends BaseTestDataFactory<IImage> {
   }
 
   /**
+   * 创建独立图像标签
+   */
+  async createTag(tagName: string): Promise<void> {
+    await this.page.evaluate(async (name: string) => {
+      await window.electronAPI.addImageTag(name);
+    }, tagName);
+  }
+
+  /**
+   * 批量创建独立图像标签
+   */
+  async createTags(count: number, label: string): Promise<string[]> {
+    return this._createTags(count, label, (name) => this.createTag(name));
+  }
+
+  /**
    * 创建带标签的图像
    */
   async createWithTags(
@@ -120,7 +136,7 @@ export class ImageApiFactory extends BaseTestDataFactory<IImage> {
     tagNames: string[],
   ): Promise<IImage> {
     const image = await this.create(data);
-    await this._createTags(image.id, tagNames);
+    await this._linkTagsToEntity(image.id, tagNames);
     return image;
   }
 
@@ -165,9 +181,9 @@ export class ImageApiFactory extends BaseTestDataFactory<IImage> {
   }
 
   /**
-   * 创建图像标签
+   * 实现基类抽象方法：关联标签到图像
    */
-  protected async _createTags(
+  protected async _linkTagsToEntity(
     imageId: string,
     tagNames: string[],
   ): Promise<void> {

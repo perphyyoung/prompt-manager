@@ -5,7 +5,114 @@ description: 在编写或调试 Playwright E2E 测试时使用。症状包括：
 
 # E2E 测试规范
 
-> **架构设计参考**：`docs/prds/prd-e2e-测试专用数据库.md`
+> **架构设计参考**：
+>
+> - 测试数据库隔离：`docs/prds/prd-e2e-测试专用数据库.md`
+> - 测试数据工厂：`docs/prds/prd-e2e-test-data-factory.md`
+
+## 核心架构
+
+### 1. 测试专用数据库
+
+每个测试文件使用独立的临时数据目录，通过 Playwright worker-scoped fixture 实现：
+
+- 每个测试文件使用独立的临时数据目录（位于系统临时目录）
+- 通过 `E2E_TEST_DATA_DIR` 环境变量传递测试数据目录路径
+- 主进程检测到该环境变量时，使用测试数据目录替代默认数据目录
+- 应用在文件级别只启动和关闭一次
+- 测试完成后自动删除临时数据目录
+- **不支持并行测试**（并行执行时数据会相互干扰）
+
+### 2. 测试数据抽象工厂
+
+使用**抽象工厂模式**创建测试数据，统一通过 API 创建，不经过 UI：
+
+```
+ITestDataFactory (抽象工厂接口)
+        △
+ApiTestFactory (具体工厂)
+    ├── createPromptFactory() → PromptApiFactory
+    └── createImageFactory()  → ImageApiFactory
+
+BaseTestDataFactory<T> (抽象基类)
+    ├── generateName()     → e2e_{label}_{timestamp}_{random}
+    ├── _batchCreate()     → 循环调用子类 create()
+    └── callApi()          → page.evaluate 封装
+
+PromptApiFactory extends BaseTestDataFactory<IPrompt>
+    ├── create(data)           → electronAPI.addPrompt()
+    ├── createBatch(count, label)
+    ├── createWithTags(data, tagNames)
+    └── createWithImages(data, imageIds)
+
+ImageApiFactory extends BaseTestDataFactory<IImage>
+    ├── create(data)           → saveImageFile() + getImageById()
+    ├── createBatch(count, label)
+    ├── createWithTags(data, tagNames)
+    └── createWithPrompts(data, promptDataList)
+```
+
+**使用方式**：
+
+```typescript
+const factory = electronTest.getApiFactory();
+const promptFactory = factory.createPromptFactory();
+const imageFactory = factory.createImageFactory();
+
+// 批量创建
+await imageFactory.createBatch(3, "test");
+await promptFactory.createBatch(2, "test");
+
+// 关联创建
+await promptFactory.createWithImages({ label: "test" }, ["img1", "img2"]);
+await imageFactory.createWithPrompts({ label: "test" }, [{ label: "prompt1" }]);
+
+// 带标签创建
+await promptFactory.createWithTags({ label: "test" }, ["tag1"]);
+await imageFactory.createWithTags({ label: "test" }, ["tag1"]);
+
+// 创建独立标签
+await promptFactory.createTag("e2e_test_tag");
+await imageFactory.createTag("e2e_test_tag");
+
+// 批量创建独立标签
+await promptFactory.createTags(5, "prompt_tags");
+await imageFactory.createTags(5, "image_tags");
+
+// 创建后刷新界面
+await electronTest.refreshData();
+```
+
+### 3. Fixture 机制
+
+使用 **worker-scoped fixture** 管理应用生命周期和测试数据目录：
+
+```typescript
+export const test = base.extend<
+  { electronTest: ReturnType<typeof createElectronTest>; page: Page },
+  { _electronTest: ReturnType<typeof createElectronTest>; _testDataDir: string }
+>({
+  _testDataDir: [
+    async ({}, use) => {
+      const testDataDir = getTestDataDir();
+      await use(testDataDir);
+      rmSync(testDataDir, { recursive: true, force: true });
+    },
+    { scope: "worker" },
+  ],
+  _electronTest: [
+    async ({ _testDataDir }, use) => {
+      const electronTest = createElectronTest(_testDataDir);
+      await electronTest.launch();
+      await use(electronTest);
+      await electronTest.close();
+    },
+    { scope: "worker" },
+  ],
+  electronTest: async ({ _electronTest }, use) => { await use(_electronTest); },
+  page: async ({ _electronTest }, use) => { await use(_electronTest.getPage()); },
+});
+```
 
 ## 快速开始
 
@@ -17,7 +124,9 @@ import { test, enterImageGridView } from "./electron-test.ts";
 test.describe("功能模块名称", () => {
   // 文件级别：创建基础测试数据
   test.beforeAll(async ({ electronTest }) => {
-    await electronTest.createTestImages(3, "shared");
+    const factory = electronTest.getApiFactory();
+    await factory.createImageFactory().createBatch(3, "shared");
+    await factory.createPromptFactory().createBatch(3, "shared");
     await electronTest.refreshData();
   });
 
@@ -32,6 +141,7 @@ test.describe("功能模块名称", () => {
 
 - 禁止使用弃用方法
 - 禁止在没有理解代码的情况下编写测试
+- 禁止使用旧的数据创建方法或通过 UI 流程创建基础测试数据，统一使用 API 工厂
 - 禁止在没有验证的情况下假设页面状态
 - 禁止跳过自动化测试验证
 
@@ -107,7 +217,7 @@ await page.waitForFunction(
 
 - 始终先创建测试数据，然后仅删除测试数据
 - 使用搜索 + 选择模式来仅定位测试创建的项目
-- 使用 `generateE2ePrefixName()` 生成带 `e2e_` 前缀的唯一标识
+- 测试数据命名模式：`e2e_{label}_{timestamp}_{random}`
 
 ### 5. 等待策略
 
@@ -135,30 +245,39 @@ await page.waitForFunction((beforeTime: string | undefined) => {
 使用 `e2e/electron-test.ts` 中的共享辅助函数：
 
 ```typescript
-import { test, enterImageGridView, generateE2ePrefixName } from './electron-test.ts';
+import { test, enterImageGridView } from './electron-test.ts';
 
-// 使用辅助函数
 await enterImageGridView(page);
-const tagName = generateE2ePrefixName('test_suffix');
 ```
 
-**添加新的共享函数时**：首先添加到 `e2e/electron-test.ts`，然后更新本文档。
+**添加新的共享函数时**：首先添加到 `e2e/electron-test.ts`，然后更新该文档。
 
 ### 7. 测试数据管理
 
-使用 `electronTest` fixture 进行测试数据管理：
+使用工厂方法创建测试数据：
 
 ```typescript
 test.describe('标签管理', () => {
   test.beforeAll(async ({ electronTest }) => {
-    // 创建基础测试数据
-    await electronTest.createTestImages(3, 'shared');
+    const factory = electronTest.getApiFactory();
+    await factory.createImageFactory().createBatch(3, "shared");
     await electronTest.refreshData();
   });
 
   test('创建标签', async ({ electronTest, page }) => {
-    const tagName = electronTest.generateE2ePrefixName('new_tag');
-    await electronTest.createImageTag(tagName);
+    // ✅ 正确：通过工厂创建独立标签
+    const factory = electronTest.getApiFactory();
+    await factory.createImageFactory().createTag("e2e_test_tag");
+    await factory.createPromptFactory().createTag("e2e_test_prompt_tag");
+
+    // ✅ 正确：批量创建独立标签
+    const imageTags = await factory.createImageFactory().createTags(3, "batch");
+    const promptTags = await factory.createPromptFactory().createTags(2, "batch");
+
+    // ✅ 正确：创建实体并关联标签
+    await factory.createImageFactory().createWithTags({ label: "test" }, ["tag1", "tag2"]);
+
+    await electronTest.refreshData();
     // 验证...
   });
 });
@@ -192,90 +311,130 @@ async function enterImageGridView(page: Page) {
 ### 单个删除
 
 ```typescript
-const testTagName = electronTest.generateE2ePrefixName('single_delete');
-await electronTest.createImageTag(testTagName);
+// 创建测试数据 + 对照组
+const factory = electronTest.getApiFactory();
+await factory.createImageFactory().createBatch(1, "delete_test");
+await factory.createImageFactory().createBatch(1, "control"); // 对照组
+await electronTest.refreshData();
 
-// 搜索以筛选和定位特定标签
-await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, testTagName);
+// 搜索以筛选和定位
+await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, "e2e_delete_test");
 
-// 验证搜索返回恰好 1 个结果且与我们的标签匹配
+// 等待搜索完成并验证筛选结果
 await page.waitForFunction(
-  (params: { containerId: string; tagName: string }) => {
+  (params: { containerId: string; keyword: string }) => {
     const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
-    return items.length === 1 &&
-           items[0].getAttribute('data-tag') === params.tagName;
+    return items.length >= 1 && Array.from(items).every(item =>
+      item.getAttribute("data-tag")?.includes(params.keyword)
+    );
   },
-  { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, tagName: testTagName },
+  { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, keyword: "e2e_delete_test" },
   { timeout: 1000 }
 );
 
-// 点击特定标签的删除按钮
-const deleteBtn = page.locator(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${testTagName}"] .tag-delete-btn`);
-await deleteBtn.click();
-
-// 确认删除
-await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, { state: 'visible', timeout: 1000 });
-await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
+// 执行删除操作...
+// 验证对照组仍然存在
+await page.click(`#${Constants.Ids.CLEAR_IMAGE_TAG_MANAGER_SEARCH_BTN}`);
+await page.waitForFunction(
+  (params: { containerId: string; tagName: string }) => {
+    const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+    return Array.from(items).some(item => item.getAttribute("data-tag") === params.tagName);
+  },
+  { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, tagName: "e2e_control_..." },
+  { timeout: 1000 }
+);
 ```
 
 ### 批量删除（带对照组）
 
 ```typescript
-const searchKeyword = 'batch_test';
-const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
-const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
-const otherTagName = electronTest.generateE2ePrefixName('other');  // 对照组
+const factory = electronTest.getApiFactory();
+const searchKeyword = "batch_delete_test";
 
-await electronTest.createImageTag(tagName1);
-await electronTest.createImageTag(tagName2);
-await electronTest.createImageTag(otherTagName);
+// 创建测试标签 + 对照组标签
+const tagName1 = electronTest.generateE2ePrefixName(`${searchKeyword}_1`);
+const tagName2 = electronTest.generateE2ePrefixName(`${searchKeyword}_2`);
+const controlTagName = electronTest.generateE2ePrefixName("control_group");
+await factory.createImageFactory().createTag(tagName1);
+await factory.createImageFactory().createTag(tagName2);
+await factory.createImageFactory().createTag(controlTagName);
+await electronTest.refreshData();
 
 // 使用特定关键词搜索
 await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
-// 验证：所有可见项目都包含搜索关键词
+// 关键：等待搜索筛选完成 AND 验证所有可见项目都包含搜索关键词
 await page.waitForFunction(
   (params: { containerId: string; keyword: string }) => {
     const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
     return items.length >= 2 && Array.from(items).every(item =>
-      item.getAttribute('data-tag')?.includes(params.keyword)
+      item.getAttribute("data-tag")?.includes(params.keyword)
     );
   },
   { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, keyword: searchKeyword },
   { timeout: 1000 }
 );
 
-// 进入批量模式并全选
+// 点击批量管理按钮
 await page.click(`#${Constants.Ids.BATCH_MANAGE_IMAGE_TAGS_BTN}`);
-await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-batch-checkbox`, { state: 'visible', timeout: 1000 });
 
-const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_TAG_BATCH_TOOLBAR}`);
-await batchToolbar.locator('.batch-action-select-all').click();
+// 等待工具栏出现
+const toolbar = page.locator(`#${Constants.Ids.IMAGE_TAG_BATCH_TOOLBAR}`);
+await expect(toolbar).toBeVisible({ timeout: 1000 });
 
-// 删除前验证：所有选中的标签必须包含搜索关键词
-await page.waitForFunction(async (keyword: string) => {
-  const checkedBoxes = document.querySelectorAll('.tag-batch-checkbox:checked');
-  const selectedTags = Array.from(checkedBoxes).map(cb => cb.getAttribute('data-tag'));
-  return selectedTags.every(tag => tag?.includes(keyword));
-}, searchKeyword, { timeout: 1000 });
+// 全选
+await toolbar.locator('[data-action="SelectAll"]').click();
 
-// 执行删除
-await batchToolbar.locator('.batch-action-delete').click();
-await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, { state: 'visible', timeout: 1000 });
+// 关键：删除前验证选中的项目
+await page.waitForFunction(
+  async (keyword: string) => {
+    const checkedBoxes = document.querySelectorAll(".tag-batch-checkbox:checked");
+    const selectedTags = Array.from(checkedBoxes).map(cb => cb.getAttribute("data-tag"));
+    // 安全检查：所有选中的标签必须包含搜索关键词
+    return selectedTags.every(tag => tag?.includes(keyword));
+  },
+  searchKeyword,
+  { timeout: 1000 }
+);
+
+// 点击"删除"按钮
+await toolbar.locator('[data-action="Delete"]').click();
+
+// 验证确认对话框出现并确认
+const confirmModal = page.locator(`#${Constants.Ids.CONFIRM_MODAL}`);
+await expect(confirmModal).toBeVisible({ timeout: 1000 });
 await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
+await expect(confirmModal).toBeHidden({ timeout: 1000 });
 
-// 验证对照组仍然存在
+// 通过 API 验证删除
+await page.waitForFunction(
+  async (names: string[]) => {
+    const tags = await window.electronAPI.getImageTags();
+    return !tags.includes(names[0]) && !tags.includes(names[1]);
+  },
+  [tagName1, tagName2],
+  { timeout: 1000 }
+);
+
+// 关键：验证对照组仍然存在
 await page.click(`#${Constants.Ids.CLEAR_IMAGE_TAG_MANAGER_SEARCH_BTN}`);
-await expect(page.locator(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${otherTagName}"]`)).toBeVisible({ timeout: 1000 });
+await page.waitForFunction(
+  (params: { containerId: string; tagName: string }) => {
+    const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+    return Array.from(items).some(item => item.getAttribute("data-tag") === params.tagName);
+  },
+  { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, tagName: controlTagName },
+  { timeout: 1000 }
+);
 ```
 
 ### 关键安全要求
 
-1. **使用特定的搜索关键词**：使用唯一的测试前缀（如 `batch_test`、`drag_drop`）
-2. **创建对照组**：始终创建至少一个不匹配搜索关键词的标签
+1. **使用特定的搜索关键词**：使用唯一的测试前缀
+2. **创建对照组**：始终创建至少一个不匹配搜索关键词的项目
 3. **验证搜索筛选**：等待搜索完成 AND 验证所有可见项目都匹配
 4. **删除前验证选择**：检查所有选中的项目是否符合搜索条件
-5. **验证对照组存活**：删除后验证对照组标签仍然存在
+5. **验证对照组存活**：删除后验证对照组仍然存在
 
 ## 测试数据刷新
 
@@ -283,18 +442,13 @@ await expect(page.locator(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-
 
 ```typescript
 test('应该显示新创建的图像', async ({ electronTest, page }) => {
-  const testImages = await electronTest.createTestImages(2, 'test_suffix');
-  await enterImageGridView(page);
+  const factory = electronTest.getApiFactory();
+  await factory.createImageFactory().createBatch(2, "test");
 
   // 刷新界面以显示新数据
   await electronTest.refreshData();
 
-  // 验证数据已显示
-  await page.waitForFunction((ids: string[]) => {
-    const cards = document.querySelectorAll('.image-card');
-    const foundIds = Array.from(cards).map(card => card.getAttribute('data-id'));
-    return ids.every(id => foundIds.includes(id));
-  }, testImages.map(img => img.id), { timeout: 1000 });
+  // 验证数据已显示...
 });
 ```
 
@@ -302,7 +456,7 @@ test('应该显示新创建的图像', async ({ electronTest, page }) => {
 
 | 场景 | 推荐方法 | 示例 |
 |------|----------|------|
-| API 调用完成 | `waitForFunction` | `await page.waitForFunction(async (tagName: string) => { const tags = await window.electronAPI.getImageTags(); return tags.includes(tagName); }, testTagName, { timeout: 1000 });` |
+| API 调用完成 | `waitForFunction` | 见下方示例 |
 | 模态框打开/关闭 | `waitForSelector` | `await page.waitForSelector('#modal', { state: 'hidden', timeout: 1000 });` |
 | 元素可见性 | `expect().toBeVisible()` | `await expect(page.locator('.item')).toBeVisible({ timeout: 1000 });` |
 | 文本内容 | `:has-text` | `await page.waitForSelector('#toast:has-text("成功")', { timeout: 1000 });` |
@@ -377,5 +531,7 @@ bun run check; bun run build
 
 ## 参考
 
-- **架构设计**：`docs/prds/prd-e2e-测试专用数据库.md`
+- **测试数据库隔离设计**：`docs/prds/prd-e2e-测试专用数据库.md`
+- **测试数据工厂设计**：`docs/prds/prd-e2e-test-data-factory.md`
 - **共享辅助函数库**：`e2e/electron-test.ts`
+- **测试数据工厂实现**：`e2e/factories/`

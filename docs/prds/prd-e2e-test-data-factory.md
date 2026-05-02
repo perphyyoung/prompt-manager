@@ -30,20 +30,27 @@
 ### 功能-基类工厂复用
 
 - `BaseTestDataFactory<T>` 抽象类封装 `generateName()` 方法，生成 `e2e_{label}_{timestamp}_{random}` 格式名称
+- `BaseTestDataFactory<T>` 封装 `createTags(count, label, addTagFn)` 批量创建独立标签的通用逻辑
 - `createBatch(count, label)` 批量创建方法在基类中实现，循环调用子类的 `create()` 方法
 - `createWithTags(data, tagNames)` 在基类中实现：先创建实体，再调用子类实现的 `_createTags()` 关联标签
 
 ### 功能-提示词数据工厂
 
 - `PromptApiFactory.create(data)` 调用 `window.electronAPI.addPrompt()` 创建提示词
+- `PromptApiFactory.createBatch(count, label)` 批量创建提示词
+- `PromptApiFactory.createTag(tagName)` 调用 `window.electronAPI.addPromptTag()` 创建独立标签
+- `PromptApiFactory.createTags(count, label)` 批量创建独立标签
+- `PromptApiFactory.createWithTags(data, tagNames)` 创建提示词并关联标签
 - `PromptApiFactory.createWithImages(data, imageIds)` 创建提示词时直接设置 `images` 字段关联图像
-- `PromptApiFactory` 实现 `_createTags()` 调用 `window.electronAPI.addPromptTags()`
 
 ### 功能-图像数据工厂
 
-- `ImageApiFactory.create(label)` 生成临时测试图像文件，调用 `window.electronAPI.saveImageFile()` 创建图像
-- `ImageApiFactory.createWithPrompts(label, promptDataList)` 创建图像并同时创建关联的提示词
-- `ImageApiFactory` 实现 `_createTags()` 调用 `window.electronAPI.addImageTags()`
+- `ImageApiFactory.create(data)` 生成临时测试图像文件，调用 `window.electronAPI.saveImageFile()` 创建图像
+- `ImageApiFactory.createBatch(count, label)` 批量创建图像
+- `ImageApiFactory.createTag(tagName)` 调用 `window.electronAPI.addImageTag()` 创建独立标签
+- `ImageApiFactory.createTags(count, label)` 批量创建独立标签
+- `ImageApiFactory.createWithTags(data, tagNames)` 创建图像并关联标签
+- `ImageApiFactory.createWithPrompts(data, promptDataList)` 创建图像并同时创建关联的提示词
 
 ### 功能-工厂集成到 ElectronTestHelper
 
@@ -71,11 +78,16 @@
 |------|----------|----------|----------|-------------|
 | 创建单个提示词 | 调用 `promptFactory.create(data)` | 应用已启动，page 可用 | 调用 `addPrompt` API | 返回创建的 `IPrompt` 对象 |
 | 批量创建提示词 | 调用 `promptFactory.createBatch(3, "test")` | 应用已启动 | 循环调用 `create()` 3 次 | 返回包含 3 个 `IPrompt` 的数组 |
-| 批量创建图像 | 调用 `imageFactory.createBatch(2, "test")` | 应用已启动 | 循环调用 `create()` 2 次 | 返回包含 2 个 `IImage` 的数组 |
+| 创建独立提示词标签 | 调用 `promptFactory.createTag("tag")` | 应用已启动 | 调用 `addPromptTag` API | 标签创建成功 |
+| 批量创建独立提示词标签 | 调用 `promptFactory.createTags(3, "test")` | 应用已启动 | 循环调用 `createTag()` 3 次 | 创建 3 个独立标签 |
 | 创建带标签的提示词 | 调用 `promptFactory.createWithTags(data, ["tag1"])` | 应用已启动 | 先创建提示词，再调用 `addPromptTags` | 返回带标签的 `IPrompt` |
 | 创建带图像的提示词 | 调用 `promptFactory.createWithImages(data, ["img1"])` | 图像已存在 | 设置 `data.images` 后调用 `addPrompt` | 返回关联图像的 `IPrompt` |
-| 创建单个图像 | 调用 `imageFactory.create("test")` | 应用已启动 | 生成临时文件，调用 `saveImageFile` | 返回创建的 `IImage` 对象 |
-| 创建带提示词的图像 | 调用 `imageFactory.createWithPrompts("test", [data])` | 应用已启动 | 创建图像，再创建提示词并关联 | 返回 `{image, prompts}` |
+| 创建单个图像 | 调用 `imageFactory.create(data)` | 应用已启动 | 生成临时文件，调用 `saveImageFile` | 返回创建的 `IImage` 对象 |
+| 批量创建图像 | 调用 `imageFactory.createBatch(2, "test")` | 应用已启动 | 循环调用 `create()` 2 次 | 返回包含 2 个 `IImage` 的数组 |
+| 创建独立图像标签 | 调用 `imageFactory.createTag("tag")` | 应用已启动 | 调用 `addImageTag` API | 标签创建成功 |
+| 批量创建独立图像标签 | 调用 `imageFactory.createTags(3, "test")` | 应用已启动 | 循环调用 `createTag()` 3 次 | 创建 3 个独立标签 |
+| 创建带标签的图像 | 调用 `imageFactory.createWithTags(data, ["tag1"])` | 应用已启动 | 先创建图像，再调用 `addImageTags` | 返回带标签的 `IImage` |
+| 创建带提示词的图像 | 调用 `imageFactory.createWithPrompts(data, [data])` | 应用已启动 | 创建图像，再创建提示词并关联 | 返回 `{image, prompts}` |
 | API 调用失败 | 网络或后端错误 | 应用已启动 | 抛出异常 | 异常信息包含操作详情 |
 
 ## 状态流转
@@ -100,8 +112,8 @@
 - [ ] `ITestDataFactory` 接口定义完整
 - [ ] `ApiTestFactory` 正确实现 `ITestDataFactory`
 - [ ] `BaseTestDataFactory` 封装通用逻辑（name 生成、batch、tag 关联）
-- [ ] `PromptApiFactory` 实现 `create`、`createWithImages`、`_createTags`
-- [ ] `ImageApiFactory` 实现 `create`、`createWithPrompts`、`_createTags`
+- [ ] `PromptApiFactory` 实现 `create`、`createWithImages`、`createTag`、`createTags`、`_linkTagsToEntity`
+- [ ] `ImageApiFactory` 实现 `create`、`createWithPrompts`、`createTag`、`createTags`、`_linkTagsToEntity`
 - [ ] `ElectronTestHelper.getApiFactory()` 返回正确实例
 - [ ] 单元测试覆盖所有工厂方法
 - [ ] `bun run test` 通过

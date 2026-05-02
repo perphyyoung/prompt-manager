@@ -48,6 +48,22 @@ export class PromptApiFactory extends BaseTestDataFactory<IPrompt> {
   }
 
   /**
+   * 创建独立提示词标签
+   */
+  async createTag(tagName: string): Promise<void> {
+    await this.page.evaluate(async (name: string) => {
+      await window.electronAPI.addPromptTag(name);
+    }, tagName);
+  }
+
+  /**
+   * 批量创建独立提示词标签
+   */
+  async createTags(count: number, label: string): Promise<string[]> {
+    return this._createTags(count, label, (name) => this.createTag(name));
+  }
+
+  /**
    * 创建带标签的提示词
    */
   async createWithTags(
@@ -55,7 +71,7 @@ export class PromptApiFactory extends BaseTestDataFactory<IPrompt> {
     tagNames: string[],
   ): Promise<IPrompt> {
     const prompt = await this.create(data);
-    await this._createTags(prompt.id, tagNames);
+    await this._linkTagsToEntity(prompt.id, tagNames);
     return prompt;
   }
 
@@ -74,9 +90,9 @@ export class PromptApiFactory extends BaseTestDataFactory<IPrompt> {
   }
 
   /**
-   * 创建提示词标签
+   * 实现基类抽象方法：关联标签到提示词
    */
-  protected async _createTags(
+  protected async _linkTagsToEntity(
     promptId: string,
     tagNames: string[],
   ): Promise<void> {

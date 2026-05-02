@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 
 /**
  * 测试数据工厂抽象基类
- * 封装通用逻辑：name 生成、batch 创建
+ * 封装通用逻辑：name 生成、batch 创建、标签创建
  */
 export abstract class BaseTestDataFactory<T> {
   protected page: Page;
@@ -34,6 +34,28 @@ export abstract class BaseTestDataFactory<T> {
     }
     return items;
   }
+
+  /**
+   * 批量创建独立标签
+   */
+  protected async _createTags(
+    count: number,
+    label: string,
+    addTagFn: (tagName: string) => Promise<void>,
+  ): Promise<string[]> {
+    const tags: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const tagName = this.generateName(`${label}_${i}`);
+      await addTagFn(tagName);
+      tags.push(tagName);
+    }
+    return tags;
+  }
+
+  /**
+   * 关联标签到实体（子类实现）
+   */
+  protected abstract _linkTagsToEntity(entityId: string, tagNames: string[]): Promise<void>;
 
   /**
    * 调用 Electron API

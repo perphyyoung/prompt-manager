@@ -34,6 +34,8 @@ export interface ImageCreateData {
 export interface IPromptDataFactory {
   create(data: PromptCreateData): Promise<IPrompt>;
   createBatch(count: number, label: string): Promise<IPrompt[]>;
+  createTag(tagName: string): Promise<void>;
+  createTags(count: number, label: string): Promise<string[]>;
   createWithTags(data: PromptCreateData, tagNames: string[]): Promise<IPrompt>;
   createWithImages(data: PromptCreateData, imageIds: string[]): Promise<IPrompt>;
 }
@@ -44,6 +46,8 @@ export interface IPromptDataFactory {
 export interface IImageDataFactory {
   create(data: ImageCreateData): Promise<IImage>;
   createBatch(count: number, label: string): Promise<IImage[]>;
+  createTag(tagName: string): Promise<void>;
+  createTags(count: number, label: string): Promise<string[]>;
   createWithTags(data: ImageCreateData, tagNames: string[]): Promise<IImage>;
   createWithPrompts(
     data: ImageCreateData,

@@ -56,7 +56,7 @@ describe("BaseTestDataFactory", () => {
       return { id: "1", name: "test" };
     }
 
-    protected async _createTags(): Promise<void> {}
+    protected async _linkTagsToEntity(): Promise<void> {}
   }
 
   it("generateName 应生成正确格式的名称", () => {
