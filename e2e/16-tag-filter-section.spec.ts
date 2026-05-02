@@ -21,17 +21,17 @@ import {
   enterPromptGridView,
   ensureTagFilterExpanded,
   ensureTagFilterCollapsed,
-  createImageTagInManager,
-  createPromptTagInManager,
-  enterImageTagManager,
-  enterPromptTagManager,
-  closeImageTagManager,
-  closePromptTagManager,
 } from "./electron-test.ts";
 // ========== 图像标签筛选区测试 ==========
 
 test.describe("图像标签筛选区", () => {
-  test('应该能通过特殊标签"收藏"筛选图像', async ({ electronTest, page }) => {
+  // 文件级别：创建基础测试数据（所有测试复用）
+  test.beforeAll(async ({ electronTest }) => {
+    const factory = electronTest.getApiFactory();
+    await factory.createImageFactory().createBatch(3, "shared");
+    await electronTest.refreshData();
+  });
+  test('应该能通过特殊标签"安全"筛选图像', async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图
@@ -44,15 +44,15 @@ test.describe("图像标签筛选区", () => {
       Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN,
     );
 
-    // 点击"收藏"特殊标签进行筛选
-    const favoriteTagBtn = page.locator(
-      `#${Constants.Ids.IMAGE_TAG_FILTER_SPECIAL_TAGS} .tag-filter-item[data-tag="${Constants.FAVORITE_TAG}"]`,
+    // 点击"安全"特殊标签进行筛选
+    const safeTagBtn = page.locator(
+      `#${Constants.Ids.IMAGE_TAG_FILTER_SPECIAL_TAGS} .tag-filter-item[data-tag="${Constants.SAFE_TAG}"]`,
     );
-    await expect(favoriteTagBtn).toBeVisible({ timeout: 1000 });
-    await favoriteTagBtn.click();
+    await expect(safeTagBtn).toBeVisible({ timeout: 1000 });
+    await safeTagBtn.click();
 
     // 验证筛选标签被选中（有active类）
-    await expect(favoriteTagBtn).toHaveClass(/active/);
+    await expect(safeTagBtn).toHaveClass(/active/);
 
     // 验证"标签筛选"按钮变成"清除筛选"
     const filterActionBtn = page.locator(
@@ -70,10 +70,11 @@ test.describe("图像标签筛选区", () => {
   test("应该能通过普通标签筛选图像", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
-    // 进入图像标签管理器并创建测试标签
-    await enterImageTagManager(page);
+    // 使用 API 工厂创建测试标签（测试目标是筛选而非创建）
+    const factory = electronTest.getApiFactory();
+    const imageFactory = factory.createImageFactory();
     const testTagName = electronTest.generateE2ePrefixName("filter_test");
-    await createImageTagInManager(page, testTagName);
+    await imageFactory.createTag(testTagName);
 
     // 获取第一个图像ID并关联标签
     const firstImageId = await page.evaluate(async () => {
@@ -85,10 +86,9 @@ test.describe("图像标签筛选区", () => {
       await electronTest.linkTagsToImage(firstImageId, [testTagName]);
     }
 
-    // 关闭标签管理器，然后进入图像网格视图
-    await closeImageTagManager(page);
-    await enterImageGridView(page);
+    await electronTest.refreshData();
     await electronTest.refreshTagFilters();
+    await enterImageGridView(page);
 
     // 确保标签筛选区展开
     await ensureTagFilterExpanded(
@@ -111,9 +111,6 @@ test.describe("图像标签筛选区", () => {
     const tagBadge = tagBtn.locator(".tag-badge");
     const badgeText = await tagBadge.textContent();
     expect(parseInt(badgeText || "0")).toBeGreaterThan(0);
-
-    // 清理测试数据
-    await electronTest.cleanupImageTagsAndGroups();
   });
 
   test("排序选择器应该能切换标签排序方式", async ({ electronTest, page }) => {
@@ -359,7 +356,14 @@ test.describe("图像标签筛选区", () => {
 // ========== 提示词标签筛选区测试 ==========
 
 test.describe("提示词标签筛选区", () => {
-  test('应该能通过特殊标签"收藏"筛选提示词', async ({ electronTest, page }) => {
+  // 文件级别：创建基础测试数据（所有测试复用）
+  test.beforeAll(async ({ electronTest }) => {
+    const factory = electronTest.getApiFactory();
+    await factory.createPromptFactory().createBatch(3, "shared");
+    await electronTest.refreshData();
+  });
+
+  test('应该能通过特殊标签"安全"筛选提示词', async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词网格视图
@@ -372,15 +376,15 @@ test.describe("提示词标签筛选区", () => {
       Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN,
     );
 
-    // 点击"收藏"特殊标签进行筛选
-    const favoriteTagBtn = page.locator(
-      `#${Constants.Ids.PROMPT_TAG_FILTER_SPECIAL_TAGS} .tag-filter-item[data-tag="${Constants.FAVORITE_TAG}"]`,
+    // 点击"安全"特殊标签进行筛选
+    const safeTagBtn = page.locator(
+      `#${Constants.Ids.PROMPT_TAG_FILTER_SPECIAL_TAGS} .tag-filter-item[data-tag="${Constants.SAFE_TAG}"]`,
     );
-    await expect(favoriteTagBtn).toBeVisible({ timeout: 1000 });
-    await favoriteTagBtn.click();
+    await expect(safeTagBtn).toBeVisible({ timeout: 1000 });
+    await safeTagBtn.click();
 
     // 验证筛选标签被选中（有active类）
-    await expect(favoriteTagBtn).toHaveClass(/active/);
+    await expect(safeTagBtn).toHaveClass(/active/);
 
     // 验证"标签筛选"按钮变成"清除筛选"
     const filterActionBtn = page.locator(
@@ -398,10 +402,11 @@ test.describe("提示词标签筛选区", () => {
   test("应该能通过普通标签筛选提示词", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
-    // 在标签管理器中创建测试标签
-    await enterPromptTagManager(page);
+    // 使用 API 工厂创建测试标签（测试目标是筛选而非创建）
+    const factory = electronTest.getApiFactory();
+    const promptFactory = factory.createPromptFactory();
     const testTagName = electronTest.generateE2ePrefixName("filter_test");
-    await createPromptTagInManager(page, testTagName);
+    await promptFactory.createTag(testTagName);
 
     // 获取第一个提示词ID并关联标签
     const firstPromptId = await page.evaluate(async () => {
@@ -413,10 +418,9 @@ test.describe("提示词标签筛选区", () => {
       await electronTest.linkTagsToPrompt(firstPromptId, [testTagName]);
     }
 
-    // 关闭标签管理器，然后进入提示词网格视图
-    await closePromptTagManager(page);
-    await enterPromptGridView(page);
+    await electronTest.refreshData();
     await electronTest.refreshTagFilters();
+    await enterPromptGridView(page);
 
     // 确保标签筛选区展开
     await ensureTagFilterExpanded(
@@ -439,9 +443,6 @@ test.describe("提示词标签筛选区", () => {
     const tagBadge = tagBtn.locator(".tag-badge");
     const badgeText = await tagBadge.textContent();
     expect(parseInt(badgeText || "0")).toBeGreaterThan(0);
-
-    // 清理测试数据
-    await electronTest.cleanupPromptTagsAndGroups();
   });
 
   test("排序选择器应该能切换标签排序方式", async ({ electronTest, page }) => {
