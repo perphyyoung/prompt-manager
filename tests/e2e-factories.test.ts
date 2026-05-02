@@ -56,7 +56,16 @@ describe("BaseTestDataFactory", () => {
       return { id: "1", name: "test" };
     }
 
+    async createTag(): Promise<void> {}
+
     protected async _linkTagsToEntity(): Promise<void> {}
+    protected async _getTagGroups(): Promise<Array<{ id: number; name: string; sortOrder: number }>> {
+      return [];
+    }
+    protected async _createTagGroupApi(): Promise<{ id: number; name: string; sortOrder: number } | null> {
+      return null;
+    }
+    protected async _assignTagToGroup(): Promise<void> {}
   }
 
   it("generateName 应生成正确格式的名称", () => {
@@ -194,6 +203,111 @@ describe("PromptApiFactory", () => {
     expect(addPromptTags).toHaveBeenCalledTimes(1);
     expect(addPromptTags).toHaveBeenCalledWith("123", ["tag1", "tag2"]);
   });
+
+  it("createTagGroup 应调用 createPromptTagGroup API 并返回结果", async () => {
+    const groupResult = { id: 1, name: "test_group", sortOrder: 0 };
+    const createPromptTagGroup = vi.fn(() => Promise.resolve(groupResult));
+    setupMockApi({ createPromptTagGroup });
+
+    const page = createMockPage();
+    const factory = new PromptApiFactory(page as any);
+    const result = await factory.createTagGroup("test_group");
+
+    expect(createPromptTagGroup).toHaveBeenCalledTimes(1);
+    expect(createPromptTagGroup).toHaveBeenCalledWith("test_group", 0);
+    expect(result).toEqual(groupResult);
+  });
+
+  it("createTagGroup isTop=true 时应查询现有组并取最小 sortOrder - 1", async () => {
+    const getPromptTagGroups = vi.fn(() => Promise.resolve([
+      { id: 1, name: "group1", sortOrder: 2 },
+      { id: 2, name: "group2", sortOrder: 5 },
+    ]));
+    const groupResult = { id: 3, name: "top_group", sortOrder: 1 };
+    const createPromptTagGroup = vi.fn((name: string, sortOrder: number) => {
+      expect(sortOrder).toBe(1); // min(2, 5) - 1 = 1
+      return Promise.resolve({ ...groupResult, sortOrder });
+    });
+    setupMockApi({ getPromptTagGroups, createPromptTagGroup });
+
+    const page = createMockPage();
+    const factory = new PromptApiFactory(page as any);
+    const result = await factory.createTagGroup("top_group", true);
+
+    expect(getPromptTagGroups).toHaveBeenCalledTimes(1);
+    expect(result.sortOrder).toBe(1);
+  });
+
+  it("createTagGroup isTop=true 且无现有组时应使用 sortOrder -1", async () => {
+    const getPromptTagGroups = vi.fn(() => Promise.resolve([]));
+    const groupResult = { id: 1, name: "first_group", sortOrder: -1 };
+    const createPromptTagGroup = vi.fn((name: string, sortOrder: number) => {
+      expect(sortOrder).toBe(-1); // 0 - 1 = -1
+      return Promise.resolve({ ...groupResult, sortOrder });
+    });
+    setupMockApi({ getPromptTagGroups, createPromptTagGroup });
+
+    const page = createMockPage();
+    const factory = new PromptApiFactory(page as any);
+    await factory.createTagGroup("first_group", true);
+  });
+
+  it("createTagGroup 失败时应抛出异常", async () => {
+    const createPromptTagGroup = vi.fn(() => Promise.resolve(null));
+    setupMockApi({ createPromptTagGroup });
+
+    const page = createMockPage();
+    const factory = new PromptApiFactory(page as any);
+
+    await expect(factory.createTagGroup("fail_group")).rejects.toThrow(
+      "Failed to create tag group: fail_group",
+    );
+  });
+
+  it("createTagInGroup 应创建标签组并在其中创建标签", async () => {
+    let addedTag: string | undefined;
+    const addPromptTag = vi.fn((tag: string) => {
+      addedTag = tag;
+      return Promise.resolve(undefined);
+    });
+    const groupResult = { id: 1, name: "test_group", sortOrder: 0 };
+    const createPromptTagGroup = vi.fn(() => Promise.resolve(groupResult));
+    const assignPromptTagToBelongGroup = vi.fn(() => Promise.resolve(undefined));
+    setupMockApi({ addPromptTag, createPromptTagGroup, assignPromptTagToBelongGroup });
+
+    vi.spyOn(global.Date, "now").mockReturnValue(1718307600000);
+
+    const page = createMockPage();
+    const factory = new PromptApiFactory(page as any);
+    const result = await factory.createTagInGroup("test_group", "my_tag");
+
+    expect(result.startsWith("e2e_my_tag_")).toBe(true);
+    expect(addPromptTag).toHaveBeenCalledTimes(1);
+    expect(createPromptTagGroup).toHaveBeenCalledWith("test_group", 0);
+    expect(assignPromptTagToBelongGroup).toHaveBeenCalledWith(addedTag, 1);
+  });
+
+  it("createTagInGroup isTop=true 时应创建首位组", async () => {
+    const getPromptTagGroups = vi.fn(() => Promise.resolve([
+      { id: 1, name: "group1", sortOrder: 2 },
+    ]));
+    const addPromptTag = vi.fn(() => Promise.resolve(undefined));
+    const groupResult = { id: 2, name: "top_group", sortOrder: 1 };
+    const createPromptTagGroup = vi.fn((name: string, sortOrder: number) => {
+      expect(sortOrder).toBe(1); // min(2) - 1 = 1
+      return Promise.resolve({ ...groupResult, sortOrder });
+    });
+    const assignPromptTagToBelongGroup = vi.fn(() => Promise.resolve(undefined));
+    setupMockApi({ getPromptTagGroups, addPromptTag, createPromptTagGroup, assignPromptTagToBelongGroup });
+
+    vi.spyOn(global.Date, "now").mockReturnValue(1718307600000);
+
+    const page = createMockPage();
+    const factory = new PromptApiFactory(page as any);
+    const result = await factory.createTagInGroup("top_group", "my_tag", true);
+
+    expect(result.startsWith("e2e_my_tag_")).toBe(true);
+  });
 });
 
 describe("ImageApiFactory", () => {
@@ -279,6 +393,123 @@ describe("ImageApiFactory", () => {
     expect(addPrompt).toHaveBeenCalledTimes(1);
     const promptCallArg = addPrompt.mock.calls[0][0];
     expect(promptCallArg.images).toEqual([{ id: "img1" }]);
+  });
+
+  it("createTagGroup 应调用 createImageTagGroup API 并返回结果", async () => {
+    const groupResult = { id: 1, name: "test_group", sortOrder: 0 };
+    const createImageTagGroup = vi.fn(() => Promise.resolve(groupResult));
+    setupMockApi({ createImageTagGroup });
+
+    const page = createMockPage();
+    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
+
+    const factory = new ImageApiFactory(page as any);
+    const result = await factory.createTagGroup("test_group");
+
+    expect(createImageTagGroup).toHaveBeenCalledTimes(1);
+    expect(createImageTagGroup).toHaveBeenCalledWith("test_group", 0);
+    expect(result).toEqual(groupResult);
+  });
+
+  it("createTagGroup isTop=true 时应查询现有组并取最小 sortOrder - 1", async () => {
+    const getImageTagGroups = vi.fn(() => Promise.resolve([
+      { id: 1, name: "group1", sortOrder: 3 },
+      { id: 2, name: "group2", sortOrder: 7 },
+    ]));
+    const groupResult = { id: 3, name: "top_group", sortOrder: 2 };
+    const createImageTagGroup = vi.fn((name: string, sortOrder: number) => {
+      expect(sortOrder).toBe(2); // min(3, 7) - 1 = 2
+      return Promise.resolve({ ...groupResult, sortOrder });
+    });
+    setupMockApi({ getImageTagGroups, createImageTagGroup });
+
+    const page = createMockPage();
+    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
+
+    const factory = new ImageApiFactory(page as any);
+    const result = await factory.createTagGroup("top_group", true);
+
+    expect(getImageTagGroups).toHaveBeenCalledTimes(1);
+    expect(result.sortOrder).toBe(2);
+  });
+
+  it("createTagGroup isTop=true 且无现有组时应使用 sortOrder -1", async () => {
+    const getImageTagGroups = vi.fn(() => Promise.resolve([]));
+    const groupResult = { id: 1, name: "first_group", sortOrder: -1 };
+    const createImageTagGroup = vi.fn((name: string, sortOrder: number) => {
+      expect(sortOrder).toBe(-1); // 0 - 1 = -1
+      return Promise.resolve({ ...groupResult, sortOrder });
+    });
+    setupMockApi({ getImageTagGroups, createImageTagGroup });
+
+    const page = createMockPage();
+    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
+
+    const factory = new ImageApiFactory(page as any);
+    await factory.createTagGroup("first_group", true);
+  });
+
+  it("createTagGroup 失败时应抛出异常", async () => {
+    const createImageTagGroup = vi.fn(() => Promise.resolve(null));
+    setupMockApi({ createImageTagGroup });
+
+    const page = createMockPage();
+    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
+
+    const factory = new ImageApiFactory(page as any);
+
+    await expect(factory.createTagGroup("fail_group")).rejects.toThrow(
+      "Failed to create tag group: fail_group",
+    );
+  });
+
+  it("createTagInGroup 应创建标签组并在其中创建标签", async () => {
+    let addedTag: string | undefined;
+    const addImageTag = vi.fn((tag: string) => {
+      addedTag = tag;
+      return Promise.resolve(undefined);
+    });
+    const groupResult = { id: 1, name: "test_group", sortOrder: 0 };
+    const createImageTagGroup = vi.fn(() => Promise.resolve(groupResult));
+    const assignImageTagToBelongGroup = vi.fn(() => Promise.resolve(undefined));
+    setupMockApi({ addImageTag, createImageTagGroup, assignImageTagToBelongGroup });
+
+    vi.spyOn(global.Date, "now").mockReturnValue(1718307600000);
+
+    const page = createMockPage();
+    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
+
+    const factory = new ImageApiFactory(page as any);
+    const result = await factory.createTagInGroup("test_group", "my_tag");
+
+    expect(result.startsWith("e2e_my_tag_")).toBe(true);
+    expect(addImageTag).toHaveBeenCalledTimes(1);
+    expect(createImageTagGroup).toHaveBeenCalledWith("test_group", 0);
+    expect(assignImageTagToBelongGroup).toHaveBeenCalledWith(addedTag, 1);
+  });
+
+  it("createTagInGroup isTop=true 时应创建首位组", async () => {
+    const getImageTagGroups = vi.fn(() => Promise.resolve([
+      { id: 1, name: "group1", sortOrder: 2 },
+    ]));
+    const addImageTag = vi.fn(() => Promise.resolve(undefined));
+    const groupResult = { id: 2, name: "top_group", sortOrder: 1 };
+    const createImageTagGroup = vi.fn((name: string, sortOrder: number) => {
+      expect(sortOrder).toBe(1); // min(2) - 1 = 1
+      return Promise.resolve({ ...groupResult, sortOrder });
+    });
+    const assignImageTagToBelongGroup = vi.fn(() => Promise.resolve(undefined));
+    setupMockApi({ getImageTagGroups, addImageTag, createImageTagGroup, assignImageTagToBelongGroup });
+
+    vi.spyOn(global.Date, "now").mockReturnValue(1718307600000);
+
+    const page = createMockPage();
+    vi.spyOn(ImageApiFactory.prototype as any, "generateTempImage").mockResolvedValue("/tmp/test.png");
+
+    const factory = new ImageApiFactory(page as any);
+    const result = await factory.createTagInGroup("top_group", "my_tag", true);
+
+    expect(result.startsWith("e2e_my_tag_")).toBe(true);
   });
 });
 

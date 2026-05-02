@@ -40,6 +40,8 @@
 - `PromptApiFactory.createBatch(count, label)` 批量创建提示词
 - `PromptApiFactory.createTag(tagName)` 调用 `window.electronAPI.addPromptTag()` 创建独立标签
 - `PromptApiFactory.createTags(count, label)` 批量创建独立标签
+- `PromptApiFactory.createTagGroup(name, isTop?)` 调用 `window.electronAPI.createPromptTagGroup()` 创建标签组，`isTop` 为 true 时查询现有组最小 `sortOrder`，取 `min(现有) - 1`（无现有组时为 `-1`）使其成为首位组
+- `PromptApiFactory.createTagInGroup(groupName, tagLabel, isTop?)` 创建标签组并在其中创建一个标签，返回标签名称
 - `PromptApiFactory.createWithTags(data, tagNames)` 创建提示词并关联标签
 - `PromptApiFactory.createWithImages(data, imageIds)` 创建提示词时直接设置 `images` 字段关联图像
 
@@ -49,6 +51,8 @@
 - `ImageApiFactory.createBatch(count, label)` 批量创建图像
 - `ImageApiFactory.createTag(tagName)` 调用 `window.electronAPI.addImageTag()` 创建独立标签
 - `ImageApiFactory.createTags(count, label)` 批量创建独立标签
+- `ImageApiFactory.createTagGroup(name, isTop?)` 调用 `window.electronAPI.createImageTagGroup()` 创建标签组，`isTop` 为 true 时查询现有组最小 `sortOrder`，取 `min(现有) - 1`（无现有组时为 `-1`）使其成为首位组
+- `ImageApiFactory.createTagInGroup(groupName, tagLabel, isTop?)` 创建标签组并在其中创建一个标签，返回标签名称
 - `ImageApiFactory.createWithTags(data, tagNames)` 创建图像并关联标签
 - `ImageApiFactory.createWithPrompts(data, promptDataList)` 创建图像并同时创建关联的提示词
 
@@ -80,12 +84,16 @@
 | 批量创建提示词 | 调用 `promptFactory.createBatch(3, "test")` | 应用已启动 | 循环调用 `create()` 3 次 | 返回包含 3 个 `IPrompt` 的数组 |
 | 创建独立提示词标签 | 调用 `promptFactory.createTag("tag")` | 应用已启动 | 调用 `addPromptTag` API | 标签创建成功 |
 | 批量创建独立提示词标签 | 调用 `promptFactory.createTags(3, "test")` | 应用已启动 | 循环调用 `createTag()` 3 次 | 创建 3 个独立标签 |
+| 创建提示词标签组 | 调用 `promptFactory.createTagGroup("组名")` | 应用已启动 | 调用 `createPromptTagGroup` API | 标签组创建成功 |
+| 创建首位提示词标签组 | 调用 `promptFactory.createTagGroup("组名", true)` | 应用已启动 | 查询现有组最小 sortOrder，取 min(现有) - 1 后调用 API | 标签组 sortOrder 小于所有现有组 |
 | 创建带标签的提示词 | 调用 `promptFactory.createWithTags(data, ["tag1"])` | 应用已启动 | 先创建提示词，再调用 `addPromptTags` | 返回带标签的 `IPrompt` |
 | 创建带图像的提示词 | 调用 `promptFactory.createWithImages(data, ["img1"])` | 图像已存在 | 设置 `data.images` 后调用 `addPrompt` | 返回关联图像的 `IPrompt` |
 | 创建单个图像 | 调用 `imageFactory.create(data)` | 应用已启动 | 生成临时文件，调用 `saveImageFile` | 返回创建的 `IImage` 对象 |
 | 批量创建图像 | 调用 `imageFactory.createBatch(2, "test")` | 应用已启动 | 循环调用 `create()` 2 次 | 返回包含 2 个 `IImage` 的数组 |
 | 创建独立图像标签 | 调用 `imageFactory.createTag("tag")` | 应用已启动 | 调用 `addImageTag` API | 标签创建成功 |
 | 批量创建独立图像标签 | 调用 `imageFactory.createTags(3, "test")` | 应用已启动 | 循环调用 `createTag()` 3 次 | 创建 3 个独立标签 |
+| 创建图像标签组 | 调用 `imageFactory.createTagGroup("组名")` | 应用已启动 | 调用 `createImageTagGroup` API | 标签组创建成功 |
+| 创建首位图像标签组 | 调用 `imageFactory.createTagGroup("组名", true)` | 应用已启动 | 查询现有组最小 sortOrder，取 min(现有) - 1 后调用 API | 标签组 sortOrder 小于所有现有组 |
 | 创建带标签的图像 | 调用 `imageFactory.createWithTags(data, ["tag1"])` | 应用已启动 | 先创建图像，再调用 `addImageTags` | 返回带标签的 `IImage` |
 | 创建带提示词的图像 | 调用 `imageFactory.createWithPrompts(data, [data])` | 应用已启动 | 创建图像，再创建提示词并关联 | 返回 `{image, prompts}` |
 | API 调用失败 | 网络或后端错误 | 应用已启动 | 抛出异常 | 异常信息包含操作详情 |

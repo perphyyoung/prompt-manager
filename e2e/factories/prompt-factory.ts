@@ -64,6 +64,39 @@ export class PromptApiFactory extends BaseTestDataFactory<IPrompt> {
   }
 
   /**
+   * 实现基类抽象方法：获取现有标签组列表
+   */
+  protected async _getTagGroups(): Promise<Array<{ id: number; name: string; sortOrder: number }>> {
+    return await this.page.evaluate(async () => {
+      return await window.electronAPI.getPromptTagGroups();
+    });
+  }
+
+  /**
+   * 实现基类抽象方法：调用创建标签组 API
+   */
+  protected async _createTagGroupApi(name: string, sortOrder: number): Promise<{ id: number; name: string; sortOrder: number } | null> {
+    return await this.page.evaluate(
+      async (params: { name: string; sortOrder: number }) => {
+        return await window.electronAPI.createPromptTagGroup(params.name, params.sortOrder);
+      },
+      { name, sortOrder },
+    );
+  }
+
+  /**
+   * 实现基类抽象方法：将标签分配到标签组
+   */
+  protected async _assignTagToGroup(tagName: string, groupId: number): Promise<void> {
+    await this.page.evaluate(
+      async (params: { tag: string; groupId: number }) => {
+        await window.electronAPI.assignPromptTagToBelongGroup(params.tag, params.groupId);
+      },
+      { tag: tagName, groupId },
+    );
+  }
+
+  /**
    * 创建带标签的提示词
    */
   async createWithTags(

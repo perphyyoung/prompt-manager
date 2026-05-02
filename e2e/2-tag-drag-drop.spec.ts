@@ -5,12 +5,6 @@ import {
   enterPromptGridView,
   ensureTagFilterExpanded,
   ensureTagFilterCollapsed,
-  createImageTagInManager,
-  createPromptTagInManager,
-  createImageTagGroup,
-  createPromptTagGroup,
-  enterImageTagManager,
-  enterPromptTagManager,
 } from "./electron-test.ts";
 import { Constants } from "../src/constants.ts";
 import type { IImage, IPrompt } from "../src/preload/index.ts";
@@ -36,40 +30,20 @@ test.describe("标签拖拽功能", () => {
   let sharedPromptTagName: string;
 
   // ========== 初始化 ==========
-  test.beforeAll(async ({ electronTest, page }) => {
+  test.beforeAll(async ({ electronTest }) => {
+    const factory = electronTest.getApiFactory();
+    const imageFactory = factory.createImageFactory();
+    const promptFactory = factory.createPromptFactory();
+
     // 创建基础测试数据（图像/提示词）
-    await electronTest.createTestImages(2, "drag");
-    await electronTest.createTestPrompts(2, "drag");
+    await imageFactory.createBatch(2, "drag");
+    await promptFactory.createBatch(2, "drag");
 
     // 创建共享的图像标签组和标签（所有图像拖拽测试复用）
-    await enterImageTagManager(page);
-    const imageGroup = await createImageTagGroup(page, "drag_shared");
-    sharedImageTagName = electronTest.generateE2ePrefixName("drag_shared");
-    await createImageTagInManager(
-      page,
-      sharedImageTagName,
-      imageGroup.groupId?.toString(),
-    );
-    await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
-    await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, {
-      state: "hidden",
-      timeout: 1000,
-    });
+    sharedImageTagName = await imageFactory.createTagInGroup("drag_shared", "drag_shared", true);
 
     // 创建共享的提示词标签组和标签（所有提示词拖拽测试复用）
-    await enterPromptTagManager(page);
-    const promptGroup = await createPromptTagGroup(page, "drag_shared");
-    sharedPromptTagName = electronTest.generateE2ePrefixName("drag_shared");
-    await createPromptTagInManager(
-      page,
-      sharedPromptTagName,
-      promptGroup.groupId?.toString(),
-    );
-    await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
-    await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, {
-      state: "hidden",
-      timeout: 1000,
-    });
+    sharedPromptTagName = await promptFactory.createTagInGroup("drag_shared", "drag_shared", true);
 
     // 刷新界面以显示新数据
     await electronTest.refreshData();

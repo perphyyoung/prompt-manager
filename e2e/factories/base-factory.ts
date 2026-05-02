@@ -58,6 +58,66 @@ export abstract class BaseTestDataFactory<T> {
   protected abstract _linkTagsToEntity(entityId: string, tagNames: string[]): Promise<void>;
 
   /**
+   * 创建单个标签（子类实现）
+   */
+  abstract createTag(tagName: string): Promise<void>;
+
+  /**
+   * 获取现有标签组列表（子类实现）
+   */
+  protected abstract _getTagGroups(): Promise<Array<{ id: number; name: string; sortOrder: number }>>;
+
+  /**
+   * 调用创建标签组 API（子类实现）
+   */
+  protected abstract _createTagGroupApi(name: string, sortOrder: number): Promise<{ id: number; name: string; sortOrder: number } | null>;
+
+  /**
+   * 将标签分配到标签组（子类实现）
+   */
+  protected abstract _assignTagToGroup(tagName: string, groupId: number): Promise<void>;
+
+  /**
+   * 创建标签组
+   * @param name - 组名称
+   * @param isTop - 是否为首位组（true 时自动取现有最小 sortOrder - 1）
+   */
+  async createTagGroup(name: string, isTop?: boolean): Promise<{ id: number; name: string; sortOrder: number }> {
+    let finalSortOrder = 0;
+
+    if (isTop) {
+      const groups = await this._getTagGroups();
+      const minSortOrder = groups.length > 0
+        ? Math.min(...groups.map((g) => g.sortOrder))
+        : 0;
+      finalSortOrder = minSortOrder - 1;
+    }
+
+    const group = await this._createTagGroupApi(name, finalSortOrder);
+
+    if (!group || !group.id) {
+      throw new Error(`Failed to create tag group: ${name}`);
+    }
+
+    return group;
+  }
+
+  /**
+   * 创建标签组并在其中创建一个标签
+   * @param groupName - 组名称
+   * @param tagLabel - 标签后缀（将生成 e2e_{tagLabel}_{timestamp}_{random} 格式的名称）
+   * @param isTop - 是否为首位组
+   * @returns 创建的标签名称
+   */
+  async createTagInGroup(groupName: string, tagLabel: string, isTop?: boolean): Promise<string> {
+    const tagName = this.generateName(tagLabel);
+    await this.createTag(tagName);
+    const group = await this.createTagGroup(groupName, isTop);
+    await this._assignTagToGroup(tagName, group.id);
+    return tagName;
+  }
+
+  /**
    * 调用 Electron API
    */
   protected async callApi<R>(apiCall: (electronAPI: any) => Promise<R>): Promise<R> {

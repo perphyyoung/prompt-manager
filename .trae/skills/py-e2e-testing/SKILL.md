@@ -42,12 +42,20 @@ BaseTestDataFactory<T> (抽象基类)
 PromptApiFactory extends BaseTestDataFactory<IPrompt>
     ├── create(data)           → electronAPI.addPrompt()
     ├── createBatch(count, label)
+    ├── createTag(tagName)     → electronAPI.addPromptTag()
+    ├── createTags(count, label)
+    ├── createTagGroup(name, isTop?) → electronAPI.createPromptTagGroup()
+    ├── createTagInGroup(groupName, tagLabel, isTop?) → 创建标签组并在其中添加标签
     ├── createWithTags(data, tagNames)
     └── createWithImages(data, imageIds)
 
 ImageApiFactory extends BaseTestDataFactory<IImage>
     ├── create(data)           → saveImageFile() + getImageById()
     ├── createBatch(count, label)
+    ├── createTag(tagName)     → electronAPI.addImageTag()
+    ├── createTags(count, label)
+    ├── createTagGroup(name, isTop?) → electronAPI.createImageTagGroup()
+    ├── createTagInGroup(groupName, tagLabel, isTop?) → 创建标签组并在其中添加标签
     ├── createWithTags(data, tagNames)
     └── createWithPrompts(data, promptDataList)
 ```
@@ -78,6 +86,18 @@ await imageFactory.createTag("e2e_test_tag");
 // 批量创建独立标签
 await promptFactory.createTags(5, "prompt_tags");
 await imageFactory.createTags(5, "image_tags");
+
+// 创建标签组
+await imageFactory.createTagGroup("e2e_test_group");
+await promptFactory.createTagGroup("e2e_test_group");
+
+// 创建标签组并在其中添加标签（一步到位）
+const tagName = await imageFactory.createTagInGroup("drag_group", "drag_shared", true);
+const promptTagName = await promptFactory.createTagInGroup("prompt_drag_group", "drag_shared", true);
+
+// 创建首位组（sortOrder 取现有最小值 - 1，无现有组时为 -1）
+await imageFactory.createTagGroup("e2e_top_group", true);
+await promptFactory.createTagGroup("e2e_top_group", true);
 
 // 创建后刷新界面
 await electronTest.refreshData();
