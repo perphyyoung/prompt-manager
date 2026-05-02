@@ -27,30 +27,35 @@ test.describe("提示词详情界面数据库字段读取", () => {
   // ========== 初始化 ==========
   test.beforeAll(async ({ electronTest }) => {
     // 创建基础测试数据（至少2个带图像的提示词用于导航测试）
+    const factory = electronTest.getApiFactory();
+
     // 创建第一个带有关联图像的提示词
-    const result1 = await electronTest.createTestImageViaUI({
-      withPrompt: true,
-      promptOverrides: {
-        content: "e2e_test_prompt_with_image_1",
-      },
-    });
-    expect(typeof result1).toBe("object");
-    const { promptId: _promptId1 } = result1 as { imageId: string; promptId: string };
-    expect(_promptId1).toBeTruthy();
+    const result1 = await factory.createImageFactory().createWithPrompts(
+      { label: "test_image_1" },
+      [
+        {
+          label: "test_prompt_1",
+          content: "e2e_test_prompt_with_image_1",
+        },
+      ],
+    );
+    expect(result1.prompts.length).toBeGreaterThan(0);
 
     // 创建第二个带有关联图像的提示词（用于导航测试）
-    const result2 = await electronTest.createTestImageViaUI({
-      withPrompt: true,
-      promptOverrides: {
-        content: "e2e_test_prompt_with_image_2",
-      },
-    });
-    expect(typeof result2).toBe("object");
-    const { promptId: _promptId2 } = result2 as { imageId: string; promptId: string };
-    expect(_promptId2).toBeTruthy();
+    const result2 = await factory.createImageFactory().createWithPrompts(
+      { label: "test_image_2" },
+      [
+        {
+          label: "test_prompt_2",
+          content: "e2e_test_prompt_with_image_2",
+        },
+      ],
+    );
+    expect(result2.prompts.length).toBeGreaterThan(0);
 
     // 再创建一个普通提示词（用于测试无图像的情况）
-    await electronTest.createTestPrompt("detail_no_image", {
+    await factory.createPromptFactory().create({
+      label: "detail_no_image",
       content: "e2e_test_prompt_no_image",
     });
 
