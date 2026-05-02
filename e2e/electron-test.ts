@@ -1384,7 +1384,8 @@ export function createElectronTest(testDataDir?: string) {
  * 4. Wait for imageTagManagerModal to be visible
  */
 export async function enterImageTagManager(page: any) {
-  await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
+  // 使用快捷键切换到图像主界面（自动关闭可能打开的模态框）
+  await page.keyboard.press("Control+i");
   await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
     state: "visible",
     timeout: 1000,
@@ -1424,7 +1425,8 @@ export async function enterImageTagManager(page: any) {
  * 4. Wait for promptTagManagerModal to be visible
  */
 export async function enterPromptTagManager(page: any) {
-  await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
+  // 使用快捷键切换到提示词主界面（自动关闭可能打开的模态框）
+  await page.keyboard.press("Control+p");
   await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
     state: "visible",
     timeout: 1000,
