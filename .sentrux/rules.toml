@@ -1,0 +1,20 @@
+[constraints]
+max_cycles = 0
+max_coupling = "B"
+max_cc = 25
+no_god_files = true
+
+[[layers]]
+name = "src"
+paths = ["src/*"]
+order = 0
+
+[[layers]]
+name = "e2e"
+paths = ["e2e/*"]
+order = 5
+
+[[boundaries]]
+from = "src/pyBatchToolbar/*"
+to = "src/middle/*"
+reason = "pyBatchToolbar must not depend on middle"
