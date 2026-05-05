@@ -14,6 +14,8 @@
 
 ## mcp 工具
 
+- 代码搜索使用 rg, 而不是 grep
+- 语义搜索优先使用 gitnexus/code-review-graph
 - CLAUDE-code-review-graph.md
 
 ## 教训
