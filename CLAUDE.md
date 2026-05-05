@@ -12,6 +12,10 @@
 - .trae/rules/项目规则.md
 - 默认系统提示
 
+## mcp 工具
+
+- CLAUDE-code-review-graph.md
+
 ## 教训
 
 - 会话开始前, 阅读 `lessons.md`, 确保不会再犯
