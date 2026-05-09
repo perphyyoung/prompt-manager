@@ -14,14 +14,25 @@ description: 在编写或调试 Playwright E2E 测试时使用。症状包括：
 
 ### 1. 测试专用数据库
 
-每个测试文件使用独立的临时数据目录，通过 Playwright worker-scoped fixture 实现：
+每个 worker 使用独立的临时数据目录，通过 Playwright worker-scoped fixture 实现：
 
-- 每个测试文件使用独立的临时数据目录（位于系统临时目录）
+- 每个 worker 使用独立的临时数据目录（位于系统临时目录）
 - 通过 `E2E_TEST_DATA_DIR` 环境变量传递测试数据目录路径
 - 主进程检测到该环境变量时，使用测试数据目录替代默认数据目录
-- 应用在文件级别只启动和关闭一次
+- 应用在 worker 级别启动和关闭一次（并行时, 每个 worker 进程执行所有分配的测试文件）
 - 测试完成后自动删除临时数据目录
-- **不支持并行测试**（并行执行时数据会相互干扰）
+
+#### Playwright 并行配置
+
+```typescript
+// playwright.config.ts
+{
+  workers: 4,        // 最多 4 个 worker 进程
+  fullyParallel: false,  // 文件间并行，文件内顺序（默认行为）
+}
+```
+
+> **前提条件**：worker-scoped fixture 依赖 Playwright 的 worker 复用机制。默认情况下（`fullyParallel: false`），每个测试文件分配独立 worker。
 
 ### 2. 测试数据抽象工厂
 

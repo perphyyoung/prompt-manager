@@ -27,7 +27,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
 
   /* 并发 workers */
-  workers: 1,
+  workers: 4,
 
   /* 报告器 */
   reporter: 'list',

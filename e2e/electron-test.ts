@@ -60,6 +60,7 @@ export class ElectronTestHelper {
     const env: Record<string, string> = {
       ...process.env,
       NODE_ENV: "test",
+      E2E_SINGLE_INSTANCE: "false",
     };
     if (this.testDataDir) {
       env.E2E_TEST_DATA_DIR = this.testDataDir;
@@ -2710,7 +2711,7 @@ function getTestDataDir(): string {
 /**
  * 共用的 Playwright fixture
  * 使用 worker-scoped fixture 管理应用生命周期
- * 每个测试文件只启动和关闭一次应用
+ * 应用在 worker 级别启动和关闭一次（并行时, 每个 worker 进程执行所有分配的测试文件）
  */
 export const test = base.extend<
   {

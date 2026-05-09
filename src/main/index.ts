@@ -2166,7 +2166,8 @@ ipcMain.handle('import-full-backup', async () => {
 });
 
 // 请求单实例锁
-const gotTheLock = app.requestSingleInstanceLock();
+const enableSingleInstance = process.env.E2E_SINGLE_INSTANCE !== "false";
+const gotTheLock = enableSingleInstance ? app.requestSingleInstanceLock() : true;
 
 if (!gotTheLock) {
   logError('Main', 'Another instance is already running. Quitting...');
@@ -2174,15 +2175,17 @@ if (!gotTheLock) {
 }
 
 // 当尝试运行第二个实例时，聚焦到第一个实例的窗口
-app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore();
+if (enableSingleInstance) {
+  app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.show();
+      mainWindow.focus();
     }
-    mainWindow.show();
-    mainWindow.focus();
-  }
-});
+  });
+}
 
 app.whenReady().then(async () => {
   // 加载配置

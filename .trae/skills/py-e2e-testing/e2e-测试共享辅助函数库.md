@@ -135,24 +135,6 @@
 
 - `test` - 共用的 Playwright fixture，每个测试独立启动和关闭应用，page fixture 接管应用关闭，避免超时冲突
 
-## 使用方法
-
-```typescript
-import { test, createElectronTest, enterImageGridView, getImageFromDatabase } from './electron-test.ts';
-
-// 使用 test fixture（推荐）
-test('测试用例', async ({ electronTest, page }) => {
-  // electronTest 和 page 已自动初始化
-  const firstCard = await enterImageGridView(page);
-  const imageData = await getImageFromDatabase(page, imageId);
-});
-
-// 或者手动创建实例
-const electronTest = createElectronTest();
-await electronTest.launch();
-const page = electronTest.getPage();
-```
-
 ## 注意事项
 
 - 所有测试标签名都会自动添加 `e2e_` 前缀
