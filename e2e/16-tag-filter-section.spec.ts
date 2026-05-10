@@ -31,7 +31,7 @@ test.describe("图像标签筛选区", () => {
     await factory.createImageFactory().createBatch(3, "shared");
     await electronTest.refreshData();
   });
-  test('应该能通过特殊标签"安全"筛选图像', async ({ electronTest, page }) => {
+  test('应该能通过特殊标签"无标"筛选图像', async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图
@@ -44,15 +44,15 @@ test.describe("图像标签筛选区", () => {
       Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN,
     );
 
-    // 点击"安全"特殊标签进行筛选
-    const safeTagBtn = page.locator(
-      `#${Constants.Ids.IMAGE_TAG_FILTER_SPECIAL_TAGS} .tag-filter-item[data-tag="${Constants.SAFE_TAG}"]`,
+    // 点击"无标"特殊标签进行筛选
+    const noTagBtn = page.locator(
+      `#${Constants.Ids.IMAGE_TAG_FILTER_SPECIAL_TAGS} .tag-filter-item[data-tag="${Constants.NO_TAG_TAG}"]`,
     );
-    await expect(safeTagBtn).toBeVisible({ timeout: 1000 });
-    await safeTagBtn.click();
+    await expect(noTagBtn).toBeVisible({ timeout: 1000 });
+    await noTagBtn.click();
 
     // 验证筛选标签被选中（有active类）
-    await expect(safeTagBtn).toHaveClass(/active/);
+    await expect(noTagBtn).toHaveClass(/active/);
 
     // 验证"标签筛选"按钮变成"清除筛选"
     const filterActionBtn = page.locator(
@@ -363,7 +363,7 @@ test.describe("提示词标签筛选区", () => {
     await electronTest.refreshData();
   });
 
-  test('应该能通过特殊标签"安全"筛选提示词', async ({ electronTest, page }) => {
+  test('应该能通过特殊标签"无标"筛选提示词', async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词网格视图
@@ -376,15 +376,15 @@ test.describe("提示词标签筛选区", () => {
       Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN,
     );
 
-    // 点击"安全"特殊标签进行筛选
-    const safeTagBtn = page.locator(
-      `#${Constants.Ids.PROMPT_TAG_FILTER_SPECIAL_TAGS} .tag-filter-item[data-tag="${Constants.SAFE_TAG}"]`,
+    // 点击"无标"特殊标签进行筛选
+    const noTagBtn = page.locator(
+      `#${Constants.Ids.PROMPT_TAG_FILTER_SPECIAL_TAGS} .tag-filter-item[data-tag="${Constants.NO_TAG_TAG}"]`,
     );
-    await expect(safeTagBtn).toBeVisible({ timeout: 1000 });
-    await safeTagBtn.click();
+    await expect(noTagBtn).toBeVisible({ timeout: 1000 });
+    await noTagBtn.click();
 
     // 验证筛选标签被选中（有active类）
-    await expect(safeTagBtn).toHaveClass(/active/);
+    await expect(noTagBtn).toHaveClass(/active/);
 
     // 验证"标签筛选"按钮变成"清除筛选"
     const filterActionBtn = page.locator(
