@@ -79,7 +79,7 @@ class EventBus {
     if (!this.events.has(event)) return;
 
     const count = this.events.get(event)!.size;
-    window.electronAPI.logDebug('EventBus', `emit "${event}", subscribers: ${count}`);
+    window.electronAPI.logInfo('EventBus', `emit "${event}", subscribers: ${count}`);
     this.events.get(event)!.forEach(callback => {
       try {
         callback(data);

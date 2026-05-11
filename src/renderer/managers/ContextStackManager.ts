@@ -73,7 +73,7 @@ export class ContextStackManager {
     }
 
     this.stack.push(entry);
-    window.electronAPI.logDebug('ContextStackManager', `push ${newId}, stack=[${this.getStackIdsString()}]`);
+    window.electronAPI.logInfo('ContextStackManager', `push ${newId}, stack=[${this.getStackIdsString()}]`);
   }
 
   /**
@@ -97,7 +97,7 @@ export class ContextStackManager {
     const popped = this.stack.pop();
     const titleStr = popped?.title || '';
     const newId = `${popped?.id}${titleStr}`;
-    window.electronAPI.logDebug('ContextStackManager', `pop: ${newId}, stack=[${this.getStackIdsString()}]`);
+    window.electronAPI.logInfo('ContextStackManager', `pop: ${newId}, stack=[${this.getStackIdsString()}]`);
 
     return true;
   }

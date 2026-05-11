@@ -834,9 +834,7 @@ ipcMain.handle('soft-delete-image', async (event, id) => {
 // 批量软删除图像
 ipcMain.handle('soft-delete-images', async (event, ids) => {
   try {
-    logDebug('Main', `soft-delete-images called with ${ids.length} IDs: ${ids.join(', ')}`);
     const result = await db.softDeleteImages(ids);
-    logDebug('Main', `soft-delete-images result: ${JSON.stringify(result)}`);
     return result;
   } catch (error) {
     logError('Main', 'Batch soft delete images error:', error);

@@ -10,8 +10,8 @@ import path from 'path';
 let logFilePath: string;
 
 // 配置日志级别
-const logLevel = 'debug';
-// const logLevel = 'warn';
+// const logLevel = 'debug';
+const logLevel = 'warn';
 log.transports.file.level = logLevel;
 log.transports.console.level = logLevel;
 
