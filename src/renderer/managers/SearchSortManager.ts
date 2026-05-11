@@ -295,9 +295,7 @@ export class SearchSortManager {
       promptCardSizeSlider.addEventListener('input', (e) => {
         this.app.promptPanelManager?.setCardSize(parseInt((e.target as HTMLInputElement).value, 10));
       });
-      promptCardSizeSlider.addEventListener('change', (e) => {
-        localStorageManager.set(Constants.LocalStorageKey.PROMPT_CARD_SIZE, parseInt((e.target as HTMLInputElement).value, 10));
-      });
+      // 注意：不需要 change 事件监听器，因为 setCardSize 内部已经处理了 localStorage 写入
     }
   }
 
@@ -368,9 +366,7 @@ export class SearchSortManager {
       imageCardSizeSlider.addEventListener('input', (e) => {
         this.app.imagePanelManager?.setCardSize(parseInt((e.target as HTMLInputElement).value, 10));
       });
-      imageCardSizeSlider.addEventListener('change', (e) => {
-        localStorageManager.set(Constants.LocalStorageKey.IMAGE_CARD_SIZE, parseInt((e.target as HTMLInputElement).value, 10));
-      });
+      // 注意：不需要 change 事件监听器，因为 setCardSize 内部已经处理了 localStorage 写入
     }
   }
 
