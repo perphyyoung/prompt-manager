@@ -2,6 +2,7 @@ import { TagUI } from '../TagUI.ts';
 import { HtmlUtils } from '../../../utils/index.ts';
 import { createListButtonHtml, Icons } from './ButtonFactory.ts';
 import { ListConfig, LayoutSection } from './ListConfig.ts';
+import { IImage } from '../../../types/entities.ts';
 
 export interface ListRenderContext {
   icons: Icons;
@@ -88,8 +89,7 @@ export class UnifiedListRenderer {
       attrs.push(`data-first-image="${firstImageId}"`);
       attrs.push('data-drop-target="prompt"');
     } else if (config.itemType === 'image') {
-      const itemWithPaths = item as { thumbnailPath?: string; relativePath?: string };
-      const imagePath = itemWithPaths.thumbnailPath || itemWithPaths.relativePath || '';
+      const imagePath = (item as IImage).thumbnailPath || (item as IImage).relativePath || '';
       attrs.push(`data-image-path="${imagePath.replace(/"/g, '&quot;')}"`);
     }
 

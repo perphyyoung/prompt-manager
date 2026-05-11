@@ -1,5 +1,6 @@
 import { cacheManager } from '../../utils/index.ts';
 import { IApp } from '../app.types.ts';
+import { IImage } from '../../types/entities.ts';
 
 interface HoverTooltipOptions {
   getContent?: (element: Element) => string | null;
@@ -47,15 +48,14 @@ export class HoverTooltipManager {
     // 如果缓存中没有，异步获取并缓存
     if (!thumbnailPath && !originalPath) {
       const allImages = await window.electronAPI.getImages('updatedAt', 'desc');
-      const img = allImages.find((i: { id: string }) => this.app.isSameId(i.id, imageId));
+      const img = allImages.find((i: { id: string }) => this.app.isSameId(i.id, imageId)) as IImage | undefined;
       if (img) {
-        const imgWithPaths = img as { thumbnailPath?: string; relativePath?: string };
-        if (imgWithPaths.thumbnailPath) {
-          thumbnailPath = await window.electronAPI.getImagePath(imgWithPaths.thumbnailPath);
+        if (img.thumbnailPath) {
+          thumbnailPath = await window.electronAPI.getImagePath(img.thumbnailPath);
           cacheManager.setImagePath(imageId, 'thumbnail', thumbnailPath);
         }
-        if (imgWithPaths.relativePath) {
-          originalPath = await window.electronAPI.getImagePath(imgWithPaths.relativePath);
+        if (img.relativePath) {
+          originalPath = await window.electronAPI.getImagePath(img.relativePath);
           cacheManager.setImagePath(imageId, 'original', originalPath);
         }
       }

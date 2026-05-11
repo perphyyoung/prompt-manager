@@ -26,6 +26,7 @@ export interface IImage {
   id: string;
   fileName: string;
   relativePath: string;
+  thumbnailPath?: string;
   isSafe?: number;
   isFavorite?: number;
   isDeleted: boolean;
