@@ -47,3 +47,10 @@ export {
   DuplicatePreventionMixin,
   type IDuplicatePrevention
 } from './DuplicatePrevention.ts';
+
+// ========== LocalStorage 管理器 ==========
+export {
+  LocalStorageManager,
+  localStorageManager,
+  type ConfigItem
+} from './LocalStorageManager.ts';

@@ -124,6 +124,12 @@ export class Constants {
     CURRENT_PANEL: 'currentPanel',
     SIDEBAR_COLLAPSED: 'sidebarCollapsed',
 
+    // 提示词视图模式
+    PROMPT_VIEW_MODE: 'promptViewMode',
+
+    // 图像视图模式
+    IMAGE_VIEW_MODE: 'imageViewMode',
+
     // 提示词排序
     PROMPT_SORT_BY: 'promptSortBy',
     PROMPT_SORT_ORDER: 'promptSortOrder',

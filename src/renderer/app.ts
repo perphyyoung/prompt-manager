@@ -21,6 +21,7 @@ import eventBus from '../utils/EventBus.ts';
 import { HtmlUtils, cacheManager } from '../utils/index.ts';
 import { clearTagsCache } from '../pyTagGroups/operations.ts';
 import { HoverTooltipManager, ShortcutManager } from './renderer_utils/index.ts';
+import { localStorageManager } from './configs/LocalStorageConfig.ts';
 import type { IPrompt, IImage } from '../types/entities.ts';
 import type {
   IApp,
@@ -116,20 +117,20 @@ class PromptManager implements IApp {
     this.currentImagesCache = cacheManager.createCache('currentImages', 100);
 
     // 从 localStorage 加载 viewMode（在创建面板管理器之前）
-    this.viewMode = localStorage.getItem(Constants.LocalStorageKey.VIEW_MODE) || 'safe';
+    this.viewMode = localStorageManager.get<string>(Constants.LocalStorageKey.VIEW_MODE);
     this.searchQuery = '';
     this.selectedTags = new Set();
     this.imageSearchQuery = '';
 
     // 标签管理排序状态
-    this.promptTagSortBy = localStorage.getItem(Constants.LocalStorageKey.PROMPT_TAG_SORT_BY) || 'count';
-    this.promptTagSortOrder = localStorage.getItem(Constants.LocalStorageKey.PROMPT_TAG_SORT_ORDER) || 'desc';
-    this.imageTagSortBy = localStorage.getItem(Constants.LocalStorageKey.IMAGE_TAG_SORT_BY) || 'count';
-    this.imageTagSortOrder = localStorage.getItem(Constants.LocalStorageKey.IMAGE_TAG_SORT_ORDER) || 'desc';
+    this.promptTagSortBy = localStorageManager.get<string>(Constants.LocalStorageKey.PROMPT_TAG_SORT_BY);
+    this.promptTagSortOrder = localStorageManager.get<string>(Constants.LocalStorageKey.PROMPT_TAG_SORT_ORDER);
+    this.imageTagSortBy = localStorageManager.get<string>(Constants.LocalStorageKey.IMAGE_TAG_SORT_BY);
+    this.imageTagSortOrder = localStorageManager.get<string>(Constants.LocalStorageKey.IMAGE_TAG_SORT_ORDER);
 
     // 图像选择器排序状态（独立设置）
-    this.imageSelectorSortBy = localStorage.getItem(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_BY) || 'updatedAt';
-    this.imageSelectorSortOrder = localStorage.getItem(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_ORDER) || 'desc';
+    this.imageSelectorSortBy = localStorageManager.get<string>(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_BY);
+    this.imageSelectorSortOrder = localStorageManager.get<string>(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_ORDER);
 
     // 事件总线（单例）
     this.eventBus = eventBus;
@@ -182,7 +183,7 @@ class PromptManager implements IApp {
    * 恢复主题
    */
   restoreTheme() {
-    const savedTheme = localStorage.getItem(Constants.LocalStorageKey.THEME) || 'dark';
+    const savedTheme = localStorageManager.get<string>(Constants.LocalStorageKey.THEME);
     const html = document.documentElement;
     html.setAttribute('data-theme', savedTheme);
 

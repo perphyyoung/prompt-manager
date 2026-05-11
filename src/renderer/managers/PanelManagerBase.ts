@@ -11,6 +11,7 @@ import { Constants, Events } from '../../constants.ts';
 import { TagService } from '../services/index.ts';
 import { buildTagsWithGroupInfo } from '../../pyTagGroups/utils.ts';
 import { IApp } from '../app.types.ts';
+import { localStorageManager } from '../configs/LocalStorageConfig.ts';
 
 // 卡片大小限制常量
 const MIN_CARD_SIZE = 100;
@@ -19,7 +20,6 @@ const MAX_CARD_SIZE = 350;
 // 面板管理器基类选项接口
 interface PanelManagerBaseOptions {
   app: IApp;
-  storagePrefix: string;
   defaultCardSize?: number;
   onSelectionChange?: () => void;
 }
@@ -89,7 +89,6 @@ export abstract class PanelManagerBase {
   [key: string]: unknown;
   app: IApp;
   protected tagManager?: unknown;
-  protected storagePrefix: string;
   protected defaultCardSize: number;
   protected onSelectionChange?: () => void;
 
@@ -97,21 +96,35 @@ export abstract class PanelManagerBase {
   protected filteredItems: IPanelItem[] = [];
   protected selectedTags: Set<string> = new Set();
 
-  // 视图设置
-  viewModeType: string;
-  sortBy: string;
-  sortOrder: string;
-  cardSize: number;
-  tagFilterSortBy: string;
-  tagFilterSortOrder: string;
+  // 视图设置（在子类构造函数中初始化）
+  viewModeType!: string;
+  sortBy!: string;
+  sortOrder!: string;
+  cardSize!: number;
+  tagFilterSortBy!: string;
+  tagFilterSortOrder!: string;
 
-  // 工具栏上下文
-  protected toolbarContext: 'promptMain' | 'imageMain';
+  // 工具栏上下文（在 init 方法中设置）
+  protected toolbarContext!: 'promptMain' | 'imageMain';
+
+  // 面板类型（子类实现）
+  protected abstract readonly panelType: 'prompt' | 'image';
 
   // UI 配置（子类实现）
   protected abstract getUIConfig(): IUIConfig;
   protected abstract getTagFilterToggleBtnId(): string;
   protected abstract getTagManagerBtnId(): string;
+
+  // 存储键名（子类实现）
+  protected abstract get storageKeys(): {
+    viewMode: string;
+    sortBy: string;
+    sortOrder: string;
+    cardSize: string;
+    tagFilterSortBy: string;
+    tagFilterSortOrder: string;
+    tagFilterCollapsed: string;
+  };
 
   /**
    * 绑定标签管理器事件
@@ -141,33 +154,25 @@ export abstract class PanelManagerBase {
     }
     this.app = options.app;
     // eventBus 通过 app 访问
-    this.storagePrefix = options.storagePrefix;
     this.defaultCardSize = options.defaultCardSize || 200;
     this.onSelectionChange = options.onSelectionChange;
 
-    // 从 localStorage 加载视图模式和排序设置
-    this.viewModeType = localStorage.getItem(`${this.storagePrefix}ViewMode`) || 'grid';
-    this.sortBy = localStorage.getItem(`${this.storagePrefix}SortBy`) || 'updatedAt';
-    this.sortOrder = localStorage.getItem(`${this.storagePrefix}SortOrder`) || 'desc';
+    // 注意：storageKeys 是抽象 getter，panelType 是抽象属性
+    // 需要在子类构造函数中调用 init() 方法完成初始化
+  }
 
-    // 卡片大小设置
-    this.cardSize = parseInt(localStorage.getItem(`${this.storagePrefix}CardSize`) || '') || this.defaultCardSize;
-
-    // 标签筛选排序设置
-    this.tagFilterSortBy = localStorage.getItem(`${this.storagePrefix}TagFilterSortBy`) || 'count';
-    this.tagFilterSortOrder = localStorage.getItem(`${this.storagePrefix}TagFilterSortOrder`) || 'desc';
-
-    // 获取配置
-    const configKey = this.storagePrefix as 'image' | 'prompt';
-    const isPrompt = configKey === 'prompt';
-
+  /**
+   * 初始化面板管理器
+   * 在子类构造函数中调用，此时 panelType 和 storageKeys 已可用
+   */
+  protected initPanelManager(): void {
     // 设置工具栏上下文
-    this.toolbarContext = isPrompt ? 'promptMain' : 'imageMain';
+    this.toolbarContext = this.panelType === 'prompt' ? 'promptMain' : 'imageMain';
 
     // 业务配置
     const businessConfig: BatchBusinessConfig = {
       delete: {
-        batchApi: isPrompt
+        batchApi: this.panelType === 'prompt'
           ? async (ids) => {
               const result = await window.electronAPI.softDeletePrompts(ids);
               return { success: result.success, deleted: result.deleted };
@@ -177,7 +182,7 @@ export abstract class PanelManagerBase {
               return { success: result.success, deleted: result.deleted };
             },
         clearCache: () => {
-          const cache = isPrompt
+          const cache = this.panelType === 'prompt'
             ? cacheManager.getPromptCache()
             : cacheManager.getImageCache();
           cache.clear();
@@ -188,7 +193,7 @@ export abstract class PanelManagerBase {
           const tagService = TagService.getInstance();
           const result = await tagService.batchLinkTags({
             tagNames,
-            type: isPrompt ? 'prompt' : 'image',
+            type: this.panelType,
             itemIds: ids
           });
           if (result.errors.length > 0) {
@@ -197,7 +202,7 @@ export abstract class PanelManagerBase {
         }
       },
       favorite: {
-        batchApi: isPrompt
+        batchApi: this.panelType === 'prompt'
           ? (ids) => window.electronAPI.batchFavoritePrompts(ids).then(() => {})
           : (ids) => window.electronAPI.batchFavoriteImages(ids).then(() => {})
       }
@@ -267,9 +272,8 @@ export abstract class PanelManagerBase {
     const currentPanel = this.app.currentPanel;
     if (!currentPanel) return false;
 
-    // 根据 storagePrefix 判断面板类型
-    // prompt -> 'prompt', image -> 'image'
-    return currentPanel === this.storagePrefix;
+    // 根据 panelType 判断面板类型
+    return currentPanel === this.panelType;
   }
 
   /**
@@ -705,8 +709,8 @@ export abstract class PanelManagerBase {
    * 恢复标签筛选区展开/收起状态
    */
   restoreTagFilterState(): void {
-    const collapsed = localStorage.getItem(this.getTagFilterStorageKey());
-    if (collapsed === 'true') {
+    const collapsed = localStorageManager.get<boolean>(this.getTagFilterStorageKey());
+    if (collapsed) {
       const section = document.getElementById(this.getTagFilterSectionId());
       section?.classList.add('collapsed');
     }
@@ -720,7 +724,7 @@ export abstract class PanelManagerBase {
     if (section) {
       section.classList.toggle('collapsed');
       const collapsed = section.classList.contains('collapsed');
-      localStorage.setItem(this.getTagFilterStorageKey(), String(collapsed));
+      localStorageManager.set(this.getTagFilterStorageKey(), collapsed);
     }
     await this.renderTagFilters();
   }
@@ -729,18 +733,17 @@ export abstract class PanelManagerBase {
    * 获取标签筛选区 section ID
    */
   private getTagFilterSectionId(): string {
-    return this.storagePrefix === 'prompt'
+    return this.panelType === 'prompt'
       ? Constants.Ids.PROMPT_TAG_FILTER_SECTION
       : Constants.Ids.IMAGE_TAG_FILTER_SECTION;
   }
 
   /**
    * 获取标签筛选区收起状态的 storage key
+   * 使用子类定义的 storageKeys
    */
   private getTagFilterStorageKey(): string {
-    return this.storagePrefix === 'prompt'
-      ? Constants.LocalStorageKey.PROMPT_TAG_FILTER_COLLAPSED
-      : Constants.LocalStorageKey.IMAGE_TAG_FILTER_COLLAPSED;
+    return this.storageKeys.tagFilterCollapsed;
   }
 
   /**
@@ -1055,8 +1058,8 @@ export abstract class PanelManagerBase {
         const [sortBy, sortOrder] = target.value.split('-');
         this.tagFilterSortBy = sortBy;
         this.tagFilterSortOrder = sortOrder as 'asc' | 'desc';
-        localStorage.setItem(`${this.storagePrefix}TagFilterSortBy`, sortBy);
-        localStorage.setItem(`${this.storagePrefix}TagFilterSortOrder`, sortOrder);
+        localStorageManager.set(this.storageKeys.tagFilterSortBy, sortBy);
+        localStorageManager.set(this.storageKeys.tagFilterSortOrder, sortOrder);
         this.renderTagFilters();
       });
     }
@@ -1068,7 +1071,7 @@ export abstract class PanelManagerBase {
       orderBtn.addEventListener('click', () => {
         const newOrder = this.tagFilterSortOrder === 'asc' ? 'desc' : 'asc';
         this.tagFilterSortOrder = newOrder;
-        localStorage.setItem(`${this.storagePrefix}TagFilterSortOrder`, newOrder);
+        localStorageManager.set(this.storageKeys.tagFilterSortOrder, newOrder);
         if (sortSelect) {
           sortSelect.value = `${this.tagFilterSortBy}-${newOrder}`;
         }
@@ -1085,7 +1088,7 @@ export abstract class PanelManagerBase {
    */
   async updateTagFilterHeader(specialTags: SpecialTagCount[], sortedTagsWithGroup: ITagWithGroup[], tagCounts: Record<string, number>): Promise<void> {
     // 使用 CacheManager 缓存 tagsWithGroup 供 getTopGroupTags 使用
-    const cacheKey = `${this.storagePrefix}TagsWithGroup`;
+    const cacheKey = `${this.panelType}TagsWithGroup`;
     cacheManager.createCache(cacheKey, 10).set('current', sortedTagsWithGroup);
 
     TagUI.renderFilterHeader({
@@ -1129,7 +1132,7 @@ export abstract class PanelManagerBase {
    */
   getTopGroupTags(): string[] {
     // 使用 CacheManager 获取 tagsWithGroup 数据
-    const cacheKey = `${this.storagePrefix}TagsWithGroup`;
+    const cacheKey = `${this.panelType}TagsWithGroup`;
     const tagsWithGroup = cacheManager.getCache(cacheKey)?.get('current') as ITagWithGroup[] || [];
 
     // 按组分组
@@ -1179,7 +1182,7 @@ export abstract class PanelManagerBase {
    */
   setViewMode(mode: string): void {
     this.viewModeType = mode;
-    localStorage.setItem(`${this.storagePrefix}ViewMode`, mode);
+    localStorageManager.set(this.storageKeys.viewMode, mode);
     this.renderView();
   }
 
@@ -1191,8 +1194,8 @@ export abstract class PanelManagerBase {
   setSort(sortBy: string, sortOrder: string): void {
     this.sortBy = sortBy;
     this.sortOrder = sortOrder;
-    localStorage.setItem(`${this.storagePrefix}SortBy`, sortBy);
-    localStorage.setItem(`${this.storagePrefix}SortOrder`, sortOrder);
+    localStorageManager.set(this.storageKeys.sortBy, sortBy);
+    localStorageManager.set(this.storageKeys.sortOrder, sortOrder);
     this.renderView();
   }
 
@@ -1204,7 +1207,7 @@ export abstract class PanelManagerBase {
     // 校验范围
     const clampedSize = Math.max(MIN_CARD_SIZE, Math.min(MAX_CARD_SIZE, size));
     this.cardSize = clampedSize;
-    localStorage.setItem(`${this.storagePrefix}CardSize`, String(clampedSize));
+    localStorageManager.set(this.storageKeys.cardSize, clampedSize);
 
     // 更新 CSS 变量
     this.applyCardSize();
@@ -1255,7 +1258,7 @@ export abstract class PanelManagerBase {
    */
   protected clearAllItemSelectionState(): void {
     // 根据当前面板类型获取选择器
-    const isImagePanel = this.storagePrefix === 'image';
+    const isImagePanel = this.panelType === 'image';
     const cardSelector = isImagePanel ? '.image-card' : '.prompt-card';
     const listItemSelector = isImagePanel ? '.list-item--image' : '.list-item--prompt';
     const compactItemSelector = isImagePanel ? '.list-item--image.list-item--compact' : '.list-item--prompt.list-item--compact';
@@ -1327,7 +1330,7 @@ export abstract class PanelManagerBase {
     if (selectedIds.size === 0) return;
 
     // 根据当前面板类型获取选择器
-    const isImagePanel = this.storagePrefix === 'image';
+    const isImagePanel = this.panelType === 'image';
     const cardSelector = isImagePanel ? '.image-card' : '.prompt-card';
     const listItemSelector = isImagePanel ? '.list-item--image' : '.list-item--prompt';
     const compactItemSelector = isImagePanel ? '.list-item--image.list-item--compact' : '.list-item--prompt.list-item--compact';
@@ -1415,7 +1418,7 @@ export abstract class PanelManagerBase {
    * 处理批量删除
    */
   protected async handleBatchDelete(): Promise<void> {
-    const isPrompt = this.storagePrefix === 'prompt';
+    const isPrompt = this.panelType === 'prompt';
     await batchToolbarMiddle.executeDelete(this.toolbarContext, {
       confirmConfig: isPrompt ? DialogConfig.BATCH_DELETE_PROMPTS : DialogConfig.BATCH_DELETE_IMAGES,
       execute: async (ids) => {
@@ -1477,8 +1480,8 @@ export abstract class PanelManagerBase {
       await batchToolbarMiddle.batchFavorite(this.toolbarContext, selectedIds, true);
       // 收藏后不清空选择状态，保持批量模式
       await this.refreshAfterUpdate();
-      
-      const isPrompt = this.storagePrefix === 'prompt';
+
+      const isPrompt = this.panelType === 'prompt';
       this.app.showToast?.(`已收藏 ${selectedIds.length} 个${isPrompt ? '提示词' : '图像'}`, 'success');
     } catch (error) {
       window.electronAPI.logError('PanelManagerBase.ts', 'Failed to batch fav', error);
@@ -1517,7 +1520,7 @@ export abstract class PanelManagerBase {
     }
 
     // 确定类型
-    const type = this.storagePrefix === 'prompt' ? 'prompt' : 'image';
+    const type = this.panelType;
 
     // 使用 TagService 统一处理创建和关联
     const tagService = TagService.getInstance();

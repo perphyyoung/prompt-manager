@@ -1,6 +1,7 @@
 import { cacheManager } from '../../utils/index.ts';
 import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
+import { localStorageManager } from '../configs/LocalStorageConfig.ts';
 import type { IApp } from '../app.types.ts';
 import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig, UnifiedListRenderer, ImageListConfig } from './SharedComponents/index.ts';
 import { Constants, Events } from '../../constants.ts';
@@ -29,6 +30,22 @@ export class ImagePanelManager extends PanelManagerBase {
   private filteredImages: IImage[] = [];
   private isInitialized = false;
 
+  // 面板类型
+  protected readonly panelType = 'image' as const;
+
+  // 存储键名
+  protected get storageKeys() {
+    return {
+      viewMode: Constants.LocalStorageKey.IMAGE_VIEW_MODE,
+      sortBy: Constants.LocalStorageKey.IMAGE_SORT_BY,
+      sortOrder: Constants.LocalStorageKey.IMAGE_SORT_ORDER,
+      cardSize: Constants.LocalStorageKey.IMAGE_CARD_SIZE,
+      tagFilterSortBy: Constants.LocalStorageKey.IMAGE_TAG_FILTER_SORT_BY,
+      tagFilterSortOrder: Constants.LocalStorageKey.IMAGE_TAG_FILTER_SORT_ORDER,
+      tagFilterCollapsed: Constants.LocalStorageKey.IMAGE_TAG_FILTER_COLLAPSED
+    };
+  }
+
   // 图像特殊标签检查函数 Map
   static IMAGE_TAG_CHECKS = new Map<string, (img: IImage) => boolean>([
     [Constants.FAVORITE_TAG, (img) => !!img.isFavorite],
@@ -42,9 +59,20 @@ export class ImagePanelManager extends PanelManagerBase {
   constructor(app: IApp) {
     super({
       app: app,
-      storagePrefix: 'image',
       defaultCardSize: 180
     });
+
+    // 从 localStorage 加载设置（在 super 之后，init 之前）
+    this.viewModeType = localStorageManager.get<string>(this.storageKeys.viewMode);
+    this.sortBy = localStorageManager.get<string>(this.storageKeys.sortBy);
+    this.sortOrder = localStorageManager.get<string>(this.storageKeys.sortOrder);
+    this.cardSize = localStorageManager.get<number>(this.storageKeys.cardSize);
+    this.tagFilterSortBy = localStorageManager.get<string>(this.storageKeys.tagFilterSortBy);
+    this.tagFilterSortOrder = localStorageManager.get<string>(this.storageKeys.tagFilterSortOrder);
+
+    // 初始化基类（使用 panelType 和 storageKeys）
+    this.initPanelManager();
+
     this.filteredImages = [];
     this.bindTagFilterActionEvent();
     this.bindTagFilterToggleEvents();

@@ -5,6 +5,7 @@
 
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { Constants } from '../../constants.ts';
+import { localStorageManager } from '../configs/LocalStorageConfig.ts';
 
 // 面板配置接口
 interface IPanelConfig {
@@ -137,11 +138,12 @@ export class NavigationManager {
       sidebar.classList.toggle('collapsed');
       const isCollapsed = sidebar.classList.contains('collapsed');
       toggleSidebarBtn.title = isCollapsed ? '展开侧边栏' : '收起侧边栏';
-      localStorage.setItem(Constants.LocalStorageKey.SIDEBAR_COLLAPSED, String(isCollapsed));
+      localStorageManager.set(Constants.LocalStorageKey.SIDEBAR_COLLAPSED, isCollapsed);
     });
 
     // 恢复侧边栏状态
-    if (localStorage.getItem(Constants.LocalStorageKey.SIDEBAR_COLLAPSED) === 'true') {
+    const isCollapsed = localStorageManager.get<boolean>(Constants.LocalStorageKey.SIDEBAR_COLLAPSED);
+    if (isCollapsed) {
       sidebar.classList.add('collapsed');
       toggleSidebarBtn.title = '展开侧边栏';
     }
@@ -252,7 +254,7 @@ export class NavigationManager {
    * 恢复面板状态
    */
   restorePanelState(): void {
-    const savedPanel = localStorage.getItem(this.storageKey) || this.defaultPanel;
+    const savedPanel = localStorageManager.get<string>(this.storageKey);
     this.switchTo(savedPanel, true);
   }
 
@@ -296,7 +298,7 @@ export class NavigationManager {
    * @private
    */
   private savePanelState(): void {
-    localStorage.setItem(this.storageKey, this.currentPanel);
+    localStorageManager.set(this.storageKey, this.currentPanel);
   }
 
   /**

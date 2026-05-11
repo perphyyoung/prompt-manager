@@ -1,4 +1,5 @@
 import { Constants } from '../../constants.ts';
+import { localStorageManager } from '../configs/LocalStorageConfig.ts';
 
 /**
  * SearchSortManager 构造选项
@@ -295,7 +296,7 @@ export class SearchSortManager {
         this.app.promptPanelManager?.setCardSize(parseInt((e.target as HTMLInputElement).value, 10));
       });
       promptCardSizeSlider.addEventListener('change', (e) => {
-        localStorage.setItem(Constants.LocalStorageKey.PROMPT_CARD_SIZE, (e.target as HTMLInputElement).value);
+        localStorageManager.set(Constants.LocalStorageKey.PROMPT_CARD_SIZE, parseInt((e.target as HTMLInputElement).value, 10));
       });
     }
   }
@@ -310,8 +311,8 @@ export class SearchSortManager {
 
     this.app.promptPanelManager.sortBy = sortBy;
     this.app.promptPanelManager.sortOrder = sortOrder;
-    localStorage.setItem(Constants.LocalStorageKey.PROMPT_SORT_BY, sortBy);
-    localStorage.setItem(Constants.LocalStorageKey.PROMPT_SORT_ORDER, sortOrder);
+    localStorageManager.set(Constants.LocalStorageKey.PROMPT_SORT_BY, sortBy);
+    localStorageManager.set(Constants.LocalStorageKey.PROMPT_SORT_ORDER, sortOrder);
     this.app.promptPanelManager.renderView();
   }
 
@@ -324,7 +325,7 @@ export class SearchSortManager {
 
     const newOrder = this.app.promptPanelManager.sortOrder === 'asc' ? 'desc' : 'asc';
     this.app.promptPanelManager.sortOrder = newOrder;
-    localStorage.setItem(Constants.LocalStorageKey.PROMPT_SORT_ORDER, newOrder);
+    localStorageManager.set(Constants.LocalStorageKey.PROMPT_SORT_ORDER, newOrder);
 
     if (sortSelect) {
       sortSelect.value = `${this.app.promptPanelManager.sortBy}-${newOrder}`;
@@ -368,7 +369,7 @@ export class SearchSortManager {
         this.app.imagePanelManager?.setCardSize(parseInt((e.target as HTMLInputElement).value, 10));
       });
       imageCardSizeSlider.addEventListener('change', (e) => {
-        localStorage.setItem(Constants.LocalStorageKey.IMAGE_CARD_SIZE, (e.target as HTMLInputElement).value);
+        localStorageManager.set(Constants.LocalStorageKey.IMAGE_CARD_SIZE, parseInt((e.target as HTMLInputElement).value, 10));
       });
     }
   }
@@ -383,8 +384,8 @@ export class SearchSortManager {
 
     this.app.imagePanelManager.sortBy = sortBy;
     this.app.imagePanelManager.sortOrder = sortOrder;
-    localStorage.setItem(Constants.LocalStorageKey.IMAGE_SORT_BY, sortBy);
-    localStorage.setItem(Constants.LocalStorageKey.IMAGE_SORT_ORDER, sortOrder);
+    localStorageManager.set(Constants.LocalStorageKey.IMAGE_SORT_BY, sortBy);
+    localStorageManager.set(Constants.LocalStorageKey.IMAGE_SORT_ORDER, sortOrder);
     this.app.imagePanelManager.renderView();
   }
 
@@ -397,7 +398,7 @@ export class SearchSortManager {
 
     const newOrder = this.app.imagePanelManager.sortOrder === 'asc' ? 'desc' : 'asc';
     this.app.imagePanelManager.sortOrder = newOrder;
-    localStorage.setItem(Constants.LocalStorageKey.IMAGE_SORT_ORDER, newOrder);
+    localStorageManager.set(Constants.LocalStorageKey.IMAGE_SORT_ORDER, newOrder);
 
     if (sortSelect) {
       sortSelect.value = `${this.app.imagePanelManager.sortBy}-${newOrder}`;

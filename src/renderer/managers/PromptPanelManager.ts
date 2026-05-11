@@ -1,6 +1,7 @@
 import { cacheManager } from '../../utils/index.ts';
 import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
+import { localStorageManager } from '../configs/LocalStorageConfig.ts';
 import type { IApp } from '../app.types.ts';
 import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig, UnifiedListRenderer, PromptListConfig } from './SharedComponents/index.ts';
 import { Constants, Events } from '../../constants.ts';
@@ -26,6 +27,22 @@ export class PromptPanelManager extends PanelManagerBase {
   filteredPrompts: IPrompt[] = [];
   private isInitialized = false;
 
+  // 面板类型
+  protected readonly panelType = 'prompt' as const;
+
+  // 存储键名
+  protected get storageKeys() {
+    return {
+      viewMode: Constants.LocalStorageKey.PROMPT_VIEW_MODE,
+      sortBy: Constants.LocalStorageKey.PROMPT_SORT_BY,
+      sortOrder: Constants.LocalStorageKey.PROMPT_SORT_ORDER,
+      cardSize: Constants.LocalStorageKey.PROMPT_CARD_SIZE,
+      tagFilterSortBy: Constants.LocalStorageKey.PROMPT_TAG_FILTER_SORT_BY,
+      tagFilterSortOrder: Constants.LocalStorageKey.PROMPT_TAG_FILTER_SORT_ORDER,
+      tagFilterCollapsed: Constants.LocalStorageKey.PROMPT_TAG_FILTER_COLLAPSED
+    };
+  }
+
   // 提示词特殊标签检查函数 Map
   static PROMPT_TAG_CHECKS = new Map<string, (p: IPrompt) => boolean>([
     [Constants.FAVORITE_TAG, (p) => !!p.isFavorite],
@@ -39,9 +56,20 @@ export class PromptPanelManager extends PanelManagerBase {
   constructor(app: IApp) {
     super({
       app: app,
-      storagePrefix: 'prompt',
       defaultCardSize: 260
     });
+
+    // 从 localStorage 加载设置（在 super 之后，init 之前）
+    this.viewModeType = localStorageManager.get<string>(this.storageKeys.viewMode);
+    this.sortBy = localStorageManager.get<string>(this.storageKeys.sortBy);
+    this.sortOrder = localStorageManager.get<string>(this.storageKeys.sortOrder);
+    this.cardSize = localStorageManager.get<number>(this.storageKeys.cardSize);
+    this.tagFilterSortBy = localStorageManager.get<string>(this.storageKeys.tagFilterSortBy);
+    this.tagFilterSortOrder = localStorageManager.get<string>(this.storageKeys.tagFilterSortOrder);
+
+    // 初始化基类（使用 panelType 和 storageKeys）
+    this.initPanelManager();
+
     this.filteredPrompts = [];
     this.bindTagFilterActionEvent();
     this.bindTagFilterToggleEvents();

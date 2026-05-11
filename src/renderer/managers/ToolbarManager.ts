@@ -4,6 +4,7 @@
  */
 import { Constants } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
+import { localStorageManager } from '../configs/LocalStorageConfig.ts';
 
 /**
  * App 类型定义
@@ -74,7 +75,7 @@ export class ToolbarManager {
     if (!cardInfoToggleBtn) return;
 
     // 从 localStorage 加载状态
-    const isInfoVisible = localStorage.getItem(Constants.LocalStorageKey.CARDS_INFO_VISIBLE) !== 'false';
+    const isInfoVisible = localStorageManager.get<boolean>(Constants.LocalStorageKey.CARDS_INFO_VISIBLE);
     if (!isInfoVisible) {
       document.body.classList.add('cards-info-hidden');
       cardInfoToggleBtn.classList.remove('active');
@@ -83,7 +84,7 @@ export class ToolbarManager {
     cardInfoToggleBtn.addEventListener('click', () => {
       const isHidden = document.body.classList.toggle('cards-info-hidden');
       cardInfoToggleBtn.classList.toggle('active');
-      localStorage.setItem(Constants.LocalStorageKey.CARDS_INFO_VISIBLE, String(!isHidden));
+      localStorageManager.set(Constants.LocalStorageKey.CARDS_INFO_VISIBLE, !isHidden);
 
       // 更新提示
       const action = isHidden ? '已隐藏' : '已显示';

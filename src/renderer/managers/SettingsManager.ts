@@ -5,6 +5,7 @@ import { DuplicatePreventionMixin } from '../../utils/index.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { ErrorHandler } from '../renderer_utils/index.ts';
 import type { IClosableElement } from '../../types/entities.ts';
+import { localStorageManager } from '../configs/LocalStorageConfig.ts';
 
 /**
  * 数据清空 API 接口
@@ -151,39 +152,29 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    */
   private async loadSettings(): Promise<void> {
     // 加载主题设置
-    const savedTheme = localStorage.getItem(Constants.LocalStorageKey.THEME);
-    if (savedTheme) {
-      this.setTheme(savedTheme, false);
-    }
+    const savedTheme = localStorageManager.get<string>(Constants.LocalStorageKey.THEME);
+    this.setTheme(savedTheme, false);
 
     // 加载卡片文字颜色设置
-    const savedCardTextColor = localStorage.getItem(Constants.LocalStorageKey.CARD_TEXT_COLOR);
-    if (savedCardTextColor) {
-      this.applyCardTextColor(savedCardTextColor);
-      const picker = document.getElementById(Constants.Ids.CARD_TEXT_COLOR_PICKER) as HTMLInputElement | null;
-      if (picker) picker.value = savedCardTextColor;
-    }
+    const savedCardTextColor = localStorageManager.get<string>(Constants.LocalStorageKey.CARD_TEXT_COLOR);
+    this.applyCardTextColor(savedCardTextColor);
+    const picker = document.getElementById(Constants.Ids.CARD_TEXT_COLOR_PICKER) as HTMLInputElement | null;
+    if (picker) picker.value = savedCardTextColor;
 
     // 先加载自定义字体列表（注入 @font-face）
     await this.loadCustomFonts();
 
     // 加载字体设置
-    const savedFont = localStorage.getItem(Constants.LocalStorageKey.FONT_FAMILY);
-    if (savedFont) {
-      this.setFontFamily(savedFont, false);
-    }
+    const savedFont = localStorageManager.get<string>(Constants.LocalStorageKey.FONT_FAMILY);
+    this.setFontFamily(savedFont, false);
 
     // 加载字体大小设置
-    const savedFontSize = localStorage.getItem(Constants.LocalStorageKey.FONT_SIZE_SCALE);
-    if (savedFontSize) {
-      this.setFontSizeScale(parseFloat(savedFontSize), false);
-    }
+    const savedFontSize = localStorageManager.get<number>(Constants.LocalStorageKey.FONT_SIZE_SCALE);
+    this.setFontSizeScale(savedFontSize, false);
 
     // 加载视图模式到 app
-    const savedViewMode = localStorage.getItem(Constants.LocalStorageKey.VIEW_MODE);
-    if (savedViewMode && this.app) {
-      this.app.viewMode = savedViewMode;
-    }
+    const savedViewMode = localStorageManager.get<string>(Constants.LocalStorageKey.VIEW_MODE);
+    this.app.viewMode = savedViewMode;
   }
 
   /**
@@ -216,7 +207,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     if (cardTextColorPicker) {
       cardTextColorPicker.addEventListener('change', (e) => {
         const color = (e.target as HTMLInputElement).value;
-        localStorage.setItem(Constants.LocalStorageKey.CARD_TEXT_COLOR, color);
+        localStorageManager.set(Constants.LocalStorageKey.CARD_TEXT_COLOR, color);
         this.applyCardTextColor(color);
       });
     }
@@ -360,7 +351,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       });
 
       // 获取当前保存的字体
-      const savedFont = localStorage.getItem(Constants.LocalStorageKey.FONT_FAMILY);
+      const savedFont = localStorageManager.get<string>(Constants.LocalStorageKey.FONT_FAMILY);
 
       // 生成下拉框选项
       const options = fonts.map((font: { fontName: string }) => {
@@ -445,7 +436,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    * @private
    */
   private async handleViewModeChange(mode: string): Promise<void> {
-    localStorage.setItem(Constants.LocalStorageKey.VIEW_MODE, mode);
+    localStorageManager.set(Constants.LocalStorageKey.VIEW_MODE, mode);
 
     // 更新 app 的 viewMode
     this.app.viewMode = mode;
@@ -490,7 +481,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     const html = document.documentElement;
 
     html.setAttribute('data-theme', theme);
-    localStorage.setItem(Constants.LocalStorageKey.THEME, theme);
+    localStorageManager.set(Constants.LocalStorageKey.THEME, theme);
     this.currentTheme = theme;
 
     // 更新主题切换按钮文本
@@ -524,7 +515,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     // 添加回退字体栈，确保自定义字体加载失败时有备用字体
     const fontStack = `${fontFamily}, ${Constants.FontFamily.FALLBACK}`;
     root.style.setProperty('--font-family', fontStack);
-    localStorage.setItem(Constants.LocalStorageKey.FONT_FAMILY, fontFamily);
+    localStorageManager.set(Constants.LocalStorageKey.FONT_FAMILY, fontFamily);
 
     if (showToast) {
       this.app.showToast?.(`字体已切换为：${fontFamily}`, 'success');
@@ -536,8 +527,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    * @returns 当前字体
    */
   getFontFamily(): string {
-    return localStorage.getItem(Constants.LocalStorageKey.FONT_FAMILY)
-      || Constants.FontFamily.DEFAULT;
+    return localStorageManager.get<string>(Constants.LocalStorageKey.FONT_FAMILY);
   }
 
   /**
@@ -560,8 +550,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    * @returns 缩放比例
    */
   getFontSizeScale(): number {
-    const saved = localStorage.getItem(Constants.LocalStorageKey.FONT_SIZE_SCALE);
-    return saved ? parseFloat(saved) : Constants.FontSize.DEFAULT;
+    return localStorageManager.get<number>(Constants.LocalStorageKey.FONT_SIZE_SCALE);
   }
 
   /**
@@ -582,7 +571,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     if (newScale !== currentScale) {
       this.setFontSizeScale(newScale);
       displayElement.textContent = `${Math.round(newScale * 100)}%`;
-      localStorage.setItem(Constants.LocalStorageKey.FONT_SIZE_SCALE, newScale.toString());
+      localStorageManager.set(Constants.LocalStorageKey.FONT_SIZE_SCALE, newScale);
     }
   }
 
