@@ -309,14 +309,14 @@ export class ImagePanelManager extends PanelManagerBase {
       })
     ).join('');
 
-    // 异步加载列表缩略图
-    this.loadImageListThumbnails();
-
-    // 绑定事件
+    // 绑定事件（必须在加载缩略图之前，因为 bindItemEvents 会调用 unbindEvents 重置 DOM）
     this.bindItemEvents(filtered);
     this.bindListButtonEvents(filtered);
     this.bindHoverPreview('.list-item--image');
     this.bindCardDropEvents(listContainer);
+
+    // 异步加载列表缩略图（必须在 bindItemEvents 之后，避免 unbindEvents 重置 DOM 导致缩略图丢失）
+    await this.loadImageListThumbnails();
   }
 
   /**

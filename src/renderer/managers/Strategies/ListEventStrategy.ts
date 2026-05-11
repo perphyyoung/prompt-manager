@@ -27,6 +27,14 @@ export abstract class ListEventStrategy implements IEventStrategy {
     this.bindRowClickEvents(container, items, context);
   }
 
+  unbindEvents(container: HTMLElement): void {
+    const items = container.querySelectorAll(this.getItemSelector());
+    items.forEach(item => {
+      const newItem = item.cloneNode(true);
+      item.parentNode?.replaceChild(newItem, item);
+    });
+  }
+
   /**
    * 绑定复选框事件
    */

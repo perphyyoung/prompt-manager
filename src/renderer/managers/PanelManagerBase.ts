@@ -1376,6 +1376,7 @@ export abstract class PanelManagerBase {
   /**
    * 模板方法：绑定项目事件
    * 使用策略模式处理不同视图的事件绑定
+   * 先清理旧的事件监听器，再绑定新的
    */
   protected bindItemEvents(items: IPanelItem[]): void {
     const strategy = this.getEventStrategy();
@@ -1383,6 +1384,9 @@ export abstract class PanelManagerBase {
 
     const container = this.getCurrentContainer();
     if (!container) return;
+
+    // 先清理旧的事件监听器，防止内存泄漏
+    strategy.unbindEvents(container);
 
     // 构建事件上下文
     const eventContext: EventContext = {

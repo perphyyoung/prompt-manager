@@ -23,6 +23,14 @@ export abstract class CardEventStrategy implements IEventStrategy {
     });
   }
 
+  unbindEvents(container: HTMLElement): void {
+    const cards = container.querySelectorAll(this.getItemSelector());
+    cards.forEach(card => {
+      const newCard = card.cloneNode(true);
+      card.parentNode?.replaceChild(newCard, card);
+    });
+  }
+
   /**
    * 绑定复选框事件
    */

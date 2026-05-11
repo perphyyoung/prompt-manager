@@ -25,6 +25,13 @@ export interface IEventStrategy {
   bindEvents(container: HTMLElement, items: IEventStrategyItem[], context: EventContext): void;
 
   /**
+   * 清理容器内所有项目的事件监听器
+   * 通过 cloneNode 移除所有旧的事件监听器，防止内存泄漏
+   * @param container - 容器元素
+   */
+  unbindEvents(container: HTMLElement): void;
+
+  /**
    * 获取复选框选择器
    */
   getCheckboxSelector(): string;
