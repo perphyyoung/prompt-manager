@@ -153,6 +153,93 @@ export class DialogService {
   static isConfirmDialogShowing(): boolean {
     return _confirmCallback !== null;
   }
+
+  /**
+   * 显示 Toast 提示（简化版，不依赖 ToastManager）
+   * @param message - 提示消息
+   * @param type - 提示类型
+   */
+  private static _showToast(message: string, type = 'info'): void {
+    const toast = document.getElementById(Constants.Ids.TOAST_CONTAINER);
+    const toastMessage = document.getElementById(Constants.Ids.TOAST_MESSAGE);
+
+    if (!toast || !toastMessage) {
+      return;
+    }
+
+    toast.className = `toast toast-${type}`;
+    toastMessage.textContent = message;
+    toast.classList.add('show');
+
+    // 3秒后自动隐藏
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3000);
+  }
+
+  /**
+   * 显示数据迁移对话框
+   * @param oldPath - 旧数据目录路径
+   * @param newPath - 新数据目录路径
+   * @returns 用户选择的操作
+   */
+  static async showMigrateDialog(oldPath: string, newPath: string): Promise<'copy' | 'use' | 'cancel'> {
+    return new Promise((resolve) => {
+      const modal = document.getElementById(Constants.Ids.MIGRATE_MODAL);
+      const oldPathEl = document.getElementById(Constants.Ids.MIGRATE_OLD_PATH);
+      const newPathEl = document.getElementById(Constants.Ids.MIGRATE_NEW_PATH);
+      const closeBtn = document.getElementById(Constants.Ids.CLOSE_MIGRATE_MODAL);
+      const cancelBtn = document.getElementById(Constants.Ids.MIGRATE_CANCEL_BTN);
+      const optionBtns = modal?.querySelectorAll<HTMLElement>('.migrate-option-btn');
+
+      if (!modal) {
+        // 回退到原生对话框
+        const useCopy = confirm(`数据目录变更\n\n从：${oldPath}\n到：${newPath}\n\n是否复制现有数据到新目录？点击"确定"复制数据，点击"取消"直接使用新目录。`);
+        resolve(useCopy ? 'copy' : 'use');
+        return;
+      }
+
+      // 设置路径
+      if (oldPathEl) oldPathEl.textContent = oldPath;
+      if (newPathEl) newPathEl.textContent = newPath;
+
+      // 显示对话框
+      (modal as HTMLElement).style.display = 'flex';
+
+      // 处理选项按钮点击
+      const handleOptionClick = (e: Event) => {
+        const btn = e.currentTarget as HTMLElement;
+        const action = btn.dataset.action as 'copy' | 'use' | 'cancel';
+        if (!action) return;
+        cleanup();
+        // 显示重启提示
+        if (action !== 'cancel') {
+          DialogService._showToast('正在重启应用...', 'info');
+        }
+        resolve(action);
+      };
+
+      // 处理关闭/取消
+      const handleCancel = () => {
+        cleanup();
+        resolve('cancel');
+      };
+
+      // 清理函数
+      const cleanup = () => {
+        (modal as HTMLElement).style.display = 'none';
+        optionBtns?.forEach(btn => btn.removeEventListener('click', handleOptionClick));
+        closeBtn?.removeEventListener('click', handleCancel);
+        cancelBtn?.removeEventListener('click', handleCancel);
+      };
+
+      // 绑定事件
+      optionBtns?.forEach(btn => btn.addEventListener('click', handleOptionClick));
+      closeBtn?.addEventListener('click', handleCancel);
+      cancelBtn?.addEventListener('click', handleCancel);
+    });
+  }
+
   /**
    * 初始化 - 页面加载时调用一次
    */
