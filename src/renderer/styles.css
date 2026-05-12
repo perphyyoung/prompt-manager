@@ -749,7 +749,6 @@ body * {
   flex-wrap: wrap;
   gap: 6px;
   overflow: visible;
-  max-height: 40px;
   padding-top: 8px;
   padding-bottom: 4px;
 }
