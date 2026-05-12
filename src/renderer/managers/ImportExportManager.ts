@@ -186,7 +186,8 @@ export class ImportExportManager {
           progressDialog.hide();
         },
         onComplete: () => {
-          // 用户点击关闭按钮后重启应用
+          // 用户点击关闭按钮后显示重启提示并重启应用
+          this.app.showToast?.('正在重启应用...', 'info');
           window.electronAPI.relaunchApp();
         }
       });
