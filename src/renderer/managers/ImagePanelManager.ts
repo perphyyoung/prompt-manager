@@ -146,9 +146,13 @@ export class ImagePanelManager extends PanelManagerBase {
         return { content: '', hasContent: false };
       },
 
-      getDeleteConfirmConfig: () => ({
-        config: DialogConfig.DELETE_IMAGE_TO_TRASH
-      }),
+      getDeleteConfirmConfig: (item: IPanelItem) => {
+        const img = item as IImage;
+        return {
+          config: DialogConfig.DELETE_IMAGE_TO_TRASH,
+          name: img.fileName || '未命名图像'
+        };
+      },
 
       getCardImagePath: (item: IPanelItem): string | null => {
         const img = item as IImage;
