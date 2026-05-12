@@ -228,16 +228,19 @@ export class TagAutocomplete {
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
+          e.stopPropagation();
           currentIndex = Math.min(currentIndex + 1, items.length - 1);
           this.setActiveItem(currentIndex);
           return;
         case 'ArrowUp':
           e.preventDefault();
+          e.stopPropagation();
           currentIndex = Math.max(currentIndex - 1, 0);
           this.setActiveItem(currentIndex);
           return;
         case 'Enter':
           e.preventDefault();
+          e.stopPropagation();
           if (activeItem) {
             const tag = (activeItem as HTMLElement).dataset.tag;
             if (tag) {

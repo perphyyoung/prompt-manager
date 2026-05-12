@@ -4095,7 +4095,7 @@ body * {
   display: block;
 }
 
-.autocomplete-item {
+.tag-autocomplete-item {
   padding: 8px 12px;
   cursor: pointer;
   font-size: var(--font-size-sm);
@@ -4103,8 +4103,7 @@ body * {
   transition: background 0.2s;
 }
 
-.autocomplete-item:hover,
-.autocomplete-item.selected {
+.tag-autocomplete-item.active {
   background: var(--primary-light);
   color: var(--primary-color);
 }
