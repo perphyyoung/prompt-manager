@@ -4,7 +4,6 @@ export type { IDialogTemplate, IDialogContext } from '../../types/entities.ts';
 
 // 上传相关服务
 export { ImageUploadService } from './ImageUploadService.ts';
-export { UploadNotificationService } from './UploadNotificationService.ts';
 export {
   UploadStrategy,
   DirectSaveStrategy,

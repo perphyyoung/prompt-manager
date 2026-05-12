@@ -1,5 +1,4 @@
 import { ImageUploadService } from './ImageUploadService.ts';
-import { UploadNotificationService } from './UploadNotificationService.ts';
 
 // 进度回调函数类型
 type ProgressCallback = (current: number, total: number) => void;
@@ -10,12 +9,20 @@ interface FileInfo {
   name: string;
 }
 
+// 图像信息接口（包含 duplicateType）
+interface ImageInfo {
+  id: string;
+  isDuplicate?: boolean;
+  duplicateType?: 'restored_from_trash' | 'existing';
+  [key: string]: unknown;
+}
+
 // 上传结果接口
 interface UploadResult {
   success: boolean;
   message?: string;
   filePaths?: string[];
-  images?: unknown[];
+  images?: ImageInfo[];
   count?: number;
 }
 
@@ -25,7 +32,7 @@ interface IApp {
   eventBus: {
     emit: (event: string, data?: unknown) => void;
   };
-   
+
   [key: string]: any;
 }
 
@@ -36,12 +43,10 @@ interface IApp {
 export abstract class UploadStrategy {
   protected app: IApp;
   protected imageUploadService: ImageUploadService;
-  protected notificationService: UploadNotificationService;
 
   constructor(app: IApp) {
     this.app = app;
     this.imageUploadService = new ImageUploadService(app);
-    this.notificationService = new UploadNotificationService(app);
   }
 
   /**
@@ -126,17 +131,15 @@ export class DelaySaveStrategy extends UploadStrategy {
 
       this.savedImages = results;
 
-      // 通知成功
-      this.notificationService.notifyBatchComplete(results.length);
-
+      // 不再这里显示 toast，由调用方（ImageUploadManager）统一处理
       return {
         success: true,
-        images: [...this.savedImages],
-        count: this.savedImages.length
+        images: results as ImageInfo[],
+        count: results.length
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.notificationService.notifyError(message);
+      this.app.showToast?.(`保存失败: ${message}`, 'error');
       return { success: false, message };
     }
   }
@@ -212,17 +215,15 @@ export class DirectSaveStrategy extends UploadStrategy {
 
       this.savedImages = [...this.savedImages, ...results];
 
-      // 通知成功
-      this.notificationService.notifyBatchComplete(results.length);
-
+      // 不再这里显示 toast，由调用方（ImageUploadManager）统一处理
       return {
         success: true,
-        images: results,
+        images: results as ImageInfo[],
         count: results.length
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.notificationService.notifyError(message);
+      this.app.showToast?.(`保存失败: ${message}`, 'error');
       return { success: false, message };
     }
   }
@@ -238,7 +239,7 @@ export class DirectSaveStrategy extends UploadStrategy {
       try {
         await this.imageUploadService.delete(image.id);
         this.savedImages.splice(index, 1);
-        return { success: true, images: [...this.savedImages] };
+        return { success: true, images: [...this.savedImages] as ImageInfo[] };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return { success: false, message };

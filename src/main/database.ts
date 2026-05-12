@@ -2041,11 +2041,12 @@ async function updateImagesBatch(updates: UpdateThumbnailParams[]): Promise<void
 }
 
 /**
- * 根据 MD5 查找图像（仅返回 id）
+ * 根据 MD5 查找图像（包含回收站中的图像）
+ * @returns 图像信息，包含 isDeleted 字段标识是否在回收站中
  */
-async function getImageByMD5(md5: string): Promise<{ id: string } | null> {
-  const row = await get<{ id: string }>('SELECT id FROM images WHERE md5 = ?', [md5]);
-  return row || null;
+async function getImageByMD5IncludeTrash(md5: string): Promise<{ id: string; isDeleted: boolean } | null> {
+  const row = await get<{ id: string; is_deleted: number }>('SELECT id, is_deleted FROM images WHERE md5 = ?', [md5]);
+  return row ? { id: row.id, isDeleted: row.is_deleted === 1 } : null;
 }
 
 /**
@@ -2977,7 +2978,7 @@ export {
   getImagesByIds,
   getAllImages,
   getImageById,
-  getImageByMD5,
+  getImageByMD5IncludeTrash,
   addImage,
   softDeleteImage,
   softDeleteImages,

@@ -206,6 +206,33 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
       return;
     }
 
+    // 统计上传结果（新上传、从回收站恢复、已存在）
+    interface ImageWithDuplicateInfo {
+      id: string;
+      isDuplicate?: boolean;
+      duplicateType?: 'restored_from_trash' | 'existing';
+    }
+    const images = (result.images || []) as ImageWithDuplicateInfo[];
+    let restoredFromTrash = 0;
+    let existing = 0;
+    for (const image of images) {
+      if (image.isDuplicate) {
+        if (image.duplicateType === 'restored_from_trash') {
+          restoredFromTrash++;
+        } else {
+          existing++;
+        }
+      }
+    }
+    const newUploads = images.length - restoredFromTrash - existing;
+
+    // 构建消息
+    const parts: string[] = [];
+    if (newUploads > 0) parts.push(`${newUploads}张新图像`);
+    if (restoredFromTrash > 0) parts.push(`${restoredFromTrash}张从回收站恢复`);
+    if (existing > 0) parts.push(`${existing}张已存在`);
+    const saveMessage = parts.length > 0 ? `成功保存：${parts.join('，')}` : `成功保存 ${result.count} 张图像`;
+
     // 获取提示词内容
     const promptTextarea = document.getElementById(Constants.Ids.UPLOAD_IMAGE_PROMPT) as HTMLTextAreaElement | null;
     const promptContent = promptTextarea?.value?.trim();
@@ -216,16 +243,16 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
     // 如果有提示词内容，创建提示词并关联图像
     if (promptContent) {
       try {
-        const imageIds = result.images.map(img => img.id);
+        const imageIds = images.map(img => img.id);
         await this.createPromptWithImages(promptContent, imageIds);
-        this.app.showToast(`成功保存 ${result.count} 张图像并创建提示词`, 'success');
+        this.app.showToast(`${saveMessage}并创建提示词`, 'success');
         shouldRefreshPrompts = true;
       } catch (error) {
         window.electronAPI.logError('ImageUploadManager.ts', 'Failed to create prompt:', error);
-        this.app.showToast(`图像已保存，但提示词创建失败: ${error instanceof Error ? error.message : String(error)}`, 'warning');
+        this.app.showToast(`${saveMessage}，但提示词创建失败: ${error instanceof Error ? error.message : String(error)}`, 'warning');
       }
     } else {
-      this.app.showToast(`成功保存 ${result.count} 张图像`, 'success');
+      this.app.showToast(saveMessage, 'success');
     }
 
     // 清理

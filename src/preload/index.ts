@@ -90,7 +90,7 @@ interface IElectronAPI {
   getInstalledFonts: () => Promise<{ fontName: string; fileName: string; filePath: string }[]>;
 
   // 图像文件操作
-  saveImageFile: (sourcePath: string, fileName: string) => Promise<{ id: string; fileName: string; isDuplicate: boolean; duplicateMessage?: string; relativePath?: string; thumbnailPath?: string; width?: number; height?: number; size?: number }>;
+  saveImageFile: (sourcePath: string, fileName: string) => Promise<{ id: string; fileName: string; isDuplicate: boolean; duplicateType?: 'restored_from_trash' | 'existing'; relativePath?: string; thumbnailPath?: string; width?: number; height?: number; size?: number }>;
   getImagePath: (relativePath: string) => Promise<string>;
   openImageFiles: () => Promise<string[]>;
   clearAllData: () => Promise<string>;

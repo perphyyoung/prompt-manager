@@ -349,23 +349,37 @@ async function regenerateAllThumbnails(onProgress: ((current: number, total: num
  * @param {string} fileName - 原始文件名
  * @returns {Object} 保存后的图像信息
  */
-async function saveImageFile(sourcePath: string, fileName: string): Promise<{ id: string; fileName: string; isDuplicate: boolean; duplicateMessage?: string }> {
+async function saveImageFile(sourcePath: string, fileName: string): Promise<{ id: string; fileName: string; isDuplicate: boolean; duplicateType?: 'restored_from_trash' | 'existing' }> {
   // 计算源文件 MD5
   const sourceMD5 = await calculateFileMD5(sourcePath);
   if (!sourceMD5) {
     throw new Error('Failed to calculate MD5');
   }
 
-  // 检查是否已存在相同 MD5 的图像
-  const existingImage = await db.getImageByMD5(sourceMD5);
+  // 检查是否已存在相同 MD5 的图像（包括回收站中的）
+  const existingImage = await db.getImageByMD5IncludeTrash(sourceMD5);
   if (existingImage) {
+    // 如果图像在回收站中，自动恢复
+    if (existingImage.isDeleted) {
+      await db.restoreImage(existingImage.id);
+      logInfo('Main', `Image was in trash, auto-restored: ${fileName}`);
+      const result: { id: string; fileName: string; isDuplicate: boolean; duplicateType: 'restored_from_trash' } = {
+        id: existingImage.id,
+        fileName: fileName,
+        isDuplicate: true,
+        duplicateType: 'restored_from_trash'
+      };
+      return result;
+    }
+
     logWarn('Found duplicate image by MD5, reusing:', fileName);
-    return {
+    const result: { id: string; fileName: string; isDuplicate: boolean; duplicateType: 'existing' } = {
       id: existingImage.id,
       fileName: fileName,
       isDuplicate: true,
-      duplicateMessage: `图像 "${fileName}" 已存在，直接使用已保存的版本`
+      duplicateType: 'existing'
     };
+    return result;
   }
 
   // 生成图像 ID

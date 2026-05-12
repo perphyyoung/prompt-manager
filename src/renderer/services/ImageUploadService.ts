@@ -4,6 +4,9 @@
  * 遵循单一职责原则：只处理上传，不处理 UI 或通知
  */
 
+// 导入类型以确保 window.electronAPI 被正确识别
+import type {} from '../app.types.ts';
+
 // 文件信息接口
 interface FileInfo {
   path: string;
@@ -20,7 +23,7 @@ interface UploadOptions {
 interface ImageInfo {
   id: string;
   isDuplicate?: boolean;
-  duplicateMessage?: string;
+  duplicateType?: 'restored_from_trash' | 'existing';
   [key: string]: unknown;
 }
 
@@ -61,12 +64,18 @@ export class ImageUploadService {
       throw new Error('Failed to get image info after upload');
     }
 
-    return {
+    // 注意：必须先展开 fullImageInfo，再设置 duplicateType，否则会被覆盖
+    const result: ImageInfo = {
       ...fullImageInfo,
+      id: fullImageInfo.id,
       isDuplicate: imageInfo.isDuplicate,
-      duplicateMessage: imageInfo.duplicateMessage,
       source
-    } as ImageInfo;
+    };
+    // 显式设置 duplicateType，确保不被覆盖
+    if (imageInfo.duplicateType) {
+      result.duplicateType = imageInfo.duplicateType;
+    }
+    return result;
   }
 
   /**
