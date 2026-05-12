@@ -388,6 +388,10 @@ export abstract class TagManager {
       
       // 批量模式下的标签项选择（单击选择）
       if (this.isBatchModeActive) {
+        // 如果点击的是复选框，不处理（由 change 事件处理）
+        if (target.classList.contains('tag-batch-checkbox')) {
+          return;
+        }
         const tagItem = target.closest('.tag-manager-item[data-tag]');
         if (tagItem) {
           const tag = (tagItem as HTMLElement).dataset.tag;
