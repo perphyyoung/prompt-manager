@@ -74,6 +74,10 @@ describe('TopGroupManager', () => {
 
   describe('buildGroupMap', () => {
     it('应正确构建组映射', () => {
+      const allGroups = [
+        { id: 1, name: '组1', sortOrder: 1 },
+        { id: 2, name: '组2', sortOrder: 2 }
+      ];
       const tags: TagInfo[] = [
         { name: 'tag1', groupId: 1, groupName: '组1', groupSortOrder: 1 },
         { name: 'tag2', groupId: 1, groupName: '组1', groupSortOrder: 1 },
@@ -81,7 +85,7 @@ describe('TopGroupManager', () => {
       ];
       const tagCounts = { tag1: 5, tag2: 3, tag3: 2 };
 
-      const result = TopGroupManager.buildGroupMap(tags, tagCounts);
+      const result = TopGroupManager.buildGroupMap(allGroups, tags, tagCounts);
 
       expect(result.size).toBe(2);
       expect(result.get(1)?.tags.length).toBe(2);
@@ -89,14 +93,32 @@ describe('TopGroupManager', () => {
       expect(result.get(1)?.groupName).toBe('组1');
     });
 
+    it('应包含空组', () => {
+      const allGroups = [
+        { id: 1, name: '组1', sortOrder: 1 },
+        { id: 2, name: '空组', sortOrder: 2 }
+      ];
+      const tags: TagInfo[] = [
+        { name: 'tag1', groupId: 1, groupName: '组1', groupSortOrder: 1 }
+      ];
+      const tagCounts = { tag1: 1 };
+
+      const result = TopGroupManager.buildGroupMap(allGroups, tags, tagCounts);
+
+      expect(result.size).toBe(2);
+      expect(result.get(1)?.tags.length).toBe(1);
+      expect(result.get(2)?.tags.length).toBe(0); // 空组
+    });
+
     it('未分组的标签不应加入组映射', () => {
+      const allGroups = [{ id: 1, name: '组1', sortOrder: 1 }];
       const tags: TagInfo[] = [
         { name: 'tag1', groupId: null, groupName: '未分组' },
         { name: 'tag2', groupId: 1, groupName: '组1', groupSortOrder: 1 }
       ];
       const tagCounts = { tag1: 1, tag2: 1 };
 
-      const result = TopGroupManager.buildGroupMap(tags, tagCounts);
+      const result = TopGroupManager.buildGroupMap(allGroups, tags, tagCounts);
 
       expect(result.size).toBe(1);
       expect(result.get(1)?.tags.length).toBe(1);
@@ -104,13 +126,17 @@ describe('TopGroupManager', () => {
   });
 
   describe('getTopGroup', () => {
-    it('应返回第一个非空组', () => {
+    it('应返回第一个组（包括空组）', () => {
+      const allGroups = [
+        { id: 1, name: '组1', sortOrder: 1 },
+        { id: 2, name: '组2', sortOrder: 2 }
+      ];
       const tags: TagInfo[] = [
         { name: 'tag1', groupId: 2, groupName: '组2', groupSortOrder: 2 },
         { name: 'tag2', groupId: 1, groupName: '组1', groupSortOrder: 1 }
       ];
       const tagCounts = { tag1: 1, tag2: 1 };
-      const groupMap = TopGroupManager.buildGroupMap(tags, tagCounts);
+      const groupMap = TopGroupManager.buildGroupMap(allGroups, tags, tagCounts);
 
       const result = TopGroupManager.getTopGroup(groupMap);
 
@@ -118,20 +144,25 @@ describe('TopGroupManager', () => {
       expect(result?.groupName).toBe('组1');
     });
 
-    it('空组映射应返回 null', () => {
-      const groupMap = new Map();
+    it('空组也可以作为首位组', () => {
+      const allGroups = [
+        { id: 1, name: '空组', sortOrder: 1 },
+        { id: 2, name: '组2', sortOrder: 2 }
+      ];
+      const tags: TagInfo[] = [
+        { name: 'tag1', groupId: 2, groupName: '组2', groupSortOrder: 2 }
+      ];
+      const tagCounts = { tag1: 1 };
+      const groupMap = TopGroupManager.buildGroupMap(allGroups, tags, tagCounts);
 
       const result = TopGroupManager.getTopGroup(groupMap);
 
-      expect(result).toBeNull();
+      expect(result?.groupId).toBe(1); // 空组是首位组
+      expect(result?.groupName).toBe('空组');
     });
 
-    it('所有组为空时应返回 null', () => {
-      const tags: TagInfo[] = [
-        { name: 'tag1', groupId: null, groupName: '未分组' }
-      ];
-      const tagCounts = { tag1: 1 };
-      const groupMap = TopGroupManager.buildGroupMap(tags, tagCounts);
+    it('空组映射应返回 null', () => {
+      const groupMap = new Map();
 
       const result = TopGroupManager.getTopGroup(groupMap);
 
@@ -144,13 +175,14 @@ describe('TopGroupManager', () => {
       const specialTags: SpecialTagInfo[] = [
         { tag: '收藏', count: 5 }
       ];
+      const allGroups: Array<{ id: number; name: string; sortOrder?: number }> = [];
       const tags: TagInfo[] = [];
       const tagCounts = { '收藏': 5 };
       const selectedTags = new Set<string>();
       const allSpecialTags = ['收藏', '无图', '无标'];
 
       const result = TopGroupManager.collectHeaderTags(
-        specialTags, tags, tagCounts, selectedTags, allSpecialTags
+        specialTags, allGroups, tags, tagCounts, selectedTags, allSpecialTags
       );
 
       expect(result.length).toBe(1);
@@ -160,6 +192,7 @@ describe('TopGroupManager', () => {
 
     it('应收集首位组标签', () => {
       const specialTags: SpecialTagInfo[] = [];
+      const allGroups = [{ id: 1, name: '组1', sortOrder: 1 }];
       const tags: TagInfo[] = [
         { name: 'tag1', groupId: 1, groupName: '组1', groupSortOrder: 1 }
       ];
@@ -168,7 +201,7 @@ describe('TopGroupManager', () => {
       const allSpecialTags: string[] = [];
 
       const result = TopGroupManager.collectHeaderTags(
-        specialTags, tags, tagCounts, selectedTags, allSpecialTags
+        specialTags, allGroups, tags, tagCounts, selectedTags, allSpecialTags
       );
 
       expect(result.length).toBe(1);
@@ -178,6 +211,7 @@ describe('TopGroupManager', () => {
 
     it('计数为0的标签也应该被收集', () => {
       const specialTags: SpecialTagInfo[] = [];
+      const allGroups = [{ id: 1, name: '组1', sortOrder: 1 }];
       const tags: TagInfo[] = [
         { name: 'tag1', groupId: 1, groupName: '组1', groupSortOrder: 1 }
       ];
@@ -186,10 +220,9 @@ describe('TopGroupManager', () => {
       const allSpecialTags: string[] = [];
 
       const result = TopGroupManager.collectHeaderTags(
-        specialTags, tags, tagCounts, selectedTags, allSpecialTags
+        specialTags, allGroups, tags, tagCounts, selectedTags, allSpecialTags
       );
 
-      // 计数为0的标签也应该显示
       expect(result.length).toBe(1);
       expect(result[0].tag).toBe('tag1');
       expect(result[0].count).toBe(0);
@@ -198,6 +231,7 @@ describe('TopGroupManager', () => {
 
     it('选中的普通标签应被收集', () => {
       const specialTags: SpecialTagInfo[] = [];
+      const allGroups = [{ id: 1, name: '组1', sortOrder: 1 }];
       const tags: TagInfo[] = [
         { name: 'tag1', groupId: 1, groupName: '组1', groupSortOrder: 1 }
       ];
@@ -206,7 +240,7 @@ describe('TopGroupManager', () => {
       const allSpecialTags: string[] = [];
 
       const result = TopGroupManager.collectHeaderTags(
-        specialTags, tags, tagCounts, selectedTags, allSpecialTags
+        specialTags, allGroups, tags, tagCounts, selectedTags, allSpecialTags
       );
 
       expect(result.length).toBe(1);
@@ -217,6 +251,7 @@ describe('TopGroupManager', () => {
       const specialTags: SpecialTagInfo[] = [
         { tag: '收藏', count: 5 }
       ];
+      const allGroups = [{ id: 1, name: '组1', sortOrder: 1 }];
       const tags: TagInfo[] = [
         { name: '收藏', groupId: 1, groupName: '组1', groupSortOrder: 1 }
       ];
@@ -225,7 +260,7 @@ describe('TopGroupManager', () => {
       const allSpecialTags = ['收藏'];
 
       const result = TopGroupManager.collectHeaderTags(
-        specialTags, tags, tagCounts, selectedTags, allSpecialTags
+        specialTags, allGroups, tags, tagCounts, selectedTags, allSpecialTags
       );
 
       const collectionTags = result.filter(r => r.tag === '收藏');
@@ -234,6 +269,10 @@ describe('TopGroupManager', () => {
 
     it('首位组标签应正确标记 isTopGroup', () => {
       const specialTags: SpecialTagInfo[] = [];
+      const allGroups = [
+        { id: 1, name: '组1', sortOrder: 1 },
+        { id: 2, name: '组2', sortOrder: 2 }
+      ];
       const tags: TagInfo[] = [
         { name: 'topTag', groupId: 1, groupName: '组1', groupSortOrder: 1 },
         { name: 'otherTag', groupId: 2, groupName: '组2', groupSortOrder: 2 }
@@ -243,7 +282,7 @@ describe('TopGroupManager', () => {
       const allSpecialTags: string[] = [];
 
       const result = TopGroupManager.collectHeaderTags(
-        specialTags, tags, tagCounts, selectedTags, allSpecialTags
+        specialTags, allGroups, tags, tagCounts, selectedTags, allSpecialTags
       );
 
       const topTag = result.find(r => r.tag === 'topTag');
@@ -252,10 +291,31 @@ describe('TopGroupManager', () => {
       expect(topTag?.isTopGroup).toBe(true);
       expect(otherTag?.isTopGroup).toBe(false);
     });
+
+    it('首位组为空时应返回空', () => {
+      const specialTags: SpecialTagInfo[] = [];
+      const allGroups = [
+        { id: 1, name: '空组', sortOrder: 1 },
+        { id: 2, name: '组2', sortOrder: 2 }
+      ];
+      const tags: TagInfo[] = [
+        { name: 'tag1', groupId: 2, groupName: '组2', groupSortOrder: 2 }
+      ];
+      const tagCounts = { tag1: 3 };
+      const selectedTags = new Set<string>();
+      const allSpecialTags: string[] = [];
+
+      const result = TopGroupManager.collectHeaderTags(
+        specialTags, allGroups, tags, tagCounts, selectedTags, allSpecialTags
+      );
+
+      // 首位组是空组，没有标签可收集
+      expect(result.length).toBe(0);
+    });
   });
 });
 
-describe('TagUI - generateTagFiltersHtml', () => {
+describe('TagUI - renderExpandedFilter', () => {
   describe('首位组标签显示', () => {
     it('首位组所有标签都应显示，包括计数为0的', () => {
       const tags: TagInfo[] = [
@@ -269,17 +329,38 @@ describe('TagUI - generateTagFiltersHtml', () => {
         { id: 2, name: '其他组', sortOrder: 2 }
       ];
 
-      const html = TagUI.generateTagFiltersHtml(tags, counts, {
+      const html = TagUI.renderExpandedFilter(tags, counts, {
         specialTags: [],
         selectedTags: new Set(),
         groups: groups,
         isImage: false
       });
 
-      // 首位组的两个标签都应该显示（包括计数为0的tag2）
       expect(html).toContain('tag1');
       expect(html).toContain('tag2');
       expect(html).toContain('tag3');
+    });
+
+    it('空组也可以作为首位组', () => {
+      const tags: TagInfo[] = [
+        { name: 'tag1', groupId: 2, groupName: '组2', groupSortOrder: 2 }
+      ];
+      const counts = { tag1: 5 };
+      const groups = [
+        { id: 1, name: '空组', sortOrder: 1 },
+        { id: 2, name: '组2', sortOrder: 2 }
+      ];
+
+      const html = TagUI.renderExpandedFilter(tags, counts, {
+        specialTags: [],
+        selectedTags: new Set(),
+        groups: groups,
+        isImage: false
+      });
+
+      // 首位组是空组，只有组2的标签显示
+      expect(html).toContain('组2');
+      expect(html).toContain('tag1');
     });
 
     it('首位组计数为0的标签应显示计数0', () => {
@@ -289,14 +370,13 @@ describe('TagUI - generateTagFiltersHtml', () => {
       const counts = { emptyTag: 0 };
       const groups = [{ id: 1, name: '首位组', sortOrder: 1 }];
 
-      const html = TagUI.generateTagFiltersHtml(tags, counts, {
+      const html = TagUI.renderExpandedFilter(tags, counts, {
         specialTags: [],
         selectedTags: new Set(),
         groups: groups,
         isImage: false
       });
 
-      // 应该包含计数0的显示
       expect(html).toContain('emptyTag');
       expect(html).toContain('>0<');
     });
@@ -312,16 +392,14 @@ describe('TagUI - generateTagFiltersHtml', () => {
         { id: 2, name: '其他组', sortOrder: 2 }
       ];
 
-      const html = TagUI.generateTagFiltersHtml(tags, counts, {
+      const html = TagUI.renderExpandedFilter(tags, counts, {
         specialTags: [],
         selectedTags: new Set(),
         groups: groups,
         isImage: false
       });
 
-      // 首位组标签显示
       expect(html).toContain('topTag');
-      // 非首位组计数为0的标签不显示
       expect(html).not.toContain('emptyTag');
     });
 
@@ -333,16 +411,14 @@ describe('TagUI - generateTagFiltersHtml', () => {
       const counts = { tag1: 0, tag2: 0 };
       const groups = [{ id: 1, name: '首位组', sortOrder: 1 }];
 
-      const html = TagUI.generateTagFiltersHtml(tags, counts, {
+      const html = TagUI.renderExpandedFilter(tags, counts, {
         specialTags: [],
         selectedTags: new Set(),
         groups: groups,
         isImage: false
       });
 
-      // 组标题应该显示
       expect(html).toContain('首位组');
-      // 所有标签都应该显示
       expect(html).toContain('tag1');
       expect(html).toContain('tag2');
     });
@@ -354,14 +430,13 @@ describe('TagUI - generateTagFiltersHtml', () => {
       const counts = { selectedTag: 3 };
       const groups = [{ id: 1, name: '首位组', sortOrder: 1 }];
 
-      const html = TagUI.generateTagFiltersHtml(tags, counts, {
+      const html = TagUI.renderExpandedFilter(tags, counts, {
         specialTags: [],
         selectedTags: new Set(['selectedTag']),
         groups: groups,
         isImage: false
       });
 
-      // 选中的标签应该有active类
       expect(html).toContain('active');
       expect(html).toContain('selectedTag');
     });
@@ -373,14 +448,13 @@ describe('TagUI - generateTagFiltersHtml', () => {
       const counts = { dragTag: 3 };
       const groups = [{ id: 1, name: '首位组', sortOrder: 1 }];
 
-      const html = TagUI.generateTagFiltersHtml(tags, counts, {
+      const html = TagUI.renderExpandedFilter(tags, counts, {
         specialTags: [],
         selectedTags: new Set(),
         groups: groups,
         isImage: true
       });
 
-      // 应该有拖拽属性
       expect(html).toContain('draggable="true"');
       expect(html).toContain('data-drag-type="image-tag"');
     });

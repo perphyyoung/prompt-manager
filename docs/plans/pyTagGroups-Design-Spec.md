@@ -426,9 +426,6 @@ export class TopGroupManager {
     tagCounts: Record<string, number>
   ): Map<number, TopGroupInfo>;
 
-  // 获取排序后的非空组列表
-  static getNonEmptyGroups(groupMap: Map<number, TopGroupInfo>): TopGroupInfo[];
-
   // 获取首位组（排序第一的非空组）
   static getTopGroup(groupMap: Map<number, TopGroupInfo>): TopGroupInfo | null;
 
@@ -699,7 +696,6 @@ const tags = lib.parse('tag1, tag2, tag3');  // ['tag1', 'tag2', 'tag3']
 
 - `sortTagsWithGroupPriority` - 按组优先级排序标签
 - `buildGroupMap` - 构建组映射
-- `getNonEmptyGroups` - 获取非空组列表
 - `getTopGroup` - 获取首位组
 - `collectHeaderTags` - 收集头部标签
 

@@ -53,25 +53,32 @@ export class TopGroupManager {
   }
 
   /**
-   * 从标签列表中构建组映射
+   * 构建组映射
+   * @param allGroups 所有组（包括空组）
+   * @param tags 标签列表
+   * @param tagCounts 标签计数
    */
   static buildGroupMap(
+    allGroups: Array<{ id: number; name: string; sortOrder?: number }>,
     tags: TagInfo[],
     tagCounts: Record<string, number>
   ): Map<number, TopGroupInfo> {
     const groupMap = new Map<number, TopGroupInfo>();
 
+    // 首先注册所有组（包括空组）
+    allGroups.forEach(group => {
+      groupMap.set(group.id, {
+        groupId: group.id,
+        groupName: group.name,
+        groupSortOrder: group.sortOrder ?? 0,
+        tags: []
+      });
+    });
+
+    // 然后填充标签
     tags.forEach(tag => {
       const count = tagCounts[tag.name] || 0;
-      if (tag.groupId) {
-        if (!groupMap.has(tag.groupId)) {
-          groupMap.set(tag.groupId, {
-            groupId: tag.groupId,
-            groupName: tag.groupName,
-            groupSortOrder: tag.groupSortOrder || 0,
-            tags: []
-          });
-        }
+      if (tag.groupId && groupMap.has(tag.groupId)) {
         groupMap.get(tag.groupId)!.tags.push({ ...tag, count });
       }
     });
@@ -80,11 +87,10 @@ export class TopGroupManager {
   }
 
   /**
-   * 获取排序后的非空组列表
+   * 获取排序后的组列表（包括空组）
    */
-  static getNonEmptyGroups(groupMap: Map<number, TopGroupInfo>): TopGroupInfo[] {
+  static getSortedGroups(groupMap: Map<number, TopGroupInfo>): TopGroupInfo[] {
     return Array.from(groupMap.values())
-      .filter(g => g.tags.length > 0)
       .sort((a, b) => a.groupSortOrder - b.groupSortOrder);
   }
 
@@ -92,8 +98,7 @@ export class TopGroupManager {
    * 获取首位组
    */
   static getTopGroup(groupMap: Map<number, TopGroupInfo>): TopGroupInfo | null {
-    const nonEmptyGroups = this.getNonEmptyGroups(groupMap);
-    return nonEmptyGroups.length > 0 ? nonEmptyGroups[0] : null;
+    return this.getSortedGroups(groupMap)[0] ?? null;
   }
 
   /**
@@ -102,6 +107,7 @@ export class TopGroupManager {
    */
   static collectHeaderTags(
     specialTags: SpecialTagInfo[],
+    allGroups: Array<{ id: number; name: string; sortOrder?: number }>,
     sortedTags: TagInfo[],
     tagCounts: Record<string, number>,
     selectedTags: Set<string>,
@@ -122,9 +128,10 @@ export class TopGroupManager {
       });
     });
 
-    // 构建组映射
-    const groupMap = this.buildGroupMap(sortedTags, tagCounts);
+    // 构建组映射并获取首位组
+    const groupMap = this.buildGroupMap(allGroups, sortedTags, tagCounts);
     const topGroup = this.getTopGroup(groupMap);
+    const topGroupId = topGroup?.groupId ?? null;
 
     // 添加首位组标签（包括计数为0的标签）
     if (topGroup) {
@@ -152,8 +159,6 @@ export class TopGroupManager {
         });
       }
     });
-
-    const topGroupId = topGroup?.groupId ?? null;
 
     selectedSet.forEach(tag => {
       if (!tagsToShow.some(t => t.tag === tag) && !allSpecialTags.includes(tag)) {

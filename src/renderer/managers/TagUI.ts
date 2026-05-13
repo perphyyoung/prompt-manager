@@ -18,6 +18,7 @@ interface TagFilterOptions {
 interface FilterHeaderOptions {
   containerId: string;
   specialTags: TagCountInfo[];
+  groups: ITagGroup[];
   sortedTagsWithGroup: ITagWithGroup[];
   tagCounts?: Record<string, number>;
   selectedTags: Set<string> | string[];
@@ -45,9 +46,9 @@ export class TagUI {
   }
 
   /**
-   * 生成标签注册表 HTML
+   * 渲染标签组卡片列表（标签管理界面）
    */
-  generateRegistryHtml(
+  renderTagGroupCards(
     groups: ITagGroup[],
     groupedTags: Record<number, string[]>,
     ungroupedTags: string[],
@@ -65,12 +66,17 @@ export class TagUI {
       globalIndex += ungroupedTags.length;
     }
 
+    // 使用 TopGroupManager 识别首位组，与筛选区逻辑一致
+    const groupMap = TopGroupManager.buildGroupMap(groups, [], tagCounts);
+    const topGroupId = TopGroupManager.getTopGroup(groupMap)?.groupId ?? null;
+
     // 标签组卡片（按排序顺序）
     const sortedGroups = groups.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-    sortedGroups.forEach((group, index) => {
+    sortedGroups.forEach((group) => {
       const tags = groupedTags[group.id] || [];
-      // 始终显示标签组，即使没有标签
-      html += this.generateTagGroupCard(group, tags, tagCounts, index === 0, isBatchMode, selectedTags, globalIndex);
+      // 使用 TopGroupManager 判断是否为首位组，确保与筛选区逻辑一致
+      const isFirst = group.id === topGroupId;
+      html += this.generateTagGroupCard(group, tags, tagCounts, isFirst, isBatchMode, selectedTags, globalIndex);
       globalIndex += tags.length;
     });
 
@@ -228,9 +234,9 @@ export class TagUI {
   }
 
   /**
-   * 生成标签筛选器 HTML
+   * 渲染展开状态的标签筛选面板
    */
-  static generateTagFiltersHtml(
+  static renderExpandedFilter(
     tags: ITagWithGroup[],
     counts: Record<string, number>,
     options: TagFilterOptions
@@ -277,9 +283,8 @@ export class TagUI {
     // 渲染分组标签
     if (groups && groups.length > 0) {
       // 使用 TopGroupManager 识别首位组，确保与 collectHeaderTags 逻辑一致
-      const groupMap = TopGroupManager.buildGroupMap(tags, counts);
-      const topGroup = TopGroupManager.getTopGroup(groupMap);
-      const topGroupId = topGroup?.groupId ?? null;
+      const groupMap = TopGroupManager.buildGroupMap(groups, tags, counts);
+      const topGroupId = TopGroupManager.getTopGroup(groupMap)?.groupId ?? null;
 
       // 按 sortOrder 排序组
       const sortedGroups = groups.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
@@ -338,12 +343,13 @@ export class TagUI {
   }
 
   /**
-   * 渲染标签筛选头部
+   * 渲染收起状态的标签筛选面板
    */
-  static renderFilterHeader(options: FilterHeaderOptions): boolean {
+  static renderCollapsedFilter(options: FilterHeaderOptions): boolean {
     const {
       containerId,
       specialTags,
+      groups,
       sortedTagsWithGroup,
       tagCounts = {},
       selectedTags,
@@ -359,6 +365,7 @@ export class TagUI {
     // 使用 TopGroupManager 收集头部标签
     const tagsToShow = TopGroupManager.collectHeaderTags(
       specialTags,
+      groups,
       sortedTagsWithGroup,
       tagCounts,
       selectedSet,

@@ -278,7 +278,7 @@ export abstract class TagManager {
       const sortedTags = this.sortTags(filteredTags, tagCounts);
       const { grouped: groupedTags, ungrouped: ungroupedTags } = groupTagsByGroup(sortedTags, groups);
 
-      const html = this.ui.generateRegistryHtml(groups, groupedTags, ungroupedTags, tagCounts, searchTerm, this.isBatchModeActive, batchToolbarMiddle.getSelectedIds(this.toolbarContext));
+      const html = this.ui.renderTagGroupCards(groups, groupedTags, ungroupedTags, tagCounts, searchTerm, this.isBatchModeActive, batchToolbarMiddle.getSelectedIds(this.toolbarContext));
       container.innerHTML = html;
 
       // 绑定容器特定的拖拽和右键菜单事件

@@ -868,7 +868,7 @@ export abstract class PanelManagerBase {
       await this.renderNormalTags(container, sortedTagsWithGroup, tagCounts, groups);
 
       // 更新头部标签
-      await this.updateTagFilterHeader(specialTags, sortedTagsWithGroup, tagCounts);
+      await this.updateTagFilterHeader(specialTags, groups, sortedTagsWithGroup, tagCounts);
 
       // 绑定事件
       this.bindTagFilterEvents();
@@ -917,7 +917,7 @@ export abstract class PanelManagerBase {
    * @param groups - 标签组
    */
   async renderNormalTags(container: HTMLElement | null, sortedTagsWithGroup: ITagWithGroup[], tagCounts: Record<string, number>, groups: ITagGroup[]): Promise<void> {
-    const html = TagUI.generateTagFiltersHtml(sortedTagsWithGroup, tagCounts, {
+    const html = TagUI.renderExpandedFilter(sortedTagsWithGroup, tagCounts, {
       specialTags: [],
       selectedTags: this.selectedTags,
       groups: groups,
@@ -1083,17 +1083,19 @@ export abstract class PanelManagerBase {
   /**
    * 更新标签筛选区域头部标签（收起时显示）
    * @param specialTags - 特殊标签列表
+   * @param groups - 标签组列表
    * @param sortedTagsWithGroup - 排序后的标签列表
    * @param tagCounts - 标签计数对象
    */
-  async updateTagFilterHeader(specialTags: SpecialTagCount[], sortedTagsWithGroup: ITagWithGroup[], tagCounts: Record<string, number>): Promise<void> {
-    // 使用 CacheManager 缓存 tagsWithGroup 供 getTopGroupTags 使用
+  async updateTagFilterHeader(specialTags: SpecialTagCount[], groups: ITagGroup[], sortedTagsWithGroup: ITagWithGroup[], tagCounts: Record<string, number>): Promise<void> {
+    // 使用 CacheManager 缓存 tagsWithGroup 供 renderCollapsedFilter 使用
     const cacheKey = `${this.panelType}TagsWithGroup`;
     cacheManager.createCache(cacheKey, 10).set('current', sortedTagsWithGroup);
 
-    TagUI.renderFilterHeader({
+    TagUI.renderCollapsedFilter({
       containerId: this.getTagFilterHeaderContainerId(),
       specialTags,
+      groups,
       sortedTagsWithGroup,
       tagCounts,
       selectedTags: this.selectedTags,
@@ -1124,37 +1126,6 @@ export abstract class PanelManagerBase {
         this.renderTagFilters();
       }
     });
-  }
-
-  /**
-   * 获取首位组的标签列表
-   * @returns 首位组的所有标签名称
-   */
-  getTopGroupTags(): string[] {
-    // 使用 CacheManager 获取 tagsWithGroup 数据
-    const cacheKey = `${this.panelType}TagsWithGroup`;
-    const tagsWithGroup = cacheManager.getCache(cacheKey)?.get('current') as ITagWithGroup[] || [];
-
-    // 按组分组
-    const groupMap = new Map<number, { groupId: number; groupSortOrder: number; tags: string[] }>();
-    tagsWithGroup.forEach((t: ITagWithGroup) => {
-      if (t.groupId) {
-        if (!groupMap.has(t.groupId)) {
-          groupMap.set(t.groupId, {
-            groupId: t.groupId,
-            groupSortOrder: t.groupSortOrder || 0,
-            tags: []
-          });
-        }
-        groupMap.get(t.groupId)?.tags.push(t.name);
-      }
-    });
-
-    // 按 sortOrder 排序，取第一个组
-    const sortedGroups = Array.from(groupMap.values())
-      .sort((a, b) => a.groupSortOrder - b.groupSortOrder);
-
-    return sortedGroups.length > 0 ? sortedGroups[0].tags : [];
   }
 
   /**
