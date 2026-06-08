@@ -366,14 +366,6 @@ export class Constants {
     CONFIRM_CANCEL_BTN: 'confirmCancelBtn',
     CLOSE_CONFIRM_MODAL: 'closeConfirmModal',
 
-    // 数据迁移对话框
-    MIGRATE_MODAL: 'migrateModal',
-    MIGRATE_MODAL_TITLE: 'migrateModalTitle',
-    MIGRATE_OLD_PATH: 'migrateOldPath',
-    MIGRATE_NEW_PATH: 'migrateNewPath',
-    MIGRATE_CANCEL_BTN: 'migrateCancelBtn',
-    CLOSE_MIGRATE_MODAL: 'closeMigrateModal',
-
     // 选择对话框
     SELECT_MODAL_LABEL: 'selectModalLabel',
 
@@ -587,7 +579,6 @@ export class Constants {
     CUSTOM_FONT_SELECT: 'customFontSelect',
     SELECT_FONT_FILE_BTN: 'selectFontFileBtn',
     CURRENT_DATA_PATH: 'currentDataPath',
-    CHANGE_DATA_PATH_BTN: 'changeDataPathBtn',
     EXPORT_ORPHAN_FILES_BTN: 'exportOrphanFilesBtn',
     EXPORT_FULL_BACKUP_BTN: 'exportFullBackupBtn',
     IMPORT_FULL_BACKUP_BTN: 'importFullBackupBtn',

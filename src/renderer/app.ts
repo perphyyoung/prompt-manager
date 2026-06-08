@@ -967,13 +967,6 @@ window.onerror = (message, source, lineno, colno, error) => {
 // DOM 加载完成后初始化
 async function initApp() {
   await app.init();
-  const oldDataDir = await window.electronAPI.getOldDataDir();
-  if (oldDataDir) {
-    DialogService.showConfirmDialogByConfig(
-      DialogConfig.DATA_RESET,
-      { oldDataDir }
-    );
-  }
 }
 
 if (document.readyState === 'loading') {

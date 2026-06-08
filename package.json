@@ -1,6 +1,6 @@
 {
   "name": "prompt-manager",
-  "version": "0.9.9",
+  "version": "0.9.10",
   "description": "本地提示词管理工具",
   "main": "out/main/index.js",
   "type": "module",
@@ -38,6 +38,8 @@
   "author": "py",
   "license": "GPL-3.0",
   "build": {
+    "appId": "com.prompt-manager.app",
+    "productName": "Prompt Manager",
     "files": [
       "out/**/*",
       "assets/**/*",
@@ -47,17 +49,24 @@
     "icon": "assets/icon.ico",
     "publish": null,
     "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
       "verifyUpdateCodeSignature": false,
       "signAndEditExecutable": false,
-      "artifactName": "${productName}-${version}.${ext}"
+      "artifactName": "${productName}-${version}.${ext}",
+      "icon": "assets/icon.ico"
     },
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "PromptManager",
-      "runAfterFinish": false,
+      "runAfterFinish": true,
       "installerIcon": "assets/icon.ico",
       "uninstallerIcon": "assets/icon.ico"
     }

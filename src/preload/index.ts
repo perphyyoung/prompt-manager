@@ -87,7 +87,6 @@ interface IElectronAPI {
 
   // 设置
   getDataPath: () => Promise<string>;
-  selectDataPath: () => Promise<string | null>;
   selectDirectory: () => Promise<string | null>;
   selectAndInstallFont: () => Promise<{ success: boolean; fontName?: string; filePath?: string; error?: string }>;
   getInstalledFonts: () => Promise<{ fontName: string; fileName: string; filePath: string }[]>;
@@ -200,9 +199,6 @@ interface IElectronAPI {
   importFullBackup: () => Promise<{ success: boolean; manifest: IBackupManifest; oldDataDir: string } | { cancelled: true }>;
   onBackupProgress: (callback: BackupProgressCallback) => void;
   offBackupProgress: (callback: BackupProgressCallback) => void;
-
-  // 清空重启
-  getOldDataDir: () => Promise<string | null>;
 }
 
 // ==================== 日志辅助函数 ====================
@@ -245,7 +241,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ==================== 设置 ====================
   getDataPath: () => ipcRenderer.invoke('get-data-path'),
-  selectDataPath: () => ipcRenderer.invoke('select-data-path'),
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
   selectAndInstallFont: () => ipcRenderer.invoke('select-and-install-font'),
   getInstalledFonts: () => ipcRenderer.invoke('get-installed-fonts'),
@@ -364,8 +359,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
 
-  // ==================== 其他 ====================
-  getOldDataDir: () => ipcRenderer.invoke('get-old-data-dir')
 } as IElectronAPI);
 
 // 导出类型供渲染进程使用

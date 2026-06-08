@@ -14,7 +14,6 @@ declare global {
   }
 }
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { promises as fs } from 'fs';
 import os from 'os';
 import sharp from 'sharp';
@@ -25,8 +24,7 @@ import { generatePromptId, generateImageId } from '../utils/idGenerator.js';
 import { getFormattedLocalTimeToSecond, getFormattedYearMonth, localTime } from '../utils/index.js';
 import { logInfo, logDebug, logError, logWarn, initLogger } from './logger.js';
 import { Constants } from '../constants.ts';
-import { copyDirectory, copyDirectoryWithProgress } from '../utils/FileUtils.js';
-import { ConfigManager, AppConfig } from './ConfigManager.js';
+import { copyDirectoryWithProgress } from '../utils/FileUtils.js';
 
 // 检测是否为生产环境（打包后的应用）
 // 打包后 __dirname 包含 app.asar，开发环境不包含
@@ -35,23 +33,14 @@ const isProduction = __dirname.includes('app.asar');
 // 项目根目录（基于 __dirname 反向推导：out/main/ -> 项目根目录）
 const ROOT_DIR = path.join(__dirname, '..', '..');
 
-// 配置文件路径（生产环境使用应用安装目录，开发环境使用项目根目录）
-const CONFIG_FILE = isProduction
-  ? path.join(path.dirname(app.getPath('exe')), 'config.json')
-  : path.join(ROOT_DIR, 'config.json');
-
-// 默认数据目录（生产环境使用应用安装目录下的 data 文件夹，开发环境使用项目根目录）
-const DEFAULT_DATA_DIR = isProduction
-  ? path.join(path.dirname(app.getPath('exe')), 'data')
+// 数据目录（生产环境使用用户数据目录下的 py-data，开发环境使用项目根目录）
+const DATA_DIR = isProduction
+  ? path.join(app.getPath('userData'), 'py-data')
   : path.join(ROOT_DIR, 'py-data');
-
-// 初始化配置管理器
-const configManager = new ConfigManager(CONFIG_FILE, isProduction ? path.dirname(app.getPath('exe')) : ROOT_DIR);
 
 let mainWindow: BrowserWindow | null = null;
 let tray = null;
-let currentDataDir = DEFAULT_DATA_DIR;
-let pendingOldDataDir: string | null = null;
+let currentDataDir = DATA_DIR;
 
 // 标签缓存（用于自动完成功能）
 let allTagsCache: string[] | null = null;
@@ -62,76 +51,16 @@ const isTestMode = process.env.PLAYWRIGHT_TEST === 'true' || process.env.NODE_EN
 // 检测是否为 E2E 测试模式（使用独立的数据目录）
 const e2eTestDataDir = process.env.E2E_TEST_DATA_DIR;
 
-// 解析命令行参数
-function parseArgs() {
-  const args = process.argv.slice(1);
-  pendingOldDataDir = null;
-  for (const arg of args) {
-    if (arg.startsWith('--old-data-dir=')) {
-      pendingOldDataDir = arg.split('=')[1];
-    }
-  }
-}
-
-parseArgs();
-
 /**
- * 加载应用配置
- * 从 config.json 读取数据目录设置
+ * 获取数据目录路径
  * E2E 测试模式下使用独立的数据目录
- * @returns {Promise<{rootDir: string, dataDir: string}>} 配置对象
+ * @returns {string} 数据目录路径
  */
-async function loadConfig() {
-  // E2E 测试模式下使用独立的数据目录
+function getDataDir(): string {
   if (e2eTestDataDir) {
-    currentDataDir = e2eTestDataDir;
-    // E2E 测试模式下，日志写入项目根目录，便于查看
-    const projectRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '../..');
-    return { rootDir: projectRoot, dataDir: e2eTestDataDir };
+    return e2eTestDataDir;
   }
-  
-  const config = await configManager.loadConfig();
-  currentDataDir = config.dataDir;
-  return config;
-}
-
-/**
- * 保存应用配置
- * @param {Object} config - 配置对象
- * @param {boolean} merge - 是否合并现有配置
- */
-async function saveConfig(config: Partial<AppConfig>, merge = false) {
-  await configManager.saveConfig(config, merge);
-  if (config.dataDir) {
-    currentDataDir = config.dataDir;
-  }
-}
-
-/**
- * 迁移数据到新的数据目录
- * @param {string} oldDir - 旧数据目录
- * @param {string} newDir - 新数据目录
- * @returns {Promise<boolean>} 是否成功
- */
-async function migrateData(oldDir: string, newDir: string) {
-  try {
-    // 检查旧目录是否存在
-    try {
-      await fs.access(oldDir);
-    } catch {
-      // 旧目录不存在，无需迁移
-      return true;
-    }
-
-    // 清空新目录并复制数据
-    await fs.rm(newDir, { recursive: true, force: true });
-    await fs.mkdir(newDir, { recursive: true });
-    await copyDirectory(oldDir, newDir);
-    return true;
-  } catch (err) {
-    logError('Main', 'Data migration failed', err);
-    return false;
-  }
+  return DATA_DIR;
 }
 
 /**
@@ -1091,59 +1020,9 @@ ipcMain.handle('set-fullscreen', async (event, flag) => {
 
 
 
-// 获取当前数据路径
+// 获取数据目录路径
 ipcMain.handle('get-data-path', async () => {
-  return currentDataDir;
-});
-
-// 选择新的数据路径
-ipcMain.handle('select-data-path', async () => {
-  const result = await dialog.showOpenDialog({
-    title: '选择数据目录',
-    properties: ['openDirectory', 'createDirectory'],
-    defaultPath: currentDataDir
-  });
-
-  if (!result.canceled && result.filePaths.length > 0) {
-    const newPath = result.filePaths[0];
-
-    // 如果路径改变，处理数据目录变更
-    if (newPath !== currentDataDir) {
-      const oldPath = currentDataDir;
-
-      if (!mainWindow) throw new Error('Main window is not available');
-
-      // 显示迁移对话框
-      const migrateAction = await mainWindow.webContents.executeJavaScript(
-        `window.dialogService?.showMigrateDialog(${JSON.stringify(oldPath)}, ${JSON.stringify(newPath)})`
-      ).catch(() => null);
-
-      if (!migrateAction || migrateAction === 'cancel') {
-        // 用户取消或对话框调用失败
-        return null;
-      }
-
-      // 更新配置（使用 merge=true 保留现有字段）
-      currentDataDir = newPath;
-      await saveConfig({ dataDir: newPath }, true);
-
-      // 迁移数据（如果用户选择复制）
-      if (migrateAction === 'copy') {
-        const success = await migrateData(oldPath, newPath);
-        if (!success) {
-          // 迁移失败或用户取消，恢复旧配置
-          currentDataDir = oldPath;
-          await saveConfig({ dataDir: oldPath }, true);
-          return null;
-        }
-      }
-
-      // 无论选择复制还是直接使用新目录，都重启应用
-      await relaunchApp();
-    }
-  }
-
-  return null;
+  return getDataDir();
 });
 
 // 选择目录（通用）
@@ -1522,13 +1401,6 @@ ipcMain.handle('optimize-database', async () => {
     logError('Main', 'Optimize database error:', error);
     throw error;
   }
-});
-
-// 获取旧数据目录路径（清空数据后）
-ipcMain.handle('get-old-data-dir', async () => {
-  const oldDir = pendingOldDataDir;
-  pendingOldDataDir = null;
-  return oldDir;
 });
 
 // 获取应用版本号
@@ -2205,11 +2077,11 @@ if (enableSingleInstance) {
 }
 
 app.whenReady().then(async () => {
-  // 加载配置
-  const config = await loadConfig();
+  // 获取数据目录
+  currentDataDir = getDataDir();
 
   // 初始化日志系统
-  initLogger(config.rootDir);
+  initLogger(ROOT_DIR);
 
   // 初始化数据库
   try {

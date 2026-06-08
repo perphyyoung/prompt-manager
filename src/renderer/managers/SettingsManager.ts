@@ -101,13 +101,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       const el = document.getElementById(Constants.Ids.CURRENT_DATA_PATH);
       if (el) el.textContent = dataPath;
     } catch (error) {
-      ErrorHandler.handleError(
-        { module: 'SettingsManager', operation: 'get data path' },
-        error,
-        { showToast: false }
-      );
-      const el = document.getElementById(Constants.Ids.CURRENT_DATA_PATH);
-      if (el) el.textContent = '获取失败';
+      console.error(error);
     }
 
     const modal = document.getElementById(Constants.Ids.SETTINGS_MODAL);
@@ -192,9 +186,6 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    * @private
    */
   private bindEvents(): void {
-    // 数据路径更改
-    document.getElementById(Constants.Ids.CHANGE_DATA_PATH_BTN)?.addEventListener('click', () => this.changeDataPath());
-
     // 清空数据
     document.getElementById(Constants.Ids.CLEAR_ALL_DATA_BTN)?.addEventListener('click', () => this.clearAllData());
 
@@ -384,28 +375,6 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
         { module: 'SettingsManager.ts', operation: 'load custom fonts' },
         error,
         { showToast: false }
-      );
-    }
-  }
-
-  /**
-   * 更改数据存储目录
-   */
-  async changeDataPath(): Promise<void> {
-    try {
-      const newPath = await window.electronAPI.selectDataPath();
-      if (newPath) {
-        const currentDataPathEl = document.getElementById(Constants.Ids.CURRENT_DATA_PATH);
-        if (currentDataPathEl) {
-          currentDataPathEl.textContent = newPath;
-        }
-        this.app.showToast?.('数据目录已更改，重启应用后生效', 'success');
-      }
-    } catch (error) {
-      ErrorHandler.handleError(
-        { module: 'SettingsManager.ts', operation: 'change data path' },
-        error,
-        { userMessage: '更改失败' }
       );
     }
   }
