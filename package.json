@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "start": "electron-vite preview",
-    "dev": "electron-vite dev",
+    "dev": "npm run build && electron-vite dev",
     "build": "npm run check:constants && electron-vite build",
     "check": "npm run check:constants && npm run typecheck && npm run lint",
     "check:constants": "tsx scripts/check-constants.ts",
