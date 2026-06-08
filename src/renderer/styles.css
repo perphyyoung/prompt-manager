@@ -2052,6 +2052,13 @@ body * {
   color: var(--text-primary);
 }
 
+.modal-header h2 .settings-version {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-left: 8px;
+}
+
 .modal-header-left {
   display: flex;
   align-items: center;

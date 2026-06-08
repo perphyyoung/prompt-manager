@@ -85,6 +85,16 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    * 打开设置模态框
    */
   async openModal(): Promise<void> {
+    // 获取应用版本号
+    try {
+      const version = await window.electronAPI.getAppVersion();
+      const el = document.getElementById(Constants.Ids.SETTINGS_VERSION);
+      if (el) el.textContent = 'v' + version;
+    } catch (error) {
+      // 版本获取失败
+      console.error(error);
+    }
+
     // 获取当前数据路径
     try {
       const dataPath = await window.electronAPI.getDataPath();

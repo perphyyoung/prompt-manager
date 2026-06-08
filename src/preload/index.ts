@@ -66,6 +66,9 @@ const backupProgressCallbacks = new WeakMap<BackupProgressCallback, (_event: Ipc
 // ==================== API 定义 ====================
 
 interface IElectronAPI {
+  // 应用信息
+  getAppVersion: () => Promise<string>;
+
   // Prompt 管理
   getPrompts: (sortBy: string, sortOrder: string) => Promise<IPrompt[]>;
   getPromptById: (id: string) => Promise<IPrompt | null>;
@@ -221,6 +224,9 @@ function sendLog(level: LogLevel, component: string, message: string, data?: unk
  * 所有主进程通信都通过 IPC 通道进行
  */
 contextBridge.exposeInMainWorld('electronAPI', {
+  // ==================== 应用信息 ====================
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+
   // ==================== Prompt 管理 ====================
   getPrompts: (sortBy: string, sortOrder: string) => ipcRenderer.invoke('get-prompts', sortBy, sortOrder),
   getPromptById: (id: string) => ipcRenderer.invoke('get-prompt-by-id', id),

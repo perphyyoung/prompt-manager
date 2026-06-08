@@ -1531,6 +1531,11 @@ ipcMain.handle('get-old-data-dir', async () => {
   return oldDir;
 });
 
+// 获取应用版本号
+ipcMain.handle('get-app-version', async () => {
+  return app.getVersion();
+});
+
 // 渲染进程日志（通过 IPC 写入 debug.log）
 ipcMain.handle('renderer-log', async (event, level, component, message, data) => {
   const logFn = level === 'error' ? logError : level === 'warn' ? logWarn : level === 'debug' ? logDebug : logInfo;

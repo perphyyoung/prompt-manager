@@ -575,6 +575,7 @@ export class Constants {
     PROMPT_DETAIL_SAFE_TOGGLE: 'promptDetailSafeToggle',
 
     CLOSE_SETTINGS_MODAL: 'closeSettingsModal',
+    SETTINGS_VERSION: 'settingsVersion',
     SETTINGS_THEME_TOGGLE: 'settingsThemeToggle',
     SETTINGS_SUN_ICON: 'settingsSunIcon',
     SETTINGS_MOON_ICON: 'settingsMoonIcon',
