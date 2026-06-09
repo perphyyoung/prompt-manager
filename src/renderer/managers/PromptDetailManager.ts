@@ -738,12 +738,9 @@ export class PromptDetailManager extends DetailViewManager {
         return;
       }
 
-      // 更新缓存并保存
+      // 更新缓存并保存（使用完整图像数据，包含 relativePath）
       for (const image of result.images) {
-        this.app.currentImagesCache.set(String(image.id), {
-          id: image.id,
-          fileName: image.fileName
-        } as IImage);
+        this.app.currentImagesCache.set(String(image.id), image as unknown as IImage);
       }
 
       // 更新全局图像缓存，确保 renderImagePreviews 能获取完整信息
