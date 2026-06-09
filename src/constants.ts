@@ -3,6 +3,9 @@
  * 集中管理应用中的所有常量
  */
 export class Constants {
+  // 应用名称
+  static APP_NAME = 'Prompt Manager';
+
   // 导航按钮 SVG
   static NAV_SVGS = {
     first: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

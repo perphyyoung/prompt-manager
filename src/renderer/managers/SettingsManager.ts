@@ -89,7 +89,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     try {
       const version = await window.electronAPI.getAppVersion();
       const el = document.getElementById(Constants.Ids.SETTINGS_VERSION);
-      if (el) el.textContent = 'v' + version;
+      if (el) el.textContent = Constants.APP_NAME + ' v' + version;
     } catch (error) {
       // 版本获取失败
       console.error(error);

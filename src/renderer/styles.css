@@ -2052,11 +2052,27 @@ body * {
   color: var(--text-primary);
 }
 
-.modal-header h2 .settings-version {
+.settings-modal-header {
+  position: relative;
+}
+
+.settings-modal-header h2 {
+  position: absolute;
+  left: 24px;
+}
+
+.settings-modal-header .settings-version {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 12px;
   font-weight: 400;
   color: var(--text-secondary);
-  margin-left: 8px;
+}
+
+.settings-modal-header .close-btn {
+  position: absolute;
+  right: 24px;
 }
 
 .modal-header-left {
