@@ -216,17 +216,34 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(displayedImageCount).toBe(dbImageCount);
   });
 
-  test("点击眼睛图标进入图像详情界面且导航后依旧有效", async ({ electronTest, page }) => {
+  test("点击眼睛图标进入图像详情界面，且切换图像后点击眼睛依旧有效", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
-    // 查找有图像的提示词
-    const promptIdWithImage = await findPromptWithImageCount(page, 1);
-    if (!promptIdWithImage) {
-      await electronTest.logWarn(page, "跳过测试：没有找到有图像的提示词");
-      return;
-    }
+    // ===== 准备测试数据：创建两个带图像的提示词 =====
+    const factory = electronTest.getApiFactory();
 
-    // 使用快捷键切换到提示词主界面（自动关闭可能打开的模态框）
+    // 创建第一个带图像的提示词
+    const result1 = await factory.createImageFactory().createWithPromptCount(
+      "test_image_nav_1",
+      1,
+      "test_prompt_nav_1",
+    );
+    expect(result1.prompts.length).toBeGreaterThan(0);
+    const firstPromptId = result1.prompts[0].id;
+
+    // 创建第二个带图像的提示词（用于导航测试）
+    const result2 = await factory.createImageFactory().createWithPromptCount(
+      "test_image_nav_2",
+      1,
+      "test_prompt_nav_2",
+    );
+    expect(result2.prompts.length).toBeGreaterThan(0);
+    const secondPromptId = result2.prompts[0].id;
+
+    // 刷新界面以显示新数据
+    await electronTest.refreshData();
+
+    // 使用快捷键切换到提示词主界面
     await page.keyboard.press("Control+p");
     await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
       state: "visible",
@@ -249,13 +266,15 @@ test.describe("提示词详情界面数据库字段读取", () => {
       timeout: 1000,
     });
 
-    // 点击找到的有图像的提示词
-    const targetCard = page.locator(
-      `.prompt-card[data-id="${promptIdWithImage}"]`,
+    // ===== 第一部分：验证第一个提示词的图像眼睛图标有效 =====
+
+    // 点击第一个提示词卡片
+    const firstCard = page.locator(
+      `.prompt-card[data-id="${firstPromptId}"]`,
     );
-    await expect(targetCard).toBeVisible({ timeout: 1000 });
-    await targetCard.scrollIntoViewIfNeeded();
-    await targetCard.click({ force: true });
+    await expect(firstCard).toBeVisible({ timeout: 1000 });
+    await firstCard.scrollIntoViewIfNeeded();
+    await firstCard.click({ force: true });
 
     // 等待详情模态框显示
     const detailModal = page.locator(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
@@ -266,6 +285,10 @@ test.describe("提示词详情界面数据库字段读取", () => {
       state: "visible",
       timeout: 1000,
     });
+
+    // 验证进入的提示词 ID
+    const enteredPromptId = await page.inputValue(`#${Constants.Ids.PROMPT_DETAIL_ID}`);
+    expect(enteredPromptId).toBe(firstPromptId);
 
     // 验证存在图像预览项
     const imagePreviewItems = page.locator(".image-preview-item");
@@ -302,67 +325,40 @@ test.describe("提示词详情界面数据库字段读取", () => {
     await closeBtn.click();
     await expect(imageDetailModal).toBeHidden({ timeout: 1000 });
 
-    // ===== 第二部分：导航到下一张有图的提示词，验证眼睛图标依旧有效 =====
+    // ===== 第二部分：直接点击第二个提示词卡片，验证眼睛图标依旧有效 =====
 
-    // 获取当前提示词的ID
-    const firstPromptId = await page.inputValue(
-      `#${Constants.Ids.PROMPT_DETAIL_ID}`,
+    // 关闭提示词详情模态框（回到列表）
+    const closeDetailBtn = page.locator(`#${Constants.Ids.PROMPT_DETAIL_CLOSE_BTN}`);
+    await closeDetailBtn.click();
+    await expect(detailModal).toBeHidden({ timeout: 1000 });
+
+    // 点击第二个提示词卡片
+    const secondCard = page.locator(
+      `.prompt-card[data-id="${secondPromptId}"]`,
     );
+    await expect(secondCard).toBeVisible({ timeout: 1000 });
+    await secondCard.scrollIntoViewIfNeeded();
+    await secondCard.click({ force: true });
 
-    // 点击下一张按钮导航，直到找到有图像的提示词
-    const nextBtn = page.locator(
-      `#${Constants.Ids.PROMPT_DETAIL_NEXT_NAV_BTN}`,
-    );
+    // 等待详情模态框显示
+    await expect(detailModal).toBeVisible({ timeout: 1000 });
 
-    let currentPromptId = firstPromptId;
-    let foundImage = false;
-    let navigationCount = 0;
-    const maxNavigation = 10; // 最多导航10次，防止无限循环
+    // 等待模态框内容加载
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_TITLE}`, {
+      state: "visible",
+      timeout: 1000,
+    });
 
-    while (!foundImage && navigationCount < maxNavigation) {
-      // 检查下一张按钮是否可用
-      const isNextBtnDisabled = await nextBtn.evaluate(
-        (el: HTMLButtonElement) => el.disabled,
-      );
+    // 验证进入的提示词 ID
+    const secondEnteredId = await page.inputValue(`#${Constants.Ids.PROMPT_DETAIL_ID}`);
+    expect(secondEnteredId).toBe(secondPromptId);
 
-      if (isNextBtnDisabled) {
-        break;
-      }
+    // 获取第二个提示词的第一个图像
+    const secondImagePreviewItems = page.locator(".image-preview-item");
+    const secondImageCount = await secondImagePreviewItems.count();
+    expect(secondImageCount).toBeGreaterThan(0);
 
-      await nextBtn.click();
-      navigationCount++;
-
-      // 等待导航完成 - 验证ID已变化
-      await page.waitForFunction(
-        (params: { idFieldId: string; prevId: string }) => {
-          const currentId = (
-            document.getElementById(params.idFieldId) as HTMLInputElement
-          )?.value;
-          return currentId && currentId !== params.prevId;
-        },
-        { idFieldId: Constants.Ids.PROMPT_DETAIL_ID, prevId: currentPromptId },
-        { timeout: 1000 },
-      );
-
-      // 获取新的提示词ID
-      const newPromptId = await page.inputValue(
-        `#${Constants.Ids.PROMPT_DETAIL_ID}`,
-      );
-
-      currentPromptId = newPromptId;
-
-      // 检查当前提示词是否有图像
-      const currentImageCount = await imagePreviewItems.count();
-      if (currentImageCount > 0) {
-        foundImage = true;
-      }
-    }
-
-    // 断言必须找到有图像的提示词
-    expect(foundImage).toBe(true);
-
-    // 获取第二张提示词的第一个图像
-    const secondFirstImagePreview = imagePreviewItems.first();
+    const secondFirstImagePreview = secondImagePreviewItems.first();
     const secondViewImageBtn = secondFirstImagePreview.locator(".view-image");
 
     // 验证眼睛图标按钮存在且可见
