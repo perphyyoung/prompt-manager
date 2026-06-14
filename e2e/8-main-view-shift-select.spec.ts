@@ -25,6 +25,67 @@ test.describe("Shift 范围选择", () => {
     await electronTest.refreshData();
   });
 
+  test.describe("图像网格视图", () => {
+    test("Shift+ 点击范围选择", async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
+
+      // 使用快捷键切换到图像面板并进入网格视图
+      await page.keyboard.press("Control+i");
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
+        state: "visible",
+        timeout: 1000,
+      });
+      await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID}`, {
+        state: "visible",
+        timeout: 1000,
+      });
+
+      // 先清除所有选择（按 Escape 退出批量模式）
+      await page.keyboard.press("Escape");
+      const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`);
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 }).catch(async () => {
+        await electronTest.logError(page, "批量工具栏隐藏失败");
+      });
+
+      // 点击第一个复选框选中（建立 lastSelectedIndex）
+      // 网格视图复选框默认隐藏，需先 hover 卡片使其可见
+      const firstCard = page.locator(".image-card").first();
+      const firstCheckbox = firstCard.locator(".card-checkbox");
+      await firstCard.hover();
+      await firstCheckbox.click();
+      await expect(firstCheckbox).toBeChecked({ timeout: 1000 });
+
+      // 验证选择计数为 1（只检查图像网格中的复选框）
+      const checkedCount = await page.evaluate((gridId: string) => {
+        return document.querySelectorAll(`#${gridId} .card-checkbox:checked`).length;
+      }, Constants.Ids.IMAGE_GRID);
+      expect(checkedCount).toBe(1);
+
+      // Shift+ 点击第三个卡片进行范围选择
+      const thirdCard = page.locator(".image-card").nth(2);
+      await page.keyboard.down("Shift");
+      await thirdCard.click();
+      await page.keyboard.up("Shift");
+
+      // 验证选择计数为 3（只检查图像网格中的复选框）
+      const finalCheckedCount = await page.evaluate((gridId: string) => {
+        return document.querySelectorAll(`#${gridId} .card-checkbox:checked`).length;
+      }, Constants.Ids.IMAGE_GRID);
+      expect(finalCheckedCount).toBe(3);
+
+      // 验证每张卡片的选中状态
+      for (let i = 0; i <= 2; i++) {
+        const checkbox = page.locator(".image-card").nth(i).locator(".card-checkbox");
+        await expect(checkbox).toBeChecked();
+      }
+
+      // 清理：退出批量模式
+      await page.keyboard.press("Escape");
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 });
+    });
+  });
+
   test.describe("图像列表视图", () => {
     test("Shift+ 点击范围选择", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
@@ -43,14 +104,10 @@ test.describe("Shift 范围选择", () => {
 
       // 先清除所有选择（按 Escape 退出批量模式）
       await page.keyboard.press("Escape");
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`,
-      );
-      await batchToolbar
-        .waitFor({ state: "hidden", timeout: 1000 })
-        .catch(async () => {
-          await electronTest.logError(page, "批量工具栏隐藏失败");
-        });
+      const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`);
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 }).catch(async () => {
+        await electronTest.logError(page, "批量工具栏隐藏失败");
+      });
 
       // 点击第一个复选框选中（建立 lastSelectedIndex）
       const firstCheckbox = page
@@ -62,9 +119,7 @@ test.describe("Shift 范围选择", () => {
 
       // 验证选择计数为 1（只检查图像列表中的复选框）
       const checkedCount = await page.evaluate((listId: string) => {
-        return document.querySelectorAll(
-          `#${listId} .list-item__checkbox:checked`,
-        ).length;
+        return document.querySelectorAll(`#${listId} .list-item__checkbox:checked`).length;
       }, Constants.Ids.IMAGE_LIST);
       expect(checkedCount).toBe(1);
 
@@ -76,18 +131,196 @@ test.describe("Shift 范围选择", () => {
 
       // 验证选择计数为 3（只检查图像列表中的复选框）
       const finalCheckedCount = await page.evaluate((listId: string) => {
-        return document.querySelectorAll(
-          `#${listId} .list-item__checkbox:checked`,
-        ).length;
+        return document.querySelectorAll(`#${listId} .list-item__checkbox:checked`).length;
       }, Constants.Ids.IMAGE_LIST);
       expect(finalCheckedCount).toBe(3);
 
       // 验证每行的选中状态
       for (let i = 0; i <= 2; i++) {
-        const checkbox = page
-          .locator(".list-item--image")
-          .nth(i)
-          .locator(".list-item__checkbox");
+        const checkbox = page.locator(".list-item--image").nth(i).locator(".list-item__checkbox");
+        await expect(checkbox).toBeChecked();
+      }
+
+      // 清理：退出批量模式
+      await page.keyboard.press("Escape");
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 });
+    });
+  });
+
+  test.describe("图像紧凑视图", () => {
+    test("Shift+ 点击范围选择", async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
+
+      // 使用快捷键切换到图像面板并进入紧凑视图
+      await page.keyboard.press("Control+i");
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
+        state: "visible",
+        timeout: 1000,
+      });
+      await page.click(`#${Constants.Ids.IMAGE_COMPACT_VIEW_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_LIST}`, {
+        state: "visible",
+        timeout: 1000,
+      });
+
+      // 先清除所有选择（按 Escape 退出批量模式）
+      await page.keyboard.press("Escape");
+      const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`);
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 }).catch(async () => {
+        await electronTest.logError(page, "批量工具栏隐藏失败");
+      });
+
+      // 点击第一个复选框选中（建立 lastSelectedIndex）
+      const firstCheckbox = page
+        .locator(".list-item--image")
+        .first()
+        .locator(".list-item__checkbox");
+      await firstCheckbox.click();
+      await expect(firstCheckbox).toBeChecked({ timeout: 1000 });
+
+      // 验证选择计数为 1
+      const checkedCount = await page.evaluate((listId: string) => {
+        return document.querySelectorAll(`#${listId} .list-item__checkbox:checked`).length;
+      }, Constants.Ids.IMAGE_LIST);
+      expect(checkedCount).toBe(1);
+
+      // Shift+ 点击第三个行进行范围选择
+      const thirdRow = page.locator(".list-item--image").nth(2);
+      await page.keyboard.down("Shift");
+      await thirdRow.click();
+      await page.keyboard.up("Shift");
+
+      // 验证选择计数为 3
+      const finalCheckedCount = await page.evaluate((listId: string) => {
+        return document.querySelectorAll(`#${listId} .list-item__checkbox:checked`).length;
+      }, Constants.Ids.IMAGE_LIST);
+      expect(finalCheckedCount).toBe(3);
+
+      // 验证每行的选中状态
+      for (let i = 0; i <= 2; i++) {
+        const checkbox = page.locator(".list-item--image").nth(i).locator(".list-item__checkbox");
+        await expect(checkbox).toBeChecked();
+      }
+
+      // 清理：退出批量模式
+      await page.keyboard.press("Escape");
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 });
+    });
+  });
+
+  test.describe("提示词网格视图", () => {
+    test("Shift+ 点击范围选择", async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
+
+      // 使用快捷键切换到提示词面板并进入网格视图
+      await page.keyboard.press("Control+p");
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
+        state: "visible",
+        timeout: 1000,
+      });
+      await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_GRID}`, {
+        state: "visible",
+        timeout: 1000,
+      });
+
+      // 先清除所有选择（按 Escape 退出批量模式）
+      await page.keyboard.press("Escape");
+      const batchToolbar = page.locator(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`);
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 }).catch(async () => {
+        await electronTest.logError(page, "批量工具栏隐藏失败");
+      });
+
+      // 点击第一个复选框选中（建立 lastSelectedIndex）
+      // 网格视图复选框默认隐藏，需先 hover 卡片使其可见
+      const firstCard = page.locator(".prompt-card").first();
+      const firstCheckbox = firstCard.locator(".card-checkbox");
+      await firstCard.hover();
+      await firstCheckbox.click();
+      await expect(firstCheckbox).toBeChecked({ timeout: 1000 });
+
+      // 验证选择计数为 1
+      const checkedCount = await page.evaluate((gridId: string) => {
+        return document.querySelectorAll(`#${gridId} .card-checkbox:checked`).length;
+      }, Constants.Ids.PROMPT_GRID);
+      expect(checkedCount).toBe(1);
+
+      // Shift+ 点击第三个卡片进行范围选择
+      const thirdCard = page.locator(".prompt-card").nth(2);
+      await page.keyboard.down("Shift");
+      await thirdCard.click();
+      await page.keyboard.up("Shift");
+
+      // 验证选择计数为 3
+      const finalCheckedCount = await page.evaluate((gridId: string) => {
+        return document.querySelectorAll(`#${gridId} .card-checkbox:checked`).length;
+      }, Constants.Ids.PROMPT_GRID);
+      expect(finalCheckedCount).toBe(3);
+
+      // 验证每张卡片的选中状态
+      for (let i = 0; i <= 2; i++) {
+        const checkbox = page.locator(".prompt-card").nth(i).locator(".card-checkbox");
+        await expect(checkbox).toBeChecked();
+      }
+
+      // 清理：退出批量模式
+      await page.keyboard.press("Escape");
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 });
+    });
+  });
+
+  test.describe("提示词紧凑视图", () => {
+    test("Shift+ 点击范围选择", async ({ electronTest, page }) => {
+      await electronTest.logTestStart();
+
+      // 使用快捷键切换到提示词面板并进入紧凑视图
+      await page.keyboard.press("Control+p");
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
+        state: "visible",
+        timeout: 1000,
+      });
+      await page.click(`#${Constants.Ids.PROMPT_COMPACT_VIEW_BTN}`);
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_LIST}`, {
+        state: "visible",
+        timeout: 1000,
+      });
+
+      // 先清除所有选择（按 Escape 退出批量模式）
+      await page.keyboard.press("Escape");
+      const batchToolbar = page.locator(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`);
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 }).catch(async () => {
+        await electronTest.logError(page, "批量工具栏隐藏失败");
+      });
+
+      // 点击第一个复选框选中（建立 lastSelectedIndex）
+      const firstCheckbox = page
+        .locator(".list-item--prompt")
+        .first()
+        .locator(".list-item__checkbox");
+      await firstCheckbox.click();
+      await expect(firstCheckbox).toBeChecked({ timeout: 1000 });
+
+      // 验证选择计数为 1
+      const checkedCount = await page.evaluate((listId: string) => {
+        return document.querySelectorAll(`#${listId} .list-item__checkbox:checked`).length;
+      }, Constants.Ids.PROMPT_LIST);
+      expect(checkedCount).toBe(1);
+
+      // Shift+ 点击第三个行进行范围选择
+      const thirdRow = page.locator(".list-item--prompt").nth(2);
+      await page.keyboard.down("Shift");
+      await thirdRow.click();
+      await page.keyboard.up("Shift");
+
+      // 验证选择计数为 3
+      const finalCheckedCount = await page.evaluate((listId: string) => {
+        return document.querySelectorAll(`#${listId} .list-item__checkbox:checked`).length;
+      }, Constants.Ids.PROMPT_LIST);
+      expect(finalCheckedCount).toBe(3);
+
+      // 验证每行的选中状态
+      for (let i = 0; i <= 2; i++) {
+        const checkbox = page.locator(".list-item--prompt").nth(i).locator(".list-item__checkbox");
         await expect(checkbox).toBeChecked();
       }
 
@@ -115,14 +348,10 @@ test.describe("Shift 范围选择", () => {
 
       // 先清除所有选择（按 Escape 退出批量模式）
       await page.keyboard.press("Escape");
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`,
-      );
-      await batchToolbar
-        .waitFor({ state: "hidden", timeout: 1000 })
-        .catch(async () => {
-          await electronTest.logError(page, "批量工具栏隐藏失败");
-        });
+      const batchToolbar = page.locator(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`);
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 }).catch(async () => {
+        await electronTest.logError(page, "批量工具栏隐藏失败");
+      });
 
       // 点击第一个复选框选中（建立 lastSelectedIndex）
       const firstCheckbox = page
@@ -134,9 +363,7 @@ test.describe("Shift 范围选择", () => {
 
       // 验证选择计数为 1（只检查提示词列表中的复选框）
       const checkedCount = await page.evaluate((listId: string) => {
-        return document.querySelectorAll(
-          `#${listId} .list-item__checkbox:checked`,
-        ).length;
+        return document.querySelectorAll(`#${listId} .list-item__checkbox:checked`).length;
       }, Constants.Ids.PROMPT_LIST);
       expect(checkedCount).toBe(1);
 
@@ -148,18 +375,13 @@ test.describe("Shift 范围选择", () => {
 
       // 验证选择计数为 3（只检查提示词列表中的复选框）
       const finalCheckedCount = await page.evaluate((listId: string) => {
-        return document.querySelectorAll(
-          `#${listId} .list-item__checkbox:checked`,
-        ).length;
+        return document.querySelectorAll(`#${listId} .list-item__checkbox:checked`).length;
       }, Constants.Ids.PROMPT_LIST);
       expect(finalCheckedCount).toBe(3);
 
       // 验证每行的选中状态
       for (let i = 0; i <= 2; i++) {
-        const checkbox = page
-          .locator(".list-item--prompt")
-          .nth(i)
-          .locator(".list-item__checkbox");
+        const checkbox = page.locator(".list-item--prompt").nth(i).locator(".list-item__checkbox");
         await expect(checkbox).toBeChecked();
       }
 

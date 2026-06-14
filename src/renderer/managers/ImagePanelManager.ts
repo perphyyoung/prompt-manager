@@ -9,8 +9,7 @@ import { DialogConfig } from '../services/index.ts';
 import { batchToolbarMiddle } from '../../middle/index.ts';
 
 import { IImage } from '../../types/entities.ts';
-import { CardEventStrategy } from './Strategies/CardEventStrategy.ts';
-import { ListEventStrategy } from './Strategies/ListEventStrategy.ts';
+import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
 
 interface PromptRef {
@@ -610,12 +609,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 获取当前视图的事件策略
    */
   protected getEventStrategy(): IEventStrategy | null {
-    if (this.viewModeType === 'grid') {
-      return new ImageCardEventStrategy(this);
-    } else if (this.viewModeType === 'list' || this.viewModeType === 'list-compact') {
-      return new ImageListEventStrategy(this);
-    }
-    return null;
+    return new ImageEventStrategy(this, this.viewModeType);
   }
 
   /**
@@ -638,24 +632,32 @@ export class ImagePanelManager extends PanelManagerBase {
 }
 
 /**
- * 图像卡片事件策略
+ * 图像统一事件策略
+ * 支持网格视图、列表视图和紧凑列表视图
  */
-class ImageCardEventStrategy extends CardEventStrategy {
-  constructor(private manager: ImagePanelManager) {
+class ImageEventStrategy extends BaseEventStrategy {
+  constructor(
+    private manager: ImagePanelManager,
+    private viewMode: string,
+  ) {
     super();
   }
 
-  protected handleOpenDetail(item: IEventStrategyItem): void {
-    this.manager.openImageDetail(item as IImage);
-  }
-}
-
-/**
- * 图像列表事件策略
- */
-class ImageListEventStrategy extends ListEventStrategy {
-  constructor(private manager: ImagePanelManager) {
-    super();
+  protected getSelectors(): IEventStrategySelectors {
+    if (this.viewMode === 'grid') {
+      return {
+        checkbox: '.card-checkbox',
+        item: '.image-card',
+        exclude: ['.action-btn', '.card-checkbox'],
+      };
+    } else {
+      // list 和 list-compact 使用相同的选择器
+      return {
+        checkbox: '.list-item__checkbox',
+        item: '.list-item--image',
+        exclude: ['.list-item__checkbox', '.list-item__actions'],
+      };
+    }
   }
 
   protected handleOpenDetail(item: IEventStrategyItem): void {

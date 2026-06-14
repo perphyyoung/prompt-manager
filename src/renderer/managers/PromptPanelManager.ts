@@ -9,8 +9,7 @@ import { DialogConfig } from '../services/index.ts';
 import { batchToolbarMiddle } from '../../middle/index.ts';
 
 import { IPrompt } from '../../types/entities.ts';
-import { CardEventStrategy } from './Strategies/CardEventStrategy.ts';
-import { ListEventStrategy } from './Strategies/ListEventStrategy.ts';
+import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
 
 interface ImageInfo {
@@ -584,12 +583,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 获取当前视图的事件策略
    */
   protected getEventStrategy(): IEventStrategy | null {
-    if (this.viewModeType === 'grid') {
-      return new PromptCardEventStrategy(this);
-    } else if (this.viewModeType === 'list' || this.viewModeType === 'list-compact') {
-      return new PromptListEventStrategy(this);
-    }
-    return null;
+    return new PromptEventStrategy(this, this.viewModeType);
   }
 
   /**
@@ -612,24 +606,32 @@ export class PromptPanelManager extends PanelManagerBase {
 }
 
 /**
- * 提示词卡片事件策略
+ * 提示词统一事件策略
+ * 支持网格视图、列表视图和紧凑列表视图
  */
-class PromptCardEventStrategy extends CardEventStrategy {
-  constructor(private manager: PromptPanelManager) {
+class PromptEventStrategy extends BaseEventStrategy {
+  constructor(
+    private manager: PromptPanelManager,
+    private viewMode: string,
+  ) {
     super();
   }
 
-  protected handleOpenDetail(item: IEventStrategyItem): void {
-    this.manager.openPromptDetail(item as IPrompt);
-  }
-}
-
-/**
- * 提示词列表事件策略
- */
-class PromptListEventStrategy extends ListEventStrategy {
-  constructor(private manager: PromptPanelManager) {
-    super();
+  protected getSelectors(): IEventStrategySelectors {
+    if (this.viewMode === 'grid') {
+      return {
+        checkbox: '.card-checkbox',
+        item: '.prompt-card',
+        exclude: ['.action-btn', '.card-checkbox'],
+      };
+    } else {
+      // list 和 list-compact 使用相同的选择器
+      return {
+        checkbox: '.list-item__checkbox',
+        item: '.list-item--prompt',
+        exclude: ['.list-item__checkbox', '.list-item__actions'],
+      };
+    }
   }
 
   protected handleOpenDetail(item: IEventStrategyItem): void {
