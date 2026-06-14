@@ -442,10 +442,14 @@ export class PromptDetailManager extends DetailViewManager {
     this.promptSaveManager = new SaveManager({
       strategy,
       itemId: prompt.id,
-      onAfterSave: async () => {
+      onAfterSave: async (fieldId: string, value: unknown) => {
         // 通过事件通知刷新，避免直接调用导致的重复刷新
         this.app.eventBus.emit(Events.PROMPTS_CHANGED);
         this.app.eventBus.emit(Events.IMAGES_CHANGED);
+
+        if (fieldId === 'isSafe') {
+          await this.syncSafetyToRelatedImages(value as number);
+        }
       }
     });
 
@@ -531,6 +535,61 @@ export class PromptDetailManager extends DetailViewManager {
         await this.promptSaveManager?.triggerSave('isFavorite', newState, currentItem?.id);
       };
       favoriteBtn.addEventListener('click', this.favoriteBtnHandler);
+    }
+  }
+
+  /**
+   * 同步安全评级到关联图像
+   * @param isSafe - 安全评级值
+   * @private
+   */
+  private async syncSafetyToRelatedImages(isSafe: number): Promise<void> {
+    const prompt = this.currentItem as unknown as IPromptExtended;
+    if (!prompt.images || prompt.images.length === 0) return;
+
+    const syncedIds: string[] = [];
+
+    for (const img of prompt.images) {
+      const imageId = img.id;
+      if (!imageId) continue;
+
+      try {
+        await window.electronAPI.updateImage(imageId, { isSafe });
+
+        const cachedImage = cacheManager.getCachedImage(imageId);
+        if (cachedImage) {
+          cachedImage.isSafe = isSafe;
+        }
+        syncedIds.push(imageId);
+      } catch (error) {
+        window.electronAPI.logError('PromptDetailManager.ts', `Failed to sync safety to image ${imageId}: ${error}`);
+      }
+    }
+
+    if (syncedIds.length > 0) {
+      this.app.eventBus.emit(Events.IMAGES_CHANGED);
+      this.updateOpenImageDetailUI(syncedIds, isSafe);
+    }
+  }
+
+  /**
+   * 更新已打开的图像详情界面 UI
+   * @param imageIds - 已同步的图像 ID 列表
+   * @param isSafe - 安全评级值
+   * @private
+   */
+  private updateOpenImageDetailUI(imageIds: string[], isSafe: number): void {
+    const imageDetailManager = this.app.imageDetailManager;
+    if (!imageDetailManager) return;
+
+    const modal = document.getElementById(Constants.Ids.IMAGE_DETAIL_MODAL);
+    if (!modal || !modal.classList.contains('active')) return;
+
+    const currentImageId = (imageDetailManager as unknown as { currentItem: { id: string } | null }).currentItem?.id;
+    if (!currentImageId) return;
+
+    if (imageIds.some(id => this.app.isSameId(id, currentImageId))) {
+      imageDetailManager.setSafeState(isSafe === 1);
     }
   }
 

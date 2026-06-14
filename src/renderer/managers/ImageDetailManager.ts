@@ -718,9 +718,13 @@ export class ImageDetailManager extends DetailViewManager {
     this.imageSaveManager = new SaveManager({
       strategy,
       itemId: image.id,
-      onAfterSave: async () => {
+      onAfterSave: async (fieldId: string, value: unknown) => {
         // 通过事件通知刷新，避免直接调用导致的重复刷新
         this.app.eventBus.emit(Events.IMAGES_CHANGED);
+
+        if (fieldId === 'isSafe') {
+          await this.syncSafetyToRelatedPrompts(value as number);
+        }
       }
     });
 
@@ -788,6 +792,61 @@ export class ImageDetailManager extends DetailViewManager {
         await this.imageSaveManager?.triggerSave('isFavorite', newState, currentItem?.id);
       };
       favoriteBtn.addEventListener('click', this.favoriteBtnHandler);
+    }
+  }
+
+  /**
+   * 同步安全评级到关联提示词
+   * @param isSafe - 安全评级值
+   * @private
+   */
+  private async syncSafetyToRelatedPrompts(isSafe: number): Promise<void> {
+    const image = this.currentItem as unknown as IImageExtended;
+    if (!image.promptRefs || image.promptRefs.length === 0) return;
+
+    const syncedIds: string[] = [];
+
+    for (const ref of image.promptRefs) {
+      const promptId = ref.promptId;
+      if (!promptId) continue;
+
+      try {
+        await window.electronAPI.updatePrompt(promptId, { isSafe });
+
+        const cachedPrompt = cacheManager.getCachedPrompt(promptId);
+        if (cachedPrompt) {
+          cachedPrompt.isSafe = isSafe;
+        }
+        syncedIds.push(promptId);
+      } catch (error) {
+        window.electronAPI.logError('ImageDetailManager.ts', `Failed to sync safety to prompt ${promptId}: ${error}`);
+      }
+    }
+
+    if (syncedIds.length > 0) {
+      this.app.eventBus.emit(Events.PROMPTS_CHANGED);
+      this.updateOpenPromptDetailUI(syncedIds, isSafe);
+    }
+  }
+
+  /**
+   * 更新已打开的提示词详情界面 UI
+   * @param promptIds - 已同步的提示词 ID 列表
+   * @param isSafe - 安全评级值
+   * @private
+   */
+  private updateOpenPromptDetailUI(promptIds: string[], isSafe: number): void {
+    const promptDetailManager = this.app.promptDetailManager;
+    if (!promptDetailManager) return;
+
+    const modal = document.getElementById(Constants.Ids.PROMPT_DETAIL_MODAL);
+    if (!modal || !modal.classList.contains('active')) return;
+
+    const currentPromptId = (promptDetailManager as unknown as { currentItem: { id: string } | null }).currentItem?.id;
+    if (!currentPromptId) return;
+
+    if (promptIds.some(id => this.app.isSameId(id, currentPromptId))) {
+      promptDetailManager.setSafeState(isSafe === 1);
     }
   }
 

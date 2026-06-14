@@ -466,9 +466,8 @@ export abstract class DetailViewManager {
   /**
    * 设置安全状态 UI（通用实现）
    * @param isSafe - 是否安全
-   * @protected
    */
-  protected setSafeState(isSafe: boolean): void {
+  setSafeState(isSafe: boolean): void {
     const safeToggle = document.getElementById(this.getSafeToggleId()) as HTMLInputElement | null;
     if (safeToggle) {
       safeToggle.checked = isSafe;

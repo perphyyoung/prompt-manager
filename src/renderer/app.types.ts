@@ -88,6 +88,7 @@ export interface IToastManager {
 export interface IDetailManager {
   open(item: unknown, options?: unknown): Promise<void>;
   close(): void;
+  setSafeState(isSafe: boolean): void;
 }
 
 /**
