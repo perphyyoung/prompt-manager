@@ -566,17 +566,17 @@ test('应该显示新创建的图像', async ({ electronTest, page }) => {
 4. **测试前运行类型检查**：
 
    ```bash
-   bun run check
+   pnpm check
    ```
 
 ### 阶段 3：自动化验证
 
 ```bash
 # 运行单个测试
-bun playwright test e2e/<测试文件>.spec.ts --grep "测试名称" --reporter=list
+pnpm e2e e2e/<测试文件>.spec.ts --grep "测试名称" --reporter=list
 
 # 运行整个文件
-bun playwright test e2e/<测试文件>.spec.ts --reporter=list
+pnpm e2e --reporter=list
 ```
 
 ### 阶段 4：调试失败
@@ -593,7 +593,7 @@ bun playwright test e2e/<测试文件>.spec.ts --reporter=list
 Clear-Content pm.log
 
 # 验证构建是最新的
-bun run check; bun run build
+pnpm check; pnpm build
 ```
 
 ## 测试路径

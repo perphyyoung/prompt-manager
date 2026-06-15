@@ -14,7 +14,7 @@ async function globalSetup() {
 
   // 构建应用
   try {
-    execSync('npm run build', {
+    execSync('pnpm build', {
       cwd: join(__dirname, '..'),
       stdio: 'inherit'
     });

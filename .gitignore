@@ -21,6 +21,7 @@ yarn.lock
 # Electron
 out/
 dist/
+release/
 .electron-cache/
 .electron-extracted/
 .npm-cache/

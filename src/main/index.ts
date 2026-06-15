@@ -478,8 +478,8 @@ function createWindow() {
 async function runBuild(): Promise<boolean> {
   return new Promise((resolve) => {
 
-    // 使用 npm run build 进行构建
-    const buildProcess = spawn('npm', ['run', 'build'], {
+    // 使用 pnpm run build 进行构建
+    const buildProcess = spawn('pnpm', ['run', 'build'], {
       cwd: ROOT_DIR,
       shell: true,
       stdio: 'pipe'

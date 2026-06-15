@@ -2,7 +2,7 @@
 cd /d "%~dp0"
 
 echo [INFO] Building...
-call npm run build
+call pnpm build
 if errorlevel 1 (
     echo [ERROR] Build failed
     pause

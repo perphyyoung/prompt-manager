@@ -23,20 +23,21 @@
 
 | 类别 | 技术 | 选型理由 |
 |------|------|----------|
-| **桌面框架** | Electron 28.0.0 | 前端技术栈开发桌面应用（当前仅支持 Windows） |
+| **桌面框架** | Electron 41.2.0 | 前端技术栈开发桌面应用（当前仅支持 Windows） |
 | **前端** | 原生 ES2023 | 无需构建步骤，直接运行现代 JS |
 | **数据库** | SQLite3 | 轻量级本地存储，无需额外服务 |
-| **图像处理** | Sharp 0.33.0 | 高性能图像处理和缩略图生成 |
+| **图像处理** | Sharp 0.35 | 高性能图像处理和缩略图生成 |
 | **架构模式** | ES Module + 模块化 | 清晰的依赖管理，支持 Tree Shaking |
-| **打包工具** | electron-builder | 生成 Windows 安装包和可执行文件 |
+| **打包工具** | Vite + electron-builder | 快速构建，生成 Windows 安装包和可执行文件 |
+| **代码检查** | OXLint + oxfmt | 高性能 TypeScript/JavaScript 检查与格式化 |
 
 ## 快速开始
 
 ### 环境要求
 
 - **操作系统**: Windows 10/11（当前仅支持 Windows）
-- Node.js >= 18.18.0
-- npm >= 9.0.0
+- Node.js ^20.19.0 或 >=22.12.0
+- pnpm >= 11.0.0
 
 ### 安装与启动
 
@@ -46,10 +47,10 @@ git clone <repository-url>
 cd prompt-manager
 
 # 安装依赖
-cnpm install
+pnpm install
 
-# 启动应用
-cnpm start
+# 启动开发模式
+pnpm dev
 ```
 
 ### 静默启动（无命令行窗口）
@@ -68,7 +69,7 @@ start-debug.bat
 
 ```bash
 # 构建 Windows NSIS 安装包
-cnpm run dist:win:nsis
+pnpm release
 ```
 
 ## 架构亮点
@@ -171,35 +172,6 @@ py-data/
 ```
 
 可通过设置界面更改数据存储路径。
-
-## 开发心得
-
-### 技术选型反思
-
-1. **原生 JS vs 框架** - 选择原生 ES2023 而非 React/Vue，因为：
-   - 项目规模适中，不需要框架的复杂生态
-   - 减少构建步骤，开发更直接
-   - 更好的性能（无虚拟 DOM 开销）
-
-2. **Electron 版本** - 使用 Electron 28 支持 ES2023 完整特性：
-   - 可选链 `?.`、空值合并 `??`
-   - 类私有字段
-   - Top-level await
-
-### 架构设计经验
-
-1. **Manager 模式** - 将业务逻辑封装在 Manager 类中：
-   - `ImagePanelManager` - 图像面板管理
-   - `TagService` - 标签业务逻辑
-   - 职责清晰，便于测试和维护
-
-2. **事件驱动** - 使用 EventBus 解耦模块：
-   - 安全评级变更通知关联组件
-   - 避免直接依赖，降低耦合度
-
-3. **配置优于代码** - 批量操作、按钮定义等使用配置：
-   - 易于扩展新操作类型
-   - 统一处理逻辑，减少重复代码
 
 ## 相关文档
 

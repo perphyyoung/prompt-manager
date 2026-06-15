@@ -125,8 +125,8 @@
 - [ ] `ImageApiFactory` 实现 `create`、`createWithPromptCount`、`createWithImageCount`、`createTag`、`createTags`、`_linkTagsToEntity`
 - [ ] `ElectronTestHelper.getApiFactory()` 返回正确实例
 - [ ] 单元测试覆盖所有工厂方法
-- [ ] `bun run test` 通过
-- [ ] `bun run check` 通过
+- [ ] `pnpm test` 通过
+- [ ] `pnpm check` 通过
 
 ## 测试决策
 
