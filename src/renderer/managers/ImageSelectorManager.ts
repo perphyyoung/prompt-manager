@@ -1,4 +1,4 @@
-import { HtmlUtils } from '../../utils/index.ts';
+import { HtmlUtils, searchMatches } from '../../utils/index.ts';
 import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { Constants } from '../../constants.ts';
 import { IImage } from '../../types/entities.ts';
@@ -115,10 +115,7 @@ export class ImageSelectorManager {
       // 应用搜索过滤
       const searchTerm = searchInput?.value?.trim().toLowerCase();
       if (searchTerm) {
-        images = images.filter(img =>
-          img.fileName?.toLowerCase().includes(searchTerm) ||
-          img.note?.toLowerCase().includes(searchTerm)
-        );
+        images = images.filter(img => searchMatches(img, searchTerm));
       }
 
       // 应用标签过滤

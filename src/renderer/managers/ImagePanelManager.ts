@@ -1,4 +1,4 @@
-import { cacheManager } from '../../utils/index.ts';
+import { cacheManager, searchMatches } from '../../utils/index.ts';
 import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
 import { localStorageManager } from '../configs/LocalStorageConfig.ts';
@@ -185,12 +185,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 支持文件名、标签、备注搜索
    */
   matchesSearch(img: IImage, lowerQuery: string): boolean {
-    if (!lowerQuery) return true;
-    return (
-      img.fileName?.toLowerCase().includes(lowerQuery) ||
-      (img.tags && img.tags.some(tag => tag.toLowerCase().includes(lowerQuery))) ||
-      false
-    );
+    return searchMatches(img, lowerQuery);
   }
 
   /**

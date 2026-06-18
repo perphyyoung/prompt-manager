@@ -54,3 +54,6 @@ export {
   localStorageManager,
   type ConfigItem
 } from './LocalStorageManager.ts';
+
+// ========== 搜索工具 ==========
+export { searchMatches } from './SearchUtils.ts';
