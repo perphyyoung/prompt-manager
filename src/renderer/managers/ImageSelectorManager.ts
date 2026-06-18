@@ -33,6 +33,9 @@ export class ImageSelectorManager {
   private sortBy: string;
   private sortOrder: string;
 
+  // 事件绑定标记
+  private eventsBound = false;
+
   constructor(options: IImageSelectorManagerOptions) {
     this.app = options.app;
 
@@ -246,6 +249,10 @@ export class ImageSelectorManager {
    * 绑定图像选择器事件
    */
   bindEvents(): void {
+    // 避免重复绑定事件
+    if (this.eventsBound) return;
+    this.eventsBound = true;
+
     // 关闭按钮
     document.getElementById(Constants.Ids.CLOSE_IMAGE_SELECTOR_MODAL)?.addEventListener('click', () => this.close());
     document.getElementById(Constants.Ids.CANCEL_IMAGE_SELECTOR_BTN)?.addEventListener('click', () => this.close());
