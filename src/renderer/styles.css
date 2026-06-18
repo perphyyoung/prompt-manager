@@ -2642,9 +2642,9 @@ body * {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 12px;
-  max-height: 400px;
   overflow-y: auto;
   padding: 4px;
+  flex: 1;
 }
 
 .image-selector-item {
