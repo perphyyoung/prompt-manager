@@ -64,22 +64,6 @@
 - 默认终端为 powershell, 不要使用 `&&`
 - 如果发现 gitnexus 过时, 通过 `npx gitnexus analyze` 更新后重新调用
 
-## Skills 应用指南
-
-如果你认为哪怕只有 1% 的可能性某个技能适用于你正在做的事情，你绝对必须调用该技能。
-如果一个技能适用于你的任务，你没有选择。你必须使用它。
-这不可协商。这不是可选的。你不能通过合理化来逃避。
-
-- `brainstorming` - 需求澄清
-- `write-a-prd-for-ai` - 编写 prd, 用于约束开发
-- `test-driven-development` - 测试驱动开发
-- `verification-before-completion` - 验证先于宣称完成
-- `systematic-debugging` - 调试
-- `writing-clearly-and-concisely` - 在撰写供人类阅读的文本时使用
-- `typescript-refactor` - typescript 重构
-- `py-e2e-testing` - e2e 测试
-- `py-html-variables-plugin` - html 与 ts 共享常量
-
 ## 编码前先思考
 
 **不要假设。不要隐藏困惑。提出权衡。**
