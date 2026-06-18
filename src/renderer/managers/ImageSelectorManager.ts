@@ -1,4 +1,5 @@
 import { HtmlUtils } from '../../utils/index.ts';
+import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { Constants } from '../../constants.ts';
 import { IImage } from '../../types/entities.ts';
 import type { IApp } from '../app.types.ts';
@@ -100,8 +101,8 @@ export class ImageSelectorManager {
     if (!grid || !emptyState) return;
 
     try {
-      // 获取所有图像（使用选择图像界面独立的排序设置）
-      let images: IImage[] = await window.electronAPI.getImages(this.sortBy, this.sortOrder);
+      // 获取所有图像（排序在前端进行）
+      let images: IImage[] = await window.electronAPI.getImages('updatedAt', 'desc');
 
       // 根据 viewMode 过滤（safe 模式只显示安全内容）
       if (this.app.viewMode === 'safe') {
@@ -124,6 +125,9 @@ export class ImageSelectorManager {
           img.tags?.includes(selectedTag)
         );
       }
+
+      // 前端排序（与主界面 ImagePanelManager.sortItems 逻辑一致）
+      images = this.sortImages(images, this.sortBy, this.sortOrder);
 
       if (images.length === 0) {
         grid.innerHTML = '';
@@ -170,6 +174,58 @@ export class ImageSelectorManager {
       window.electronAPI.logError('ImageSelectorManager.ts', 'Failed to render image selector:', error);
       grid.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">加载失败</p>';
     }
+  }
+
+  /**
+   * 排序图像（与主界面 ImagePanelManager.sortItems 逻辑一致）
+   * @param items - 图像列表
+   * @param sortBy - 排序字段
+   * @param sortOrder - 排序顺序
+   * @returns 排序后的列表
+   */
+  private sortImages(items: IImage[], sortBy: string, sortOrder: string): IImage[] {
+    const sorted = [...items];
+    const order = sortOrder === 'asc' ? 1 : -1;
+
+    sorted.sort((a, b) => {
+      let valueA: string | number | undefined, valueB: string | number | undefined;
+
+      switch (sortBy) {
+        case 'updatedAt':
+          valueA = timeToTimestamp(a.updatedAt);
+          valueB = timeToTimestamp(b.updatedAt);
+          break;
+        case 'createdAt':
+          valueA = timeToTimestamp(a.createdAt);
+          valueB = timeToTimestamp(b.createdAt);
+          break;
+        case 'fileName':
+          valueA = (a.fileName || '').toLowerCase();
+          valueB = (b.fileName || '').toLowerCase();
+          break;
+        case 'width':
+          valueA = a.width || 0;
+          valueB = b.width || 0;
+          break;
+        case 'height':
+          valueA = a.height || 0;
+          valueB = b.height || 0;
+          break;
+        case 'fileSize':
+          valueA = a.fileSize || 0;
+          valueB = b.fileSize || 0;
+          break;
+        default:
+          valueA = timeToTimestamp(a.updatedAt);
+          valueB = timeToTimestamp(b.updatedAt);
+      }
+
+      if (valueA < valueB) return -1 * order;
+      if (valueA > valueB) return 1 * order;
+      return 0;
+    });
+
+    return sorted;
   }
 
   /**
