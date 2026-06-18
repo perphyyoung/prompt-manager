@@ -1,6 +1,6 @@
 import { localTime } from '../../../utils/index.ts';
 import { Constants, Events } from '../../../constants.ts';
-import type { CacheUpdateData, TrashItem } from './TrashHandler.ts';
+import type { CacheUpdateData, TrashItem } from './TrashTypes.ts';
 
 /**
  * 提示词回收站处理器
