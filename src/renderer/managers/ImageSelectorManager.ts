@@ -69,7 +69,10 @@ export class ImageSelectorManager {
     // 重置搜索和筛选状态
     const searchInput = document.getElementById(Constants.Ids.IMAGE_SELECTOR_SEARCH_INPUT) as HTMLInputElement | null;
     const tagFilter = document.getElementById(Constants.Ids.IMAGE_SELECTOR_TAG_FILTER) as HTMLSelectElement | null;
-    if (searchInput) searchInput.value = '';
+    if (searchInput) {
+      searchInput.value = '';
+      searchInput.focus();
+    }
     if (tagFilter) tagFilter.value = '';
 
     // 加载图像列表
