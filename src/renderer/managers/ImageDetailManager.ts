@@ -422,6 +422,174 @@ export class ImageDetailManager extends DetailViewManager {
     this.tagAutocomplete.init();
   }
 
+  // ========== 提示词渲染辅助方法 ==========
+
+  /**
+   * 收集并缓存提示词引用
+   */
+  private collectPromptRefs(image: IImageExtended): IPrompt[] {
+    if (!image.promptRefs?.length) return [];
+
+    return image.promptRefs.map(ref => {
+      const cachedPrompt = cacheManager.getCachedPrompt(ref.promptId);
+      if (cachedPrompt) return cachedPrompt;
+
+      if (ref.promptContent) {
+        const prompt: IPrompt = {
+          id: ref.promptId,
+          title: ref.promptTitle || '',
+          content: ref.promptContent,
+          contentTranslate: ref.promptContentTranslate,
+          note: ref.promptNote,
+          tags: [],
+          isDeleted: false
+        };
+        cacheManager.cachePrompt(prompt);
+        return prompt;
+      }
+      return null;
+    }).filter((p): p is IPrompt => p !== null);
+  }
+
+  /**
+   * 渲染提示词标题列表（多/单）并绑定事件
+   */
+  private renderPromptTitles(
+    promptTitleContainer: HTMLElement | null,
+    allPromptRefs: IPrompt[],
+    image: IImageExtended
+  ): void {
+    if (!promptTitleContainer) return;
+
+    if (allPromptRefs.length > 1) {
+      promptTitleContainer.innerHTML = allPromptRefs.map((p, index) =>
+        `<div class="prompt-ref-item" data-prompt-id="${p.id}">
+          <span class="prompt-ref-number">${index + 1}.</span>
+          <span class="prompt-ref-title">${HtmlUtils.escapeHtml(p.title || '未命名')}</span>
+          <span class="prompt-ref-unlink" title="解除关联">×</span>
+        </div>`
+      ).join('');
+
+      // 绑定标题点击切换
+      promptTitleContainer.querySelectorAll('.prompt-ref-item').forEach(item => {
+        const titleEl = item.querySelector('.prompt-ref-title');
+        if (titleEl) {
+          titleEl.addEventListener('click', () => {
+            const promptId = (item as HTMLElement).dataset.promptId;
+            if (!promptId) return;
+            const selectedPrompt = allPromptRefs.find(p => this.app.isSameId(p.id, promptId));
+            if (selectedPrompt) this.showPromptDetail(selectedPrompt);
+          });
+        }
+      });
+
+      // 绑定解除关联
+      promptTitleContainer.querySelectorAll('.prompt-ref-unlink').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const item = (btn as HTMLElement).closest('.prompt-ref-item');
+          const promptId = (item as HTMLElement | null)?.dataset.promptId;
+          if (!promptId) return;
+          const promptRef = allPromptRefs.find(p => this.app.isSameId(p.id, promptId));
+          if (promptRef) await this.unlinkFromPrompt(image.id, promptId, promptRef.title);
+        });
+      });
+    } else {
+      const p = allPromptRefs[0];
+      promptTitleContainer.innerHTML =
+        `<div class="prompt-ref-item single-ref" data-prompt-id="${p.id}">
+          <span class="prompt-ref-title">${HtmlUtils.escapeHtml(p.title || '未命名')}</span>
+          <span class="prompt-ref-unlink" title="解除关联">×</span>
+        </div>`;
+
+      promptTitleContainer.querySelector('.prompt-ref-unlink')
+        ?.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await this.unlinkFromPrompt(image.id, p.id, p.title);
+        });
+    }
+  }
+
+  /**
+   * 渲染提示词内容显示（内容/翻译/备注/标签）
+   */
+  private renderPromptContentDisplay(prompt: IPrompt): void {
+    const promptContentEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_CONTENT);
+    const promptTranslateEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_TRANSLATE);
+    const promptNoteEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_NOTE);
+    const tagsContainer = document.getElementById(Constants.Ids.IMAGE_DETAIL_TAGS);
+
+    if (promptContentEl) promptContentEl.textContent = prompt.content || '-';
+    if (promptTranslateEl) promptTranslateEl.textContent = prompt.contentTranslate || '-';
+    if (promptNoteEl) promptNoteEl.textContent = prompt.note || '-';
+
+    if (tagsContainer) {
+      if (prompt.tags?.length) {
+        tagsContainer.innerHTML = prompt.tags.map(tag =>
+          `<span class="tag-editable">${HtmlUtils.escapeHtml(tag)}</span>`
+        ).join('');
+      } else {
+        tagsContainer.innerHTML = '<span style="color: var(--text-secondary);">无标签</span>';
+      }
+    }
+  }
+
+  /**
+   * 清空提示词显示
+   */
+  private clearPromptDisplay(): void {
+    const promptTitleContainer = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_TITLE);
+    const promptContentEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_CONTENT);
+    const promptTranslateEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_TRANSLATE);
+    const promptNoteEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_NOTE);
+    const tagsContainer = document.getElementById(Constants.Ids.IMAGE_DETAIL_TAGS);
+
+    if (promptTitleContainer) promptTitleContainer.textContent = '-';
+    if (promptContentEl) promptContentEl.textContent = '-';
+    if (promptTranslateEl) promptTranslateEl.textContent = '-';
+    if (promptNoteEl) promptNoteEl.textContent = '-';
+    if (tagsContainer) tagsContainer.innerHTML = '<span style="color: var(--text-secondary);">无标签</span>';
+  }
+
+  /**
+   * 统一设置编辑按钮状态
+   */
+  private setupEditPromptButton(
+    editPromptBtn: HTMLButtonElement | null,
+    editPromptBtnText: HTMLElement | null,
+    allPromptRefs: IPrompt[],
+    currentDetailPromptId: string | null,
+    buttonText: string
+  ): void {
+    if (!editPromptBtn) return;
+
+    editPromptBtn.style.display = 'flex';
+
+    if (this.app.isFromDetailJump) {
+      editPromptBtn.disabled = true;
+      editPromptBtn.classList.add('disabled-secondary');
+      editPromptBtn.title = '已从详情界面跳转，禁止再次跳转';
+      editPromptBtn.onclick = null;
+    } else {
+      editPromptBtn.disabled = false;
+      editPromptBtn.classList.remove('disabled-secondary');
+      editPromptBtn.title = '';
+      editPromptBtn.onclick = () => {
+        if (!currentDetailPromptId) return;
+        const currentPrompt = allPromptRefs.length > 0
+          ? allPromptRefs.find(p => this.app.isSameId(p.id, currentDetailPromptId))
+          : null;
+        if (currentPrompt) {
+          this.openPromptDetail(currentPrompt);
+        }
+      };
+    }
+
+    if (editPromptBtnText) editPromptBtnText.textContent = buttonText;
+  }
+
+  // ========== 提示词渲染辅助方法结束 ==========
+
   /**
    * 渲染关联提示词信息
    * @param image - 图像对象
@@ -429,167 +597,30 @@ export class ImageDetailManager extends DetailViewManager {
    */
   private async renderPromptInfo(image: IImageExtended): Promise<void> {
     const promptTitleContainer = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_TITLE);
-    const promptContentEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_CONTENT);
-    const promptTranslateEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_TRANSLATE);
-    const promptNoteEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_NOTE);
-    const tagsContainer = document.getElementById(Constants.Ids.IMAGE_DETAIL_TAGS);
     const editPromptBtn = document.getElementById(Constants.Ids.EDIT_PROMPT_FROM_IMAGE_BTN) as HTMLButtonElement | null;
     const editPromptBtnText = document.getElementById(Constants.Ids.EDIT_PROMPT_BTN_TEXT);
 
-    // 收集所有引用的提示词信息
-    let allPromptRefs: IPrompt[] = [];
-
-    if (image.promptRefs && image.promptRefs.length > 0) {
-      allPromptRefs = image.promptRefs.map(ref => {
-        // 优先从缓存查找
-        const cachedPrompt = cacheManager.getCachedPrompt(ref.promptId);
-        if (cachedPrompt) {
-          return cachedPrompt;
-        }
-        // 如果缓存中没有，使用数据库返回的数据并添加到缓存
-        if (ref.promptContent) {
-          const prompt: IPrompt = {
-            id: ref.promptId,
-            title: ref.promptTitle || '',
-            content: ref.promptContent,
-            contentTranslate: ref.promptContentTranslate,
-            note: ref.promptNote,
-            tags: [],
-            isDeleted: false
-          };
-          cacheManager.cachePrompt(prompt);
-          return prompt;
-        }
-        return null;
-      }).filter((p): p is IPrompt => p !== null);
-    }
+    const allPromptRefs = this.collectPromptRefs(image);
 
     if (allPromptRefs.length > 0) {
-      // 多引用情况：显示所有提示词标题列表
-      if (allPromptRefs.length > 1) {
-        if (promptTitleContainer) {
-          promptTitleContainer.innerHTML = allPromptRefs.map((p, index) =>
-            `<div class="prompt-ref-item" data-prompt-id="${p.id}">
-              <span class="prompt-ref-number">${index + 1}.</span>
-              <span class="prompt-ref-title">${HtmlUtils.escapeHtml(p.title || '未命名')}</span>
-              <span class="prompt-ref-unlink" title="解除关联">×</span>
-            </div>`
-          ).join('');
-        }
+      this.renderPromptTitles(promptTitleContainer, allPromptRefs, image);
 
-        // 绑定点击事件 - 点击标题切换显示
-        promptTitleContainer?.querySelectorAll('.prompt-ref-item').forEach(item => {
-          const titleEl = item.querySelector('.prompt-ref-title');
-          if (titleEl) {
-            titleEl.addEventListener('click', () => {
-              const promptId = (item as HTMLElement).dataset.promptId;
-              if (!promptId) return;
-              const selectedPrompt = allPromptRefs.find(p => this.app.isSameId(p.id, promptId));
-              if (selectedPrompt) {
-                this.showPromptDetail(selectedPrompt);
-              }
-            });
-          }
-        });
-
-        // 绑定解除关联事件
-        promptTitleContainer?.querySelectorAll('.prompt-ref-unlink').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const item = (btn as HTMLElement).closest('.prompt-ref-item');
-            const promptId = (item as HTMLElement | null)?.dataset.promptId;
-            if (!promptId) return;
-            const promptRef = allPromptRefs.find(p => this.app.isSameId(p.id, promptId));
-            if (promptRef) {
-              await this.unlinkFromPrompt(image.id, promptId, promptRef.title);
-            }
-          });
-        });
-      } else {
-        // 单引用情况：显示标题和解除关联按钮
-        const p = allPromptRefs[0];
-        if (promptTitleContainer) {
-          promptTitleContainer.innerHTML =
-            `<div class="prompt-ref-item single-ref" data-prompt-id="${p.id}">
-              <span class="prompt-ref-title">${HtmlUtils.escapeHtml(p.title || '未命名')}</span>
-              <span class="prompt-ref-unlink" title="解除关联">×</span>
-            </div>`;
-        }
-
-        // 绑定解除关联事件
-        const unlinkBtn = promptTitleContainer?.querySelector('.prompt-ref-unlink');
-        if (unlinkBtn) {
-          unlinkBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            await this.unlinkFromPrompt(image.id, p.id, p.title);
-          });
-        }
-      }
-
-      // 显示第一个提示词的详细内容
       const firstPrompt = allPromptRefs[0];
-      if (promptContentEl) promptContentEl.textContent = firstPrompt.content || '-';
-      if (promptTranslateEl) promptTranslateEl.textContent = firstPrompt.contentTranslate || '-';
-      if (promptNoteEl) promptNoteEl.textContent = firstPrompt.note || '-';
+      this.renderPromptContentDisplay(firstPrompt);
 
-      // 设置标签
-      if (tagsContainer) {
-        if (firstPrompt.tags && firstPrompt.tags.length > 0) {
-          tagsContainer.innerHTML = firstPrompt.tags.map(tag =>
-            `<span class="tag-editable">${HtmlUtils.escapeHtml(tag)}</span>`
-          ).join('');
-        } else {
-          tagsContainer.innerHTML = '<span style="color: var(--text-secondary);">无标签</span>';
-        }
-      }
+      const btnText = allPromptRefs.length > 1 ? '编辑提示词 (1)' : '编辑提示词';
+      this.setupEditPromptButton(editPromptBtn, editPromptBtnText, allPromptRefs, firstPrompt.id, btnText);
 
-      const isFromDetailJump = this.app.isFromDetailJump;
-      if (editPromptBtn) {
-        editPromptBtn.style.display = 'flex';
-        if (isFromDetailJump) {
-          editPromptBtn.disabled = true;
-          editPromptBtn.classList.add('disabled-secondary');
-          editPromptBtn.title = '已从详情界面跳转，禁止再次跳转';
-        } else {
-          editPromptBtn.disabled = false;
-          editPromptBtn.classList.remove('disabled-secondary');
-          editPromptBtn.title = '';
-          editPromptBtn.onclick = () => {
-            if (!this.currentDetailPromptId) return;
-            const currentPrompt = allPromptRefs.find(p => this.app.isSameId(p.id, this.currentDetailPromptId as string));
-            if (currentPrompt) {
-              this.openPromptDetail(currentPrompt);
-            }
-          };
-        }
-      }
-      if (editPromptBtnText) editPromptBtnText.textContent = allPromptRefs.length > 1 ? '编辑提示词 (1)' : '编辑提示词';
       this.currentDetailPromptId = firstPrompt.id;
       this.currentDetailPromptRefs = allPromptRefs;
     } else {
-      // 没有关联提示词
-      if (promptTitleContainer) promptTitleContainer.textContent = '-';
-      if (promptContentEl) promptContentEl.textContent = '-';
-      if (promptTranslateEl) promptTranslateEl.textContent = '-';
-      if (promptNoteEl) promptNoteEl.textContent = '-';
-      if (tagsContainer) tagsContainer.innerHTML = '<span style="color: var(--text-secondary);">无标签</span>';
+      this.clearPromptDisplay();
 
-      const isFromDetailJump = this.app.isFromDetailJump;
-      if (editPromptBtn) {
-        editPromptBtn.style.display = 'flex';
-        if (isFromDetailJump) {
-          editPromptBtn.disabled = true;
-          editPromptBtn.classList.add('disabled-secondary');
-          editPromptBtn.title = '已从详情界面跳转，禁止再次跳转';
-          editPromptBtn.onclick = null;
-        } else {
-          editPromptBtn.disabled = false;
-          editPromptBtn.classList.remove('disabled-secondary');
-          editPromptBtn.title = '';
-          editPromptBtn.onclick = () => this.createPromptForImage(image);
-        }
+      this.setupEditPromptButton(editPromptBtn, editPromptBtnText, [], null, '添加提示词');
+      if (editPromptBtn && !this.app.isFromDetailJump) {
+        editPromptBtn.onclick = () => this.createPromptForImage(image);
       }
-      if (editPromptBtnText) editPromptBtnText.textContent = '添加提示词';
+
       this.currentDetailPromptId = null;
       this.currentDetailPromptRefs = [];
     }
@@ -619,26 +650,8 @@ export class ImageDetailManager extends DetailViewManager {
       });
     }
 
-    // 更新提示词内容
-    const promptContentEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_CONTENT);
-    const promptTranslateEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_TRANSLATE);
-    const promptNoteEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_NOTE);
-    const tagsContainer = document.getElementById(Constants.Ids.IMAGE_DETAIL_TAGS);
-
-    if (promptContentEl) promptContentEl.textContent = promptInfo.content || '-';
-    if (promptTranslateEl) promptTranslateEl.textContent = promptInfo.contentTranslate || '-';
-    if (promptNoteEl) promptNoteEl.textContent = promptInfo.note || '-';
-
-    // 更新标签
-    if (tagsContainer) {
-      if (promptInfo.tags && promptInfo.tags.length > 0) {
-        tagsContainer.innerHTML = promptInfo.tags.map(tag =>
-          `<span class="tag-editable">${HtmlUtils.escapeHtml(tag)}</span>`
-        ).join('');
-      } else {
-        tagsContainer.innerHTML = '<span style="color: var(--text-secondary);">无标签</span>';
-      }
-    }
+    // 使用提取的方法渲染内容
+    this.renderPromptContentDisplay(promptInfo);
 
     // 更新编辑按钮文本
     const editPromptBtnText = document.getElementById(Constants.Ids.EDIT_PROMPT_BTN_TEXT);
