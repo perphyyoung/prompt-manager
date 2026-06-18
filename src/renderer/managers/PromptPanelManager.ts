@@ -318,6 +318,10 @@ export class PromptPanelManager extends PanelManagerBase {
     const allImages = await window.electronAPI.getImages('updatedAt', 'desc');
     const items = listContainer.querySelectorAll('.list-item--prompt');
 
+    // 收集所有列表项的路径信息，批量获取
+    const itemInfoList: Array<{ thumbnailEl: HTMLImageElement | null }> = [];
+    const relativePaths: string[] = [];
+
     for (const item of items) {
       const promptId = (item as HTMLElement).dataset.id;
       const prompt = filtered.find(p => String(p.id) === String(promptId));
@@ -330,15 +334,23 @@ export class PromptPanelManager extends PanelManagerBase {
       const imagePath = img.thumbnailPath || img.relativePath;
       if (!imagePath) continue;
 
-      try {
-        const fullPath = await window.electronAPI.getImagePath(imagePath);
-        const thumbnailEl = item.querySelector('.list-item__thumbnail') as HTMLImageElement | null;
-        if (thumbnailEl) {
-          thumbnailEl.src = `file://${fullPath.replace(/"/g, '&quot;')}`;
-        }
-      } catch (error) {
-        window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load prompt list thumbnail:', error);
-      }
+      const thumbnailEl = item.querySelector('.list-item__thumbnail') as HTMLImageElement | null;
+      itemInfoList.push({ thumbnailEl });
+      relativePaths.push(imagePath);
+    }
+
+    if (relativePaths.length === 0) return;
+
+    // 单次 IPC 批量获取所有路径
+    try {
+      const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
+      itemInfoList.forEach((info, index) => {
+        if (!info.thumbnailEl) return;
+        const fullPath = fullPaths[index];
+        info.thumbnailEl.src = `file://${fullPath.replace(/"/g, '&quot;')}`;
+      });
+    } catch (error) {
+      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load prompt list thumbnails:', error);
     }
   }
 

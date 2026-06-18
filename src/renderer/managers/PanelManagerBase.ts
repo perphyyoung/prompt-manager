@@ -483,6 +483,11 @@ export abstract class PanelManagerBase {
     const cards = container.querySelectorAll(config.cardSelector);
     const items = this.getItems();
 
+    // 收集所有卡片的路径信息，批量获取
+    const cardInfoList: Array<{ card: Element; fullPath: string }> = [];
+    const relativePaths: string[] = [];
+    const cardIndexMap: number[] = [];
+
     for (const card of cards) {
       const id = (card as HTMLElement).dataset.id;
       const item = items.find(i => String(i.id) === String(id));
@@ -491,15 +496,25 @@ export abstract class PanelManagerBase {
       const imagePath = config.getCardImagePath(item);
       if (!imagePath) continue;
 
-      try {
-        const fullPath = await window.electronAPI.getImagePath(imagePath);
-        const bgElement = card.querySelector(config.cardBgSelector);
+      cardIndexMap.push(relativePaths.length);
+      relativePaths.push(imagePath);
+      cardInfoList.push({ card, fullPath: '' });
+    }
+
+    if (relativePaths.length === 0) return;
+
+    // 单次 IPC 批量获取所有路径
+    try {
+      const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
+      cardInfoList.forEach((info, index) => {
+        const fullPath = fullPaths[index];
+        const bgElement = info.card.querySelector(config.cardBgSelector);
         if (bgElement) {
           (bgElement as HTMLElement).style.backgroundImage = `url('file://${fullPath.replace(/\\/g, '/')}')`;
         }
-      } catch (error) {
-        window.electronAPI.logError('PanelManagerBase.ts', 'Failed to load card background:', error);
-      }
+      });
+    } catch (error) {
+      window.electronAPI.logError('PanelManagerBase.ts', 'Failed to load card backgrounds:', error);
     }
   }
 
