@@ -43,6 +43,12 @@ export default {
       'Autocomplete', 'Suggestions'
     ];
 
+    // 常见的 DOM ID 属性名
+    const idPropertyNames = [
+      'id', 'elementId', 'modalId', 'containerId',
+      'toolbarId', 'gridId', 'listId', 'inputId', 'statusId'
+    ];
+
     // 检查字符串是否可能是 DOM ID
     function isLikelyDomId(str) {
       if (!idPattern.test(str)) return false;
@@ -59,82 +65,80 @@ export default {
         .toUpperCase();
     }
 
+    // 检查 getElementById('hardcoded')
+    function checkGetElementById(node) {
+      const { callee, arguments: args } = node;
+      if (
+        callee.type !== 'MemberExpression' ||
+        callee.property.type !== 'Identifier' ||
+        callee.property.name !== 'getElementById' ||
+        args.length === 0 ||
+        args[0].type !== 'Literal' ||
+        typeof args[0].value !== 'string'
+      ) return;
+
+      const id = args[0].value;
+      if (isLikelyDomId(id)) {
+        context.report({
+          node: args[0],
+          messageId: 'noHardcodedId',
+          data: { id, constantName: toConstantName(id) }
+        });
+      }
+    }
+
+    // 检查 querySelector('#xxx') 或 querySelectorAll('#xxx')
+    function checkQuerySelector(node) {
+      const { callee, arguments: args } = node;
+      if (
+        callee.type !== 'MemberExpression' ||
+        callee.property.type !== 'Identifier' ||
+        (callee.property.name !== 'querySelector' && callee.property.name !== 'querySelectorAll') ||
+        args.length === 0 ||
+        args[0].type !== 'Literal' ||
+        typeof args[0].value !== 'string'
+      ) return;
+
+      const selector = args[0].value;
+      if (selector.startsWith('#')) {
+        const id = selector.slice(1);
+        if (isLikelyDomId(id)) {
+          context.report({
+            node: args[0],
+            messageId: 'noHardcodedSelector',
+            data: { id, constantName: toConstantName(id) }
+          });
+        }
+      }
+    }
+
+    // 检查对象属性中的 id: 'xxx'
+    function checkPropertyId(node) {
+      if (
+        node.key.type !== 'Identifier' ||
+        !idPropertyNames.includes(node.key.name) ||
+        node.value.type !== 'Literal' ||
+        typeof node.value.value !== 'string'
+      ) return;
+
+      const id = node.value.value;
+      if (isLikelyDomId(id)) {
+        context.report({
+          node: node.value,
+          messageId: 'noHardcodedId',
+          data: { id, constantName: toConstantName(id) }
+        });
+      }
+    }
+
     return {
-      // 检查 getElementById('xxx')
       CallExpression(node) {
-        const { callee } = node;
-
-        // getElementById('hardcoded')
-        if (
-          callee.type === 'MemberExpression' &&
-          callee.property.type === 'Identifier' &&
-          callee.property.name === 'getElementById' &&
-          node.arguments.length > 0 &&
-          node.arguments[0].type === 'Literal' &&
-          typeof node.arguments[0].value === 'string'
-        ) {
-          const id = node.arguments[0].value;
-          if (isLikelyDomId(id)) {
-            context.report({
-              node: node.arguments[0],
-              messageId: 'noHardcodedId',
-              data: {
-                id,
-                constantName: toConstantName(id)
-              }
-            });
-          }
-        }
-
-        // querySelector('#xxx') 或 querySelectorAll('#xxx')
-        if (
-          callee.type === 'MemberExpression' &&
-          callee.property.type === 'Identifier' &&
-          (callee.property.name === 'querySelector' || callee.property.name === 'querySelectorAll') &&
-          node.arguments.length > 0 &&
-          node.arguments[0].type === 'Literal' &&
-          typeof node.arguments[0].value === 'string'
-        ) {
-          const selector = node.arguments[0].value;
-          // 检查是否是以 # 开头的 ID 选择器
-          if (selector.startsWith('#')) {
-            const id = selector.slice(1);
-            if (isLikelyDomId(id)) {
-              context.report({
-                node: node.arguments[0],
-                messageId: 'noHardcodedSelector',
-                data: {
-                  id,
-                  constantName: toConstantName(id)
-                }
-              });
-            }
-          }
-        }
+        checkGetElementById(node);
+        checkQuerySelector(node);
       },
 
-      // 检查对象属性中的 id: 'xxx'
       Property(node) {
-        if (
-          node.key.type === 'Identifier' &&
-          (node.key.name === 'id' || node.key.name === 'elementId' || node.key.name === 'modalId' ||
-           node.key.name === 'containerId' || node.key.name === 'toolbarId' || node.key.name === 'gridId' ||
-           node.key.name === 'listId' || node.key.name === 'inputId' || node.key.name === 'statusId') &&
-          node.value.type === 'Literal' &&
-          typeof node.value.value === 'string'
-        ) {
-          const id = node.value.value;
-          if (isLikelyDomId(id)) {
-            context.report({
-              node: node.value,
-              messageId: 'noHardcodedId',
-              data: {
-                id,
-                constantName: toConstantName(id)
-              }
-            });
-          }
-        }
+        checkPropertyId(node);
       }
     };
   }
