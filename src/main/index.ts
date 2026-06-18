@@ -1354,6 +1354,11 @@ ipcMain.handle('get-image-path', async (event, relativePath) => {
   return path.join(currentDataDir, relativePath);
 });
 
+// 批量获取图像完整路径
+ipcMain.handle('get-images-paths', async (event, relativePaths: string[]) => {
+  return relativePaths.map(p => p ? path.join(currentDataDir, p) : '');
+});
+
 // 选择图像文件
 ipcMain.handle('select-image-files', async () => {
   const result = await dialog.showOpenDialog({

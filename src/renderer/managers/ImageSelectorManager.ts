@@ -139,12 +139,10 @@ export class ImageSelectorManager {
       grid.style.display = 'grid';
       emptyState.style.display = 'none';
 
-      // 获取所有图像的完整路径
-      const imageItems = await Promise.all(images.map(async (image) => {
-        const imagePath = image.relativePath;
-        const fullPath = imagePath ? await window.electronAPI.getImagePath(imagePath) : '';
-        return { ...image, fullPath };
-      }));
+      // 批量获取所有图像的完整路径（单次 IPC 调用）
+      const relativePaths = images.map(img => img.relativePath || '');
+      const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
+      const imageItems = images.map((image, index) => ({ ...image, fullPath: fullPaths[index] }));
 
       grid.innerHTML = imageItems.map(image => `
         <div class="image-selector-item" data-image-id="${image.id}" data-image-path="${HtmlUtils.escapeHtml(image.relativePath || '')}">

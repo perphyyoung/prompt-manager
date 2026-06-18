@@ -94,6 +94,7 @@ interface IElectronAPI {
   // 图像文件操作
   saveImageFile: (sourcePath: string, fileName: string) => Promise<{ id: string; fileName: string; isDuplicate: boolean; duplicateType?: 'restored_from_trash' | 'existing'; relativePath?: string; thumbnailPath?: string; width?: number; height?: number; size?: number }>;
   getImagePath: (relativePath: string) => Promise<string>;
+  getImagesPaths: (relativePaths: string[]) => Promise<string[]>;
   openImageFiles: () => Promise<string[]>;
   clearAllData: () => Promise<string>;
   getImages: (sortBy: string, sortOrder: string) => Promise<IImage[]>;
@@ -248,6 +249,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ==================== 图像文件操作 ====================
   saveImageFile: (sourcePath: string, fileName: string) => ipcRenderer.invoke('save-image-file', sourcePath, fileName),
   getImagePath: (relativePath: string) => ipcRenderer.invoke('get-image-path', relativePath),
+  getImagesPaths: (relativePaths: string[]) => ipcRenderer.invoke('get-images-paths', relativePaths),
   openImageFiles: () => ipcRenderer.invoke('dialog:open-image-files'),
   clearAllData: () => ipcRenderer.invoke('clear-all-data'),
   getImages: (sortBy: string, sortOrder: string) => ipcRenderer.invoke('get-images', sortBy, sortOrder),
