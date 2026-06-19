@@ -15,8 +15,7 @@
 ## mcp 工具
 
 - 代码搜索使用 rg, 而不是 grep
-- 语义搜索优先使用 gitnexus/code-review-graph
-- CLAUDE-code-review-graph.md
+- 语义搜索优先使用 gitnexus，参数添加 `"repo": "prompt-manager"` 指定当前仓库
 
 ## 教训
 
@@ -62,7 +61,6 @@
 - 删除时, 一次删除不要超过 100 行, 分次删除; 已删除方法的注释也删除
 - 抽象方法使用 `abstract` 声明, 而不是抛出实现错误
 - 默认终端为 powershell, 不要使用 `&&`
-- 如果发现 gitnexus 过时, 通过 `npx gitnexus analyze` 更新后重新调用
 
 ## 编码前先思考
 
