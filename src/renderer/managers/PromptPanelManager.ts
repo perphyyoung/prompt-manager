@@ -610,6 +610,13 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
+   * 获取滚动导航按钮 ID（实现基类抽象方法）
+   */
+  getScrollNavId(): string {
+    return Constants.Ids.PROMPT_SCROLL_NAV;
+  }
+
+  /**
    * 打开提示词编辑
    */
   openPromptDetail(prompt: IPrompt): void {

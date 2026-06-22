@@ -719,6 +719,7 @@ export abstract class PanelManagerBase {
   async ensureRendered(): Promise<void> {
     await this.renderView();
     await this.renderTagFilters();
+    this.initScrollNav();
   }
 
   /**
@@ -1413,6 +1414,48 @@ export abstract class PanelManagerBase {
    * 子类实现以提供对应视图的策略
    */
   protected abstract getEventStrategy(): IEventStrategy | null;
+
+  /**
+   * 获取滚动导航按钮 ID（子类实现）
+   */
+  protected abstract getScrollNavId(): string;
+
+  /**
+   * 初始化滚动导航按钮
+   */
+  initScrollNav(): void {
+    const navId = this.getScrollNavId();
+    if (!navId) return;
+
+    const nav = document.getElementById(navId);
+    if (!nav) return;
+
+    // 防止重复绑定
+    if (nav.hasAttribute('data-scroll-nav-bound')) return;
+    nav.setAttribute('data-scroll-nav-bound', 'true');
+
+    // 上箭头按钮
+    const topBtn = nav.querySelector('.scroll-nav__btn--top');
+    if (topBtn) {
+      topBtn.addEventListener('click', () => {
+        const container = this.getCurrentContainer();
+        if (container) {
+          container.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+    }
+
+    // 下箭头按钮
+    const bottomBtn = nav.querySelector('.scroll-nav__btn--bottom');
+    if (bottomBtn) {
+      bottomBtn.addEventListener('click', () => {
+        const container = this.getCurrentContainer();
+        if (container) {
+          container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        }
+      });
+    }
+  }
 
   /**
    * 获取当前视图的容器元素

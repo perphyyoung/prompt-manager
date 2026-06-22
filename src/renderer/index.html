@@ -215,6 +215,19 @@
         <div id="promptList" class="list-view" style="display: none;">
           <!-- 列表视图提示词将在这里动态生成 -->
         </div>
+        <!-- 滚动导航按钮 -->
+        <div class="scroll-nav" id="promptScrollNav">
+          <button class="scroll-nav__btn scroll-nav__btn--top" title="跳到顶部">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="18 15 12 9 6 15"></polyline>
+            </svg>
+          </button>
+          <button class="scroll-nav__btn scroll-nav__btn--bottom" title="跳到底部">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+        </div>
 
         <div id="promptEmptyState" class="empty-state" style="display: none;">
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
@@ -369,6 +382,19 @@
         </div>
         <div id="imageList" class="list-view" style="display: none;">
           <!-- 列表视图图像将在这里动态生成 -->
+        </div>
+        <!-- 滚动导航按钮 -->
+        <div class="scroll-nav" id="imageScrollNav">
+          <button class="scroll-nav__btn scroll-nav__btn--top" title="跳到顶部">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="18 15 12 9 6 15"></polyline>
+            </svg>
+          </button>
+          <button class="scroll-nav__btn scroll-nav__btn--bottom" title="跳到底部">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
         </div>
         <!-- 图像提示词浮动提示框 -->
         <div id="imagePromptTooltip" class="image-prompt-tooltip">

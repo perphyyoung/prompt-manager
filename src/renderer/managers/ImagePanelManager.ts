@@ -631,6 +631,13 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
+   * 获取滚动导航按钮 ID（实现基类抽象方法）
+   */
+  getScrollNavId(): string {
+    return Constants.Ids.IMAGE_SCROLL_NAV;
+  }
+
+  /**
    * 打开图像详情
    */
   openImageDetail(img: IImage): void {
