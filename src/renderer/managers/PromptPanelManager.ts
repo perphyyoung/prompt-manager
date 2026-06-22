@@ -49,7 +49,8 @@ export class PromptPanelManager extends PanelManagerBase {
     [Constants.UNSAFE_TAG, (p) => p.isSafe === 0],
     [Constants.MULTI_IMAGE_TAG, (p) => !!p.images && p.images.length >= 2],
     [Constants.NO_IMAGE_TAG, (p) => !p.images || p.images.length === 0],
-    [Constants.NO_TAG_TAG, (p) => !p.tags || p.tags.length === 0]
+    [Constants.NO_TAG_TAG, (p) => !p.tags || p.tags.length === 0],
+    [Constants.SINGLE_LANG_TAG, (p) => !p.contentTranslate || p.contentTranslate.trim() === '']
   ]);
 
   constructor(app: IApp) {
@@ -461,6 +462,7 @@ export class PromptPanelManager extends PanelManagerBase {
     const multiImageCount = visibleItems.filter(p => p.images && p.images.length >= 2).length;
     const noImageCount = visibleItems.filter(p => !p.images || p.images.length === 0).length;
     const noTagCount = visibleItems.filter(p => !p.tags || p.tags.length === 0).length;
+    const singleLangCount = visibleItems.filter(p => !p.contentTranslate || p.contentTranslate.trim() === '').length;
 
     if (favoriteCount > 0) {
       specialTags.push({ tag: Constants.FAVORITE_TAG, count: favoriteCount });
@@ -473,6 +475,9 @@ export class PromptPanelManager extends PanelManagerBase {
     }
     if (noTagCount > 0) {
       specialTags.push({ tag: Constants.NO_TAG_TAG, count: noTagCount });
+    }
+    if (singleLangCount > 0) {
+      specialTags.push({ tag: Constants.SINGLE_LANG_TAG, count: singleLangCount });
     }
 
     // NSFW 模式下显示安全评级标签

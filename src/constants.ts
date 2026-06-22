@@ -53,6 +53,7 @@ export class Constants {
   });
   static UNSAFE_TAG = '敏感';
   static NO_TAG_TAG = '无标';
+  static SINGLE_LANG_TAG = '单语';
 
   // 所有特殊标签集合
   static ALL_SPECIAL_TAGS = [
@@ -63,7 +64,8 @@ export class Constants {
     Constants.UNSAFE_TAG,
     Constants.MULTI_IMAGE_TAG,
     Constants.NO_IMAGE_TAG,
-    Constants.NO_TAG_TAG
+    Constants.NO_TAG_TAG,
+    Constants.SINGLE_LANG_TAG
   ];
 
   // 提示词特殊标签列表（用于标签管理界面）
@@ -71,7 +73,8 @@ export class Constants {
     Constants.FAVORITE_TAG,
     Constants.MULTI_IMAGE_TAG,
     Constants.NO_IMAGE_TAG,
-    Constants.NO_TAG_TAG
+    Constants.NO_TAG_TAG,
+    Constants.SINGLE_LANG_TAG
   ];
 
   // 图像特殊标签列表（用于标签管理界面）
