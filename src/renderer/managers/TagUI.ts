@@ -22,7 +22,7 @@ interface FilterHeaderOptions {
   sortedTagsWithGroup: ITagWithGroup[];
   tagCounts?: Record<string, number>;
   selectedTags: Set<string> | string[];
-  onTagClick?: (tag: string, isTopGroupTag: boolean, event: MouseEvent) => void;
+  onTagClick?: (tag: string, event: MouseEvent) => void;
   topGroupInfo?: unknown;
   dragType?: string | null;
 }
@@ -403,9 +403,8 @@ export class TagUI {
             return;
           }
           const tag = (el as HTMLElement).dataset.tag;
-          const isTopGroupTag = (el as HTMLElement).dataset.isTopGroup === 'true';
           if (tag) {
-            onTagClick(tag, isTopGroupTag, e as MouseEvent);
+            onTagClick(tag, e as MouseEvent);
           }
         });
       });

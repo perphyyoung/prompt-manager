@@ -1093,7 +1093,7 @@ export abstract class PanelManagerBase {
       tagCounts,
       selectedTags: this.selectedTags,
       dragType: this.getTagDragType(),
-      onTagClick: (tag: string, isTopGroupTag: boolean, event: MouseEvent) => {
+      onTagClick: (tag: string, event: MouseEvent) => {
         // 重新点击标签：退出反选模式，恢复一致
         this.exitInvertedFilter();
         const isCtrlPressed = event && (event.ctrlKey || event.metaKey);
