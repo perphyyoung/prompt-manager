@@ -978,28 +978,10 @@ export abstract class PanelManagerBase {
         item.addEventListener('click', (e: Event) => {
           // 重新点击标签：退出反选模式，恢复一致
           this.exitInvertedFilter();
-          const tag = (item as HTMLElement).dataset.tag;
-          if (!tag) return;
-          if ((e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey) {
-            // Ctrl/Cmd + 点击：多选模式
-            if (this.selectedTags.has(tag)) {
-              this.selectedTags.delete(tag);
-            } else {
-              this.selectedTags.add(tag);
-            }
-          } else {
-            // 普通点击：纯单选模式
-            if (this.selectedTags.has(tag)) {
-              this.selectedTags.delete(tag);
-            } else {
-              this.selectedTags.clear();
-              this.selectedTags.add(tag);
-            }
-          }
-          // 标签筛选改变时退出批量模式
-          this.exitBatchMode();
-          this.renderView();
-          this.renderTagFilters();
+          const tag = (item as HTMLElement).dataset.tag ?? '';
+          const isCtrlPressed = (e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey;
+          this.handleTagToggle(tag, isCtrlPressed);
+          this.afterTagFilterChange();
         });
       });
     }
@@ -1018,36 +1000,13 @@ export abstract class PanelManagerBase {
             return;
           }
           e.stopPropagation();
-          const tag = (item as HTMLElement).dataset.tag;
-
+          const tag = (item as HTMLElement).dataset.tag ?? '';
+          
           // 重新点击标签：退出反选模式，恢复一致
           this.exitInvertedFilter();
-
-          if ((e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey) {
-            // Ctrl/Cmd + 点击：多选模式
-            if (tag) {
-              if (this.selectedTags.has(tag)) {
-                this.selectedTags.delete(tag);
-              } else {
-                this.selectedTags.add(tag);
-              }
-            }
-          } else {
-            // 普通点击：纯单选模式
-            if (tag) {
-              if (this.selectedTags.has(tag)) {
-                this.selectedTags.delete(tag);
-              } else {
-                this.selectedTags.clear();
-                this.selectedTags.add(tag);
-              }
-            }
-          }
-
-          // 标签筛选改变时退出批量模式
-          this.exitBatchMode();
-          this.renderView();
-          this.renderTagFilters();
+          const isCtrlPressed = (e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey;
+          this.handleTagToggle(tag, isCtrlPressed);
+          this.afterTagFilterChange();
         });
       });
 
@@ -1138,28 +1097,8 @@ export abstract class PanelManagerBase {
         // 重新点击标签：退出反选模式，恢复一致
         this.exitInvertedFilter();
         const isCtrlPressed = event && (event.ctrlKey || event.metaKey);
-
-        if (isCtrlPressed) {
-          // Ctrl/Cmd+ 点击：多选模式
-          if (this.selectedTags.has(tag)) {
-            this.selectedTags.delete(tag);
-          } else {
-            this.selectedTags.add(tag);
-          }
-        } else {
-          // 普通点击：单选模式
-          if (this.selectedTags.has(tag)) {
-            this.selectedTags.delete(tag);
-          } else {
-            // 先清除所有已选标签，再添加当前标签
-            this.selectedTags.clear();
-            this.selectedTags.add(tag);
-          }
-        }
-        // 标签筛选改变时退出批量模式
-        this.exitBatchMode();
-        this.renderView();
-        this.renderTagFilters();
+        this.handleTagToggle(tag, isCtrlPressed);
+        this.afterTagFilterChange();
       }
     });
   }
@@ -1170,6 +1109,44 @@ export abstract class PanelManagerBase {
   clearTagFilter(): void {
     this.selectedTags.clear();
     this.invertedFilter = false;
+    this.renderView();
+    this.renderTagFilters();
+  }
+
+  /**
+   * 处理标签选中/取消选中
+   * @param tag - 标签名
+   * @param isCtrlPressed - 是否按住 Ctrl/Cmd 键
+   * @returns 是否发生了状态变化
+   */
+  private handleTagToggle(tag: string, isCtrlPressed: boolean): boolean {
+    if (!tag) return false;
+    const isSelected = this.selectedTags.has(tag);
+    if (isCtrlPressed) {
+      // Ctrl/Cmd+ 点击：多选模式
+      if (isSelected) {
+        this.selectedTags.delete(tag);
+      } else {
+        this.selectedTags.add(tag);
+      }
+    } else {
+      // 普通点击：单选模式
+      if (isSelected) {
+        this.selectedTags.delete(tag);
+      } else {
+        // 先清除所有已选标签，再添加当前标签
+        this.selectedTags.clear();
+        this.selectedTags.add(tag);
+      }
+    }
+    return this.selectedTags.has(tag) !== isSelected;
+  }
+
+  /**
+   * 标签筛选改变后的统一处理
+   */
+  private afterTagFilterChange(): void {
+    this.exitBatchMode();
     this.renderView();
     this.renderTagFilters();
   }
