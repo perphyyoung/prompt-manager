@@ -95,6 +95,7 @@ export abstract class PanelManagerBase {
   // 通用状态
   protected filteredItems: IPanelItem[] = [];
   protected selectedTags: Set<string> = new Set();
+  protected invertedFilter = false;
 
   // 视图设置（在子类构造函数中初始化）
   viewModeType!: string;
@@ -784,7 +785,7 @@ export abstract class PanelManagerBase {
       if (this.selectedTags.size > 0) {
         const specialTagChecks = this.getSpecialTagChecks();
         filtered = filtered.filter((item: IPanelItem) => {
-          return Array.from(this.selectedTags).every(tag => {
+          const matchesAll = Array.from(this.selectedTags).every(tag => {
             const checkFn = specialTagChecks.get(tag);
             if (checkFn) {
               return checkFn(item);
@@ -796,6 +797,8 @@ export abstract class PanelManagerBase {
             }
             return item.tags.includes(tag);
           });
+          // 反选模式：排除匹配的项目
+          return this.invertedFilter ? !matchesAll : matchesAll;
         });
       }
 
@@ -851,6 +854,9 @@ export abstract class PanelManagerBase {
         actionBtn.textContent = hasFilters ? '清除筛选' : '标签筛选';
         actionBtn.classList.toggle('has-filters', hasFilters);
       }
+
+      // 更新反选按钮状态
+      this.updateInvertedFilterUI();
 
       // 获取所有标签和标签组
       const tags = await this.getAllTags();
@@ -969,6 +975,8 @@ export abstract class PanelManagerBase {
     if (specialTagsContainer) {
       specialTagsContainer.querySelectorAll('.tag-filter-item[data-is-special="true"]').forEach((item: Element) => {
         item.addEventListener('click', (e: Event) => {
+          // 重新点击标签：退出反选模式，恢复一致
+          this.exitInvertedFilter();
           const tag = (item as HTMLElement).dataset.tag;
           if (!tag) return;
           if ((e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey) {
@@ -1010,6 +1018,9 @@ export abstract class PanelManagerBase {
           }
           e.stopPropagation();
           const tag = (item as HTMLElement).dataset.tag;
+
+          // 重新点击标签：退出反选模式，恢复一致
+          this.exitInvertedFilter();
 
           if ((e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey) {
             // Ctrl/Cmd + 点击：多选模式
@@ -1093,6 +1104,13 @@ export abstract class PanelManagerBase {
         this.renderTagFilters();
       });
     }
+
+    // 绑定反选按钮事件
+    const invertBtn = document.getElementById(this.getInvertedFilterBtnId());
+    if (invertBtn && !invertBtn.hasAttribute('data-event-bound')) {
+      invertBtn.setAttribute('data-event-bound', 'true');
+      invertBtn.addEventListener('click', () => this.toggleInvertedFilter());
+    }
   }
 
   /**
@@ -1116,6 +1134,8 @@ export abstract class PanelManagerBase {
       selectedTags: this.selectedTags,
       dragType: this.getTagDragType(),
       onTagClick: (tag: string, isTopGroupTag: boolean, event: MouseEvent) => {
+        // 重新点击标签：退出反选模式，恢复一致
+        this.exitInvertedFilter();
         const isCtrlPressed = event && (event.ctrlKey || event.metaKey);
 
         if (isCtrlPressed) {
@@ -1148,9 +1168,46 @@ export abstract class PanelManagerBase {
    */
   clearTagFilter(): void {
     this.selectedTags.clear();
+    this.invertedFilter = false;
     this.renderView();
     this.renderTagFilters();
   }
+
+  /**
+   * 切换反选筛选模式
+   */
+  toggleInvertedFilter(): void {
+    if (this.selectedTags.size === 0) return;
+    this.invertedFilter = !this.invertedFilter;
+    this.renderView();
+    this.updateInvertedFilterUI();
+  }
+
+  /**
+   * 退出反选模式
+   */
+  exitInvertedFilter(): void {
+    if (!this.invertedFilter) return;
+    this.invertedFilter = false;
+    this.renderView();
+    this.updateInvertedFilterUI();
+  }
+
+  /**
+   * 更新反选按钮 UI
+   */
+  updateInvertedFilterUI(): void {
+    const invertBtn = document.getElementById(this.getInvertedFilterBtnId());
+    if (invertBtn) {
+      invertBtn.classList.toggle('active', this.invertedFilter);
+      invertBtn.textContent = this.invertedFilter ? '正选' : '反选';
+    }
+  }
+
+  /**
+   * 获取反选按钮 ID（子类实现）
+   */
+  protected abstract getInvertedFilterBtnId(): string;
 
   /**
    * 处理筛选动作按钮点击

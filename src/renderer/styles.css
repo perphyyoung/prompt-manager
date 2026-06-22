@@ -859,6 +859,31 @@ body * {
   border-color: var(--primary-color);
 }
 
+/* 反选按钮 */
+.tag-filter-invert-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.tag-filter-invert-btn:hover {
+  color: var(--primary-color);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.tag-filter-invert-btn.active {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+  background: rgba(99, 102, 241, 0.1);
+}
+
 .tag-filter-header-actions .btn-icon-only,
 .tag-filter-header-right .btn-icon-only {
   padding: 8px;

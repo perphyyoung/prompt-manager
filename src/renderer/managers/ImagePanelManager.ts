@@ -450,6 +450,13 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
+   * 获取反选按钮 ID（实现基类抽象方法）
+   */
+  getInvertedFilterBtnId(): string {
+    return Constants.Ids.IMAGE_TAG_FILTER_INVERT_BTN;
+  }
+
+  /**
    * 获取标签拖拽类型（实现基类抽象方法）
    */
   getTagDragType(): string {

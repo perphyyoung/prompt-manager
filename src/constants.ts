@@ -346,6 +346,8 @@ export class Constants {
     PROMPT_TAG_FILTER_SORT_SELECT: 'promptTagFilterSortSelect',
     IMAGE_TAG_FILTER_ORDER_BTN: 'imageTagFilterOrderBtn',
     PROMPT_TAG_FILTER_ORDER_BTN: 'promptTagFilterOrderBtn',
+    IMAGE_TAG_FILTER_INVERT_BTN: 'imageTagFilterInvertBtn',
+    PROMPT_TAG_FILTER_INVERT_BTN: 'promptTagFilterInvertBtn',
 
     // 输入对话框
     INPUT_MODAL_TITLE: 'inputModalTitle',
