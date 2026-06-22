@@ -46,7 +46,7 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   // 图像特殊标签检查函数 Map
-  static IMAGE_TAG_CHECKS = new Map<string, (img: IImage) => boolean>([
+  static IMAGE_SPECIAL_TAG_PREDICATES = new Map<string, (img: IImage) => boolean>([
     [Constants.FAVORITE_TAG, (img) => !!img.isFavorite],
     [Constants.UNREFERENCED_TAG, (img) => !img.promptRefs || img.promptRefs.length === 0],
     [Constants.MULTI_REF_TAG, (img) => !!img.promptRefs && img.promptRefs.length > 1],
@@ -192,7 +192,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 获取特殊标签检查函数 Map（实现基类抽象方法）
    */
   getSpecialTagChecks(): Map<string, (item: Record<string, unknown>) => boolean> {
-    return ImagePanelManager.IMAGE_TAG_CHECKS as Map<string, (item: Record<string, unknown>) => boolean>;
+    return ImagePanelManager.IMAGE_SPECIAL_TAG_PREDICATES as Map<string, (item: Record<string, unknown>) => boolean>;
   }
 
   /**
@@ -468,22 +468,14 @@ export class ImagePanelManager extends PanelManagerBase {
    */
   calculateSpecialTagCounts(visibleItems: IImage[]): { tag: string; count: number }[] {
     const specialTags: { tag: string; count: number }[] = [];
-    const favoriteCount = visibleItems.filter(img => img.isFavorite).length;
-    const unreferencedCount = visibleItems.filter(img => !img.promptRefs || img.promptRefs.length === 0).length;
-    const multiRefCount = visibleItems.filter(img => img.promptRefs && img.promptRefs.length > 1).length;
-    const noTagCount = visibleItems.filter(img => !img.tags || img.tags.length === 0).length;
 
-    if (favoriteCount > 0) {
-      specialTags.push({ tag: Constants.FAVORITE_TAG, count: favoriteCount });
-    }
-    if (unreferencedCount > 0) {
-      specialTags.push({ tag: Constants.UNREFERENCED_TAG, count: unreferencedCount });
-    }
-    if (multiRefCount > 0) {
-      specialTags.push({ tag: Constants.MULTI_REF_TAG, count: multiRefCount });
-    }
-    if (noTagCount > 0) {
-      specialTags.push({ tag: Constants.NO_TAG_TAG, count: noTagCount });
+    // 遍历特殊标签检查函数，自动计算计数（安全/敏感标签在 NSFW 模式下单独处理）
+    for (const [tag, checkFn] of ImagePanelManager.IMAGE_SPECIAL_TAG_PREDICATES) {
+      if (tag === Constants.SAFE_TAG || tag === Constants.UNSAFE_TAG) continue;
+      const count = visibleItems.filter(checkFn).length;
+      if (count > 0) {
+        specialTags.push({ tag, count });
+      }
     }
 
     // NSFW 模式下显示安全评级标签

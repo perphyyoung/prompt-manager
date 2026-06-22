@@ -43,7 +43,7 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   // 提示词特殊标签检查函数 Map
-  static PROMPT_TAG_CHECKS = new Map<string, (p: IPrompt) => boolean>([
+  static PROMPT_SPECIAL_TAG_PREDICATES = new Map<string, (p: IPrompt) => boolean>([
     [Constants.FAVORITE_TAG, (p) => !!p.isFavorite],
     [Constants.SAFE_TAG, (p) => p.isSafe !== 0],
     [Constants.UNSAFE_TAG, (p) => p.isSafe === 0],
@@ -181,7 +181,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 获取特殊标签检查函数 Map（实现基类抽象方法）
    */
   getSpecialTagChecks(): Map<string, (item: Record<string, unknown>) => boolean> {
-    return PromptPanelManager.PROMPT_TAG_CHECKS as Map<string, (item: Record<string, unknown>) => boolean>;
+    return PromptPanelManager.PROMPT_SPECIAL_TAG_PREDICATES as Map<string, (item: Record<string, unknown>) => boolean>;
   }
 
   /**
@@ -458,26 +458,14 @@ export class PromptPanelManager extends PanelManagerBase {
    */
   calculateSpecialTagCounts(visibleItems: IPrompt[]): { tag: string; count: number }[] {
     const specialTags: { tag: string; count: number }[] = [];
-    const favoriteCount = visibleItems.filter(p => p.isFavorite).length;
-    const multiImageCount = visibleItems.filter(p => p.images && p.images.length >= 2).length;
-    const noImageCount = visibleItems.filter(p => !p.images || p.images.length === 0).length;
-    const noTagCount = visibleItems.filter(p => !p.tags || p.tags.length === 0).length;
-    const singleLangCount = visibleItems.filter(p => !p.contentTranslate || p.contentTranslate.trim() === '').length;
 
-    if (favoriteCount > 0) {
-      specialTags.push({ tag: Constants.FAVORITE_TAG, count: favoriteCount });
-    }
-    if (multiImageCount > 0) {
-      specialTags.push({ tag: Constants.MULTI_IMAGE_TAG, count: multiImageCount });
-    }
-    if (noImageCount > 0) {
-      specialTags.push({ tag: Constants.NO_IMAGE_TAG, count: noImageCount });
-    }
-    if (noTagCount > 0) {
-      specialTags.push({ tag: Constants.NO_TAG_TAG, count: noTagCount });
-    }
-    if (singleLangCount > 0) {
-      specialTags.push({ tag: Constants.SINGLE_LANG_TAG, count: singleLangCount });
+    // 遍历特殊标签检查函数，自动计算计数（安全/敏感标签在 NSFW 模式下单独处理）
+    for (const [tag, checkFn] of PromptPanelManager.PROMPT_SPECIAL_TAG_PREDICATES) {
+      if (tag === Constants.SAFE_TAG || tag === Constants.UNSAFE_TAG) continue;
+      const count = visibleItems.filter(checkFn).length;
+      if (count > 0) {
+        specialTags.push({ tag, count });
+      }
     }
 
     // NSFW 模式下显示安全评级标签
