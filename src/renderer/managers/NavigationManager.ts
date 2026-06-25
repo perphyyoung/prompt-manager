@@ -165,6 +165,10 @@ export class NavigationManager {
       return;
     }
 
+    // 退出当前面板的批量模式
+    this.app.promptPanelManager?.exitBatchMode?.();
+    this.app.imagePanelManager?.exitBatchMode?.();
+
     // 隐藏所有面板
     this.panels.forEach((panel) => {
       const element = document.getElementById(panel.id || '');
