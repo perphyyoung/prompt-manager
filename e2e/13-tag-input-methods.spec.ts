@@ -178,7 +178,8 @@ test.describe("详情界面标签输入方法", () => {
     const expectedTag = await thirdItem.getAttribute("data-tag");
     expect(expectedTag).not.toBeNull();
 
-    // 按向下箭头选择第三个建议（第一个默认已选中，按两次到第三个）
+    // 按向下箭头选择第三个建议
+    await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "ArrowDown");
     await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "ArrowDown");
     await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "ArrowDown");
 
@@ -426,7 +427,8 @@ test.describe("详情界面标签输入方法", () => {
     const expectedTag = await secondItem.getAttribute("data-tag");
     expect(expectedTag).not.toBeNull();
 
-    // 按向下箭头选择第二个建议（第一个默认已选中，按一次到第二个）
+    // 按两次向下箭头选择第二个建议
+    await page.press(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, "ArrowDown");
     await page.press(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, "ArrowDown");
 
     // 按回车选择

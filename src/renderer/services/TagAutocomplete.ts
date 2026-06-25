@@ -180,8 +180,8 @@ export class TagAutocomplete {
     };
 
     this.dropdown.innerHTML = suggestions
-      .map((tag, index) => `
-        <div class="tag-autocomplete-item ${index === 0 ? 'active' : ''}" data-tag="${tag}">
+      .map((tag) => `
+        <div class="tag-autocomplete-item" data-tag="${tag}">
           ${highlightMatch(tag, inputValue)}
         </div>
       `)
@@ -241,9 +241,20 @@ export class TagAutocomplete {
       }
     }
 
-    // 回车直接提交输入内容（忽略候选列表）
+    // 回车：有选中候选时填入输入框再提交，否则直接提交输入文本
     if (e.key === 'Enter' && this.input?.value.trim()) {
-      // 有 onBatchAdd 回调（详情页）则直接批量添加；否则放行事件（模态框由 DialogService 处理）
+      // 如果有活跃的候选项，将其填入输入框
+      if (this.dropdown?.classList.contains('active')) {
+        const activeItem = this.dropdown.querySelector('.tag-autocomplete-item.active') as HTMLElement | null;
+        if (activeItem) {
+          const tag = activeItem.dataset.tag;
+          if (tag) {
+            this.input.value = tag;
+          }
+        }
+      }
+
+      // 有 onBatchAdd 回调（详情页）则拦截并批量添加；否则放行事件（模态框由 DialogService 处理）
       if (this.onBatchAdd) {
         e.preventDefault();
         e.stopPropagation();

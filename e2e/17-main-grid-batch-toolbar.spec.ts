@@ -162,10 +162,6 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
       { id: cardId!, tag: testTagName },
       { timeout: 1000 },
     );
-
-    // 点击取消退出批量模式
-    await toolbar.locator('[data-action="Cancel"]').click();
-    await expect(toolbar).toBeHidden({ timeout: 1000 });
   });
 
   // ==================== 图像主界面 - 收藏按钮 ====================
@@ -207,10 +203,6 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
       cardId!,
       { timeout: 1000 },
     );
-
-    // 点击取消退出批量模式
-    await toolbar.locator('[data-action="Cancel"]').click();
-    await expect(toolbar).toBeHidden({ timeout: 1000 });
   });
 
   // ==================== 图像主界面 - 取消按钮 ====================
@@ -651,10 +643,6 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
       { id: cardId!, tag: testTagName },
       { timeout: 1000 },
     );
-
-    // 点击取消退出批量模式
-    await toolbar.locator('[data-action="Cancel"]').click();
-    await expect(toolbar).toBeHidden({ timeout: 1000 });
   });
 
   // ==================== 提示词主界面 - 收藏按钮 ====================
@@ -696,10 +684,6 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
       cardId!,
       { timeout: 1000 },
     );
-
-    // 点击取消退出批量模式
-    await toolbar.locator('[data-action="Cancel"]').click();
-    await expect(toolbar).toBeHidden({ timeout: 1000 });
   });
 
   // ==================== 提示词主界面 - 取消按钮 ====================

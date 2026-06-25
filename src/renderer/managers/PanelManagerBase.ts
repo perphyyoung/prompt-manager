@@ -1498,6 +1498,8 @@ export abstract class PanelManagerBase {
       onRefresh: async () => {
         await this.refreshAfterUpdate();
         this.app.eventBus.emit(isPrompt ? Events.PROMPTS_CHANGED : Events.IMAGES_CHANGED);
+        // 删除成功后退出批量模式
+        this.exitBatchMode();
       },
       showToast: (msg, type) => {
         this.app.showToast?.(msg, type);
@@ -1526,6 +1528,9 @@ export abstract class PanelManagerBase {
       // 关闭对话框
       const inputModal = document.getElementById(Constants.Ids.INPUT_MODAL) as HTMLElement & { close: () => void };
       inputModal.close();
+
+      // 添加成功后退出批量模式
+      this.exitBatchMode();
     } catch (error) {
       window.electronAPI.logError('PanelManagerBase.ts', 'Failed to add tag from dialog', error);
     }
@@ -1549,9 +1554,10 @@ export abstract class PanelManagerBase {
 
     try {
       await batchToolbarMiddle.batchAddTag(this.toolbarContext, selectedIds, tagNames);
-      // 添加标签后不清空选择状态，保持批量模式
       await this.refreshAfterUpdate();
       this.app.showToast?.(`已为 ${selectedIds.length} 个项目添加标签`, 'success');
+      // 添加成功后退出批量模式
+      this.exitBatchMode();
     } catch (error) {
       window.electronAPI.logError('PanelManagerBase.ts', 'Failed to batch add tag', error);
       this.app.showToast?.('批量添加标签失败', 'error');
@@ -1567,11 +1573,12 @@ export abstract class PanelManagerBase {
 
     try {
       await batchToolbarMiddle.batchFavorite(this.toolbarContext, selectedIds, true);
-      // 收藏后不清空选择状态，保持批量模式
       await this.refreshAfterUpdate();
 
       const isPrompt = this.panelType === 'prompt';
       this.app.showToast?.(`已收藏 ${selectedIds.length} 个${isPrompt ? '提示词' : '图像'}`, 'success');
+      // 收藏成功后退出批量模式
+      this.exitBatchMode();
     } catch (error) {
       window.electronAPI.logError('PanelManagerBase.ts', 'Failed to batch fav', error);
       this.app.showToast?.('批量收藏失败', 'error');

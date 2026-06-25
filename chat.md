@@ -239,7 +239,7 @@ font-family 也参考 font-size 的设计, 应该全局只需要一个字体吧,
 
 同目录模块 之间导入时，直接导入具体文件，不通过 index.js; 跨目录导入 时，统一使用 index.js
 `ImagePanelManager.js` `PromptPanelManager.js` 两个文件是不是存在大量重复逻辑? 结合 `PanelManagerBase.js` , 通过 refactor skills 给出优化方案; 配置驱动模式是否可用; 可暂时只考虑 批量相关功能
-只有点击 取消选择 按钮才会退出批量模式
+只有点击 取消选择 按钮才会退出批量模式 -> 操作成功后退出
 
 import 统一通过 index.js 导出和导入, 修改 xxx
 ToolbarConfig 只是 批量工具栏 的配置, 命名需要具体, BatchToolbarConfig?

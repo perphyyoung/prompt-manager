@@ -31,6 +31,8 @@ interface IToolbarState {
   count: number;
   /** 选择状态变化时的回调 */
   onSelectionChange?: () => void;
+  /** 隐藏工具栏的延时定时器 */
+  hideTimer?: ReturnType<typeof setTimeout>;
 }
 
 /** 批量业务配置 */
@@ -149,6 +151,12 @@ export class BatchToolbarMiddle {
       return;
     }
 
+    // 清除上一个 hide 残留的定时器，防止意外隐藏
+    if (state.hideTimer) {
+      clearTimeout(state.hideTimer);
+      state.hideTimer = undefined;
+    }
+
     const toolbar = document.getElementById(state.config.id);
     if (!toolbar) return;
 
@@ -196,8 +204,9 @@ export class BatchToolbarMiddle {
     const toolbar = document.getElementById(state.config.id);
     if (toolbar) {
       toolbar.classList.remove("visible");
-      setTimeout(() => {
+      state.hideTimer = setTimeout(() => {
         toolbar.style.display = "none";
+        state.hideTimer = undefined;
       }, 200);
     }
 
