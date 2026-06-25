@@ -219,7 +219,7 @@ export class TagAutocomplete {
       return;
     }
 
-    // 下拉框激活时处理导航和选择
+    // 下拉框激活时处理导航
     if (this.dropdown?.classList.contains('active')) {
       const items = this.dropdown.querySelectorAll('.tag-autocomplete-item');
       const activeItem = this.dropdown.querySelector('.tag-autocomplete-item.active');
@@ -238,26 +238,17 @@ export class TagAutocomplete {
           currentIndex = Math.max(currentIndex - 1, 0);
           this.setActiveItem(currentIndex);
           return;
-        case 'Enter':
-          // 只有活跃项存在时才拦截 Enter；无候选时放行，让对话框提交输入内容
-          if (activeItem) {
-            e.preventDefault();
-            e.stopPropagation();
-            const tag = (activeItem as HTMLElement).dataset.tag;
-            if (tag) {
-              this.selectTag(tag);
-              return;
-            }
-          }
-          break;
       }
     }
 
-    // 下拉框未激活时，回车添加输入的内容
+    // 回车直接提交输入内容（忽略候选列表）
     if (e.key === 'Enter' && this.input?.value.trim()) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.handleBatchAdd();
+      // 有 onBatchAdd 回调（详情页）则直接批量添加；否则放行事件（模态框由 DialogService 处理）
+      if (this.onBatchAdd) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.handleBatchAdd();
+      }
     }
   }
 

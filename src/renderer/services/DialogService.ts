@@ -250,11 +250,6 @@ export class DialogService {
       if (e.key === 'Enter') {
         const inputModal = document.getElementById(Constants.Ids.INPUT_MODAL);
         if (inputModal && (inputModal as HTMLElement).style.display === 'flex') {
-          // 如果自动完成下拉框正在显示，让 TagAutocomplete 处理 Enter
-          const autocompleteDropdown = document.getElementById(Constants.Ids.INPUT_MODAL_TAG_AUTOCOMPLETE);
-          if (autocompleteDropdown && autocompleteDropdown.classList.contains('active')) {
-            return;
-          }
           e.preventDefault();
           const inputEl = document.getElementById(Constants.Ids.INPUT_MODAL_FIELD) as HTMLInputElement | null;
           if (inputEl && document.activeElement === inputEl) {
