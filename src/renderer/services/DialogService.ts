@@ -1,6 +1,7 @@
 import { Constants } from '../../constants';
 import { contextStack } from '../managers/ContextStackManager';
 import type { IDialogTemplate, IDialogContext, IClosableElement } from '../../types/entities.ts';
+import { TagAutocomplete } from './TagAutocomplete.ts';
 
 // ==================== 对话框配置 ====================
 export const DialogConfig: Record<string, IDialogTemplate> = {
@@ -244,11 +245,16 @@ export class DialogService {
     });
 
     // 绑定键盘事件
-    document.addEventListener('keydown', (e) => {
+    const handleKeydown = (e: KeyboardEvent): void => {
       // 输入对话框 - Enter 确定
       if (e.key === 'Enter') {
         const inputModal = document.getElementById(Constants.Ids.INPUT_MODAL);
         if (inputModal && (inputModal as HTMLElement).style.display === 'flex') {
+          // 如果自动完成下拉框正在显示，让 TagAutocomplete 处理 Enter
+          const autocompleteDropdown = document.getElementById(Constants.Ids.INPUT_MODAL_TAG_AUTOCOMPLETE);
+          if (autocompleteDropdown && autocompleteDropdown.classList.contains('active')) {
+            return;
+          }
           e.preventDefault();
           const inputEl = document.getElementById(Constants.Ids.INPUT_MODAL_FIELD) as HTMLInputElement | null;
           if (inputEl && document.activeElement === inputEl) {
@@ -266,10 +272,14 @@ export class DialogService {
           }
         }
       }
-    });
+    };
+    document.addEventListener('keydown', handleKeydown, true);
   }
 
   // ==================== 输入对话框 ====================
+  /** 模态框标签自动完成实例 */
+  private static inputModalAutocomplete: TagAutocomplete | null = null;
+
   static async showInputDialog(options: {
     title: string;
     placeholder?: string;
@@ -278,6 +288,7 @@ export class DialogService {
     showGroupSelect?: boolean;
     groups?: Array<{ id: number; name: string }>;
     defaultGroupId?: number | null;
+    autocomplete?: 'prompt' | 'image';
   }): Promise<{ value: string; groupId?: number | null } | null> {
     const modal = document.getElementById(Constants.Ids.INPUT_MODAL) as IClosableElement;
     const titleEl = document.getElementById(Constants.Ids.INPUT_MODAL_TITLE);
@@ -324,6 +335,32 @@ export class DialogService {
         groupSection.style.display = 'none';
       }
 
+      // 初始化标签自动完成
+      if (options.autocomplete) {
+        // 销毁旧实例
+        DialogService.inputModalAutocomplete?.destroy();
+
+        // onSelect 回调：点击候选词时直接添加标签（通过事件通知调用方）
+        const onSelect = async (tagName: string) => {
+          // 触发自定义事件，让 PanelManagerBase 处理
+          const event = new CustomEvent('dialog-tag-select', {
+            detail: { tagName, type: options.autocomplete },
+            bubbles: true
+          });
+          document.dispatchEvent(event);
+          return false;
+        };
+
+        DialogService.inputModalAutocomplete = new TagAutocomplete({
+          inputId: Constants.Ids.INPUT_MODAL_FIELD,
+          dropdownId: Constants.Ids.INPUT_MODAL_TAG_AUTOCOMPLETE,
+          containerSelector: '.modal-body',
+          type: options.autocomplete,
+          onSelect
+        });
+        DialogService.inputModalAutocomplete.init();
+      }
+
       // 在 DOM 元素上设置 close 方法
       modal.close = () => {
         _inputResolve?.(null);
@@ -352,6 +389,9 @@ export class DialogService {
     if (modal) {
       (modal as HTMLElement).style.display = 'none';
     }
+    // 销毁自动完成实例
+    DialogService.inputModalAutocomplete?.destroy();
+    DialogService.inputModalAutocomplete = null;
     contextStack.pop(Constants.Ids.INPUT_MODAL);
     _inputResolve = null;
   }

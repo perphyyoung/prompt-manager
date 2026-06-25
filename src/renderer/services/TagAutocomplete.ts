@@ -65,7 +65,7 @@ export class TagAutocomplete {
     this.dropdown = document.getElementById(this.dropdownId);
 
     if (!this.input || !this.dropdown) {
-      console.warn(`TagAutocomplete: 未找到输入框 (${this.inputId}) 或下拉框 (${this.dropdownId})`);
+      window.electronAPI.logError('TagAutocomplete', `init 失败: 未找到元素 - inputId=${this.inputId}, dropdownId=${this.dropdownId}`);
       return;
     }
 
@@ -239,9 +239,10 @@ export class TagAutocomplete {
           this.setActiveItem(currentIndex);
           return;
         case 'Enter':
-          e.preventDefault();
-          e.stopPropagation();
+          // 只有活跃项存在时才拦截 Enter；无候选时放行，让对话框提交输入内容
           if (activeItem) {
+            e.preventDefault();
+            e.stopPropagation();
             const tag = (activeItem as HTMLElement).dataset.tag;
             if (tag) {
               this.selectTag(tag);
@@ -280,11 +281,24 @@ export class TagAutocomplete {
   private async selectTag(tag: string): Promise<void> {
     if (!this.input) return;
 
-    const result = await this.onSelect?.(tag);
+    // 优先使用 onSelect（详情页：直接添加标签）
+    if (this.onSelect) {
+      const result = await this.onSelect(tag);
+      if (result !== false) {
+        this.input.value = '';
+        this.hideDropdown();
+      }
+      return;
+    }
 
-    if (result !== false) {
-      this.input.value = '';
-      this.hideDropdown();
+    // 否则使用 onBatchAdd（模态框：填入输入框并提交）
+    if (this.onBatchAdd) {
+      const result = await this.onBatchAdd([tag]);
+      if (result !== false) {
+        this.input.value = '';
+        this.hideDropdown();
+      }
+      return;
     }
   }
 

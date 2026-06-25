@@ -1320,7 +1320,10 @@
       <div class="modal-body">
         <div class="form-group required">
           <label id="inputModalLabel" class="form-label">标签名称</label>
-          <input type="text" id="inputModalField" class="form-input" placeholder="">
+          <div style="position: relative;">
+            <input type="text" id="inputModalField" class="form-input" placeholder="">
+            <div id="{{INPUT_MODAL_TAG_AUTOCOMPLETE}}" class="autocomplete-dropdown"></div>
+          </div>
         </div>
         <div class="form-group" id="inputModalGroupSection" style="display: none;">
           <label class="form-label">所属标签组</label>

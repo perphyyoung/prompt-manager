@@ -158,6 +158,11 @@ export abstract class PanelManagerBase {
     this.defaultCardSize = options.defaultCardSize || 200;
     this.onSelectionChange = options.onSelectionChange;
 
+    // 监听对话框标签选择事件
+    document.addEventListener('dialog-tag-select', ((e: CustomEvent) => {
+      this.handleDialogTagSelect(e.detail.tagName, e.detail.type);
+    }) as EventListener);
+
     // 注意：storageKeys 是抽象 getter，panelType 是抽象属性
     // 需要在子类构造函数中调用 init() 方法完成初始化
   }
@@ -1505,20 +1510,41 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 处理批量添加标签
+   * 处理对话框中的标签选择事件（点击候选词时触发）
    */
+  private async handleDialogTagSelect(tagName: string, type: 'prompt' | 'image'): Promise<void> {
+    // 只处理当前面板类型的标签
+    if (type !== this.panelType) return;
+
+    const selectedIds = Array.from(batchToolbarMiddle.getSelectedIds(this.toolbarContext));
+    if (selectedIds.length === 0) return;
+
+    try {
+      await batchToolbarMiddle.batchAddTag(this.toolbarContext, selectedIds, [tagName]);
+      await this.refreshAfterUpdate();
+
+      // 关闭对话框
+      const inputModal = document.getElementById(Constants.Ids.INPUT_MODAL) as HTMLElement & { close: () => void };
+      inputModal.close();
+    } catch (error) {
+      window.electronAPI.logError('PanelManagerBase.ts', 'Failed to add tag from dialog', error);
+    }
+  }
+
   protected async handleBatchAddTag(): Promise<void> {
     const selectedIds = Array.from(batchToolbarMiddle.getSelectedIds(this.toolbarContext));
     if (selectedIds.length === 0) return;
 
     const tagInputResult = await DialogService.showInputDialog({
       title: '批量添加标签',
-      placeholder: '请输入标签名，多个标签用逗号分隔'
+      placeholder: '请输入标签名，多个标签用逗号分隔',
+      autocomplete: this.panelType === 'prompt' ? 'prompt' : 'image'
     });
 
     if (!tagInputResult) return;
 
-    const tagNames = tagInputResult.value.split(',').map((t: string) => t.trim()).filter((t: string) => t);
+    const tagService = TagService.getInstance();
+    const tagNames = tagService.parseTagInput(tagInputResult.value);
     if (tagNames.length === 0) return;
 
     try {

@@ -278,6 +278,7 @@ export class Constants {
     // 标签自动完成下拉框
     PROMPT_DETAIL_TAG_AUTOCOMPLETE: 'promptDetailTagAutocomplete',
     IMAGE_DETAIL_TAG_AUTOCOMPLETE: 'imageDetailTagAutocomplete',
+    INPUT_MODAL_TAG_AUTOCOMPLETE: 'inputModalTagAutocomplete',
 
     // 提示词详情标签相关
     PROMPT_DETAIL_TAGS_CONTAINER: 'promptDetailTagsContainer',
