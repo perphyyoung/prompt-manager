@@ -187,6 +187,16 @@ export class TagAutocomplete {
       `)
       .join('');
 
+    // 使用 fixed 定位，脱离 overflow 裁剪，相对视口定位在输入框下方
+    const inputRect = this.input.getBoundingClientRect();
+    this.dropdown.style.position = 'fixed';
+    this.dropdown.style.top = `${inputRect.bottom}px`;
+    this.dropdown.style.left = `${inputRect.left}px`;
+    this.dropdown.style.width = `${inputRect.width}px`;
+    const availableHeight = window.innerHeight - inputRect.bottom - 16;
+    this.dropdown.style.maxHeight = `${Math.max(Math.min(availableHeight, 200), 60)}px`;
+    this.dropdown.style.zIndex = '10000';
+
     this.dropdown.classList.add('active');
 
     // 绑定点击事件
