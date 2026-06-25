@@ -176,7 +176,6 @@ export class PyTagGroups {
 
     return allTags.filter(tag =>
       tag.toLowerCase().startsWith(lowerPrefix) &&
-      tag.toLowerCase() !== lowerPrefix &&
       (!exclude || !exclude.includes(tag))
     );
   }
