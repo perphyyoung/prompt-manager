@@ -268,7 +268,7 @@ export class DialogService {
         }
       }
     };
-    document.addEventListener('keydown', handleKeydown, true);
+    document.addEventListener('keydown', handleKeydown);
   }
 
   // ==================== 输入对话框 ====================

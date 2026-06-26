@@ -3,7 +3,7 @@
  * 提供标签输入的自动完成、键盘导航等功能
  */
 
-import type { ElementId } from '../../constants.ts';
+import { Constants, type ElementId } from '../../constants.ts';
 import { TagService } from './TagService.ts';
 
 // Symbol 标记，用于防止重复绑定
@@ -264,11 +264,17 @@ export class TagAutocomplete {
         }
       }
 
-      // 有 onBatchAdd 回调（详情页）则拦截并批量添加；否则放行事件（模态框由 DialogService 处理）
       if (this.onBatchAdd) {
+        // 详情页：拦截 Enter，由 onBatchAdd 处理批量添加
         e.preventDefault();
         e.stopPropagation();
         this.handleBatchAdd();
+      } else {
+        // 模态框：拦截 Enter，填入值后直接点击 OK 按钮提交
+        e.preventDefault();
+        e.stopPropagation();
+        const okBtn = document.getElementById(Constants.Ids.INPUT_OK_BTN);
+        okBtn?.click();
       }
     }
   }
