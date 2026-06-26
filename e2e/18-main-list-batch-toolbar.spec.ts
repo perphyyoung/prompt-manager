@@ -768,11 +768,6 @@ test.describe("批量工具栏 - 列表视图功能测试", () => {
 
     // 确保至少有3个列表项
     const items = page.locator(".list-item--prompt");
-    const itemCount = await items.count();
-    if (itemCount < 3) {
-      test.skip();
-      return;
-    }
 
     // 进入批量模式，选中第一项
     await page.keyboard.down("Control");

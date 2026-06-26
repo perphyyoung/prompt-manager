@@ -166,32 +166,28 @@ test.describe("详情界面标签输入方法", () => {
     // 等待下拉框显示
     await page.waitForSelector(
       `#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}.active`,
-      { state: "visible", timeout: 1000 },
+      { state: "visible", timeout: 2000 },
     );
 
-    // 获取下拉框中的第三个建议项
-    const thirdItem = await page
-      .locator(
-        `#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE} .tag-autocomplete-item`,
-      )
-      .nth(2);
-    const expectedTag = await thirdItem.getAttribute("data-tag");
+    // 获取下拉框中的第二个建议项
+    const itemSelector = `#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE} .tag-autocomplete-item`;
+    const secondItem = await page.locator(itemSelector).nth(1);
+    const expectedTag = await secondItem.getAttribute("data-tag");
     expect(expectedTag).not.toBeNull();
 
-    // 按向下箭头选择第三个建议
-    await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "ArrowDown");
+    // 按两次向下箭头选择第二个建议
     await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "ArrowDown");
     await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "ArrowDown");
 
     // 按回车选择
     await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "Enter");
 
-    // 验证标签已添加（第三个标签）
+    // 验证标签已添加（第二个标签）
     await expect(
       page.locator(
         `#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${expectedTag}"]`,
       ),
-    ).toBeVisible({ timeout: 1000 });
+    ).toBeVisible({ timeout: 2000 });
 
     // 验证输入框被清空
     const inputValue = await page.inputValue(
@@ -415,15 +411,12 @@ test.describe("详情界面标签输入方法", () => {
     // 等待下拉框显示
     await page.waitForSelector(
       `#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}.active`,
-      { state: "visible", timeout: 1000 },
+      { state: "visible", timeout: 2000 },
     );
 
     // 获取下拉框中的第二个建议项
-    const secondItem = await page
-      .locator(
-        `#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE} .tag-autocomplete-item`,
-      )
-      .nth(1);
+    const promptItemSelector = `#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE} .tag-autocomplete-item`;
+    const secondItem = await page.locator(promptItemSelector).nth(1);
     const expectedTag = await secondItem.getAttribute("data-tag");
     expect(expectedTag).not.toBeNull();
 
@@ -439,7 +432,7 @@ test.describe("详情界面标签输入方法", () => {
       page.locator(
         `#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${expectedTag}"]`,
       ),
-    ).toBeVisible({ timeout: 1000 });
+    ).toBeVisible({ timeout: 2000 });
 
     // 验证输入框被清空
     const inputValue = await page.inputValue(

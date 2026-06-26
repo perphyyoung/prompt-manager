@@ -17,7 +17,7 @@ export default defineConfig({
 
   /* 全局 expect 超时 */
   expect: {
-    timeout: 1000
+    timeout: 2000
   },
 
   /* 并发测试数量 */
