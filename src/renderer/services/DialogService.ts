@@ -335,15 +335,15 @@ export class DialogService {
         // 销毁旧实例
         DialogService.inputModalAutocomplete?.destroy();
 
-        // onSelect 回调：点击候选词时直接添加标签（通过事件通知调用方）
-        const onSelect = async (tagName: string) => {
-          // 触发自定义事件，让 PanelManagerBase 处理
-          const event = new CustomEvent('dialog-tag-select', {
-            detail: { tagName, type: options.autocomplete },
-            bubbles: true
-          });
-          document.dispatchEvent(event);
-          return false;
+        // onBatchAdd 回调：填入输入框并提交对话框
+        const onBatchAdd = (tagNames: string[]) => {
+          const field = document.getElementById(Constants.Ids.INPUT_MODAL_FIELD) as HTMLInputElement;
+          if (field) {
+            field.value = tagNames.join(', ');
+          }
+          const okBtn = document.getElementById(Constants.Ids.INPUT_OK_BTN);
+          okBtn?.click();
+          return true;
         };
 
         DialogService.inputModalAutocomplete = new TagAutocomplete({
@@ -351,7 +351,7 @@ export class DialogService {
           dropdownId: Constants.Ids.INPUT_MODAL_TAG_AUTOCOMPLETE,
           containerSelector: '.modal-body',
           type: options.autocomplete,
-          onSelect
+          onBatchAdd
         });
         DialogService.inputModalAutocomplete.init();
       }
