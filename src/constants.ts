@@ -562,6 +562,7 @@ export class Constants {
     PROMPT_DETAIL_CONTENT_COPY_BTN: "promptDetailContentCopyBtn",
     PROMPT_DETAIL_TRANSLATE: "promptDetailTranslate",
     PROMPT_DETAIL_TRANSLATE_STATUS: "promptDetailTranslateStatus",
+    PROMPT_DETAIL_TRANSLATE_COPY_BTN: "promptDetailTranslateCopyBtn",
     PROMPT_DETAIL_BATCH_TAG_TOOLBAR: "promptDetailBatchTagToolbar",
     PROMPT_DETAIL_BATCH_TAG_COUNT: "promptDetailBatchTagCount",
     PROMPT_DETAIL_BATCH_TAG_DELETE_BTN: "promptDetailBatchTagDeleteBtn",

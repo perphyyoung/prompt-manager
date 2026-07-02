@@ -51,6 +51,7 @@ export class PromptDetailManager extends DetailViewManager {
   private promptSaveManager: SaveManager | null = null;
   private favoriteBtnHandler: (() => void) | null = null;
   private contentCopyBtnHandler: (() => void) | null = null;
+  private translateCopyBtnHandler: (() => void) | null = null;
   private returnToManager: DetailViewManager | null = null;
   private returnToItem: unknown = null;
   private imageContextMenuManager: ImageContextMenuManager | null = null;
@@ -462,6 +463,17 @@ export class PromptDetailManager extends DetailViewManager {
       this.contentCopyBtnHandler = null;
     }
 
+    // 清理翻译复制按钮事件监听器
+    if (this.translateCopyBtnHandler) {
+      const translateCopyBtn = document.getElementById(
+        Constants.Ids.PROMPT_DETAIL_TRANSLATE_COPY_BTN,
+      );
+      if (translateCopyBtn) {
+        translateCopyBtn.removeEventListener("click", this.translateCopyBtnHandler);
+      }
+      this.translateCopyBtnHandler = null;
+    }
+
     // 创建保存策略
     const strategy = new PromptSaveStrategy(this.app);
 
@@ -589,6 +601,35 @@ export class PromptDetailManager extends DetailViewManager {
         }
       };
       contentCopyBtn.addEventListener("click", this.contentCopyBtnHandler);
+    }
+
+    // 手动绑定翻译复制按钮点击事件
+    const translateCopyBtn = document.getElementById(
+      Constants.Ids.PROMPT_DETAIL_TRANSLATE_COPY_BTN,
+    );
+    if (translateCopyBtn) {
+      this.translateCopyBtnHandler = async () => {
+        const translateInput = document.getElementById(
+          Constants.Ids.PROMPT_DETAIL_TRANSLATE,
+        ) as HTMLTextAreaElement | null;
+        const translate = translateInput?.value || "";
+        if (!translate.trim()) {
+          this.app.showToast("没有可复制的翻译", "warning");
+          return;
+        }
+        try {
+          await window.electronAPI.copyToClipboard(translate);
+          this.app.showToast("已复制到剪贴板", "success");
+        } catch (error) {
+          window.electronAPI.logError(
+            "PromptDetailManager.ts",
+            "Failed to copy translate to clipboard",
+            error,
+          );
+          this.app.showToast("复制失败", "error");
+        }
+      };
+      translateCopyBtn.addEventListener("click", this.translateCopyBtnHandler);
     }
   }
 
@@ -1213,6 +1254,17 @@ export class PromptDetailManager extends DetailViewManager {
         contentCopyBtn.removeEventListener("click", this.contentCopyBtnHandler);
       }
       this.contentCopyBtnHandler = null;
+    }
+
+    // 清理翻译复制按钮事件监听器
+    if (this.translateCopyBtnHandler) {
+      const translateCopyBtn = document.getElementById(
+        Constants.Ids.PROMPT_DETAIL_TRANSLATE_COPY_BTN,
+      );
+      if (translateCopyBtn) {
+        translateCopyBtn.removeEventListener("click", this.translateCopyBtnHandler);
+      }
+      this.translateCopyBtnHandler = null;
     }
 
     this.app.isFromDetailJump = false;

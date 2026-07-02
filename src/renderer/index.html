@@ -920,9 +920,32 @@
                 ></textarea>
               </div>
               <div class="form-group">
-                <label for="promptDetailTranslate"
-                  >提示词翻译 <span id="promptDetailTranslateStatus" class="field-status"></span
-                ></label>
+                <div class="section-header-with-actions">
+                  <label for="promptDetailTranslate"
+                    >提示词翻译 <span id="promptDetailTranslateStatus" class="field-status"></span
+                  ></label>
+                  <div class="header-actions-group">
+                    <button
+                      type="button"
+                      id="{{PROMPT_DETAIL_TRANSLATE_COPY_BTN}}"
+                      class="btn btn-sm btn-outline"
+                      title="复制翻译"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      复制
+                    </button>
+                  </div>
+                </div>
                 <textarea
                   id="promptDetailTranslate"
                   class="auto-resize"
