@@ -56,6 +56,7 @@ export class PromptDetailManager extends DetailViewManager {
   private returnToItem: unknown = null;
   private imageContextMenuManager: ImageContextMenuManager | null = null;
   private currentTags: string[] = [];
+  private imagesChangedHandler: (() => void) | null = null;
   protected app: IApp;
 
   /**
@@ -112,6 +113,9 @@ export class PromptDetailManager extends DetailViewManager {
       await this.initNavigatorForPrompt(latestPrompt, options);
 
       this.showModal();
+
+      // 监听图像变更事件，刷新图像预览标签
+      this.subscribeToImagesChanged();
 
       this.bindImageUploadEvents();
 
@@ -744,7 +748,39 @@ export class PromptDetailManager extends DetailViewManager {
   }
 
   /**
-   * 更新视图
+   * 订阅图像变更事件
+   * 当图像标签等信息变更时，刷新图像预览
+   * @private
+   */
+  private subscribeToImagesChanged(): void {
+    // 先清理旧的监听器，避免重复绑定
+    this.unsubscribeFromImagesChanged();
+
+    this.imagesChangedHandler = () => {
+      const modal = document.getElementById(this.modalId);
+      // 处于二级跳转状态时跳过渲染，避免眼睛图标被错误禁用
+      // 关闭图像详情后会重新触发渲染
+      if (modal?.classList.contains("active") && !this.app.isFromDetailJump) {
+        this.renderImagePreviews();
+      }
+    };
+
+    this.app.eventBus.on(Events.IMAGES_CHANGED, this.imagesChangedHandler);
+  }
+
+  /**
+   * 取消订阅图像变更事件
+   * @private
+   */
+  private unsubscribeFromImagesChanged(): void {
+    if (this.imagesChangedHandler) {
+      this.app.eventBus.off(Events.IMAGES_CHANGED, this.imagesChangedHandler);
+      this.imagesChangedHandler = null;
+    }
+  }
+
+  /**
+   * 填充表单数据
    * @param prompt - 提示词对象
    */
   async updateView(prompt: IPromptExtended): Promise<void> {
@@ -1282,6 +1318,9 @@ export class PromptDetailManager extends DetailViewManager {
     }
 
     this.app.isFromDetailJump = false;
+
+    // 取消图像变更事件监听
+    this.unsubscribeFromImagesChanged();
 
     // 清理图像缓存
     this.app.currentImagesCache.clear();

@@ -226,6 +226,23 @@ export class CacheManager {
   }
 
   /**
+   * 原地更新缓存中的项目，不改变缓存顺序
+   * 适用于只需更新对象内部字段、不希望影响界面排序的场景
+   * @param id - 项目 ID
+   * @param type - 项目类型 ('prompt' | 'image')
+   * @param updater - 更新回调，接收当前缓存对象并直接修改
+   * @returns 是否成功更新
+   */
+  updateCachedItemInPlace<T extends IPrompt | IImage>(
+    id: string,
+    type: 'prompt' | 'image',
+    updater: (item: T) => void
+  ): boolean {
+    const cache = type === 'prompt' ? this.getPromptCache() : this.getImageCache();
+    return cache.updateValue(String(id), updater as (value: IPrompt | IImage) => void);
+  }
+
+  /**
    * 从缓存中删除项目
    * @param id - 项目 ID
    * @param type - 项目类型 ('prompt' | 'image')

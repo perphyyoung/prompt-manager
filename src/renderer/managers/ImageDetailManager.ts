@@ -304,6 +304,7 @@ export class ImageDetailManager extends DetailViewManager {
           });
           if (success) {
             this.currentTags = this.currentTags.filter(t => t !== tagName);
+            this.syncImageTagsToCache();
             this.app.eventBus.emit(Events.IMAGES_CHANGED);
             // 触发重新渲染标签列表
             detailTagManager.onRender?.();
@@ -326,6 +327,7 @@ export class ImageDetailManager extends DetailViewManager {
             for (const tagName of tagNames) {
               this.currentTags = this.currentTags.filter(t => t !== tagName);
             }
+            this.syncImageTagsToCache();
             this.app.eventBus.emit(Events.IMAGES_CHANGED);
           }
           return { success: result.errors.length === 0, deleted: result.deleted };
@@ -356,6 +358,7 @@ export class ImageDetailManager extends DetailViewManager {
                 this.currentTags.push(tagName);
               }
             }
+            this.syncImageTagsToCache();
             // 触发重新渲染
             detailTagManager.onRender?.();
             this.app.eventBus.emit(Events.IMAGES_CHANGED);
@@ -424,6 +427,7 @@ export class ImageDetailManager extends DetailViewManager {
                 this.currentTags.push(tag);
               }
             }
+            this.syncImageTagsToCache();
             // 触发重新渲染
             this.detailTagManager?.onRender?.();
             this.app.eventBus.emit(Events.IMAGES_CHANGED);
@@ -456,6 +460,7 @@ export class ImageDetailManager extends DetailViewManager {
                 this.currentTags.push(tag);
               }
             }
+            this.syncImageTagsToCache();
             // 触发重新渲染
             this.detailTagManager?.onRender?.();
             this.app.eventBus.emit(Events.IMAGES_CHANGED);
@@ -475,6 +480,31 @@ export class ImageDetailManager extends DetailViewManager {
     });
 
     this.tagAutocomplete.init();
+  }
+
+  /**
+   * 同步当前标签到图像缓存
+   * 确保从图像详情返回其他界面时，图像标签显示为最新
+   * 使用原地更新，避免改变缓存中的图像顺序
+   * @private
+   */
+  private syncImageTagsToCache(): void {
+    const currentImage = this.currentItem as unknown as IImageExtended;
+    if (!currentImage?.id) return;
+
+    const tags = [...this.currentTags];
+    const imageId = String(currentImage.id);
+
+    // 原地更新 cacheManager，不改变 LRU 顺序
+    cacheManager.updateCachedItemInPlace<IImage>(imageId, 'image', (cachedImage) => {
+      cachedImage.tags = tags;
+    });
+
+    // 原地更新 currentImagesCache，不改变 LRU 顺序
+    const cachedImage = this.app.currentImagesCache.peek(imageId);
+    if (cachedImage) {
+      cachedImage.tags = tags;
+    }
   }
 
   // ========== 提示词渲染辅助方法 ==========
@@ -1105,6 +1135,10 @@ export class ImageDetailManager extends DetailViewManager {
     this.app.isFromDetailJump = false;
 
     await super.close();
+
+    // 触发图像变更事件，让下层提示词详情界面重新渲染图像预览
+    // 此时 isFromDetailJump 已重置，眼睛图标会恢复可点击
+    this.app.eventBus.emit(Events.IMAGES_CHANGED);
 
     if (returnToManager && returnToItem) {
       // 使用保存的选项恢复状态，包括 filteredList

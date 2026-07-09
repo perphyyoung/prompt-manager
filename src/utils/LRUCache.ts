@@ -56,6 +56,32 @@ export class LRUCache<T = any> {
   }
 
   /**
+   * peek 获取缓存值，不改变 key 的顺序
+   * 适用于只需读取对象、不希望影响缓存顺序的场景
+   * @param key - 缓存键
+   * @returns 缓存值或 undefined
+   */
+  peek(key: string): T | undefined {
+    return this.cache.get(key);
+  }
+
+  /**
+   * 原地更新缓存值，不改变 key 的顺序
+   * 适用于只需更新对象内部字段、不希望影响缓存顺序的场景
+   * @param key - 缓存键
+   * @param updater - 更新回调，接收当前值并直接修改
+   * @returns 是否成功更新（key 存在时为 true）
+   */
+  updateValue(key: string, updater: (value: T) => void): boolean {
+    const value = this.cache.get(key);
+    if (value === undefined) {
+      return false;
+    }
+    updater(value);
+    return true;
+  }
+
+  /**
    * 删除指定键
    * @param key - 缓存键
    * @returns 是否成功删除
