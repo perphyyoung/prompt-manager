@@ -79,7 +79,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
   // ========== 单图像测试组（1张图像）==========
 
-  test("单图像：首张图像右键不显示菜单", async ({ electronTest, page }) => {
+  test("单图像：首张图像右键只显示打开本地保存位置", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 查找只有1张图像的提示词
@@ -104,23 +104,23 @@ test.describe('提示词详情界面"设首张"功能', () => {
     );
     await firstImageItem.click({ button: "right" });
 
-    // 验证右键菜单没有显示（首张图像不显示菜单）
-    // 使用 waitForFunction 轮询检查菜单状态，而不是固定等待
-    await page.waitForFunction(
-      () => {
-        const menu = document.querySelector(".context-menu");
-        // 菜单不存在，或者 display 不是 block，都视为未显示
-        return !(menu && (menu as HTMLElement).style.display === "block");
-      },
-      { timeout: 1000 },
+    // 等待右键菜单显示
+    await page.waitForSelector(
+      '.context-menu-item[data-item-id="openLocation"]',
+      { state: "visible", timeout: 1000 },
     );
 
-    // 再次验证菜单确实没有显示
-    const menuVisible = await page.evaluate(() => {
-      const menu = document.querySelector(".context-menu");
-      return menu && (menu as HTMLElement).style.display === "block";
-    });
-    expect(menuVisible).toBe(false);
+    // 验证"打开本地保存位置"菜单项可见
+    const openLocationItem = page.locator('.context-menu-item[data-item-id="openLocation"]');
+    await expect(openLocationItem).toBeVisible();
+
+    // 验证"设为首张"菜单项隐藏（首张图像不需要该选项）
+    const setAsFirstItem = page.locator('.context-menu-item[data-item-id="setAsFirst"]');
+    await expect(setAsFirstItem).toBeHidden();
+
+    // 关闭菜单（点击其他地方）
+    await page.click(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
+    await expect(openLocationItem).toBeHidden();
   });
 
   // ========== 双图像测试组（≥2张图像）==========

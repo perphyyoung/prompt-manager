@@ -10,6 +10,7 @@ import { Constants, Events } from '../../constants.ts';
 import { TagAutocomplete, DialogService, DialogConfig, TagService } from '../services/index.ts';
 import { IImage, IPrompt } from '../../types/entities.ts';
 import type { IApp } from '../app.types.ts';
+import { ImageContextMenuManager } from './ImageContextMenuManager.ts';
 
 // 扩展 IImage 接口
 interface IImageExtended extends IImage {
@@ -44,6 +45,7 @@ export class ImageDetailManager extends DetailViewManager {
   private currentDetailPromptId: string | null = null;
   private currentDetailPromptRefs: IPrompt[] = [];
   private currentTags: string[] = [];
+  private imageContextMenuManager: ImageContextMenuManager | null = null;
 
   constructor(options: IImageDetailManagerOptions) {
     super({
@@ -98,6 +100,9 @@ export class ImageDetailManager extends DetailViewManager {
 
       // 初始化导航器
       await this.initNavigatorForImage(latestImage, options);
+
+      // 初始化图像右键菜单
+      this.initImageContextMenu();
 
       // 显示模态框
       this.showModal();
@@ -214,6 +219,56 @@ export class ImageDetailManager extends DetailViewManager {
         );
         imgEl.alt = '加载图像失败';
       }
+    }
+  }
+
+  /**
+   * 初始化图像右键菜单
+   * @private
+   */
+  private initImageContextMenu(): void {
+    // 如果已存在右键菜单管理器，先销毁旧的以避免重复创建DOM元素
+    if (this.imageContextMenuManager) {
+      this.imageContextMenuManager.destroy();
+      this.imageContextMenuManager = null;
+    }
+
+    // 创建右键菜单管理器
+    this.imageContextMenuManager = new ImageContextMenuManager({
+      onOpenLocation: async () => {
+        const currentImage = this.currentItem as unknown as IImageExtended;
+        if (!currentImage?.relativePath) return;
+
+        try {
+          await window.electronAPI.openImageLocation(currentImage.relativePath);
+        } catch (error) {
+          ErrorHandler.handleError(
+            { module: 'ImageDetailManager.ts', operation: 'open image location' },
+            error,
+            { userMessage: '打开保存位置失败' }
+          );
+        }
+      },
+    });
+
+    // 初始化菜单
+    this.imageContextMenuManager.init();
+
+    // 绑定到主图像
+    const imgEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_IMG);
+    if (imgEl) {
+      imgEl.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const currentImage = this.currentItem as unknown as IImageExtended;
+        if (!currentImage) return;
+
+        this.imageContextMenuManager?.show({
+          x: e.clientX,
+          y: e.clientY,
+          image: currentImage as unknown as IImage,
+          showSetAsFirst: false,
+        });
+      });
     }
   }
 
@@ -1039,6 +1094,12 @@ export class ImageDetailManager extends DetailViewManager {
     if (this.tagAutocomplete) {
       this.tagAutocomplete.destroy();
       this.tagAutocomplete = null;
+    }
+
+    // 销毁图像右键菜单管理器
+    if (this.imageContextMenuManager) {
+      this.imageContextMenuManager.destroy();
+      this.imageContextMenuManager = null;
     }
 
     this.app.isFromDetailJump = false;

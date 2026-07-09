@@ -96,6 +96,10 @@ export class Constants {
   static STATUS_SAVED = "已保存";
   static STATUS_SAVE_FAILED = "保存失败";
 
+  // 图像右键菜单
+  static CONTEXT_MENU_SET_AS_FIRST = "设为首张";
+  static CONTEXT_MENU_OPEN_LOCATION = "打开本地保存位置";
+
   // 图标定义
   static ICONS = Object.freeze({
     favorite: {

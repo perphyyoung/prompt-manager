@@ -849,6 +849,20 @@ export class PromptDetailManager extends DetailViewManager {
         // 调用 handleSetFirst 实现设为首张
         await this.handleSetFirst(index);
       },
+      onOpenLocation: async (image: IImage) => {
+        if (!image.relativePath) return;
+
+        try {
+          await window.electronAPI.openImageLocation(image.relativePath);
+        } catch (error) {
+          window.electronAPI.logError(
+            "PromptDetailManager.ts",
+            "Failed to open image location:",
+            error,
+          );
+          this.app.showToast("打开保存位置失败", "error");
+        }
+      },
     });
 
     // 初始化菜单
@@ -871,9 +885,8 @@ export class PromptDetailManager extends DetailViewManager {
         const image = images.find((img) => String(img.id) === String(imageId));
         if (!image) return;
 
-        // 获取索引，如果是第一张图则不显示菜单
+        // 获取索引，用于控制"设为首张"菜单项的显示
         const index = images.findIndex((img) => String(img.id) === String(imageId));
-        if (index === 0) return;
 
         // 显示右键菜单
         e.preventDefault();
@@ -881,6 +894,7 @@ export class PromptDetailManager extends DetailViewManager {
           x: e.clientX,
           y: e.clientY,
           image,
+          showSetAsFirst: index !== 0,
         });
       });
     }

@@ -1,4 +1,5 @@
 import { IImage } from '../../types/entities.ts';
+import { Constants } from '../../constants.ts';
 
 /**
  * 显示选项
@@ -7,6 +8,7 @@ interface IShowOptions {
   x: number;
   y: number;
   image: IImage;
+  showSetAsFirst?: boolean;
 }
 
 /**
@@ -14,6 +16,7 @@ interface IShowOptions {
  */
 interface IImageContextMenuManagerOptions {
   onSetAsFirst?: (image: IImage) => void | Promise<void>;
+  onOpenLocation?: (image: IImage) => void | Promise<void>;
 }
 
 /**
@@ -24,9 +27,11 @@ export class ImageContextMenuManager {
   private currentImage: IImage | null = null;
   private menuElement: HTMLElement | null = null;
   private onSetAsFirst: ((image: IImage) => void | Promise<void>) | null = null;
+  private onOpenLocation: ((image: IImage) => void | Promise<void>) | null = null;
 
   constructor(options: IImageContextMenuManagerOptions = {}) {
     this.onSetAsFirst = options.onSetAsFirst || null;
+    this.onOpenLocation = options.onOpenLocation || null;
   }
 
   /**
@@ -51,15 +56,24 @@ export class ImageContextMenuManager {
     this.menuElement.style.display = 'none';
     this.menuElement.innerHTML = `
       <div class="context-menu-item" data-item-id="setAsFirst">
-        <span class="context-menu-label">设为首张</span>
+        <span class="context-menu-label">${Constants.CONTEXT_MENU_SET_AS_FIRST}</span>
+      </div>
+      <div class="context-menu-item" data-item-id="openLocation">
+        <span class="context-menu-label">${Constants.CONTEXT_MENU_OPEN_LOCATION}</span>
       </div>
     `;
     document.body.appendChild(this.menuElement);
 
-    // 绑定点击事件
-    this.menuElement.querySelector('.context-menu-item')?.addEventListener('click', () => {
-      if (this.currentImage && this.onSetAsFirst) {
+    // 绑定点击事件（事件委托）
+    this.menuElement.addEventListener('click', (e) => {
+      const item = (e.target as HTMLElement).closest('.context-menu-item') as HTMLElement | null;
+      if (!item || !this.currentImage) return;
+
+      const itemId = item.dataset.itemId;
+      if (itemId === 'setAsFirst' && this.onSetAsFirst) {
         this.onSetAsFirst(this.currentImage);
+      } else if (itemId === 'openLocation' && this.onOpenLocation) {
+        this.onOpenLocation(this.currentImage);
       }
       this.hide();
     });
@@ -90,7 +104,7 @@ export class ImageContextMenuManager {
    * @param options - 显示选项
    */
   show(options: IShowOptions): void {
-    const { x, y, image } = options;
+    const { x, y, image, showSetAsFirst = true } = options;
 
     this.currentImage = image;
 
@@ -99,6 +113,17 @@ export class ImageContextMenuManager {
     }
 
     if (this.menuElement) {
+      // 控制菜单项可见性
+      const setAsFirstItem = this.menuElement.querySelector('[data-item-id="setAsFirst"]') as HTMLElement | null;
+      if (setAsFirstItem) {
+        setAsFirstItem.style.display = showSetAsFirst && this.onSetAsFirst ? '' : 'none';
+      }
+
+      const openLocationItem = this.menuElement.querySelector('[data-item-id="openLocation"]') as HTMLElement | null;
+      if (openLocationItem) {
+        openLocationItem.style.display = this.onOpenLocation ? '' : 'none';
+      }
+
       this.menuElement.style.display = 'block';
       this.menuElement.style.left = `${x}px`;
       this.menuElement.style.top = `${y}px`;
@@ -152,6 +177,7 @@ export class ImageContextMenuManager {
    */
   setCallbacks(callbacks: Partial<IImageContextMenuManagerOptions>): void {
     if (callbacks.onSetAsFirst) this.onSetAsFirst = callbacks.onSetAsFirst;
+    if (callbacks.onOpenLocation) this.onOpenLocation = callbacks.onOpenLocation;
   }
 
   /**

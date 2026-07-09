@@ -3,7 +3,7 @@
  * 负责窗口管理、文件系统操作、IPC 通信
  */
 
-import { app, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage, clipboard, session } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage, clipboard, session, shell } from 'electron';
 
 // 扩展 Electron.App 类型
 declare global {
@@ -1357,6 +1357,15 @@ ipcMain.handle('get-image-path', async (event, relativePath) => {
 // 批量获取图像完整路径
 ipcMain.handle('get-images-paths', async (event, relativePaths: string[]) => {
   return relativePaths.map(p => p ? path.join(currentDataDir, p) : '');
+});
+
+// 打开图像本地保存位置
+ipcMain.handle('open-image-location', async (event, relativePath: string) => {
+  if (!relativePath || typeof relativePath !== 'string') {
+    throw new Error('Invalid relativePath: ' + relativePath);
+  }
+  const fullPath = path.join(currentDataDir, relativePath);
+  shell.showItemInFolder(fullPath);
 });
 
 // 选择图像文件
