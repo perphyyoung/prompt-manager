@@ -60,17 +60,17 @@ export class ImportExportManager {
         return false;
       }
 
-      this.app.showToast?.(`发现 ${scanResult.totalCount} 个孤儿文件，正在导出...`, 'info');
+      this.app.showToast?.(`发现 ${scanResult.totalCount} 个孤儿文件，正在导出并删除...`, 'info');
 
       const result: IExportOrphanFilesResult = await window.electronAPI.exportOrphanFiles(exportDir);
 
       if (result.successCount > 0) {
-        this.app.showToast?.(`成功导出 ${result.successCount} 个孤儿文件`, 'success');
+        this.app.showToast?.(`已导出 ${result.exportCount} 个原图像并删除 ${result.deletedCount} 个孤儿文件`, 'success');
         return true;
       } else if (result.failedCount > 0) {
-        throw new Error(`${result.failedCount} 个文件导出失败`);
+        throw new Error(`${result.failedCount} 个文件处理失败`);
       } else {
-        throw new Error('导出失败');
+        throw new Error('导出并删除失败');
       }
     } catch (error) {
       ErrorHandler.handleError(

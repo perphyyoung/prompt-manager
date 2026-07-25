@@ -1,6 +1,6 @@
 {
   "name": "prompt-manager",
-  "version": "0.10.36",
+  "version": "0.10.37",
   "description": "本地提示词管理工具",
   "main": "out/main/index.js",
   "type": "module",

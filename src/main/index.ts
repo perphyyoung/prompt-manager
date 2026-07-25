@@ -1738,53 +1738,61 @@ ipcMain.handle('get-installed-fonts', async () => {
 });
 
 
-// 导出孤儿文件（不删除）
+// 导出并删除孤儿文件：原图像导出后删除，缩略图直接删除
 ipcMain.handle('export-orphan-files', async (event, exportDir) => {
   try {
     // 先扫描孤儿文件
     const scanResult = await scanOrphanFilesInternal();
-    
+
     if (scanResult.totalCount === 0) {
-      return { successCount: 0, failedCount: 0, exportPath: '' };
+      return { successCount: 0, failedCount: 0, exportCount: 0, deletedCount: 0, exportPath: '' };
     }
-    
+
     // 创建导出目录
     const orphanExportDir = path.join(exportDir, `orphan_files_${Date.now()}`);
     await fs.mkdir(orphanExportDir, { recursive: true });
-    
-    // 创建子目录
-    const imagesExportDir = path.join(orphanExportDir, 'images');
-    const thumbnailsExportDir = path.join(orphanExportDir, 'thumbnails');
-    await fs.mkdir(imagesExportDir, { recursive: true });
-    await fs.mkdir(thumbnailsExportDir, { recursive: true });
-    
-    let successCount = 0;
+
+    let exportCount = 0;
+    let deletedCount = 0;
     let failedCount = 0;
-    
-    // 导出所有孤儿文件
-    const allOrphanFiles = [...scanResult.orphanImages, ...scanResult.orphanThumbnails];
-    
-    for (const file of allOrphanFiles) {
+    let imageSuccessCount = 0;
+    let thumbnailSuccessCount = 0;
+
+    // 1. 导出原图像，导出成功后删除源文件
+    for (const file of scanResult.orphanImages) {
       try {
-        // 确定导出子目录
-        const isThumbnail = file.relativePath.includes('thumbnails/');
-        const targetDir = isThumbnail ? thumbnailsExportDir : imagesExportDir;
-        
-        // 复制文件
         const fileName = path.basename(file.fullPath);
-        const targetPath = path.join(targetDir, fileName);
+        const targetPath = path.join(orphanExportDir, fileName);
         await fs.copyFile(file.fullPath, targetPath);
-        successCount++;
+        exportCount++;
+
+        await fs.unlink(file.fullPath);
+        deletedCount++;
+        imageSuccessCount++;
       } catch (error) {
-        logError('Main', 'Failed to export orphan file:', { fullPath: file.fullPath, error });
+        logError('Main', 'Failed to export and delete orphan image:', { fullPath: file.fullPath, error });
         failedCount++;
       }
     }
-    
-    return { 
-      successCount, 
-      failedCount, 
-      exportPath: orphanExportDir 
+
+    // 2. 缩略图直接删除，不导出
+    for (const file of scanResult.orphanThumbnails) {
+      try {
+        await fs.unlink(file.fullPath);
+        deletedCount++;
+        thumbnailSuccessCount++;
+      } catch (error) {
+        logError('Main', 'Failed to delete orphan thumbnail:', { fullPath: file.fullPath, error });
+        failedCount++;
+      }
+    }
+
+    return {
+      successCount: imageSuccessCount + thumbnailSuccessCount,
+      failedCount,
+      exportCount,
+      deletedCount,
+      exportPath: orphanExportDir
     };
   } catch (error) {
     logError('Main', 'Export orphan files error:', error);

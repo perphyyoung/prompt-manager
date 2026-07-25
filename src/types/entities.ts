@@ -62,10 +62,12 @@ export interface IScanOrphanFilesResult {
   totalSize: string;
 }
 
-/** 导出孤儿文件结果 */
+/** 导出并删除孤儿文件结果 */
 export interface IExportOrphanFilesResult {
   successCount: number;
   failedCount: number;
+  exportCount: number;
+  deletedCount: number;
   exportPath: string;
 }
 
