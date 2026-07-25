@@ -1025,6 +1025,11 @@ ipcMain.handle('get-data-path', async () => {
   return getDataDir();
 });
 
+// 打开数据目录
+ipcMain.handle('open-data-directory', async () => {
+  await shell.openPath(currentDataDir);
+});
+
 // 选择目录（通用）
 ipcMain.handle('select-directory', async () => {
   const result = await dialog.showOpenDialog({

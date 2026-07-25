@@ -87,6 +87,7 @@ interface IElectronAPI {
 
   // 设置
   getDataPath: () => Promise<string>;
+  openDataDirectory: () => Promise<void>;
   selectDirectory: () => Promise<string | null>;
   selectAndInstallFont: () => Promise<{ success: boolean; fontName?: string; filePath?: string; error?: string }>;
   getInstalledFonts: () => Promise<{ fontName: string; fileName: string; filePath: string }[]>;
@@ -244,6 +245,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ==================== 设置 ====================
   getDataPath: () => ipcRenderer.invoke('get-data-path'),
+  openDataDirectory: () => ipcRenderer.invoke('open-data-directory'),
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
   selectAndInstallFont: () => ipcRenderer.invoke('select-and-install-font'),
   getInstalledFonts: () => ipcRenderer.invoke('get-installed-fonts'),

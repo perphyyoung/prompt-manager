@@ -605,6 +605,7 @@ export class Constants {
     CUSTOM_FONT_SELECT: "customFontSelect",
     SELECT_FONT_FILE_BTN: "selectFontFileBtn",
     CURRENT_DATA_PATH: "currentDataPath",
+    OPEN_DATA_DIR_BTN: "openDataDirBtn",
     EXPORT_ORPHAN_FILES_BTN: "exportOrphanFilesBtn",
     EXPORT_FULL_BACKUP_BTN: "exportFullBackupBtn",
     IMPORT_FULL_BACKUP_BTN: "importFullBackupBtn",

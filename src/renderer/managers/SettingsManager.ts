@@ -139,6 +139,16 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
   }
 
   /**
+   * 打开数据目录
+   * @private
+   */
+  private openDataDirectory(): void {
+    window.electronAPI.openDataDirectory().catch((error) => {
+      console.error('Failed to open data directory:', error);
+    });
+  }
+
+  /**
    * 初始化
    */
   async init(): Promise<void> {
@@ -202,6 +212,9 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
 
     // 主题切换
     document.getElementById(Constants.Ids.SETTINGS_THEME_TOGGLE)?.addEventListener('click', () => this.toggleTheme());
+
+    // 打开数据目录
+    document.getElementById(Constants.Ids.OPEN_DATA_DIR_BTN)?.addEventListener('click', () => this.openDataDirectory());
 
     // 卡片文字颜色选择器
     const cardTextColorPicker = document.getElementById(Constants.Ids.CARD_TEXT_COLOR_PICKER) as HTMLInputElement | null;
