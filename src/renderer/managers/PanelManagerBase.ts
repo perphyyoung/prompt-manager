@@ -1094,6 +1094,10 @@ export abstract class PanelManagerBase {
 
     // 绑定标签筛选排序选择器事件（防止重复绑定）
     const sortSelect = document.getElementById(this.getTagFilterSortSelectId()) as HTMLSelectElement | null;
+    if (sortSelect) {
+      // 同步 localStorage 中保存的排序状态到 UI
+      sortSelect.value = `${this.tagFilterSortBy}-${this.tagFilterSortOrder}`;
+    }
     if (sortSelect && !sortSelect.hasAttribute('data-event-bound')) {
       sortSelect.setAttribute('data-event-bound', 'true');
       sortSelect.addEventListener('change', (e: Event) => {
