@@ -13,7 +13,7 @@ import {
   DialogService,
   DialogConfig,
 } from "../services/index.ts";
-import { ImageContextMenuManager } from "./ImageContextMenuManager.ts";
+import { showContextMenu } from "../renderer_utils/ContextMenuUtils.ts";
 import { IPrompt, IImage } from "../../types/entities.ts";
 import { TagExistsError, InvalidTagNameError, TagOperationError } from "../../pyTagGroups/index.ts";
 import { TagService } from "../services/index.ts";
@@ -54,7 +54,6 @@ export class PromptDetailManager extends DetailViewManager {
   private translateCopyBtnHandler: (() => void) | null = null;
   private returnToManager: DetailViewManager | null = null;
   private returnToItem: unknown = null;
-  private imageContextMenuManager: ImageContextMenuManager | null = null;
   private currentTags: string[] = [];
   private imagesChangedHandler: (() => void) | null = null;
   protected app: IApp;
@@ -868,42 +867,6 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private initImageContextMenu(): void {
-    // 如果已存在右键菜单管理器，先销毁旧的以避免重复创建DOM元素
-    if (this.imageContextMenuManager) {
-      this.imageContextMenuManager.destroy();
-      this.imageContextMenuManager = null;
-    }
-
-    // 创建右键菜单管理器
-    this.imageContextMenuManager = new ImageContextMenuManager({
-      onSetAsFirst: async (image: IImage) => {
-        // 获取当前图像在列表中的索引
-        const images = Array.from(this.app.currentImagesCache.values());
-        const index = images.findIndex((img) => String(img.id) === String(image.id));
-        if (index <= 0) return; // 已经是首图或找不到
-
-        // 调用 handleSetFirst 实现设为首张
-        await this.handleSetFirst(index);
-      },
-      onOpenLocation: async (image: IImage) => {
-        if (!image.relativePath) return;
-
-        try {
-          await window.electronAPI.openImageLocation(image.relativePath);
-        } catch (error) {
-          window.electronAPI.logError(
-            "PromptDetailManager.ts",
-            "Failed to open image location:",
-            error,
-          );
-          this.app.showToast("打开保存位置失败", "error");
-        }
-      },
-    });
-
-    // 初始化菜单
-    this.imageContextMenuManager.init();
-
     // 绑定到图像预览容器（事件委托）
     const imagePreviewContainer = document.getElementById(Constants.Ids.IMAGE_PREVIEW_LIST);
     if (imagePreviewContainer) {
@@ -926,11 +889,38 @@ export class PromptDetailManager extends DetailViewManager {
 
         // 显示右键菜单
         e.preventDefault();
-        this.imageContextMenuManager?.show({
+        showContextMenu({
           x: e.clientX,
           y: e.clientY,
-          image,
-          showSetAsFirst: index !== 0,
+          items: [
+            {
+              id: "setAsFirst",
+              label: Constants.CONTEXT_MENU_SET_AS_FIRST,
+              visible: index !== 0,
+              onClick: async () => {
+                if (index <= 0) return;
+                await this.handleSetFirst(index);
+              },
+            },
+            {
+              id: "openLocation",
+              label: Constants.CONTEXT_MENU_OPEN_LOCATION,
+              onClick: async () => {
+                if (!image.relativePath) return;
+
+                try {
+                  await window.electronAPI.openImageLocation(image.relativePath);
+                } catch (error) {
+                  window.electronAPI.logError(
+                    "PromptDetailManager.ts",
+                    "Failed to open image location:",
+                    error,
+                  );
+                  this.app.showToast("打开保存位置失败", "error");
+                }
+              },
+            },
+          ],
         });
       });
     }

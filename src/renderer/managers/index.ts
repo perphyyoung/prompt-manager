@@ -31,7 +31,6 @@ export { SettingsManager } from './SettingsManager.ts';
 export { ImageSelectorManager } from './ImageSelectorManager.ts';
 export { NewPromptManager } from './NewPromptManager.ts';
 export { ImageUploadManager } from './ImageUploadManager.ts';
-export { ImageContextMenuManager } from './ImageContextMenuManager.ts';
 export { StatisticsManager } from './StatisticsManager.ts';
 
 // 导出共享组件

@@ -12,7 +12,7 @@ import { TagService } from '../services/index.ts';
 import { buildTagsWithGroupInfo } from '../../pyTagGroups/utils.ts';
 import { IApp } from '../app.types.ts';
 import { localStorageManager } from '../configs/LocalStorageConfig.ts';
-import { PanelContextMenuManager } from './PanelContextMenuManager.ts';
+import { showContextMenu } from '../renderer_utils/ContextMenuUtils.ts';
 
 // 卡片大小限制常量
 const MIN_CARD_SIZE = 100;
@@ -100,9 +100,6 @@ export abstract class PanelManagerBase {
   protected filteredItems: IPanelItem[] = [];
   protected selectedTags: Set<string> = new Set();
   protected invertedFilter = false;
-
-  // 右键菜单管理器
-  protected panelContextMenuManager: PanelContextMenuManager | null = null;
 
   // 视图设置（在子类构造函数中初始化）
   viewModeType!: string;
@@ -234,10 +231,6 @@ export abstract class PanelManagerBase {
 
     // 绑定事件
     this.subscribeToEvents();
-
-    // 初始化右键菜单
-    this.panelContextMenuManager = new PanelContextMenuManager();
-    this.panelContextMenuManager.init();
   }
 
   /**
@@ -515,10 +508,20 @@ export abstract class PanelManagerBase {
         }
 
         e.preventDefault();
-        this.panelContextMenuManager?.show({
+        showContextMenu({
           x: e.clientX,
           y: e.clientY,
-          path
+          items: [
+            {
+              id: 'openLocation',
+              label: Constants.CONTEXT_MENU_OPEN_LOCATION,
+              onClick: () => {
+                window.electronAPI.openImageLocation(path).catch((error: unknown) => {
+                  window.electronAPI.logError('PanelManagerBase.ts', 'Failed to open image location', error);
+                });
+              }
+            }
+          ]
         });
       });
     });
