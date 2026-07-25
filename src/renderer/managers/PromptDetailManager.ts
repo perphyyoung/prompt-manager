@@ -903,6 +903,60 @@ export class PromptDetailManager extends DetailViewManager {
               },
             },
             {
+              id: "replaceImage",
+              label: Constants.CONTEXT_MENU_REPLACE_IMAGE,
+              onClick: async () => {
+                try {
+                  const result = await window.electronAPI.replaceImage(imageId);
+                  if (result.canceled) return;
+                  if (result.reason === 'same_image') {
+                    this.app.showToast('选择的图像与当前图像相同', 'info');
+                    return;
+                  }
+                  if (result.success) {
+                    this.app.showToast('图像已替换', 'success');
+                    // 重新加载当前提示词，更新图像关联缓存
+                    const currentPrompt = this.currentItem as unknown as IPromptExtended;
+                    // 刷新新图像缓存（包含最新的更新时间），确保图像主界面按最近更新排序正确
+                    if (result.image) {
+                      cacheManager.cacheImage(result.image);
+                    }
+                    this.app.eventBus.emit(Events.IMAGES_CHANGED);
+                    // 同步更新所有相关提示词缓存，避免关闭详情后重新打开仍显示旧图像
+                    const relatedPromptIds = result.relatedPromptIds || [];
+                    if (currentPrompt?.id && !relatedPromptIds.includes(String(currentPrompt.id))) {
+                      relatedPromptIds.push(String(currentPrompt.id));
+                    }
+                    for (const promptId of relatedPromptIds) {
+                      const updatedPrompt = await window.electronAPI.getPromptById(promptId);
+                      if (updatedPrompt) {
+                        cacheManager.cachePrompt(updatedPrompt);
+                      }
+                    }
+                    // 通知提示词面板刷新，确保提示词主界面按最近更新排序正确
+                    if (relatedPromptIds.length > 0) {
+                      this.app.eventBus.emit(Events.PROMPTS_CHANGED);
+                    }
+                    // 刷新当前提示词的图像列表
+                    const latestPrompt = currentPrompt?.id
+                      ? cacheManager.getCachedPrompt(String(currentPrompt.id))
+                      : undefined;
+                    if (latestPrompt) {
+                      this.currentItem = latestPrompt as unknown as { id: string | number; [key: string]: unknown };
+                      await this.loadImages(latestPrompt as IPromptExtended);
+                    }
+                  }
+                } catch (error) {
+                  window.electronAPI.logError(
+                    'PromptDetailManager.ts',
+                    'Failed to replace image:',
+                    error,
+                  );
+                  this.app.showToast('替换图像失败', 'error');
+                }
+              },
+            },
+            {
               id: "openLocation",
               label: Constants.CONTEXT_MENU_OPEN_LOCATION,
               onClick: async () => {

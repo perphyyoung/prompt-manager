@@ -93,6 +93,7 @@ interface IElectronAPI {
 
   // 图像文件操作
   saveImageFile: (sourcePath: string, fileName: string) => Promise<{ id: string; fileName: string; isDuplicate: boolean; duplicateType?: 'restored_from_trash' | 'existing'; relativePath?: string; thumbnailPath?: string; width?: number; height?: number; size?: number }>;
+  replaceImage: (oldImageId: string) => Promise<{ success: boolean; canceled?: boolean; reason?: string; image?: IImage; relatedPromptIds?: string[] }>;
   getImagePath: (relativePath: string) => Promise<string>;
   getImagesPaths: (relativePaths: string[]) => Promise<string[]>;
   openImageLocation: (relativePath: string) => Promise<void>;
@@ -249,6 +250,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ==================== 图像文件操作 ====================
   saveImageFile: (sourcePath: string, fileName: string) => ipcRenderer.invoke('save-image-file', sourcePath, fileName),
+  replaceImage: (oldImageId: string) => ipcRenderer.invoke('replace-image', oldImageId),
   getImagePath: (relativePath: string) => ipcRenderer.invoke('get-image-path', relativePath),
   getImagesPaths: (relativePaths: string[]) => ipcRenderer.invoke('get-images-paths', relativePaths),
   openImageLocation: (relativePath: string) => ipcRenderer.invoke('open-image-location', relativePath),

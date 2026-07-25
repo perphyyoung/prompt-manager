@@ -99,6 +99,7 @@ export class Constants {
   // 图像右键菜单
   static CONTEXT_MENU_SET_AS_FIRST = "设为首张";
   static CONTEXT_MENU_OPEN_LOCATION = "打开本地保存位置";
+  static CONTEXT_MENU_REPLACE_IMAGE = "替换图像";
 
   // 图标定义
   static ICONS = Object.freeze({

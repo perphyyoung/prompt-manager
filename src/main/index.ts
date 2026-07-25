@@ -1045,6 +1045,54 @@ ipcMain.handle('save-image-file', async (event, sourcePath, fileName) => {
   return await saveImageFile(sourcePath, fileName);
 });
 
+// 替换图像：选择新图像文件，软删除旧图并迁移关联关系
+ipcMain.handle('replace-image', async (event, oldImageId: string) => {
+  try {
+    // 测试 mock 优先
+    const mockPath = (global as any).__testMockedReplaceImageFilePath as string | undefined;
+    let sourcePath: string;
+    if (mockPath) {
+      delete (global as any).__testMockedReplaceImageFilePath;
+      sourcePath = mockPath;
+    } else {
+      const result = await dialog.showOpenDialog({
+        title: '选择替换图像',
+        filters: [
+          { name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'] },
+          { name: 'All Files', extensions: ['*'] }
+        ],
+        properties: ['openFile']
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, canceled: true };
+      }
+      sourcePath = result.filePaths[0];
+    }
+
+    const fileName = path.basename(sourcePath);
+
+    // 保存新图像
+    const saveResult = await saveImageFile(sourcePath, fileName);
+
+    // 如果选择的是完全相同的文件（MD5 一致且未删除），无需替换
+    if (saveResult.isDuplicate && saveResult.duplicateType === 'existing' && saveResult.id === oldImageId) {
+      return { success: false, reason: 'same_image' };
+    }
+
+    // 迁移关联关系：旧图入回收站，关联迁移到新图
+    await db.replaceImage(oldImageId, saveResult.id);
+
+    // 返回新图像完整信息及关联提示词ID列表（用于前端刷新缓存）
+    const newImage = await db.getImageById(saveResult.id);
+    const relatedPromptIds = (newImage?.promptRefs || []).map((ref) => String(ref.promptId));
+    return { success: true, image: newImage, relatedPromptIds };
+  } catch (error) {
+    logError('Main', 'Replace image error:', error);
+    throw error;
+  }
+});
+
 // 打开图像文件对话框（支持多选）
 ipcMain.handle('dialog:open-image-files', async () => {
   // 测试 mock 优先（支持单路径或多路径）

@@ -239,6 +239,46 @@ export class ImageDetailManager extends DetailViewManager {
           y: e.clientY,
           items: [
             {
+              id: 'replaceImage',
+              label: Constants.CONTEXT_MENU_REPLACE_IMAGE,
+              onClick: async () => {
+                try {
+                  const result = await window.electronAPI.replaceImage(currentImage.id);
+                  if (result.canceled) return;
+                  if (result.reason === 'same_image') {
+                    this.app.showToast('选择的图像与当前图像相同', 'info');
+                    return;
+                  }
+                  if (result.success && result.image) {
+                    this.app.showToast('图像已替换', 'success');
+                    // 刷新新图像缓存（包含最新的更新时间），确保主界面按最近更新排序正确
+                    if (result.image) {
+                      cacheManager.cacheImage(result.image);
+                    }
+                    this.app.eventBus.emit(Events.IMAGES_CHANGED);
+                    // 刷新相关提示词缓存，并通知提示词面板刷新，确保提示词主界面按最近更新排序正确
+                    if (result.relatedPromptIds && result.relatedPromptIds.length > 0) {
+                      for (const promptId of result.relatedPromptIds) {
+                        const updatedPrompt = await window.electronAPI.getPromptById(promptId);
+                        if (updatedPrompt) {
+                          cacheManager.cachePrompt(updatedPrompt);
+                        }
+                      }
+                      this.app.eventBus.emit(Events.PROMPTS_CHANGED);
+                    }
+                    // 刷新当前详情显示
+                    await this.updateView(result.image as IImage);
+                  }
+                } catch (error) {
+                  ErrorHandler.handleError(
+                    { module: 'ImageDetailManager.ts', operation: 'replace image' },
+                    error,
+                    { userMessage: '替换图像失败' }
+                  );
+                }
+              }
+            },
+            {
               id: 'openLocation',
               label: Constants.CONTEXT_MENU_OPEN_LOCATION,
               onClick: async () => {

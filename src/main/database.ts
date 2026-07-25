@@ -2093,6 +2093,60 @@ async function softDeleteImage(id: string): Promise<boolean> {
 }
 
 /**
+ * 替换图像
+ * 将旧图像软删除，并把旧图像的关联关系迁移到新图像
+ * @param oldId - 被替换的图像ID
+ * @param newId - 新图像ID
+ * @returns 是否成功
+ */
+async function replaceImage(oldId: string, newId: string): Promise<boolean> {
+  if (oldId === newId) return true;
+
+  return runInTransaction(async () => {
+    // 1. 软删除旧图像
+    await softDeleteImage(oldId);
+
+    // 2. 迁移提示词-图像关联关系
+    await run(
+      `UPDATE OR IGNORE prompt_image_relations
+       SET image_id = ?
+       WHERE image_id = ?`,
+      [newId, oldId]
+    );
+
+    // 3. 迁移图像-标签关联关系
+    await run(
+      `UPDATE OR IGNORE image_tag_relations
+       SET image_id = ?
+       WHERE image_id = ?`,
+      [newId, oldId]
+    );
+
+    // 4. 同步更新新图像和相关提示词的更新时间
+    const now = localTime();
+    await run(
+      'UPDATE images SET updated_at = ? WHERE id = ?',
+      [now, newId]
+    );
+
+    const relatedPromptRows = await all<{ prompt_id: string }>(
+      'SELECT prompt_id FROM prompt_image_relations WHERE image_id = ?',
+      [newId]
+    );
+    const relatedPromptIds = relatedPromptRows.map(row => row.prompt_id);
+    if (relatedPromptIds.length > 0) {
+      const placeholders = relatedPromptIds.map(() => '?').join(',');
+      await run(
+        `UPDATE prompts SET updated_at = ? WHERE id IN (${placeholders})`,
+        [now, ...relatedPromptIds]
+      );
+    }
+
+    return true;
+  });
+}
+
+/**
  * 批量软删除图像
  * 保留关联关系，仅标记删除状态
  * @param ids - 图像ID数组
@@ -2980,6 +3034,7 @@ export {
   getImageById,
   getImageByMD5IncludeTrash,
   addImage,
+  replaceImage,
   softDeleteImage,
   softDeleteImages,
   restoreImage,
