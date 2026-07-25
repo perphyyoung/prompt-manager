@@ -687,9 +687,11 @@ export class ImageDetailManager extends DetailViewManager {
       editPromptBtn.classList.remove('disabled-secondary');
       editPromptBtn.title = '';
       editPromptBtn.onclick = () => {
-        if (!currentDetailPromptId) return;
+        // 动态读取当前选中的提示词ID，避免切换后仍打开之前绑定的提示词
+        const promptId = this.currentDetailPromptId;
+        if (!promptId) return;
         const currentPrompt = allPromptRefs.length > 0
-          ? allPromptRefs.find(p => this.app.isSameId(p.id, currentDetailPromptId))
+          ? allPromptRefs.find(p => this.app.isSameId(p.id, promptId))
           : null;
         if (currentPrompt) {
           this.openPromptDetail(currentPrompt);
@@ -718,12 +720,22 @@ export class ImageDetailManager extends DetailViewManager {
       this.renderPromptTitles(promptTitleContainer, allPromptRefs, image);
 
       const firstPrompt = allPromptRefs[0];
-      this.renderPromptContentDisplay(firstPrompt);
 
-      const btnText = allPromptRefs.length > 1 ? '编辑提示词 (1)' : '编辑提示词';
-      this.setupEditPromptButton(editPromptBtn, editPromptBtnText, allPromptRefs, firstPrompt.id, btnText);
+      // 优先保持当前选中的提示词；若当前选中不在当前图像提示词列表中（如打开了新图像），则默认第一个
+      const selectedPromptId = this.currentDetailPromptId;
+      const currentPromptId = selectedPromptId && allPromptRefs.some(p => this.app.isSameId(p.id, selectedPromptId))
+        ? selectedPromptId
+        : firstPrompt.id;
+      const currentIndex = allPromptRefs.findIndex(p => this.app.isSameId(p.id, currentPromptId));
+      const currentPrompt = currentIndex >= 0 ? allPromptRefs[currentIndex] : firstPrompt;
+      this.renderPromptContentDisplay(currentPrompt);
 
-      this.currentDetailPromptId = firstPrompt.id;
+      const btnText = allPromptRefs.length > 1
+        ? `编辑提示词 (${currentIndex >= 0 ? currentIndex + 1 : 1})`
+        : '编辑提示词';
+      this.setupEditPromptButton(editPromptBtn, editPromptBtnText, allPromptRefs, currentPromptId, btnText);
+
+      this.currentDetailPromptId = currentPromptId;
       this.currentDetailPromptRefs = allPromptRefs;
     } else {
       this.clearPromptDisplay();
