@@ -158,6 +158,12 @@ export class ImagePanelManager extends PanelManagerBase {
         const thumbnailPath = typeof img.thumbnailPath === 'string' ? img.thumbnailPath : undefined;
         const relativePath = typeof img.relativePath === 'string' ? img.relativePath : undefined;
         return thumbnailPath || relativePath || null;
+      },
+
+      getOpenLocationPath: (item: IPanelItem): string | null => {
+        const img = item as IImage;
+        const relativePath = typeof img.relativePath === 'string' ? img.relativePath : undefined;
+        return relativePath || null;
       }
     };
   }

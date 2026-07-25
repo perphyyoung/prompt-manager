@@ -12,6 +12,7 @@ import { TagService } from '../services/index.ts';
 import { buildTagsWithGroupInfo } from '../../pyTagGroups/utils.ts';
 import { IApp } from '../app.types.ts';
 import { localStorageManager } from '../configs/LocalStorageConfig.ts';
+import { PanelContextMenuManager } from './PanelContextMenuManager.ts';
 
 // 卡片大小限制常量
 const MIN_CARD_SIZE = 100;
@@ -78,6 +79,9 @@ interface IUIConfig {
 
   // 获取卡片背景图片路径
   getCardImagePath(item: IPanelItem): string | null;
+
+  // 获取本地保存位置路径（用于右键菜单）
+  getOpenLocationPath(item: IPanelItem): string | null;
 }
 
 /**
@@ -96,6 +100,9 @@ export abstract class PanelManagerBase {
   protected filteredItems: IPanelItem[] = [];
   protected selectedTags: Set<string> = new Set();
   protected invertedFilter = false;
+
+  // 右键菜单管理器
+  protected panelContextMenuManager: PanelContextMenuManager | null = null;
 
   // 视图设置（在子类构造函数中初始化）
   viewModeType!: string;
@@ -227,6 +234,10 @@ export abstract class PanelManagerBase {
 
     // 绑定事件
     this.subscribeToEvents();
+
+    // 初始化右键菜单
+    this.panelContextMenuManager = new PanelContextMenuManager();
+    this.panelContextMenuManager.init();
   }
 
   /**
@@ -470,6 +481,46 @@ export abstract class PanelManagerBase {
           }
         });
       }
+    });
+  }
+
+  /**
+   * 绑定右键菜单事件（事件委托）
+   * 覆盖卡片视图、列表视图和紧凑视图
+   * @private
+   */
+  protected bindContextMenuEvents(): void {
+    const config = this.getUIConfig();
+    const itemSelectors = [config.cardSelector, config.listItemSelector].join(', ');
+
+    [config.gridContainerId, config.listContainerId].forEach((containerId) => {
+      const container = document.getElementById(containerId);
+      if (!container || container.dataset.contextMenuBound === 'true') return;
+
+      container.dataset.contextMenuBound = 'true';
+      container.addEventListener('contextmenu', (e) => {
+        const itemEl = (e.target as HTMLElement).closest(itemSelectors) as HTMLElement | null;
+        if (!itemEl) return;
+
+        const id = config.getElementId(itemEl);
+        if (!id) return;
+
+        const item = this.filteredItems.find((i) => String(i.id) === id);
+        if (!item) return;
+
+        const path = config.getOpenLocationPath(item);
+        if (!path) {
+          this.app.showToast?.('没有可打开的本地保存位置', 'warning');
+          return;
+        }
+
+        e.preventDefault();
+        this.panelContextMenuManager?.show({
+          x: e.clientX,
+          y: e.clientY,
+          path
+        });
+      });
     });
   }
 
@@ -818,6 +869,9 @@ export abstract class PanelManagerBase {
 
       // 子类实现具体的渲染逻辑
       await this.renderContainer(filtered);
+
+      // 绑定右键菜单事件（事件委托，只绑定一次）
+      this.bindContextMenuEvents();
 
       // 设置卡片大小 CSS 变量
       this.applyCardSize();

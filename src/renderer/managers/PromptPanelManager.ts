@@ -131,6 +131,13 @@ export class PromptPanelManager extends PanelManagerBase {
         if (!prompt.images || prompt.images.length === 0) return null;
         const firstImage = prompt.images[0] as ImageInfo;
         return firstImage.thumbnailPath || firstImage.relativePath || null;
+      },
+
+      getOpenLocationPath: (item: IPanelItem) => {
+        const prompt = item as IPrompt;
+        if (!prompt.images || prompt.images.length === 0) return null;
+        const firstImage = prompt.images[0] as ImageInfo;
+        return firstImage.relativePath || null;
       }
     };
   }
