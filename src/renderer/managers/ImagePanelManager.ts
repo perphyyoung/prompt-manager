@@ -127,7 +127,7 @@ export class ImagePanelManager extends PanelManagerBase {
       gridContainerId: Constants.Ids.IMAGE_GRID,
       listContainerId: Constants.Ids.IMAGE_LIST,
       dragSource: 'image-tag',
-      getCardDropSelector: () => '.image-card',
+      getCardDropSelector: () => '.image-card, .list-item--image',
 
       getElementId: (element: HTMLElement): string | undefined => {
         return element.dataset.id || element.dataset.imageId || undefined;
