@@ -328,6 +328,48 @@ export interface GetImagesOptions {
 }
 
 /**
+ * 分页获取图像选项
+ */
+export interface GetImagesPaginatedOptions {
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  searchQuery?: string;
+  tagNames?: string[];
+  isSafe?: boolean;
+  limit: number;
+  offset: number;
+}
+
+/**
+ * 分页获取图像结果
+ */
+export interface PaginatedImagesResult {
+  items: Image[];
+  totalCount: number;
+}
+
+/**
+ * 图像标签计数选项
+ */
+export interface CountImageTagsOptions {
+  searchQuery?: string;
+  tagNames?: string[];
+  isSafe?: boolean;
+}
+
+/**
+ * 图像特殊标签计数结果
+ */
+export interface ImageSpecialTagCounts {
+  favorite: number;
+  unreferenced: number;
+  multiRef: number;
+  noTag: number;
+  safe: number;
+  unsafe: number;
+}
+
+/**
  * 图像清理信息（用于孤儿文件清理）
  */
 export interface ImageCleanupInfo {

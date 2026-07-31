@@ -323,8 +323,43 @@ export class PromptPanelManager extends PanelManagerBase {
     const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
     if (!listContainer) return;
 
-    const allImages = await window.electronAPI.getImages('updatedAt', 'desc');
     const items = listContainer.querySelectorAll('.list-item--prompt');
+
+    // 收集所有需要的图像 ID，优先从缓存获取
+    const imageIdToInfo = new Map<string, ImageInfo>();
+    const missingImageIds: string[] = [];
+
+    for (const item of items) {
+      const promptId = (item as HTMLElement).dataset.id;
+      const prompt = filtered.find(p => String(p.id) === String(promptId));
+      if (!prompt || !prompt.images || prompt.images.length === 0) continue;
+
+      const firstImageId = typeof prompt.images[0] === 'object' ? (prompt.images[0] as ImageInfo).id : prompt.images[0];
+      if (!firstImageId) continue;
+
+      const cached = cacheManager.getCachedImage(String(firstImageId));
+      if (cached) {
+        imageIdToInfo.set(String(firstImageId), cached as ImageInfo);
+      } else if (!imageIdToInfo.has(String(firstImageId))) {
+        imageIdToInfo.set(String(firstImageId), { id: firstImageId });
+        missingImageIds.push(String(firstImageId));
+      }
+    }
+
+    // 批量查询未命中的图像
+    if (missingImageIds.length > 0) {
+      try {
+        const fetchedImages = await window.electronAPI.getImagesByIds(missingImageIds);
+        for (const img of fetchedImages) {
+          if (img && img.id) {
+            cacheManager.cacheImage(img);
+            imageIdToInfo.set(String(img.id), img as ImageInfo);
+          }
+        }
+      } catch (error) {
+        window.electronAPI.logError('PromptPanelManager.ts', 'Failed to fetch images by ids:', error);
+      }
+    }
 
     // 收集所有列表项的路径信息，批量获取
     const itemInfoList: Array<{ thumbnailEl: HTMLImageElement | null }> = [];
@@ -336,7 +371,9 @@ export class PromptPanelManager extends PanelManagerBase {
       if (!prompt || !prompt.images || prompt.images.length === 0) continue;
 
       const firstImageId = typeof prompt.images[0] === 'object' ? (prompt.images[0] as ImageInfo).id : prompt.images[0];
-      const img = this.app.findImageById(String(firstImageId), allImages) as ImageInfo | undefined;
+      if (!firstImageId) continue;
+
+      const img = imageIdToInfo.get(String(firstImageId));
       if (!img) continue;
 
       const imagePath = img.thumbnailPath || img.relativePath;

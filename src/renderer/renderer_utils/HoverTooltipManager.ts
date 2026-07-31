@@ -1,6 +1,5 @@
 import { cacheManager } from '../../utils/index.ts';
 import { IApp } from '../app.types.ts';
-import { IImage } from '../../types/entities.ts';
 
 interface HoverTooltipOptions {
   getContent?: (element: Element) => string | null;
@@ -45,10 +44,9 @@ export class HoverTooltipManager {
     let thumbnailPath = cacheManager.getImagePath(imageId, 'thumbnail');
     let originalPath = cacheManager.getImagePath(imageId, 'original');
 
-    // 如果缓存中没有，异步获取并缓存
+    // 如果缓存中没有，按 ID 查询图像并缓存路径
     if (!thumbnailPath && !originalPath) {
-      const allImages = await window.electronAPI.getImages('updatedAt', 'desc');
-      const img = allImages.find((i: { id: string }) => this.app.isSameId(i.id, imageId)) as IImage | undefined;
+      const img = await window.electronAPI.getImageById(imageId);
       if (img) {
         if (img.thumbnailPath) {
           thumbnailPath = await window.electronAPI.getImagePath(img.thumbnailPath);

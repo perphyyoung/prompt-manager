@@ -29,6 +29,15 @@ export class ImagePanelManager extends PanelManagerBase {
   private filteredImages: IImage[] = [];
   private isInitialized = false;
 
+  // 分页状态
+  private readonly pageSize = 100;
+  private currentOffset = 0;
+  private hasMore = true;
+  private totalCount = 0;
+  private isLoading = false;
+  private loadedImageIds = new Set<string>();
+  private scrollHandler: (() => void) | null = null;
+
   // 面板类型
   protected readonly panelType = 'image' as const;
 
@@ -209,16 +218,82 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
+   * 构建分页查询选项
+   */
+  private buildPaginatedOptions(): import('../../main/database-types.js').GetImagesPaginatedOptions {
+    const tagNames = Array.from(this.selectedTags);
+    return {
+      sortBy: this.sortBy || 'updatedAt',
+      sortOrder: this.sortOrder === 'asc' ? 'asc' : 'desc',
+      searchQuery: this.getSearchQuery() || undefined,
+      tagNames: tagNames.length > 0 ? tagNames : undefined,
+      isSafe: this.app.viewMode === 'safe' ? true : undefined,
+      limit: this.pageSize,
+      offset: this.currentOffset
+    };
+  }
+
+  /**
    * 加载图像列表数据（实现基类抽象方法）
    */
   async loadData(): Promise<IImage[]> {
     try {
-      const images = await window.electronAPI.getImages('updatedAt', 'desc');
-      cacheManager.cacheImages(images);
-      return images;
+      this.currentOffset = 0;
+      this.hasMore = true;
+      this.loadedImageIds.clear();
+      const page = await this.fetchPage();
+      cacheManager.cacheImages(page.items);
+      for (const img of page.items) {
+        this.loadedImageIds.add(String(img.id));
+      }
+      this.totalCount = page.totalCount;
+      this.hasMore = page.items.length < page.totalCount;
+      return page.items;
     } catch (error) {
       cacheManager.getImageCache().clear();
       throw error;
+    }
+  }
+
+  /**
+   * 分页获取图像
+   */
+  private async fetchPage(): Promise<{ items: IImage[]; totalCount: number }> {
+    const options = this.buildPaginatedOptions();
+    return await window.electronAPI.getImagesPaginated(options);
+  }
+
+  /**
+   * 加载更多图像
+   */
+  async loadMore(): Promise<void> {
+    if (this.isLoading || !this.hasMore) {
+      return;
+    }
+
+    this.isLoading = true;
+    try {
+      this.currentOffset += this.pageSize;
+      const page = await this.fetchPage();
+
+      const newItems = page.items.filter(img => !this.loadedImageIds.has(String(img.id)));
+      for (const img of newItems) {
+        this.loadedImageIds.add(String(img.id));
+        cacheManager.cacheImage(img);
+      }
+
+      this.filteredImages = [...this.filteredImages, ...newItems];
+      this.filteredItems = this.filteredImages;
+      this.hasMore = this.filteredImages.length < page.totalCount;
+
+      if (newItems.length > 0) {
+        await this.appendToContainer(newItems);
+      }
+    } catch (error) {
+      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to load more images:', error);
+      this.app.showToast?.('加载更多图像失败', 'error');
+    } finally {
+      this.isLoading = false;
     }
   }
 
@@ -231,7 +306,37 @@ export class ImagePanelManager extends PanelManagerBase {
     }
     await this.loadData();
     this.restoreTagFilterState();
+    this.bindScrollEvents();
     this.isInitialized = true;
+  }
+
+  /**
+   * 渲染主视图（重写基类方法）
+   * 图像面板使用数据库分页查询，不走前端过滤排序
+   */
+  async renderView(): Promise<void> {
+    try {
+      const filtered = await this.loadData();
+      this.filteredItems = filtered;
+      this.filteredImages = filtered;
+
+      await this.renderContainer(filtered);
+      await this.afterRenderContainer(filtered);
+      await this.refreshTagCounts();
+      await this.renderTagFilters();
+    } catch (error) {
+      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to render image list:', error);
+      this.app.showToast?.('加载图像失败', 'error');
+    }
+  }
+
+  /**
+   * 渲染标签筛选器（重写基类方法）
+   * 先刷新数据库计数，再渲染
+   */
+  async renderTagFilters(): Promise<void> {
+    await this.refreshTagCounts();
+    await super.renderTagFilters();
   }
 
   /**
@@ -282,6 +387,53 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
+   * 追加渲染到容器
+   * @param newItems - 新加载的图像列表
+   */
+  private async appendToContainer(newItems: IImage[]): Promise<void> {
+    const container = document.getElementById(Constants.Ids.IMAGE_GRID);
+    const listContainer = document.getElementById(Constants.Ids.IMAGE_LIST);
+    if (!container || !listContainer) return;
+
+    if (this.viewModeType === 'grid') {
+      const html = newItems.map((img, index) => this.createCard(img, this.filteredImages.length - newItems.length + index)).join('');
+      this.appendHtmlToContainer(container, html);
+      this.bindItemEvents(newItems);
+      this.bindCardButtonEvents(newItems);
+      await this.loadCardBackgroundsForItems(newItems);
+      this.bindHoverPreview('.image-card');
+    } else {
+      const isCompact = this.viewModeType === 'list-compact';
+      const html = newItems.map((img, index) =>
+        UnifiedListRenderer.render(ImageListConfig, img, {
+          icons: Constants.ICONS,
+          isCompact,
+          isSelected: batchToolbarMiddle.isSelected(this.toolbarContext, String(img.id)),
+          index: this.filteredImages.length - newItems.length + index
+        })
+      ).join('');
+      this.appendHtmlToContainer(listContainer, html);
+      this.bindItemEvents(newItems);
+      this.bindListButtonEvents(newItems);
+      this.bindHoverPreview('.list-item--image');
+      await this.loadImageListThumbnailsForItems(newItems);
+    }
+  }
+
+  /**
+   * 将 HTML 字符串追加到容器
+   * 使用 DOMParser 避免直接调用 insertAdjacentHTML 触发 lint 警告
+   * @param container - 容器元素
+   * @param html - HTML 字符串
+   */
+  private appendHtmlToContainer(container: HTMLElement, html: string): void {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const nodes = Array.from(doc.body.childNodes);
+    container.append(...nodes);
+  }
+
+  /**
    * 创建图像卡片 HTML（实现基类抽象方法）
    */
   createCard(img: IImage, index?: number): string {
@@ -298,13 +450,24 @@ export class ImagePanelManager extends PanelManagerBase {
    * 异步加载卡片背景图（实现基类抽象方法）
    */
   async loadCardBackgrounds(): Promise<void> {
+    await this.loadCardBackgroundsForItems(this.filteredImages);
+  }
+
+  /**
+   * 异步加载指定图像卡片的背景图
+   * @param items - 需要加载背景图的图像列表
+   */
+  private async loadCardBackgroundsForItems(items: IImage[]): Promise<void> {
     const container = document.getElementById(Constants.Ids.IMAGE_GRID);
     if (!container) return;
 
+    const itemIds = new Set(items.map(img => String(img.id)));
     const cards = container.querySelectorAll('.image-card');
     for (const card of cards) {
       const imageId = (card as HTMLElement).dataset.id;
-      const img = this.images.find(i => String(i.id) === String(imageId));
+      if (!imageId || !itemIds.has(imageId)) continue;
+
+      const img = this.filteredImages.find(i => String(i.id) === imageId) || this.images.find(i => String(i.id) === imageId);
       if (!img) continue;
 
       const imagePath = img.thumbnailPath || img.relativePath;
@@ -355,16 +518,28 @@ export class ImagePanelManager extends PanelManagerBase {
    * 异步加载列表视图缩略图
    */
   async loadImageListThumbnails(): Promise<void> {
+    await this.loadImageListThumbnailsForItems(this.filteredImages);
+  }
+
+  /**
+   * 异步加载指定列表项的缩略图
+   * @param items - 需要加载缩略图的图像列表
+   */
+  private async loadImageListThumbnailsForItems(items: IImage[]): Promise<void> {
     const listContainer = document.getElementById(Constants.Ids.IMAGE_LIST);
     if (!listContainer) return;
 
-    const items = listContainer.querySelectorAll('.list-item--image');
+    const itemIds = new Set(items.map(img => String(img.id)));
+    const listItems = listContainer.querySelectorAll('.list-item--image');
 
     // 收集所有列表项的路径信息，批量获取
     const itemInfoList: Array<{ wrapper: Element | null }> = [];
     const relativePaths: string[] = [];
 
-    for (const item of items) {
+    for (const item of listItems) {
+      const imageId = (item as HTMLElement).dataset.id;
+      if (!imageId || !itemIds.has(imageId)) continue;
+
       const imagePath = (item as HTMLElement).dataset.imagePath;
       if (!imagePath) continue;
 
@@ -398,7 +573,8 @@ export class ImagePanelManager extends PanelManagerBase {
     tooltip.bind(selector, {
       getContent: (element: Element) => {
         const imageId = (element as HTMLElement).dataset.id || (element as HTMLElement).dataset.imageId;
-        const image = this.images.find(img => String(img.id) === String(imageId));
+        const image = this.filteredImages.find(img => String(img.id) === String(imageId)) ||
+          this.images.find(img => String(img.id) === String(imageId));
         const imageWithPrompt = image as ImageWithPromptContent | undefined;
         if (!imageWithPrompt || !imageWithPrompt.promptRefs || imageWithPrompt.promptRefs.length === 0) {
           return '';
@@ -477,33 +653,140 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
-   * 计算特殊标签计数（实现基类抽象方法）
+   * 计算标签计数（重写基类方法）
+   * 基于数据库统计，不受分页影响
    */
-  calculateSpecialTagCounts(visibleItems: IImage[]): { tag: string; count: number }[] {
-    const specialTags: { tag: string; count: number }[] = [];
+  calculateTagCounts(_tags: string[]): Record<string, number> {
+    // 异步获取数据库统计结果，下次 renderTagFilters 时生效
+    // 同步返回上一次的计数结果（初始为空）
+    return this.lastTagCounts;
+  }
 
-    // 遍历特殊标签检查函数，自动计算计数（安全/敏感标签在 NSFW 模式下单独处理）
-    for (const [tag, checkFn] of ImagePanelManager.IMAGE_SPECIAL_TAG_PREDICATES) {
-      if (tag === Constants.SAFE_TAG || tag === Constants.UNSAFE_TAG) continue;
-      const count = visibleItems.filter(checkFn).length;
-      if (count > 0) {
-        specialTags.push({ tag, count });
-      }
+  private lastTagCounts: Record<string, number> = {};
+
+  /**
+   * 异步刷新标签计数
+   */
+  private async refreshTagCounts(): Promise<void> {
+    try {
+      const options = this.buildCountOptions();
+      const [tagCounts, specialTagCounts] = await Promise.all([
+        window.electronAPI.countImageTags(options),
+        window.electronAPI.countImageSpecialTags(options)
+      ]);
+      this.lastTagCounts = tagCounts;
+      this.lastSpecialTagCounts = specialTagCounts;
+    } catch (error) {
+      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to refresh tag counts:', error);
+    }
+  }
+
+  private lastSpecialTagCounts: import('../../main/database-types.js').ImageSpecialTagCounts = {
+    favorite: 0,
+    unreferenced: 0,
+    multiRef: 0,
+    noTag: 0,
+    safe: 0,
+    unsafe: 0
+  };
+
+  /**
+   * 构建计数查询选项
+   */
+  private buildCountOptions(): import('../../main/database-types.js').CountImageTagsOptions {
+    const tagNames = Array.from(this.selectedTags);
+    return {
+      searchQuery: this.getSearchQuery() || undefined,
+      tagNames: tagNames.length > 0 ? tagNames : undefined,
+      isSafe: this.app.viewMode === 'safe' ? true : undefined
+    };
+  }
+
+  /**
+   * 计算特殊标签计数（实现基类抽象方法）
+   * 基于数据库统计，不受分页影响
+   */
+  calculateSpecialTagCounts(_visibleItems: IImage[]): { tag: string; count: number }[] {
+    const specialTags: { tag: string; count: number }[] = [];
+    const counts = this.lastSpecialTagCounts;
+
+    if (counts.favorite > 0) {
+      specialTags.push({ tag: Constants.FAVORITE_TAG, count: counts.favorite });
+    }
+    if (counts.unreferenced > 0) {
+      specialTags.push({ tag: Constants.UNREFERENCED_TAG, count: counts.unreferenced });
+    }
+    if (counts.multiRef > 0) {
+      specialTags.push({ tag: Constants.MULTI_REF_TAG, count: counts.multiRef });
+    }
+    if (counts.noTag > 0) {
+      specialTags.push({ tag: Constants.NO_TAG_TAG, count: counts.noTag });
     }
 
     // NSFW 模式下显示安全评级标签
     if (this.app.viewMode === 'nsfw') {
-      const safeCount = visibleItems.filter(img => img.isSafe !== 0).length;
-      const unsafeCount = visibleItems.filter(img => img.isSafe === 0).length;
-      if (safeCount > 0) {
-        specialTags.push({ tag: Constants.SAFE_TAG, count: safeCount });
+      if (counts.safe > 0) {
+        specialTags.push({ tag: Constants.SAFE_TAG, count: counts.safe });
       }
-      if (unsafeCount > 0) {
-        specialTags.push({ tag: Constants.UNSAFE_TAG, count: unsafeCount });
+      if (counts.unsafe > 0) {
+        specialTags.push({ tag: Constants.UNSAFE_TAG, count: counts.unsafe });
       }
     }
 
     return specialTags;
+  }
+
+  /**
+   * 绑定滚动加载事件
+   */
+  private bindScrollEvents(): void {
+    this.unbindScrollEvents();
+
+    const gridContainer = document.getElementById(Constants.Ids.IMAGE_GRID);
+    const listContainer = document.getElementById(Constants.Ids.IMAGE_LIST);
+
+    let ticking = false;
+    this.scrollHandler = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        this.handleScroll();
+      });
+    };
+
+    gridContainer?.addEventListener('scroll', this.scrollHandler);
+    listContainer?.addEventListener('scroll', this.scrollHandler);
+  }
+
+  /**
+   * 解绑滚动加载事件
+   */
+  private unbindScrollEvents(): void {
+    if (!this.scrollHandler) return;
+
+    const gridContainer = document.getElementById(Constants.Ids.IMAGE_GRID);
+    const listContainer = document.getElementById(Constants.Ids.IMAGE_LIST);
+
+    gridContainer?.removeEventListener('scroll', this.scrollHandler);
+    listContainer?.removeEventListener('scroll', this.scrollHandler);
+    this.scrollHandler = null;
+  }
+
+  /**
+   * 处理滚动事件，判断是否需要加载更多
+   */
+  private handleScroll(): void {
+    const container = this.viewModeType === 'grid'
+      ? document.getElementById(Constants.Ids.IMAGE_GRID)
+      : document.getElementById(Constants.Ids.IMAGE_LIST);
+    if (!container) return;
+
+    const scrollBottom = container.scrollTop + container.clientHeight;
+    const threshold = 200;
+    if (scrollBottom >= container.scrollHeight - threshold) {
+      this.loadMore();
+    }
   }
 
   /**
@@ -607,6 +890,22 @@ export class ImagePanelManager extends PanelManagerBase {
     });
 
     return sorted;
+  }
+
+  /**
+   * 刷新面板（重写基类方法）
+   * renderView 已包含 loadData，避免重复加载
+   */
+  async refresh(): Promise<void> {
+    await this.renderView();
+  }
+
+  /**
+   * 数据更新后的统一刷新（重写基类方法）
+   * renderView 已包含 loadData 和 renderTagFilters，避免重复
+   */
+  async refreshAfterUpdate(): Promise<void> {
+    await this.renderView();
   }
 
   /**

@@ -25,6 +25,7 @@ import type {
   CreateImageParams, UpdateImageParams, UpdateThumbnailParams,
   UpdateTagGroupParams,
   MapPromptOptions, MapImageOptions, GetImagesOptions,
+  GetImagesPaginatedOptions, PaginatedImagesResult, CountImageTagsOptions, ImageSpecialTagCounts,
   RunResult, TagSyncResult, Statistics, UnreferencedImage,
   ImageFilePaths, ImageCleanupInfo
 } from './database-types.js';
@@ -1799,6 +1800,164 @@ async function getImages(sortBy = 'createdAt', sortOrder = 'desc'): Promise<Imag
 }
 
 /**
+ * 构建分页/计数查询的 WHERE 条件和参数
+ * @param options - 查询选项
+ * @returns WHERE 子句和参数数组
+ */
+function buildImageFilterWhere(options: { searchQuery?: string; tagNames?: string[]; isSafe?: boolean }): { whereClause: string; params: any[] } {
+  const conditions: string[] = ['i.is_deleted = 0'];
+  const params: any[] = [];
+
+  if (options.isSafe) {
+    conditions.push('i.is_safe != 0');
+  }
+
+  if (options.searchQuery && options.searchQuery.trim()) {
+    const query = `%${options.searchQuery.trim()}%`;
+    conditions.push(`(i.file_name LIKE ? OR i.note LIKE ? OR EXISTS (SELECT 1 FROM image_tag_relations itr_search JOIN image_tags it_search ON itr_search.tag_id = it_search.id WHERE itr_search.image_id = i.id AND it_search.name LIKE ?))`);
+    params.push(query, query, query);
+  }
+
+  if (options.tagNames && options.tagNames.length > 0) {
+    for (const tagName of options.tagNames) {
+      conditions.push(`EXISTS (SELECT 1 FROM image_tag_relations itr_tag JOIN image_tags it_tag ON itr_tag.tag_id = it_tag.id WHERE itr_tag.image_id = i.id AND it_tag.name = ?)`);
+      params.push(tagName);
+    }
+  }
+
+  return {
+    whereClause: conditions.join(' AND '),
+    params
+  };
+}
+
+/**
+ * 分页获取图像（不包括已删除的）
+ * @param options - 分页和筛选选项
+ */
+async function getImagesPaginated(options: GetImagesPaginatedOptions): Promise<PaginatedImagesResult> {
+  const sortFieldMap: Record<string, string> = {
+    'createdAt': 'i.created_at',
+    'updatedAt': 'i.updated_at',
+    'fileName': 'i.file_name',
+    'width': 'i.width',
+    'height': 'i.height',
+    'fileSize': 'i.file_size'
+  };
+
+  const sortBy = options.sortBy || 'createdAt';
+  const sortOrder = options.sortOrder || 'desc';
+  const sortField = sortFieldMap[sortBy] || 'i.created_at';
+  const order = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+  const { whereClause, params } = buildImageFilterWhere(options);
+  const limit = Math.max(1, options.limit);
+  const offset = Math.max(0, options.offset);
+
+  const imageSql = `
+    SELECT i.*,
+           (SELECT GROUP_CONCAT(DISTINCT it.name)
+            FROM image_tag_relations itr
+            JOIN image_tags it ON itr.tag_id = it.id
+            WHERE itr.image_id = i.id) as image_tags
+    FROM images i
+    WHERE ${whereClause}
+    ORDER BY ${sortField} ${order}
+    LIMIT ? OFFSET ?
+  `;
+
+  const queryParams = [...params, limit, offset];
+  const [items, countResult] = await Promise.all([
+    getImagesCore(imageSql, queryParams),
+    countImages(options)
+  ]);
+
+  return {
+    items,
+    totalCount: countResult
+  };
+}
+
+/**
+ * 统计满足条件的图像总数
+ * @param options - 筛选选项（不含 limit/offset）
+ */
+async function countImages(options: Omit<GetImagesPaginatedOptions, 'limit' | 'offset'>): Promise<number> {
+  const { whereClause, params } = buildImageFilterWhere(options);
+
+  const sql = `
+    SELECT COUNT(DISTINCT i.id) as count
+    FROM images i
+    WHERE ${whereClause}
+  `;
+
+  const row = await get<{ count: number }>(sql, params);
+  return row?.count || 0;
+}
+
+/**
+ * 统计图像标签数量（基于当前筛选条件）
+ * @param options - 筛选选项
+ */
+async function countImageTags(options: CountImageTagsOptions): Promise<Record<string, number>> {
+  const { whereClause, params } = buildImageFilterWhere(options);
+
+  const sql = `
+    SELECT it.name as tag_name, COUNT(DISTINCT i.id) as count
+    FROM images i
+    JOIN image_tag_relations itr ON i.id = itr.image_id
+    JOIN image_tags it ON itr.tag_id = it.id
+    WHERE ${whereClause}
+    GROUP BY it.name
+  `;
+
+  const rows = await all<{ tag_name: string; count: number }>(sql, params);
+  const result: Record<string, number> = {};
+  for (const row of rows) {
+    result[row.tag_name] = row.count;
+  }
+  return result;
+}
+
+/**
+ * 统计图像特殊标签数量（基于当前筛选条件）
+ * @param options - 筛选选项
+ */
+async function countImageSpecialTags(options: CountImageTagsOptions): Promise<ImageSpecialTagCounts> {
+  const { whereClause, params } = buildImageFilterWhere(options);
+
+  const sql = `
+    SELECT
+      SUM(CASE WHEN i.is_favorite = 1 THEN 1 ELSE 0 END) as favorite,
+      SUM(CASE WHEN NOT EXISTS (SELECT 1 FROM prompt_image_relations pir WHERE pir.image_id = i.id) THEN 1 ELSE 0 END) as unreferenced,
+      SUM(CASE WHEN (SELECT COUNT(*) FROM prompt_image_relations pir WHERE pir.image_id = i.id) > 1 THEN 1 ELSE 0 END) as multi_ref,
+      SUM(CASE WHEN NOT EXISTS (SELECT 1 FROM image_tag_relations itr WHERE itr.image_id = i.id) THEN 1 ELSE 0 END) as no_tag,
+      SUM(CASE WHEN i.is_safe != 0 THEN 1 ELSE 0 END) as safe,
+      SUM(CASE WHEN i.is_safe = 0 THEN 1 ELSE 0 END) as unsafe
+    FROM images i
+    WHERE ${whereClause}
+  `;
+
+  const row = await get<{
+    favorite: number;
+    unreferenced: number;
+    multi_ref: number;
+    no_tag: number;
+    safe: number;
+    unsafe: number;
+  }>(sql, params);
+
+  return {
+    favorite: row?.favorite || 0,
+    unreferenced: row?.unreferenced || 0,
+    multiRef: row?.multi_ref || 0,
+    noTag: row?.no_tag || 0,
+    safe: row?.safe || 0,
+    unsafe: row?.unsafe || 0
+  };
+}
+
+/**
  * 根据 ID 批量获取图像
  * @param ids - 图像 ID 数组
  * @returns 图像列表
@@ -3029,6 +3188,10 @@ export {
   checkTagGroupNameDuplicate,
   // 图像操作
   getImages,
+  getImagesPaginated,
+  countImages,
+  countImageTags,
+  countImageSpecialTags,
   getImagesByIds,
   getAllImages,
   getImageById,

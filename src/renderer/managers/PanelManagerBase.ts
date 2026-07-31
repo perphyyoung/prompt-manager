@@ -873,21 +873,30 @@ export abstract class PanelManagerBase {
       // 子类实现具体的渲染逻辑
       await this.renderContainer(filtered);
 
-      // 绑定右键菜单事件（事件委托，只绑定一次）
-      this.bindContextMenuEvents();
-
-      // 设置卡片大小 CSS 变量
-      this.applyCardSize();
-
-      // 更新选择模式类
-      this.updateSelectionModeClass();
-
-      // 更新卡片/列表项的选中状态（视图切换后需要重新应用）
-      this.updateItemSelectionState();
+      // 执行渲染后的通用后续处理
+      await this.afterRenderContainer(filtered);
     } catch (error) {
       (window as { electronAPI?: { logError?: (context: string, message: string, data?: unknown) => void } }).electronAPI?.logError?.('PanelManagerBase.ts', `Failed to render ${this.getItemType()} list:`, error);
       this.app.showToast?.(`加载${this.getItemType()}失败`, 'error');
     }
+  }
+
+  /**
+   * 渲染容器后的通用后续处理
+   * @param filtered - 筛选后的项目列表
+   */
+  protected async afterRenderContainer(_filtered: IPanelItem[]): Promise<void> {
+    // 绑定右键菜单事件（事件委托，只绑定一次）
+    this.bindContextMenuEvents();
+
+    // 设置卡片大小 CSS 变量
+    this.applyCardSize();
+
+    // 更新选择模式类
+    this.updateSelectionModeClass();
+
+    // 更新卡片/列表项的选中状态（视图切换后需要重新应用）
+    this.updateItemSelectionState();
   }
 
   /**

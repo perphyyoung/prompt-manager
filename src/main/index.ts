@@ -1150,6 +1150,36 @@ ipcMain.handle('get-images', async (event, sortBy, sortOrder) => {
   }
 });
 
+// 分页获取图像信息
+ipcMain.handle('get-images-paginated', async (event, options) => {
+  try {
+    return await db.getImagesPaginated(options);
+  } catch (error) {
+    logError('Main', 'Get images paginated error:', error);
+    throw error;
+  }
+});
+
+// 统计图像标签数量
+ipcMain.handle('count-image-tags', async (event, options) => {
+  try {
+    return await db.countImageTags(options);
+  } catch (error) {
+    logError('Main', 'Count image tags error:', error);
+    throw error;
+  }
+});
+
+// 统计图像特殊标签数量
+ipcMain.handle('count-image-special-tags', async (event, options) => {
+  try {
+    return await db.countImageSpecialTags(options);
+  } catch (error) {
+    logError('Main', 'Count image special tags error:', error);
+    throw error;
+  }
+});
+
 // 根据 ID 批量获取图像信息
 ipcMain.handle('get-images-by-ids', async (event, ids) => {
   try {

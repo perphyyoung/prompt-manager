@@ -101,6 +101,9 @@ interface IElectronAPI {
   openImageFiles: () => Promise<string[]>;
   clearAllData: () => Promise<string>;
   getImages: (sortBy: string, sortOrder: string) => Promise<IImage[]>;
+  getImagesPaginated: (options: import('../main/database-types.js').GetImagesPaginatedOptions) => Promise<{ items: IImage[]; totalCount: number }>;
+  countImageTags: (options: import('../main/database-types.js').CountImageTagsOptions) => Promise<Record<string, number>>;
+  countImageSpecialTags: (options: import('../main/database-types.js').CountImageTagsOptions) => Promise<import('../main/database-types.js').ImageSpecialTagCounts>;
   getImagesByIds: (ids: string[]) => Promise<IImage[]>;
   getAllImagesForStats: () => Promise<IImage[]>;
   getImageById: (imageId: string) => Promise<IImage | null>;
@@ -259,6 +262,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openImageFiles: () => ipcRenderer.invoke('dialog:open-image-files'),
   clearAllData: () => ipcRenderer.invoke('clear-all-data'),
   getImages: (sortBy: string, sortOrder: string) => ipcRenderer.invoke('get-images', sortBy, sortOrder),
+  getImagesPaginated: (options: import('../main/database-types.js').GetImagesPaginatedOptions) => ipcRenderer.invoke('get-images-paginated', options),
+  countImageTags: (options: import('../main/database-types.js').CountImageTagsOptions) => ipcRenderer.invoke('count-image-tags', options),
+  countImageSpecialTags: (options: import('../main/database-types.js').CountImageTagsOptions) => ipcRenderer.invoke('count-image-special-tags', options),
   getImagesByIds: (ids: string[]) => ipcRenderer.invoke('get-images-by-ids', ids),
   getAllImagesForStats: () => ipcRenderer.invoke('get-all-images-for-stats'),
   getImageById: (imageId: string) => ipcRenderer.invoke('get-image-by-id', imageId),
