@@ -269,7 +269,7 @@ await page.waitForTimeout(1000);
 await page.waitForSelector('#imageTagManagerModal', { state: 'hidden', timeout: 1000 });
 ```
 
-**例外情况**：当需要等待时间戳变化时（`localTime()` 只精确到秒）：
+**例外情况**：当需要等待时间戳变化时（`localTime()` 只精确到秒；更新：已更改为iso格式保存）：
 
 ```typescript
 await page.waitForFunction((beforeTime: string | undefined) => {

@@ -4,7 +4,7 @@
  */
 
 /**
- * 获取当前本地时间字符串
+ * 获取当前本地时间字符串（用于界面显示）
  * @returns 本地时间字符串
  * @example
  * localTime()
@@ -12,6 +12,32 @@
  */
 export function localTime(): string {
   return new Date().toLocaleString('zh-CN');
+}
+
+/**
+ * 获取当前数据库时间字符串（ISO 8601，用于数据库存储和 SQL 排序）
+ * @returns ISO 8601 时间字符串
+ * @example
+ * dbTime()
+ * // 返回: "2026-03-20T20:34:56.000Z"
+ */
+export function dbTime(): string {
+  return new Date().toISOString();
+}
+
+/**
+ * 将数据库 ISO 时间字符串转换为本地显示格式
+ * @param isoTime - ISO 8601 时间字符串
+ * @returns 本地时间字符串，无效输入返回原字符串
+ * @example
+ * formatDbTimeToLocal("2026-03-20T20:34:56.000Z")
+ * // 返回: "2026/3/20 20:34:56"
+ */
+export function formatDbTimeToLocal(isoTime: string | undefined | null): string {
+  if (!isoTime) return isoTime || '';
+  const date = new Date(isoTime);
+  if (isNaN(date.getTime())) return isoTime;
+  return date.toLocaleString('zh-CN');
 }
 
 /**

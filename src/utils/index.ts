@@ -30,6 +30,8 @@ export {
 // ========== 时间工具 ==========
 export {
   localTime,
+  dbTime,
+  formatDbTimeToLocal,
   getFormattedLocalTimeToSecond,
   getFormattedLocalDate,
   getFormattedYearMonth

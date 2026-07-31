@@ -57,7 +57,7 @@ test.describe("TagService 高级功能测试", () => {
       const updatedAtBefore = imageBefore?.updatedAt;
 
       // 4. 等待下一秒开始，确保删除操作发生在不同秒
-      // （localTime() 只精确到秒，同一秒内操作时间戳相同）
+      // （界面显示的时间只精确到秒，同一秒内操作时间戳相同）
       await page.waitForFunction(
         (beforeTime: string | undefined) => {
           const now = new Date().toLocaleString("zh-CN");
@@ -127,7 +127,7 @@ test.describe("TagService 高级功能测试", () => {
       const updatedAtBefore = promptBefore?.updatedAt;
 
       // 4. 等待下一秒开始，确保删除操作发生在不同秒
-      // （localTime() 只精确到秒，同一秒内操作时间戳相同）
+      // （界面显示的时间只精确到秒，同一秒内操作时间戳相同）
       await page.waitForFunction(
         (beforeTime: string | undefined) => {
           const now = new Date().toLocaleString("zh-CN");
@@ -448,7 +448,7 @@ test.describe("TagService 高级功能测试", () => {
       const updatedAtBefore = imageBefore?.updatedAt;
 
       // 3. 等待下一秒开始，确保添加操作发生在不同秒
-      // （localTime() 只精确到秒，同一秒内操作时间戳相同）
+      // （界面显示的时间只精确到秒，同一秒内操作时间戳相同）
       await page.waitForFunction(
         (beforeTime: string | undefined) => {
           const now = new Date().toLocaleString("zh-CN");
@@ -492,7 +492,7 @@ test.describe("TagService 高级功能测试", () => {
       const updatedAtBefore = promptBefore?.updatedAt;
 
       // 3. 等待下一秒开始，确保添加操作发生在不同秒
-      // （localTime() 只精确到秒，同一秒内操作时间戳相同）
+      // （界面显示的时间只精确到秒，同一秒内操作时间戳相同）
       await page.waitForFunction(
         (beforeTime: string | undefined) => {
           const now = new Date().toLocaleString("zh-CN");
@@ -540,7 +540,7 @@ test.describe("TagService 高级功能测试", () => {
       const updatedAtBefore = imageBefore?.updatedAt;
 
       // 3. 等待下一秒开始，确保添加操作发生在不同秒
-      // （localTime() 只精确到秒，同一秒内操作时间戳相同）
+      // （界面显示的时间只精确到秒，同一秒内操作时间戳相同）
       await page.waitForFunction(
         (beforeTime: string | undefined) => {
           const now = new Date().toLocaleString("zh-CN");
@@ -591,7 +591,7 @@ test.describe("TagService 高级功能测试", () => {
       const updatedAtBefore = promptBefore?.updatedAt;
 
       // 3. 等待下一秒开始，确保添加操作发生在不同秒
-      // （localTime() 只精确到秒，同一秒内操作时间戳相同）
+      // （界面显示的时间只精确到秒，同一秒内操作时间戳相同）
       await page.waitForFunction(
         (beforeTime: string | undefined) => {
           const now = new Date().toLocaleString("zh-CN");

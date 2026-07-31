@@ -8,7 +8,7 @@ import sqlite3 from 'sqlite3';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { logError, logWarn, logDebug } from './logger.js';
-import { getFormattedLocalTimeToSecond, localTime } from '../utils/index.js';
+import { getFormattedLocalTimeToSecond, dbTime, formatDbTimeToLocal } from '../utils/index.js';
 import {
   DatabaseError,
   DatabaseErrorCode,
@@ -206,11 +206,95 @@ async function createTables(): Promise<void> {
     applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  // 执行数据库迁移
+  await runMigrations();
+
   // 创建索引以优化查询性能
   await createIndexes();
 
   // 配置 PRAGMA 以优化性能
   await configurePragmas();
+}
+
+/**
+ * 获取当前数据库版本
+ * @returns 当前版本号，无记录返回 0
+ */
+async function getDbVersion(): Promise<number> {
+  try {
+    const result = await get<{ version: number }>('SELECT version FROM db_version ORDER BY version DESC LIMIT 1');
+    return result?.version || 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * 设置数据库版本
+ * @param version - 版本号
+ */
+async function setDbVersion(version: number): Promise<void> {
+  await run(
+    'INSERT OR REPLACE INTO db_version (version, applied_at) VALUES (?, ?)',
+    [version, dbTime()]
+  );
+}
+
+/**
+ * 将旧版本本地时间格式转换为 ISO 8601
+ * @param localTimeStr - 本地时间字符串，如 "2026/3/20 20:34:56"
+ * @returns ISO 8601 字符串，转换失败返回原字符串
+ */
+function localTimeToIso(localTimeStr: string): string {
+  const timestamp = new Date(localTimeStr).getTime();
+  if (isNaN(timestamp)) return localTimeStr;
+  return new Date(timestamp).toISOString();
+}
+
+/**
+ * 迁移日期格式：把本地格式转换为 ISO 8601，使 SQL 排序正确
+ */
+async function migrateDateFormats(): Promise<void> {
+  logDebug('Database', 'Migrating date formats to ISO 8601');
+
+  const tables = [
+    { table: 'prompts', columns: ['created_at', 'updated_at', 'deleted_at'], idColumn: 'id' },
+    { table: 'images', columns: ['created_at', 'updated_at', 'deleted_at'], idColumn: 'id' },
+    { table: 'prompt_tags', columns: ['created_at', 'updated_at'], idColumn: 'id' },
+    { table: 'image_tags', columns: ['created_at', 'updated_at'], idColumn: 'id' },
+    { table: 'prompt_tag_groups', columns: ['created_at', 'updated_at'], idColumn: 'id' },
+    { table: 'image_tag_groups', columns: ['created_at', 'updated_at'], idColumn: 'id' }
+  ];
+
+  for (const { table, columns, idColumn } of tables) {
+    for (const column of columns) {
+      const rows = await all<{ [key: string]: string | number | null }>(
+        `SELECT ${idColumn} as id, ${column} as value FROM ${table} WHERE ${column} IS NOT NULL AND ${column} LIKE '%/%'`
+      );
+
+      for (const row of rows) {
+        const localValue = row.value as string;
+        const isoValue = localTimeToIso(localValue);
+        if (isoValue !== localValue) {
+          await run(`UPDATE ${table} SET ${column} = ? WHERE ${idColumn} = ?`, [isoValue, row.id]);
+        }
+      }
+    }
+  }
+
+  logDebug('Database', 'Date format migration completed');
+}
+
+/**
+ * 执行数据库迁移
+ */
+async function runMigrations(): Promise<void> {
+  const version = await getDbVersion();
+
+  if (version < 1) {
+    await migrateDateFormats();
+    await setDbVersion(1);
+  }
 }
 
 /**
@@ -530,7 +614,7 @@ async function createPromptTagGroup(name: string, sortOrder = 0): Promise<Prompt
   if (existing) {
     throw new DuplicateNameError('提示词标签组', name);
   }
-  const now = localTime();
+  const now = dbTime();
   const sql = `
     INSERT INTO prompt_tag_groups (name, sort_order, created_at, updated_at)
     VALUES (?, ?, ?, ?)
@@ -585,7 +669,7 @@ const VALID_PROMPT_TAG_GROUP_FIELDS: Record<string, string> = {
  */
 async function updatePromptTagGroup(id: number, updates: UpdateTagGroupParams): Promise<PromptTagGroupRow | undefined> {
   const { name, sortOrder } = updates;
-  const now = localTime();
+  const now = dbTime();
 
   if (name !== undefined) {
     const existing = await checkTagGroupNameDuplicate('prompt', name, id);
@@ -648,7 +732,7 @@ async function createImageTagGroup(name: string, sortOrder = 0): Promise<ImageTa
   if (existing) {
     throw new DuplicateNameError('图像标签组', name);
   }
-  const now = localTime();
+  const now = dbTime();
   const sql = `
     INSERT INTO image_tag_groups (name, sort_order, created_at, updated_at)
     VALUES (?, ?, ?, ?)
@@ -703,7 +787,7 @@ const VALID_IMAGE_TAG_GROUP_FIELDS: Record<string, string> = {
  */
 async function updateImageTagGroup(id: number, updates: UpdateTagGroupParams): Promise<ImageTagGroupRow | undefined> {
   const { name, sortOrder } = updates;
-  const now = localTime();
+  const now = dbTime();
 
   if (name !== undefined) {
     const existing = await checkTagGroupNameDuplicate('image', name, id);
@@ -772,8 +856,8 @@ function mapRowToPrompt(row: PromptRow, options: MapPromptOptions = {}): Prompt 
     title: row.title,
     content: row.content,
     contentTranslate: row.content_translate,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: formatDbTimeToLocal(row.created_at),
+    updatedAt: formatDbTimeToLocal(row.updated_at),
     isFavorite: row.is_favorite === 1,
     isSafe: row.is_safe === 1 ? 1 : 0,  // 严格限制为 0 或 1，其他值视为 0
     isDeleted: row.is_deleted === 1,
@@ -786,7 +870,7 @@ function mapRowToPrompt(row: PromptRow, options: MapPromptOptions = {}): Prompt 
   }
 
   if (includeDeletedAt) {
-    prompt.deletedAt = row.deleted_at;
+    prompt.deletedAt = formatDbTimeToLocal(row.deleted_at);
   }
 
   return prompt;
@@ -960,7 +1044,7 @@ async function searchPrompts(query: string): Promise<Prompt[]> {
  */
 async function addPrompt(prompt: CreatePromptParams): Promise<Prompt | null> {
   const { id, title, content, contentTranslate, tags = [], images = [], note = '', isSafe = 1 } = prompt;
-  const now = localTime();
+  const now = dbTime();
 
   return runInTransaction(async () => {
     await run(
@@ -989,7 +1073,7 @@ async function addPrompt(prompt: CreatePromptParams): Promise<Prompt | null> {
  */
 async function updatePrompt(id: string, updates: UpdatePromptParams): Promise<Prompt | null> {
   const { title, content, contentTranslate, tags, images, note, isSafe, isFavorite } = updates;
-  const now = localTime();
+  const now = dbTime();
 
   return runInTransaction(async () => {
     const relatedFields = ['tags', 'images'];
@@ -1103,7 +1187,7 @@ async function updatePrompt(id: string, updates: UpdatePromptParams): Promise<Pr
  * 保留关联关系，仅标记删除状态
  */
 async function deletePrompt(id: string): Promise<boolean> {
-  const now = localTime();
+  const now = dbTime();
 
   // 仅标记软删除，保留所有关联关系
   await run(
@@ -1123,7 +1207,7 @@ async function deletePrompt(id: string): Promise<boolean> {
 async function softDeletePrompts(ids: string[]): Promise<{ success: boolean; deleted: number }> {
   if (ids.length === 0) return { success: true, deleted: 0 };
 
-  const now = localTime();
+  const now = dbTime();
   const placeholders = ids.map(() => '?').join(',');
 
   // 仅标记软删除，保留所有关联关系
@@ -1139,7 +1223,7 @@ async function softDeletePrompts(ids: string[]): Promise<{ success: boolean; del
  * 恢复已删除的提示词
  */
 async function restorePrompt(id: string): Promise<Prompt | null> {
-  const now = localTime();
+  const now = dbTime();
   await run(
     'UPDATE prompts SET is_deleted = 0, deleted_at = NULL, updated_at = ? WHERE id = ?',
     [now, id]
@@ -1178,7 +1262,7 @@ async function emptyPromptTrash(): Promise<boolean> {
  * 恢复所有已删除的提示词
  */
 async function restoreAllPrompts(): Promise<boolean> {
-  const now = localTime();
+  const now = dbTime();
   await run(
     'UPDATE prompts SET is_deleted = 0, deleted_at = NULL, updated_at = ? WHERE is_deleted = 1',
     [now]
@@ -1220,7 +1304,7 @@ async function getPromptTags(): Promise<string[]> {
  * @returns 标签ID
  */
 async function addPromptTag(name: string, groupId: number | null = null): Promise<number | null> {
-  const now = localTime();
+  const now = dbTime();
 
   // 1. 先查询标签是否已存在
   const existingRow = await get<{ id: number; group_id: number | null }>(
@@ -1268,7 +1352,7 @@ async function addPromptTag(name: string, groupId: number | null = null): Promis
  * @param groupId - 标签组ID
  */
 async function updatePromptTagGroupByTagName(tagName: string, groupId: number | null): Promise<void> {
-  const now = localTime();
+  const now = dbTime();
   await run(
     'UPDATE prompt_tags SET group_id = ?, updated_at = ? WHERE name = ?',
     [groupId, now, tagName]
@@ -1483,7 +1567,7 @@ async function getOrCreateTags(tagTable: string, tagNames: string[]): Promise<Ma
     return new Map();
   }
 
-  const now = localTime();
+  const now = dbTime();
   const tagIdMap = new Map<string, number>();
 
   // 1. 查询已存在的标签
@@ -1585,7 +1669,7 @@ async function addPromptTags(promptId: string, tagNames: string[]): Promise<void
   }
 
   // 更新提示词的 updated_at
-  const now = localTime();
+  const now = dbTime();
   await run('UPDATE prompts SET updated_at = ? WHERE id = ?', [now, promptId]);
 }
 
@@ -1644,7 +1728,7 @@ async function removeTagFromPrompt(promptId: string, tagName: string): Promise<v
     );
 
     // 更新提示词的 updated_at 字段
-    const now = localTime();
+    const now = dbTime();
     await run(
       'UPDATE prompts SET updated_at = ? WHERE id = ?',
       [now, promptId]
@@ -1671,7 +1755,7 @@ async function removeTagFromImage(imageId: string, tagName: string): Promise<voi
     );
 
     // 更新图像的 updated_at 字段
-    const now = localTime();
+    const now = dbTime();
     await run(
       'UPDATE images SET updated_at = ? WHERE id = ?',
       [now, imageId]
@@ -1704,8 +1788,8 @@ function mapRowToImage(row: ImageRow, promptRows: Array<{ id: string; title: str
     isSafe: row.is_safe === 1 ? 1 : 0,  // 严格限制为 0 或 1，其他值视为 0
     isDeleted: row.is_deleted === 1,
     note: row.note,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: formatDbTimeToLocal(row.created_at),
+    updatedAt: formatDbTimeToLocal(row.updated_at),
     tags: row.image_tags ? row.image_tags.split(',').filter(t => t) : [],
     promptRefs: promptRows.map(p => ({
       promptId: p.id,
@@ -1717,7 +1801,7 @@ function mapRowToImage(row: ImageRow, promptRows: Array<{ id: string; title: str
   };
 
   if (includeDeletedAt) {
-    image.deletedAt = row.deleted_at;
+    image.deletedAt = formatDbTimeToLocal(row.deleted_at);
   }
 
   return image;
@@ -2077,7 +2161,7 @@ async function getImageById(id: string): Promise<Image | null> {
  */
 async function updateImage(id: string, updates: UpdateImageParams): Promise<Image | null> {
   const { isFavorite, isSafe, note, fileName, tags, prompts } = updates;
-  const now = localTime();
+  const now = dbTime();
 
   return runInTransaction(async () => {
     const relatedFields = ['tags', 'prompts'];
@@ -2192,7 +2276,7 @@ async function updateImagesBatch(updates: UpdateThumbnailParams[]): Promise<void
     return;
   }
 
-  const now = localTime();
+  const now = dbTime();
 
   return runInTransaction(async () => {
     if (!db) {
@@ -2248,7 +2332,7 @@ async function addImage(image: CreateImageParams): Promise<Image | null> {
     fileSize
   } = image;
 
-  const now = localTime();
+  const now = dbTime();
 
   await run(
     `INSERT INTO images (id, file_name, stored_name, relative_path, thumbnail_path, md5, width, height, file_size, created_at, updated_at)
@@ -2264,7 +2348,7 @@ async function addImage(image: CreateImageParams): Promise<Image | null> {
  * 保留关联关系，仅标记删除状态
  */
 async function softDeleteImage(id: string): Promise<boolean> {
-  const now = localTime();
+  const now = dbTime();
 
   // 仅标记软删除，保留所有关联关系
   await run(
@@ -2306,7 +2390,7 @@ async function replaceImage(oldId: string, newId: string): Promise<boolean> {
     );
 
     // 4. 同步更新新图像和相关提示词的更新时间
-    const now = localTime();
+    const now = dbTime();
     await run(
       'UPDATE images SET updated_at = ? WHERE id = ?',
       [now, newId]
@@ -2338,7 +2422,7 @@ async function replaceImage(oldId: string, newId: string): Promise<boolean> {
 async function softDeleteImages(ids: string[]): Promise<{ success: boolean; deleted: number }> {
   if (ids.length === 0) return { success: true, deleted: 0 };
 
-  const now = localTime();
+  const now = dbTime();
   const placeholders = ids.map(() => '?').join(',');
 
   // 仅标记软删除，保留所有关联关系
@@ -2354,7 +2438,7 @@ async function softDeleteImages(ids: string[]): Promise<{ success: boolean; dele
  * 恢复已删除的图像
  */
 async function restoreImage(id: string): Promise<Image | null> {
-  const now = localTime();
+  const now = dbTime();
   await run(
     'UPDATE images SET is_deleted = 0, deleted_at = NULL, updated_at = ? WHERE id = ?',
     [now, id]
@@ -2412,7 +2496,7 @@ async function permanentDeleteImage(id: string, dataDir: string): Promise<boolea
  * 恢复所有已删除的图像
  */
 async function restoreAllImages(): Promise<boolean> {
-  const now = localTime();
+  const now = dbTime();
   await run(
     'UPDATE images SET is_deleted = 0, deleted_at = NULL, updated_at = ? WHERE is_deleted = 1',
     [now]
@@ -2525,7 +2609,7 @@ async function addRelationsBatch(
 ): Promise<void> {
   if (secondIds.length === 0) return;
 
-  const now = localTime();
+  const now = dbTime();
 
   await runInTransaction(async () => {
     if (!db) {
@@ -2714,7 +2798,7 @@ async function getImageTags(): Promise<string[]> {
  * @param groupId - 标签组ID（可选）
  */
 async function addImageTag(name: string, groupId: number | null = null): Promise<void> {
-  const now = localTime();
+  const now = dbTime();
 
   // 1. 先查询标签是否已存在
   const existingRow = await get<{ id: number; group_id: number | null }>(
@@ -2777,7 +2861,7 @@ async function addImageTags(imageId: string, tagNames: string[]): Promise<void> 
   }
 
   // 更新图像的 updated_at
-  const now = localTime();
+  const now = dbTime();
   await run('UPDATE images SET updated_at = ? WHERE id = ?', [now, imageId]);
 }
 
@@ -2811,7 +2895,7 @@ async function deleteImageTags(names: string[]): Promise<{ success: boolean; del
  * @param groupId - 标签组ID
  */
 async function assignImageTagToBelongGroup(tagName: string, groupId: number | null): Promise<void> {
-  const now = localTime();
+  const now = dbTime();
   await run(
     'UPDATE image_tags SET group_id = ?, updated_at = ? WHERE name = ?',
     [groupId, now, tagName]
@@ -2838,7 +2922,7 @@ async function getImageTagsByImageId(imageId: string): Promise<string[]> {
  * 将提示词和图像双方的标签差异同步到对方，保留组信息
  */
 async function syncTagsBidirectional(): Promise<TagSyncResult> {
-  const now = localTime();
+  const now = dbTime();
 
   // 获取提示词标签和图像标签
   const promptTagsSql = `
@@ -3113,7 +3197,7 @@ async function clearAllData(dataDir: string): Promise<string> {
 async function batchFavoritePrompts(ids: string[]): Promise<{ success: boolean; updated: number }> {
   if (ids.length === 0) return { success: true, updated: 0 };
 
-  const now = localTime();
+  const now = dbTime();
 
   return runInTransaction(async () => {
     // 先获取当前收藏状态
@@ -3147,7 +3231,7 @@ async function batchFavoritePrompts(ids: string[]): Promise<{ success: boolean; 
 async function batchFavoriteImages(ids: string[]): Promise<{ success: boolean; updated: number }> {
   if (ids.length === 0) return { success: true, updated: 0 };
 
-  const now = localTime();
+  const now = dbTime();
 
   return runInTransaction(async () => {
     // 先获取当前收藏状态
