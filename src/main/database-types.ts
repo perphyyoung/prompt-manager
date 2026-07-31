@@ -335,6 +335,7 @@ export interface GetImagesPaginatedOptions {
   sortOrder?: 'asc' | 'desc';
   searchQuery?: string;
   tagNames?: string[];
+  specialTags?: string[];
   isSafe?: boolean;
   limit: number;
   offset: number;
@@ -354,6 +355,7 @@ export interface PaginatedImagesResult {
 export interface CountImageTagsOptions {
   searchQuery?: string;
   tagNames?: string[];
+  specialTags?: string[];
   isSafe?: boolean;
 }
 

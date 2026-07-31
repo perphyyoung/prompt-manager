@@ -1799,12 +1799,27 @@ async function getImages(sortBy = 'createdAt', sortOrder = 'desc'): Promise<Imag
   return getImagesCore(imageSql, []);
 }
 
+
+
+/**
+ * 图像特殊标签到 SQL 条件的映射
+ * 键值需与 src/constants.ts 中的特殊标签常量保持一致
+ */
+const IMAGE_SPECIAL_TAG_CONDITIONS: Record<string, string> = {
+  '收藏': 'i.is_favorite = 1',
+  '未引': 'NOT EXISTS (SELECT 1 FROM prompt_image_relations pir WHERE pir.image_id = i.id)',
+  '多引': '(SELECT COUNT(*) FROM prompt_image_relations pir WHERE pir.image_id = i.id) > 1',
+  '无标': 'NOT EXISTS (SELECT 1 FROM image_tag_relations itr WHERE itr.image_id = i.id)',
+  '安全': 'i.is_safe != 0',
+  '敏感': 'i.is_safe = 0'
+};
+
 /**
  * 构建分页/计数查询的 WHERE 条件和参数
  * @param options - 查询选项
  * @returns WHERE 子句和参数数组
  */
-function buildImageFilterWhere(options: { searchQuery?: string; tagNames?: string[]; isSafe?: boolean }): { whereClause: string; params: any[] } {
+function buildImageFilterWhere(options: { searchQuery?: string; tagNames?: string[]; specialTags?: string[]; isSafe?: boolean }): { whereClause: string; params: any[] } {
   const conditions: string[] = ['i.is_deleted = 0'];
   const params: any[] = [];
 
@@ -1822,6 +1837,15 @@ function buildImageFilterWhere(options: { searchQuery?: string; tagNames?: strin
     for (const tagName of options.tagNames) {
       conditions.push(`EXISTS (SELECT 1 FROM image_tag_relations itr_tag JOIN image_tags it_tag ON itr_tag.tag_id = it_tag.id WHERE itr_tag.image_id = i.id AND it_tag.name = ?)`);
       params.push(tagName);
+    }
+  }
+
+  if (options.specialTags && options.specialTags.length > 0) {
+    for (const tag of options.specialTags) {
+      const condition = IMAGE_SPECIAL_TAG_CONDITIONS[tag];
+      if (condition) {
+        conditions.push(condition);
+      }
     }
   }
 

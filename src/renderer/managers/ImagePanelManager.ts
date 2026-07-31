@@ -218,15 +218,35 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
+   * 将选中的标签拆分为普通标签和特殊标签
+   */
+  private splitSelectedTags(): { tagNames: string[]; specialTags: string[] } {
+    const specialTagChecks = this.getSpecialTagChecks();
+    const tagNames: string[] = [];
+    const specialTags: string[] = [];
+
+    for (const tag of this.selectedTags) {
+      if (specialTagChecks.has(tag)) {
+        specialTags.push(tag);
+      } else {
+        tagNames.push(tag);
+      }
+    }
+
+    return { tagNames, specialTags };
+  }
+
+  /**
    * 构建分页查询选项
    */
   private buildPaginatedOptions(): import('../../main/database-types.js').GetImagesPaginatedOptions {
-    const tagNames = Array.from(this.selectedTags);
+    const { tagNames, specialTags } = this.splitSelectedTags();
     return {
       sortBy: this.sortBy || 'updatedAt',
       sortOrder: this.sortOrder === 'asc' ? 'asc' : 'desc',
       searchQuery: this.getSearchQuery() || undefined,
       tagNames: tagNames.length > 0 ? tagNames : undefined,
+      specialTags: specialTags.length > 0 ? specialTags : undefined,
       isSafe: this.app.viewMode === 'safe' ? true : undefined,
       limit: this.pageSize,
       offset: this.currentOffset
@@ -694,10 +714,11 @@ export class ImagePanelManager extends PanelManagerBase {
    * 构建计数查询选项
    */
   private buildCountOptions(): import('../../main/database-types.js').CountImageTagsOptions {
-    const tagNames = Array.from(this.selectedTags);
+    const { tagNames, specialTags } = this.splitSelectedTags();
     return {
       searchQuery: this.getSearchQuery() || undefined,
       tagNames: tagNames.length > 0 ? tagNames : undefined,
+      specialTags: specialTags.length > 0 ? specialTags : undefined,
       isSafe: this.app.viewMode === 'safe' ? true : undefined
     };
   }
