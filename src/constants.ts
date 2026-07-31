@@ -642,6 +642,7 @@ export class Constants {
     IMAGE_SELECTOR_SORT_REVERSE_BTN: "imageSelectorSortReverseBtn",
     IMAGE_SELECTOR_GRID: "imageSelectorGrid",
     IMAGE_SELECTOR_EMPTY: "imageSelectorEmpty",
+    IMAGE_SELECTOR_INFO: "imageSelectorInfo",
     CANCEL_IMAGE_SELECTOR_BTN: "cancelImageSelectorBtn",
     CONFIRM_IMAGE_SELECTOR_BTN: "confirmImageSelectorBtn",
 

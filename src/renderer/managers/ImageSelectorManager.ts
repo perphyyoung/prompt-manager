@@ -1,5 +1,4 @@
-import { HtmlUtils, searchMatches } from '../../utils/index.ts';
-import { timeToTimestamp } from '../../utils/TimeUtils.ts';
+import { HtmlUtils } from '../../utils/index.ts';
 import { Constants } from '../../constants.ts';
 import { IImage } from '../../types/entities.ts';
 import type { IApp } from '../app.types.ts';
@@ -32,6 +31,13 @@ export class ImageSelectorManager {
   // 排序状态（独立于主界面的排序设置）
   private sortBy: string;
   private sortOrder: string;
+
+  // 默认加载数量
+  private readonly pageSize = 100;
+
+  // 搜索防抖计时器
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly searchDebounceMs = 300;
 
   // 事件绑定标记
   private eventsBound = false;
@@ -93,6 +99,12 @@ export class ImageSelectorManager {
     }
     this.selectedImages = [];
     this.onConfirm = null;
+
+    // 关闭时清除搜索防抖计时器，避免延迟查询
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
   }
 
   /**
@@ -101,46 +113,42 @@ export class ImageSelectorManager {
   async renderGrid(): Promise<void> {
     const grid = document.getElementById(Constants.Ids.IMAGE_SELECTOR_GRID);
     const emptyState = document.getElementById(Constants.Ids.IMAGE_SELECTOR_EMPTY);
+    const infoEl = document.getElementById(Constants.Ids.IMAGE_SELECTOR_INFO);
     const searchInput = document.getElementById(Constants.Ids.IMAGE_SELECTOR_SEARCH_INPUT) as HTMLInputElement | null;
     const tagFilter = document.getElementById(Constants.Ids.IMAGE_SELECTOR_TAG_FILTER) as HTMLSelectElement | null;
 
     if (!grid || !emptyState) return;
 
     try {
-      // 获取所有图像（排序在前端进行）
-      let images: IImage[] = await window.electronAPI.getImages('updatedAt', 'desc');
-
-      // 根据 viewMode 过滤（safe 模式只显示安全内容）
-      if (this.app.viewMode === 'safe') {
-        images = images.filter(img => img.isSafe !== 0);
-      }
-
-      // 应用搜索过滤
-      const searchTerm = searchInput?.value?.trim().toLowerCase();
-      if (searchTerm) {
-        images = images.filter(img => searchMatches(img, searchTerm));
-      }
-
-      // 应用标签过滤
+      const searchTerm = searchInput?.value?.trim();
       const selectedTag = tagFilter?.value;
-      if (selectedTag) {
-        images = images.filter(img =>
-          img.tags?.includes(selectedTag)
-        );
-      }
 
-      // 前端排序（与主界面 ImagePanelManager.sortItems 逻辑一致）
-      images = this.sortImages(images, this.sortBy, this.sortOrder);
+      const options: import('../../main/database-types.js').GetImagesPaginatedOptions = {
+        sortBy: this.sortBy || 'updatedAt',
+        sortOrder: this.sortOrder === 'asc' ? 'asc' : 'desc',
+        searchQuery: searchTerm || undefined,
+        tagNames: selectedTag ? [selectedTag] : undefined,
+        isSafe: this.app.viewMode === 'safe' ? true : undefined,
+        limit: this.pageSize,
+        offset: 0
+      };
+
+      const page = await window.electronAPI.getImagesPaginated(options);
+      const images = page.items;
+
+      this.updateInfoText(infoEl, images.length, page.totalCount, searchTerm, selectedTag);
 
       if (images.length === 0) {
         grid.innerHTML = '';
         grid.style.display = 'none';
         emptyState.style.display = 'block';
+        if (infoEl) infoEl.style.display = 'none';
         return;
       }
 
       grid.style.display = 'grid';
       emptyState.style.display = 'none';
+      if (infoEl) infoEl.style.display = 'block';
 
       // 批量获取所有图像的完整路径（单次 IPC 调用）
       const relativePaths = images.map(img => img.relativePath || '');
@@ -174,59 +182,28 @@ export class ImageSelectorManager {
     } catch (error) {
       window.electronAPI.logError('ImageSelectorManager.ts', 'Failed to render image selector:', error);
       grid.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">加载失败</p>';
+      if (infoEl) infoEl.style.display = 'none';
     }
   }
 
   /**
-   * 排序图像（与主界面 ImagePanelManager.sortItems 逻辑一致）
-   * @param items - 图像列表
-   * @param sortBy - 排序字段
-   * @param sortOrder - 排序顺序
-   * @returns 排序后的列表
+   * 更新总数提示文本
    */
-  private sortImages(items: IImage[], sortBy: string, sortOrder: string): IImage[] {
-    const sorted = [...items];
-    const order = sortOrder === 'asc' ? 1 : -1;
+  private updateInfoText(
+    infoEl: HTMLElement | null,
+    displayedCount: number,
+    totalCount: number,
+    searchTerm?: string,
+    selectedTag?: string
+  ): void {
+    if (!infoEl) return;
 
-    sorted.sort((a, b) => {
-      let valueA: string | number | undefined, valueB: string | number | undefined;
-
-      switch (sortBy) {
-        case 'updatedAt':
-          valueA = timeToTimestamp(a.updatedAt);
-          valueB = timeToTimestamp(b.updatedAt);
-          break;
-        case 'createdAt':
-          valueA = timeToTimestamp(a.createdAt);
-          valueB = timeToTimestamp(b.createdAt);
-          break;
-        case 'fileName':
-          valueA = (a.fileName || '').toLowerCase();
-          valueB = (b.fileName || '').toLowerCase();
-          break;
-        case 'width':
-          valueA = a.width || 0;
-          valueB = b.width || 0;
-          break;
-        case 'height':
-          valueA = a.height || 0;
-          valueB = b.height || 0;
-          break;
-        case 'fileSize':
-          valueA = a.fileSize || 0;
-          valueB = b.fileSize || 0;
-          break;
-        default:
-          valueA = timeToTimestamp(a.updatedAt);
-          valueB = timeToTimestamp(b.updatedAt);
-      }
-
-      if (valueA < valueB) return -1 * order;
-      if (valueA > valueB) return 1 * order;
-      return 0;
-    });
-
-    return sorted;
+    const hasFilter = !!searchTerm || !!selectedTag;
+    if (hasFilter) {
+      infoEl.textContent = `找到 ${totalCount} 张匹配图像，显示前 ${displayedCount} 张`;
+    } else {
+      infoEl.textContent = `共 ${totalCount} 张图像，显示最近更新的 ${displayedCount} 张`;
+    }
   }
 
   /**
@@ -262,8 +239,16 @@ export class ImageSelectorManager {
     const clearImageSelectorSearchBtn = document.getElementById(Constants.Ids.CLEAR_IMAGE_SELECTOR_SEARCH_BTN);
     if (searchInput) {
       searchInput.addEventListener('input', () => {
-        this.renderGrid();
-        // 显示/隐藏清空按钮
+        // 防抖处理搜索输入
+        if (this.searchDebounceTimer) {
+          clearTimeout(this.searchDebounceTimer);
+        }
+        this.searchDebounceTimer = setTimeout(() => {
+          this.searchDebounceTimer = null;
+          this.renderGrid();
+        }, this.searchDebounceMs);
+
+        // 显示/隐藏清空按钮（立即响应）
         if (clearImageSelectorSearchBtn) {
           clearImageSelectorSearchBtn.style.display = searchInput.value ? 'flex' : 'none';
         }
