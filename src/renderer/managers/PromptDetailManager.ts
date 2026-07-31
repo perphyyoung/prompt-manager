@@ -1227,7 +1227,7 @@ export class PromptDetailManager extends DetailViewManager {
     // 绑定查看事件
     const viewButtons = container.querySelectorAll(".view-image");
     viewButtons.forEach((btn) => {
-      btn.addEventListener("click", (e) => {
+      btn.addEventListener("click", async (e) => {
         e.stopPropagation();
         if (this.app.isFromDetailJump) {
           return;
@@ -1236,7 +1236,14 @@ export class PromptDetailManager extends DetailViewManager {
         if (!imageId) {
           return;
         }
-        const image = cacheManager.getCachedImage(imageId);
+        let image: IImage | null | undefined = cacheManager.getCachedImage(imageId);
+        if (!image) {
+          try {
+            image = await window.electronAPI.getImageById(imageId);
+          } catch (error) {
+            window.electronAPI.logError('PromptDetailManager.ts', 'Failed to fetch image by id:', error);
+          }
+        }
         if (image) {
           this.app.isFromDetailJump = true;
           this.app.openImageDetailModal?.(image);
