@@ -67,8 +67,8 @@ test.describe("图像详情界面单提示词编辑跳转", () => {
 });
 
 test.describe("图像详情界面多提示词编辑跳转", () => {
-  const promptTitle1 = "e2e-first-prompt";
-  const promptTitle2 = "e2e-second-prompt";
+  const promptOld = "e2e-old-prompt";
+  const promptNew = "e2e-new-prompt";
 
   test.beforeAll(async ({ electronTest }) => {
     const factory = electronTest.getApiFactory();
@@ -76,18 +76,18 @@ test.describe("图像详情界面多提示词编辑跳转", () => {
     // 创建测试图像，并关联两个提示词
     const image = await factory.createImageFactory().create({ label: "multi-prompt" });
     await factory.createPromptFactory().createWithImages(
-      { title: promptTitle1, label: "first" },
+      { title: promptOld, label: "old" },
       [image.id],
     );
     await factory.createPromptFactory().createWithImages(
-      { title: promptTitle2, label: "second" },
+      { title: promptNew, label: "new" },
       [image.id],
     );
 
     await electronTest.refreshData();
   });
 
-  test("多提示词下编辑按钮默认打开第一个提示词", async ({ electronTest, page }) => {
+  test("多提示词下编辑按钮默认打开最新提示词", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
     await enterImageDetailView(page);
 
@@ -97,10 +97,10 @@ test.describe("图像详情界面多提示词编辑跳转", () => {
     const editBtnText = page.locator("#editPromptBtnText");
     await expect(editBtnText).toHaveText("编辑提示词 (1)");
 
-    await openPromptDetailFromImageAndVerify(page, promptTitle1);
+    await openPromptDetailFromImageAndVerify(page, promptNew);
   });
 
-  test("切换第二个提示词后编辑按钮打开第二个提示词", async ({ electronTest, page }) => {
+  test("切换第二个提示词后编辑按钮打开对应提示词", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
     await enterImageDetailView(page);
 
@@ -114,6 +114,6 @@ test.describe("图像详情界面多提示词编辑跳转", () => {
     const editBtnText = page.locator("#editPromptBtnText");
     await expect(editBtnText).toHaveText("编辑提示词 (2)");
 
-    await openPromptDetailFromImageAndVerify(page, promptTitle2);
+    await openPromptDetailFromImageAndVerify(page, promptOld);
   });
 });
