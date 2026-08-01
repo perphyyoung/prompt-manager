@@ -337,6 +337,7 @@ export interface GetImagesPaginatedOptions {
   tagNames?: string[];
   specialTags?: string[];
   isSafe?: boolean;
+  invertedFilter?: boolean;
   limit: number;
   offset: number;
 }
@@ -357,6 +358,7 @@ export interface CountImageTagsOptions {
   tagNames?: string[];
   specialTags?: string[];
   isSafe?: boolean;
+  invertedFilter?: boolean;
 }
 
 /**

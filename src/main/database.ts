@@ -1903,7 +1903,7 @@ const IMAGE_SPECIAL_TAG_CONDITIONS: Record<string, string> = {
  * @param options - 查询选项
  * @returns WHERE 子句和参数数组
  */
-function buildImageFilterWhere(options: { searchQuery?: string; tagNames?: string[]; specialTags?: string[]; isSafe?: boolean }): { whereClause: string; params: any[] } {
+function buildImageFilterWhere(options: { searchQuery?: string; tagNames?: string[]; specialTags?: string[]; isSafe?: boolean; invertedFilter?: boolean }): { whereClause: string; params: any[] } {
   const conditions: string[] = ['i.is_deleted = 0'];
   const params: any[] = [];
 
@@ -1917,19 +1917,30 @@ function buildImageFilterWhere(options: { searchQuery?: string; tagNames?: strin
     params.push(query, query, query);
   }
 
+  // 构建标签筛选条件（普通标签 + 特殊标签）
+  const tagConditions: string[] = [];
+
   if (options.tagNames && options.tagNames.length > 0) {
-    for (const tagName of options.tagNames) {
-      conditions.push(`EXISTS (SELECT 1 FROM image_tag_relations itr_tag JOIN image_tags it_tag ON itr_tag.tag_id = it_tag.id WHERE itr_tag.image_id = i.id AND it_tag.name = ?)`);
-      params.push(tagName);
-    }
+    const placeholders = options.tagNames.map(() => '?').join(',');
+    tagConditions.push(`(SELECT COUNT(DISTINCT it_tag.name) FROM image_tag_relations itr_tag JOIN image_tags it_tag ON itr_tag.tag_id = it_tag.id WHERE itr_tag.image_id = i.id AND it_tag.name IN (${placeholders})) = ${options.tagNames.length}`);
+    params.push(...options.tagNames);
   }
 
   if (options.specialTags && options.specialTags.length > 0) {
     for (const tag of options.specialTags) {
       const condition = IMAGE_SPECIAL_TAG_CONDITIONS[tag];
       if (condition) {
-        conditions.push(condition);
+        tagConditions.push(condition);
       }
+    }
+  }
+
+  if (tagConditions.length > 0) {
+    const combinedTagCondition = tagConditions.join(' AND ');
+    if (options.invertedFilter) {
+      conditions.push(`NOT (${combinedTagCondition})`);
+    } else {
+      conditions.push(combinedTagCondition);
     }
   }
 

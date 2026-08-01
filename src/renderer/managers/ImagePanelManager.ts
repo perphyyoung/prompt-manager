@@ -248,6 +248,7 @@ export class ImagePanelManager extends PanelManagerBase {
       tagNames: tagNames.length > 0 ? tagNames : undefined,
       specialTags: specialTags.length > 0 ? specialTags : undefined,
       isSafe: this.app.viewMode === 'safe' ? true : undefined,
+      invertedFilter: this.invertedFilter,
       limit: this.pageSize,
       offset: this.currentOffset
     };
@@ -719,7 +720,8 @@ export class ImagePanelManager extends PanelManagerBase {
       searchQuery: this.getSearchQuery() || undefined,
       tagNames: tagNames.length > 0 ? tagNames : undefined,
       specialTags: specialTags.length > 0 ? specialTags : undefined,
-      isSafe: this.app.viewMode === 'safe' ? true : undefined
+      isSafe: this.app.viewMode === 'safe' ? true : undefined,
+      invertedFilter: this.invertedFilter
     };
   }
 
