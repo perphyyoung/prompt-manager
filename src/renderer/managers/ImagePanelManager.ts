@@ -500,8 +500,17 @@ export class ImagePanelManager extends PanelManagerBase {
         if (!fullPath) {
           // 缓存未命中，调用 IPC 获取
           fullPath = await window.electronAPI.getImagePath(imagePath as string);
-          // 存入缓存
-          cacheManager.setImagePath(imageId, 'thumbnail', fullPath);
+          // 根据实际路径类型存入对应缓存
+          if (img.thumbnailPath) {
+            cacheManager.setImagePath(imageId, 'thumbnail', fullPath);
+          }
+          if (img.relativePath) {
+            // 如果用的是原图路径，也存入 original 缓存
+            const originalFullPath = img.thumbnailPath
+              ? await window.electronAPI.getImagePath(img.relativePath as string)
+              : fullPath;
+            cacheManager.setImagePath(imageId, 'original', originalFullPath);
+          }
         }
         const bgElement = card.querySelector('.image-card-bg, .card__bg');
         if (bgElement) {

@@ -8,7 +8,6 @@ interface HoverTooltipOptions {
 }
 
 interface ImagePathInfo {
-  thumbnailPath: string | null;
   originalPath: string | null;
 }
 
@@ -40,26 +39,19 @@ export class HoverTooltipManager {
    * 使用全局 CacheManager 替代局部 Map
    */
   async loadImagePaths(imageId: string): Promise<ImagePathInfo> {
-    // 优先从全局缓存获取
-    let thumbnailPath = cacheManager.getImagePath(imageId, 'thumbnail');
+    // 优先从全局缓存获取原图路径
     let originalPath = cacheManager.getImagePath(imageId, 'original');
 
     // 如果缓存中没有，按 ID 查询图像并缓存路径
-    if (!thumbnailPath && !originalPath) {
+    if (!originalPath) {
       const img = await window.electronAPI.getImageById(imageId);
-      if (img) {
-        if (img.thumbnailPath) {
-          thumbnailPath = await window.electronAPI.getImagePath(img.thumbnailPath);
-          cacheManager.setImagePath(imageId, 'thumbnail', thumbnailPath);
-        }
-        if (img.relativePath) {
-          originalPath = await window.electronAPI.getImagePath(img.relativePath);
-          cacheManager.setImagePath(imageId, 'original', originalPath);
-        }
+      if (img && img.relativePath) {
+        originalPath = await window.electronAPI.getImagePath(img.relativePath);
+        cacheManager.setImagePath(imageId, 'original', originalPath);
       }
     }
 
-    return { thumbnailPath: thumbnailPath || null, originalPath: originalPath || null };
+    return { originalPath: originalPath || null };
   }
 
   /**
