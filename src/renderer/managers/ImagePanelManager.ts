@@ -309,6 +309,8 @@ export class ImagePanelManager extends PanelManagerBase {
 
       if (newItems.length > 0) {
         await this.appendToContainer(newItems);
+        // 重新绑定事件，让闭包包含所有已加载图像
+        this.bindItemEvents(this.filteredImages);
       }
     } catch (error) {
       window.electronAPI.logError('ImagePanelManager.ts', 'Failed to load more images:', error);
@@ -419,7 +421,6 @@ export class ImagePanelManager extends PanelManagerBase {
     if (this.viewModeType === 'grid') {
       const html = newItems.map((img, index) => this.createCard(img, this.filteredImages.length - newItems.length + index)).join('');
       this.appendHtmlToContainer(container, html);
-      this.bindItemEvents(newItems);
       this.bindCardButtonEvents(newItems);
       await this.loadCardBackgroundsForItems(newItems);
       this.bindHoverPreview('.image-card');
@@ -434,7 +435,6 @@ export class ImagePanelManager extends PanelManagerBase {
         })
       ).join('');
       this.appendHtmlToContainer(listContainer, html);
-      this.bindItemEvents(newItems);
       this.bindListButtonEvents(newItems);
       this.bindHoverPreview('.list-item--image');
       await this.loadImageListThumbnailsForItems(newItems);
