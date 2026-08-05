@@ -500,17 +500,7 @@ export class ImagePanelManager extends PanelManagerBase {
         if (!fullPath) {
           // 缓存未命中，调用 IPC 获取
           fullPath = await window.electronAPI.getImagePath(imagePath as string);
-          // 根据实际路径类型存入对应缓存
-          if (img.thumbnailPath) {
-            cacheManager.setImagePath(imageId, 'thumbnail', fullPath);
-          }
-          if (img.relativePath) {
-            // 如果用的是原图路径，也存入 original 缓存
-            const originalFullPath = img.thumbnailPath
-              ? await window.electronAPI.getImagePath(img.relativePath as string)
-              : fullPath;
-            cacheManager.setImagePath(imageId, 'original', originalFullPath);
-          }
+          cacheManager.setImagePath(imageId, 'thumbnail', fullPath);
         }
         const bgElement = card.querySelector('.image-card-bg, .card__bg');
         if (bgElement) {
@@ -967,6 +957,7 @@ export class ImagePanelManager extends PanelManagerBase {
   /**
    * 增量刷新：保持当前分页状态，重新获取已加载范围的数据
    * 用于从详情页返回等场景，避免重置分页状态导致已加载数据丢失
+   * 只更新 DOM 中变化的数据（标签、备注等），不重新加载缩略图
    */
   private async refreshIncremental(): Promise<void> {
     try {
@@ -990,15 +981,89 @@ export class ImagePanelManager extends PanelManagerBase {
         cacheManager.cacheImage(img);
       }
 
-      // 重新渲染
-      await this.renderContainer(this.filteredImages);
-      await this.afterRenderContainer(this.filteredImages);
+      // 增量更新 DOM：只更新变化的数据，不重新加载缩略图
+      this.updateDomIncrementally(result.items);
+
+      // 刷新标签计数
       await this.refreshTagCounts();
       await this.renderTagFilters();
     } catch (error) {
       window.electronAPI.logError('ImagePanelManager.ts', 'Failed to refresh incremental:', error);
       this.app.showToast?.('刷新失败', 'error');
     }
+  }
+
+  /**
+   * 增量更新 DOM：只更新变化的数据（标签、备注等），不重新加载缩略图
+   * @param items - 更新后的图像列表
+   */
+  private updateDomIncrementally(items: IImage[]): void {
+    if (this.viewModeType === 'grid') {
+      this.updateGridDomIncrementally(items);
+    } else {
+      this.updateListDomIncrementally(items);
+    }
+  }
+
+  /**
+   * 增量更新网格视图 DOM
+   */
+  private updateGridDomIncrementally(items: IImage[]): void {
+    const container = document.getElementById(Constants.Ids.IMAGE_GRID);
+    if (!container) return;
+
+    for (const img of items) {
+      const card = container.querySelector(`[data-id="${img.id}"]`) as HTMLElement;
+      if (!card) continue;
+
+      // 更新卡片 is-favorite class
+      card.classList.toggle('is-favorite', !!img.isFavorite);
+
+      // 更新收藏按钮状态
+      const favoriteBtn = card.querySelector('.favorite-btn');
+      if (favoriteBtn) {
+        const isActive = !!img.isFavorite;
+        favoriteBtn.classList.toggle('active', isActive);
+        favoriteBtn.innerHTML = isActive ? Constants.ICONS.favorite.filled : Constants.ICONS.favorite.outline;
+      }
+    }
+  }
+
+  /**
+   * 增量更新列表视图 DOM
+   */
+  private updateListDomIncrementally(items: IImage[]): void {
+    const container = document.getElementById(Constants.Ids.IMAGE_LIST);
+    if (!container) return;
+
+    for (const img of items) {
+      const item = container.querySelector(`[data-id="${img.id}"]`) as HTMLElement;
+      if (!item) continue;
+
+      // 更新列表项 list-item--favorite class
+      item.classList.toggle('list-item--favorite', !!img.isFavorite);
+
+      // 更新收藏按钮状态
+      const favoriteBtn = item.querySelector('.favorite-btn');
+      if (favoriteBtn) {
+        const isActive = !!img.isFavorite;
+        favoriteBtn.classList.toggle('active', isActive);
+        favoriteBtn.innerHTML = isActive ? Constants.ICONS.favorite.filled : Constants.ICONS.favorite.outline;
+      }
+    }
+  }
+
+  /**
+   * 渲染标签 HTML
+   */
+  private renderTagsHtml(tags: string[], isFavorite?: number): string {
+    if (tags.length === 0 && !isFavorite) return '';
+
+    const tagHtml = tags.slice(0, 3).map(tag => `<span class="image-card-tag">${tag}</span>`).join('');
+    const moreCount = tags.length - 3;
+    const moreHtml = moreCount > 0 ? `<span class="image-card-tag image-card-tag--more">+${moreCount}</span>` : '';
+
+    return tagHtml + moreHtml;
   }
 
   /**
