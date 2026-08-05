@@ -134,6 +134,59 @@ export class CacheManager {
     }
   }
 
+  /**
+   * 预缓存一批图像的完整路径（原图 + 缩略图）
+   * 仅写入缓存缺失的项。这是路径缓存的唯一写入点。
+   * @param images - 图像列表
+   * @param electronAPI - 渲染进程的 electronAPI（用于 getImagesPaths）
+   * @returns 是否有新项写入
+   */
+  async prefetchImagePaths(
+    images: Array<{ id: string | number; relativePath?: string; thumbnailPath?: string }>,
+    electronAPI: { getImagesPaths: (relativePaths: string[]) => Promise<string[]> }
+  ): Promise<void> {
+    if (images.length === 0) return;
+
+    const originalEntries: Array<{ imageId: string; fullPath: string }> = [];
+    const thumbnailEntries: Array<{ imageId: string; fullPath: string }> = [];
+    const needOriginalRelative: string[] = [];
+    const needThumbnailRelative: string[] = [];
+
+    for (const img of images) {
+      const id = String(img.id);
+      if (img.relativePath && !this.getImagePath(id, 'original')) {
+        needOriginalRelative.push(img.relativePath);
+        originalEntries.push({ imageId: id, fullPath: '' });
+      }
+      const thumbPath = img.thumbnailPath || img.relativePath;
+      if (thumbPath && !this.getImagePath(id, 'thumbnail')) {
+        needThumbnailRelative.push(thumbPath);
+        thumbnailEntries.push({ imageId: id, fullPath: '' });
+      }
+    }
+
+    try {
+      if (needOriginalRelative.length > 0) {
+        const fullPaths = await electronAPI.getImagesPaths(needOriginalRelative);
+        needOriginalRelative.forEach((_, i) => {
+          originalEntries[i].fullPath = fullPaths[i] || '';
+        });
+        const valid = originalEntries.filter(e => e.fullPath);
+        this.setImagePaths(valid, 'original');
+      }
+      if (needThumbnailRelative.length > 0) {
+        const fullPaths = await electronAPI.getImagesPaths(needThumbnailRelative);
+        needThumbnailRelative.forEach((_, i) => {
+          thumbnailEntries[i].fullPath = fullPaths[i] || '';
+        });
+        const valid = thumbnailEntries.filter(e => e.fullPath);
+        this.setImagePaths(valid, 'thumbnail');
+      }
+    } catch (error) {
+      console.error('[CacheManager] Failed to prefetch image paths:', error);
+    }
+  }
+
   // ==================== 数据对象缓存快捷方法 ====================
 
   /**

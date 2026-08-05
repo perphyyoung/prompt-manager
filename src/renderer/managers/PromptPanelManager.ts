@@ -133,6 +133,13 @@ export class PromptPanelManager extends PanelManagerBase {
         return firstImage.thumbnailPath || firstImage.relativePath || null;
       },
 
+      getCardImageId: (item: IPanelItem) => {
+        const prompt = item as IPrompt;
+        if (!prompt.images || prompt.images.length === 0) return null;
+        const firstImage = prompt.images[0] as ImageInfo;
+        return firstImage.id ? String(firstImage.id) : null;
+      },
+
       getOpenLocationPath: (item: IPanelItem) => {
         const prompt = item as IPrompt;
         if (!prompt.images || prompt.images.length === 0) return null;
@@ -205,11 +212,66 @@ export class PromptPanelManager extends PanelManagerBase {
     try {
       const prompts = await window.electronAPI.getPrompts('updatedAt', 'desc');
       cacheManager.cachePrompts(prompts);
+      // 预缓存提示词关联的第一张图的路径（缩略图用）
+      await this.prefetchPromptImagePaths(prompts);
       return prompts;
     } catch (error) {
       window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load prompts:', error);
       throw error;
     }
+  }
+
+  /**
+   * 预缓存提示词关联的第一张图（卡片背景）的缩略图路径
+   * 仅加载缩略图（卡片背景用），不加载原图
+   */
+  private async prefetchPromptImagePaths(prompts: IPrompt[]): Promise<void> {
+    if (prompts.length === 0) return;
+
+    // 收集所有第一张图 ID，去重
+    const firstImageIds = new Set<string>();
+    for (const p of prompts) {
+      if (p.images && p.images.length > 0) {
+        const firstImage = p.images[0] as ImageInfo;
+        if (firstImage.id) {
+          firstImageIds.add(String(firstImage.id));
+        }
+      }
+    }
+
+    if (firstImageIds.size === 0) return;
+
+    // 仅获取未在路径缓存中的图元数据
+    const needFetchIds: string[] = [];
+    const needFetchImages: Array<{ id: string; relativePath?: string; thumbnailPath?: string }> = [];
+    for (const imageId of firstImageIds) {
+      if (cacheManager.getImagePath(imageId, 'thumbnail')) continue;
+      const cached = cacheManager.getImageCache().peek(imageId) as { id: string; relativePath?: string; thumbnailPath?: string } | undefined;
+      if (cached) {
+        needFetchImages.push(cached);
+      } else {
+        needFetchIds.push(imageId);
+      }
+    }
+
+    let fetchedImages: Array<{ id: string; relativePath?: string; thumbnailPath?: string }> = [];
+    if (needFetchIds.length > 0) {
+      try {
+        const imgs = await window.electronAPI.getImagesByIds(needFetchIds);
+        for (const img of imgs) {
+          if (img && img.id) {
+            cacheManager.cacheImage(img);
+            fetchedImages.push(img as { id: string; relativePath?: string; thumbnailPath?: string });
+          }
+        }
+      } catch (error) {
+        window.electronAPI.logError('PromptPanelManager.ts', 'Failed to fetch first images by ids:', error);
+      }
+    }
+
+    // 统一预缓存缩略图路径
+    const allImages = [...needFetchImages, ...fetchedImages];
+    await cacheManager.prefetchImagePaths(allImages, window.electronAPI);
   }
 
   /**
@@ -318,6 +380,7 @@ export class PromptPanelManager extends PanelManagerBase {
 
   /**
    * 异步加载提示词列表缩略图
+   * 优先从路径缓存读取，未命中时单次 IPC 批量兜底
    */
   async loadPromptListThumbnails(filtered: IPrompt[]): Promise<void> {
     const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
@@ -325,78 +388,166 @@ export class PromptPanelManager extends PanelManagerBase {
 
     const items = listContainer.querySelectorAll('.list-item--prompt');
 
-    // 收集所有需要的图像 ID，优先从缓存获取
+    // 第一步：补齐元数据缓存
+    const imageIdToInfo = await this.collectFirstImageMetadata(items, filtered);
+
+    // 第二步：构建缩略图目标（先读路径缓存）
+    const { targets, uncachedIds, uncachedPaths } = this.buildThumbnailTargets(items, filtered, imageIdToInfo);
+    if (targets.length === 0) return;
+
+    // 第三步：未命中项 IPC 兜底
+    await this.fetchMissingThumbnailPaths(targets, uncachedIds, uncachedPaths);
+
+    // 第四步：应用所有缩略图
+    this.applyThumbnailTargets(targets);
+  }
+
+  /**
+   * 从列表项中提取每个 prompt 的第一张图 ID，并补齐元数据缓存
+   */
+  private async collectFirstImageMetadata(
+    items: NodeListOf<Element>,
+    filtered: IPrompt[]
+  ): Promise<Map<string, ImageInfo>> {
     const imageIdToInfo = new Map<string, ImageInfo>();
     const missingImageIds: string[] = [];
 
     for (const item of items) {
-      const promptId = (item as HTMLElement).dataset.id;
-      const prompt = filtered.find(p => String(p.id) === String(promptId));
-      if (!prompt || !prompt.images || prompt.images.length === 0) continue;
+      const resolved = this.resolveFirstImageFromItem(item, filtered);
+      if (!resolved) continue;
+      const { imageId, imageIdStr } = resolved;
 
-      const firstImageId = typeof prompt.images[0] === 'object' ? (prompt.images[0] as ImageInfo).id : prompt.images[0];
-      if (!firstImageId) continue;
-
-      const cached = cacheManager.getCachedImage(String(firstImageId));
+      const cached = cacheManager.getCachedImage(imageIdStr);
       if (cached) {
-        imageIdToInfo.set(String(firstImageId), cached as ImageInfo);
-      } else if (!imageIdToInfo.has(String(firstImageId))) {
-        imageIdToInfo.set(String(firstImageId), { id: firstImageId });
-        missingImageIds.push(String(firstImageId));
+        imageIdToInfo.set(imageIdStr, cached as ImageInfo);
+      } else if (!imageIdToInfo.has(imageIdStr)) {
+        imageIdToInfo.set(imageIdStr, { id: imageId });
+        missingImageIds.push(imageIdStr);
       }
     }
 
-    // 批量查询未命中的图像
-    if (missingImageIds.length > 0) {
-      try {
-        const fetchedImages = await window.electronAPI.getImagesByIds(missingImageIds);
-        for (const img of fetchedImages) {
-          if (img && img.id) {
-            cacheManager.cacheImage(img);
-            imageIdToInfo.set(String(img.id), img as ImageInfo);
-          }
+    if (missingImageIds.length === 0) return imageIdToInfo;
+
+    try {
+      const fetchedImages = await window.electronAPI.getImagesByIds(missingImageIds);
+      for (const img of fetchedImages) {
+        if (img && img.id) {
+          cacheManager.cacheImage(img);
+          imageIdToInfo.set(String(img.id), img as ImageInfo);
         }
-      } catch (error) {
-        window.electronAPI.logError('PromptPanelManager.ts', 'Failed to fetch images by ids:', error);
       }
+    } catch (error) {
+      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to fetch images by ids:', error);
     }
 
-    // 收集所有列表项的路径信息，批量获取
-    const itemInfoList: Array<{ thumbnailEl: HTMLImageElement | null }> = [];
-    const relativePaths: string[] = [];
+    return imageIdToInfo;
+  }
+
+  /**
+   * 构建缩略图渲染目标：优先读路径缓存，未命中收集待 IPC 兜底
+   */
+  private buildThumbnailTargets(
+    items: NodeListOf<Element>,
+    filtered: IPrompt[],
+    imageIdToInfo: Map<string, ImageInfo>
+  ): {
+    targets: Array<{ thumbnailEl: HTMLImageElement | null; fullPath: string }>;
+    uncachedIds: string[];
+    uncachedPaths: string[];
+  } {
+    const targets: Array<{ thumbnailEl: HTMLImageElement | null; fullPath: string }> = [];
+    const uncachedIds: string[] = [];
+    const uncachedPaths: string[] = [];
 
     for (const item of items) {
-      const promptId = (item as HTMLElement).dataset.id;
-      const prompt = filtered.find(p => String(p.id) === String(promptId));
-      if (!prompt || !prompt.images || prompt.images.length === 0) continue;
+      const resolved = this.resolveFirstImageFromItem(item, filtered);
+      if (!resolved) continue;
+      const { imageIdStr } = resolved;
 
-      const firstImageId = typeof prompt.images[0] === 'object' ? (prompt.images[0] as ImageInfo).id : prompt.images[0];
-      if (!firstImageId) continue;
-
-      const img = imageIdToInfo.get(String(firstImageId));
+      const img = imageIdToInfo.get(imageIdStr);
       if (!img) continue;
 
       const imagePath = img.thumbnailPath || img.relativePath;
       if (!imagePath) continue;
 
       const thumbnailEl = item.querySelector('.list-item__thumbnail') as HTMLImageElement | null;
-      itemInfoList.push({ thumbnailEl });
-      relativePaths.push(imagePath);
+      const cachedPath = cacheManager.getImagePath(imageIdStr, 'thumbnail');
+      if (cachedPath) {
+        targets.push({ thumbnailEl, fullPath: cachedPath });
+      } else {
+        targets.push({ thumbnailEl, fullPath: '' });
+        uncachedIds.push(imageIdStr);
+        uncachedPaths.push(imagePath);
+      }
     }
 
-    if (relativePaths.length === 0) return;
+    return { targets, uncachedIds, uncachedPaths };
+  }
 
-    // 单次 IPC 批量获取所有路径
+  /**
+   * 对未命中路径缓存的项，单次 IPC 批量获取并回写缓存
+   */
+  private async fetchMissingThumbnailPaths(
+    targets: Array<{ thumbnailEl: HTMLImageElement | null; fullPath: string }>,
+    uncachedIds: string[],
+    uncachedPaths: string[]
+  ): Promise<void> {
+    if (uncachedPaths.length === 0) return;
+
     try {
-      const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
-      itemInfoList.forEach((info, index) => {
-        if (!info.thumbnailEl) return;
-        const fullPath = fullPaths[index];
-        info.thumbnailEl.src = `file://${fullPath.replace(/"/g, '&quot;')}`;
-      });
+      const fullPaths = await window.electronAPI.getImagesPaths(uncachedPaths);
+      const entries: Array<{ imageId: string; fullPath: string }> = [];
+      let uncachedIdx = 0;
+      for (const target of targets) {
+        if (!target.fullPath && uncachedIdx < uncachedPaths.length) {
+          const fullPath = fullPaths[uncachedIdx];
+          const imageId = uncachedIds[uncachedIdx];
+          if (fullPath) {
+            target.fullPath = fullPath;
+            if (imageId) {
+              entries.push({ imageId, fullPath });
+            }
+          }
+          uncachedIdx++;
+        }
+      }
+      if (entries.length > 0) {
+        cacheManager.setImagePaths(entries, 'thumbnail');
+      }
     } catch (error) {
       window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load prompt list thumbnails:', error);
     }
+  }
+
+  /**
+   * 应用所有缩略图到 DOM
+   */
+  private applyThumbnailTargets(
+    targets: Array<{ thumbnailEl: HTMLImageElement | null; fullPath: string }>
+  ): void {
+    for (const target of targets) {
+      if (!target.thumbnailEl || !target.fullPath) continue;
+      target.thumbnailEl.src = `file://${target.fullPath.replace(/"/g, '&quot;')}`;
+    }
+  }
+
+  /**
+   * 从列表项中解析对应的 prompt 第一张图 ID
+   * 返回 null 表示该 item 无关联图
+   */
+  private resolveFirstImageFromItem(
+    item: Element,
+    filtered: IPrompt[]
+  ): { imageId: string; imageIdStr: string } | null {
+    const promptId = (item as HTMLElement).dataset.id;
+    const prompt = filtered.find(p => String(p.id) === String(promptId));
+    if (!prompt || !prompt.images || prompt.images.length === 0) return null;
+
+    const firstImage = prompt.images[0];
+    const imageId = typeof firstImage === 'object' ? (firstImage as ImageInfo).id : firstImage;
+    if (!imageId) return null;
+
+    return { imageId, imageIdStr: String(imageId) };
   }
 
   /**

@@ -80,6 +80,9 @@ interface IUIConfig {
   // 获取卡片背景图片路径
   getCardImagePath(item: IPanelItem): string | null;
 
+  // 获取卡片背景图对应的 imageId（用于路径缓存命中）
+  getCardImageId?(item: IPanelItem): string | null;
+
   // 获取本地保存位置路径（用于右键菜单）
   getOpenLocationPath(item: IPanelItem): string | null;
 }
@@ -529,6 +532,7 @@ export abstract class PanelManagerBase {
 
   /**
    * 异步加载卡片背景图（通用实现）
+   * 优先从路径缓存读取，未命中时单次 IPC 批量兜底并回写缓存
    */
   async loadCardBackgrounds(): Promise<void> {
     const config = this.getUIConfig();
@@ -538,10 +542,10 @@ export abstract class PanelManagerBase {
     const cards = container.querySelectorAll(config.cardSelector);
     const items = this.getItems();
 
-    // 收集所有卡片的路径信息，批量获取
+    // 收集所有卡片的路径信息：优先从路径缓存读取
     const cardInfoList: Array<{ card: Element; fullPath: string }> = [];
-    const relativePaths: string[] = [];
-    const cardIndexMap: number[] = [];
+    const uncachedIds: string[] = [];
+    const uncachedPaths: string[] = [];
 
     for (const card of cards) {
       const id = (card as HTMLElement).dataset.id;
@@ -551,25 +555,58 @@ export abstract class PanelManagerBase {
       const imagePath = config.getCardImagePath(item);
       if (!imagePath) continue;
 
-      cardIndexMap.push(relativePaths.length);
-      relativePaths.push(imagePath);
+      // 尝试从路径缓存读取（按 imageId 命中）
+      const imageId = config.getCardImageId?.(item);
+      if (imageId) {
+        const cached = cacheManager.getImagePath(imageId, 'thumbnail');
+        if (cached) {
+          cardInfoList.push({ card, fullPath: cached });
+          continue;
+        }
+      }
+
+      // 缓存未命中：记录 imageId 用于回写，relativePath 用于 IPC
+      uncachedIds.push(imageId || '');
+      uncachedPaths.push(imagePath);
       cardInfoList.push({ card, fullPath: '' });
     }
 
-    if (relativePaths.length === 0) return;
+    if (cardInfoList.length === 0) return;
 
-    // 单次 IPC 批量获取所有路径
-    try {
-      const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
-      cardInfoList.forEach((info, index) => {
-        const fullPath = fullPaths[index];
-        const bgElement = info.card.querySelector(config.cardBgSelector);
-        if (bgElement) {
-          (bgElement as HTMLElement).style.backgroundImage = `url('file://${fullPath.replace(/\\/g, '/')}')`;
+    // 仅对未命中的项单次 IPC 批量获取
+    if (uncachedPaths.length > 0) {
+      try {
+        const fullPaths = await window.electronAPI.getImagesPaths(uncachedPaths);
+        const entries: Array<{ imageId: string; fullPath: string }> = [];
+        let uncachedIdx = 0;
+        for (const info of cardInfoList) {
+          if (!info.fullPath && uncachedIdx < uncachedPaths.length) {
+            const fullPath = fullPaths[uncachedIdx];
+            const imageId = uncachedIds[uncachedIdx];
+            if (fullPath) {
+              info.fullPath = fullPath;
+              if (imageId) {
+                entries.push({ imageId, fullPath });
+              }
+            }
+            uncachedIdx++;
+          }
         }
-      });
-    } catch (error) {
-      window.electronAPI.logError('PanelManagerBase.ts', 'Failed to load card backgrounds:', error);
+        if (entries.length > 0) {
+          cacheManager.setImagePaths(entries, 'thumbnail');
+        }
+      } catch (error) {
+        window.electronAPI.logError('PanelManagerBase.ts', 'Failed to load card backgrounds:', error);
+      }
+    }
+
+    // 应用所有背景图
+    for (const info of cardInfoList) {
+      if (!info.fullPath) continue;
+      const bgElement = info.card.querySelector(config.cardBgSelector);
+      if (bgElement) {
+        (bgElement as HTMLElement).style.backgroundImage = `url('file://${info.fullPath.replace(/\\/g, '/')}')`;
+      }
     }
   }
 

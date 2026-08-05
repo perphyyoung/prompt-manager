@@ -169,6 +169,10 @@ export class ImagePanelManager extends PanelManagerBase {
         return thumbnailPath || relativePath || null;
       },
 
+      getCardImageId: (item: IPanelItem): string | null => {
+        return String((item as IImage).id);
+      },
+
       getOpenLocationPath: (item: IPanelItem): string | null => {
         const img = item as IImage;
         const relativePath = typeof img.relativePath === 'string' ? img.relativePath : undefined;
@@ -289,53 +293,10 @@ export class ImagePanelManager extends PanelManagerBase {
 
   /**
    * 预缓存一批图像的完整路径（原图 + 缩略图）
-   * 仅写入缓存缺失的项，已存在的不重复请求
-   * 这是路径缓存的唯一写入点
+   * 委托给 cacheManager.prefetchImagePaths
    */
   private async prefetchImagePaths(items: IImage[]): Promise<void> {
-    if (items.length === 0) return;
-
-    const originalEntries: Array<{ imageId: string; fullPath: string }> = [];
-    const thumbnailEntries: Array<{ imageId: string; fullPath: string }> = [];
-    const needOriginalRelative: string[] = [];
-    const needThumbnailRelative: string[] = [];
-
-    for (const img of items) {
-      const id = String(img.id);
-      // 原图路径：使用 relativePath
-      if (img.relativePath && !cacheManager.getImagePath(id, 'original')) {
-        needOriginalRelative.push(img.relativePath);
-        originalEntries.push({ imageId: id, fullPath: '' }); // 占位，下一步填充
-      }
-      // 缩略图路径：使用 thumbnailPath
-      const thumbPath = img.thumbnailPath || img.relativePath;
-      if (thumbPath && !cacheManager.getImagePath(id, 'thumbnail')) {
-        needThumbnailRelative.push(thumbPath);
-        thumbnailEntries.push({ imageId: id, fullPath: '' });
-      }
-    }
-
-    try {
-      if (needOriginalRelative.length > 0) {
-        const fullPaths = await window.electronAPI.getImagesPaths(needOriginalRelative);
-        needOriginalRelative.forEach((_, i) => {
-          originalEntries[i].fullPath = fullPaths[i] || '';
-        });
-        // 过滤空路径
-        const valid = originalEntries.filter(e => e.fullPath);
-        cacheManager.setImagePaths(valid, 'original');
-      }
-      if (needThumbnailRelative.length > 0) {
-        const fullPaths = await window.electronAPI.getImagesPaths(needThumbnailRelative);
-        needThumbnailRelative.forEach((_, i) => {
-          thumbnailEntries[i].fullPath = fullPaths[i] || '';
-        });
-        const valid = thumbnailEntries.filter(e => e.fullPath);
-        cacheManager.setImagePaths(valid, 'thumbnail');
-      }
-    } catch (error) {
-      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to prefetch image paths:', error);
-    }
+    await cacheManager.prefetchImagePaths(items, window.electronAPI);
   }
 
   /**

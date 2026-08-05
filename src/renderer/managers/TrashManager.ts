@@ -3,7 +3,7 @@ import type { IDialogContext, IClosableElement } from '../../types/entities.ts';
 import { UnifiedCardRenderer, PromptTrashConfig, ImageTrashConfig } from './SharedComponents/index.ts';
 import { Constants, ElementId, Events } from '../../constants.ts';
 import { PromptTrashHandler, ImageTrashHandler } from './handlers/index.ts';
-import { localTime } from '../../utils/index.ts';
+import { localTime, cacheManager } from '../../utils/index.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import type { TrashHandler, TrashItem } from './handlers/TrashHandler.ts';
 import type { IApp, IEventBus, IPanelManager } from '../app.types.ts';
@@ -208,10 +208,16 @@ export class TrashManager {
 
   /**
    * 异步加载卡片背景图（针对指定容器）
+   * 优先从路径缓存读取，未命中时单次 IPC 批量兜底
    * @param container - 容器元素
    */
   private async loadCardBackgroundsForContainer(container: HTMLElement): Promise<void> {
     const cards = container.querySelectorAll<HTMLElement>('.trash-card');
+
+    // 收集路径信息：优先读路径缓存
+    const cardInfoList: Array<{ card: HTMLElement; fullPath: string }> = [];
+    const uncachedPaths: string[] = [];
+    const uncachedIds: string[] = [];
 
     for (const card of cards) {
       const itemId = card.dataset.id;
@@ -221,14 +227,53 @@ export class TrashManager {
       const imagePath = this.currentHandler!.getThumbnailPath(item);
       if (!imagePath) continue;
 
+      // 尝试从路径缓存读取
+      if (itemId && cacheManager.getImagePath(itemId, 'thumbnail')) {
+        const fullPath = cacheManager.getImagePath(itemId, 'thumbnail')!;
+        cardInfoList.push({ card, fullPath });
+        continue;
+      }
+
+      uncachedIds.push(itemId || '');
+      uncachedPaths.push(imagePath);
+      cardInfoList.push({ card, fullPath: '' });
+    }
+
+    if (cardInfoList.length === 0) return;
+
+    // 单次 IPC 批量获取未命中的路径
+    if (uncachedPaths.length > 0) {
       try {
-        const fullPath = await window.electronAPI.getImagePath(imagePath);
-        const bgElement = card.querySelector<HTMLElement>('.trash-card-bg, .card__bg');
-        if (bgElement) {
-          bgElement.style.backgroundImage = `url('file://${fullPath.replace(/\\/g, '/')}')`;
+        const fullPaths = await window.electronAPI.getImagesPaths(uncachedPaths);
+        const entries: Array<{ imageId: string; fullPath: string }> = [];
+        let uncachedIdx = 0;
+        for (const info of cardInfoList) {
+          if (!info.fullPath && uncachedIdx < uncachedPaths.length) {
+            const fullPath = fullPaths[uncachedIdx];
+            const imageId = uncachedIds[uncachedIdx];
+            if (fullPath) {
+              info.fullPath = fullPath;
+              if (imageId) {
+                entries.push({ imageId, fullPath });
+              }
+            }
+            uncachedIdx++;
+          }
+        }
+        if (entries.length > 0) {
+          cacheManager.setImagePaths(entries, 'thumbnail');
         }
       } catch (error) {
-        window.electronAPI.logError('TrashManager.js', 'Failed to load trash card background:', error);
+        window.electronAPI.logError('TrashManager.js', 'Failed to load trash card backgrounds (fallback):', error);
+      }
+    }
+
+    // 应用所有背景图
+    for (const info of cardInfoList) {
+      if (!info.fullPath) continue;
+      const bgElement = info.card.querySelector<HTMLElement>('.trash-card-bg, .card__bg');
+      if (bgElement) {
+        bgElement.style.backgroundImage = `url('file://${info.fullPath.replace(/\\/g, '/')}')`;
       }
     }
   }
