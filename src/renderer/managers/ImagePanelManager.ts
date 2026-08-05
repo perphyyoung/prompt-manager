@@ -30,7 +30,7 @@ export class ImagePanelManager extends PanelManagerBase {
   private isInitialized = false;
 
   // 分页状态
-  private readonly pageSize = 100;
+  private readonly pageSize = 500;
   private currentOffset = 0;
   private hasMore = true;
   private totalCount = 0;
