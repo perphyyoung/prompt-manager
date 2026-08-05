@@ -925,10 +925,47 @@ export class ImagePanelManager extends PanelManagerBase {
 
   /**
    * 数据更新后的统一刷新（重写基类方法）
-   * renderView 已包含 loadData 和 renderTagFilters，避免重复
+   * 增量刷新：保持当前分页状态，只重新渲染已加载的数据
    */
   async refreshAfterUpdate(): Promise<void> {
-    await this.renderView();
+    await this.refreshIncremental();
+  }
+
+  /**
+   * 增量刷新：保持当前分页状态，重新获取已加载范围的数据
+   * 用于从详情页返回等场景，避免重置分页状态导致已加载数据丢失
+   */
+  private async refreshIncremental(): Promise<void> {
+    try {
+      // 保持 currentOffset 和 loadedImageIds，重新获取当前已加载范围的数据
+      const options = this.buildPaginatedOptions();
+      options.limit = this.currentOffset + this.pageSize;
+      options.offset = 0;
+
+      const result = await window.electronAPI.getImagesPaginated(options);
+
+      // 更新缓存和 filteredImages
+      this.filteredImages = result.items;
+      this.filteredItems = result.items;
+      this.hasMore = result.items.length < result.totalCount;
+      this.totalCount = result.totalCount;
+
+      // 更新 loadedImageIds
+      this.loadedImageIds.clear();
+      for (const img of result.items) {
+        this.loadedImageIds.add(String(img.id));
+        cacheManager.cacheImage(img);
+      }
+
+      // 重新渲染
+      await this.renderContainer(this.filteredImages);
+      await this.afterRenderContainer(this.filteredImages);
+      await this.refreshTagCounts();
+      await this.renderTagFilters();
+    } catch (error) {
+      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to refresh incremental:', error);
+      this.app.showToast?.('刷新失败', 'error');
+    }
   }
 
   /**
