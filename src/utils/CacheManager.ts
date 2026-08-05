@@ -77,7 +77,7 @@ export class CacheManager {
    * @returns LRU 缓存实例
    */
   getImagePathCache(): LRUCache {
-    return this.createCache('imagePaths', 200);
+    return this.createCache('imagePaths', 500);
   }
 
   /**

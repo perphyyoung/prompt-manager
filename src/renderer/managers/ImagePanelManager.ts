@@ -495,7 +495,14 @@ export class ImagePanelManager extends PanelManagerBase {
       if (!imagePath) continue;
 
       try {
-        const fullPath = await window.electronAPI.getImagePath(imagePath as string);
+        // 先检查缓存
+        let fullPath = cacheManager.getImagePath(imageId, 'thumbnail');
+        if (!fullPath) {
+          // 缓存未命中，调用 IPC 获取
+          fullPath = await window.electronAPI.getImagePath(imagePath as string);
+          // 存入缓存
+          cacheManager.setImagePath(imageId, 'thumbnail', fullPath);
+        }
         const bgElement = card.querySelector('.image-card-bg, .card__bg');
         if (bgElement) {
           (bgElement as HTMLElement).style.backgroundImage = `url('file://${fullPath.replace(/\\/g, '/')}')`;
@@ -553,9 +560,9 @@ export class ImagePanelManager extends PanelManagerBase {
     const itemIds = new Set(items.map(img => String(img.id)));
     const listItems = listContainer.querySelectorAll('.list-item--image');
 
-    // 收集所有列表项的路径信息，批量获取
-    const itemInfoList: Array<{ wrapper: Element | null }> = [];
-    const relativePaths: string[] = [];
+    // 收集所有列表项的路径信息，区分缓存命中和未命中
+    const itemInfoList: Array<{ wrapper: Element | null; imageId: string; fullPath?: string }> = [];
+    const uncachedPaths: Array<{ index: number; relativePath: string }> = [];
 
     for (const item of listItems) {
       const imageId = (item as HTMLElement).dataset.id;
@@ -565,23 +572,40 @@ export class ImagePanelManager extends PanelManagerBase {
       if (!imagePath) continue;
 
       const wrapper = item.querySelector('.list-item__thumbnail-wrapper');
-      itemInfoList.push({ wrapper });
-      relativePaths.push(imagePath);
+      const itemIndex = itemInfoList.length;
+      itemInfoList.push({ wrapper, imageId });
+
+      // 先检查缓存
+      const cachedPath = cacheManager.getImagePath(imageId, 'thumbnail');
+      if (cachedPath) {
+        itemInfoList[itemIndex].fullPath = cachedPath;
+      } else {
+        // 缓存未命中，加入待获取列表
+        uncachedPaths.push({ index: itemIndex, relativePath: imagePath });
+      }
     }
 
-    if (relativePaths.length === 0) return;
-
-    // 单次 IPC 批量获取所有路径
-    try {
-      const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
-      itemInfoList.forEach((info, index) => {
-        if (!info.wrapper) return;
-        const fullPath = fullPaths[index];
-        info.wrapper.innerHTML = `<img src="file://${fullPath.replace(/\\/g, '/').replace(/"/g, '&quot;')}" alt="" class="list-item__thumbnail">`;
-      });
-    } catch (error) {
-      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to load list thumbnails:', error);
+    // 批量获取未缓存的路径
+    if (uncachedPaths.length > 0) {
+      try {
+        const relativePaths = uncachedPaths.map(p => p.relativePath);
+        const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
+        uncachedPaths.forEach((item, i) => {
+          const fullPath = fullPaths[i];
+          itemInfoList[item.index].fullPath = fullPath;
+          // 存入缓存
+          cacheManager.setImagePath(itemInfoList[item.index].imageId, 'thumbnail', fullPath);
+        });
+      } catch (error) {
+        window.electronAPI.logError('ImagePanelManager.ts', 'Failed to load list thumbnails:', error);
+      }
     }
+
+    // 渲染所有缩略图
+    itemInfoList.forEach((info) => {
+      if (!info.wrapper || !info.fullPath) return;
+      info.wrapper.innerHTML = `<img src="file://${info.fullPath.replace(/\\/g, '/').replace(/"/g, '&quot;')}" alt="" class="list-item__thumbnail">`;
+    });
   }
 
   /**
