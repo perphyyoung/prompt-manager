@@ -169,12 +169,12 @@ export abstract class BaseEventStrategy implements IEventStrategy {
       // Ctrl/Cmd + 点击：切换选择
       event.preventDefault();
       context.batchToolbarMiddle.toggleSelection(context.toolbarContext, idStr, index);
-      context.renderView();
+      context.updateSelectionUI();
     } else if (event.shiftKey) {
       // Shift + 点击：范围选择
       event.preventDefault();
       context.batchToolbarMiddle.rangeSelect(context.toolbarContext, context.items, index);
-      context.renderView();
+      context.updateSelectionUI();
     } else {
       // 普通点击：打开详情
       this.handleOpenDetail(item);

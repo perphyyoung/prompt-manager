@@ -12,6 +12,7 @@ export interface EventContext {
   batchToolbarMiddle: BatchToolbarMiddle;
   toolbarContext: ToolbarContext;
   renderView: () => void | Promise<void>;
+  updateSelectionUI: () => void;
   items: IEventStrategyItem[];
 }
 

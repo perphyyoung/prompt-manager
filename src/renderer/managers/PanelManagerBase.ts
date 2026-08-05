@@ -1418,7 +1418,6 @@ export abstract class PanelManagerBase {
    */
   protected updateItemSelectionState(): void {
     const selectedIds = batchToolbarMiddle.getSelectedIds(this.toolbarContext);
-    if (selectedIds.size === 0) return;
 
     // 根据当前面板类型获取选择器
     const isImagePanel = this.panelType === 'image';
@@ -1429,20 +1428,25 @@ export abstract class PanelManagerBase {
     // 更新网格视图中的卡片
     document.querySelectorAll(cardSelector).forEach((card) => {
       const id = card.getAttribute('data-id');
-      if (id && selectedIds.has(id)) {
-        card.classList.add('is-selected');
+      if (id) {
+        const isSelected = selectedIds.has(id);
+        card.classList.toggle('is-selected', isSelected);
+        const checkbox = card.querySelector('.card-checkbox') as HTMLInputElement;
+        if (checkbox) {
+          checkbox.checked = isSelected;
+        }
       }
     });
 
     // 更新列表视图中的项
     document.querySelectorAll(listItemSelector).forEach((item) => {
       const id = item.getAttribute('data-id');
-      if (id && selectedIds.has(id)) {
-        item.classList.add('is-selected');
-        // 更新复选框的 checked 状态
+      if (id) {
+        const isSelected = selectedIds.has(id);
+        item.classList.toggle('is-selected', isSelected);
         const checkbox = item.querySelector('.list-item__checkbox') as HTMLInputElement;
         if (checkbox) {
-          checkbox.checked = true;
+          checkbox.checked = isSelected;
         }
       }
     });
@@ -1450,10 +1454,19 @@ export abstract class PanelManagerBase {
     // 更新紧凑视图中的项
     document.querySelectorAll(compactItemSelector).forEach((item) => {
       const id = item.getAttribute('data-id');
-      if (id && selectedIds.has(id)) {
-        item.classList.add('is-selected');
+      if (id) {
+        item.classList.toggle('is-selected', selectedIds.has(id));
       }
     });
+  }
+
+  /**
+   * 更新选中状态的 UI（选择模式类 + 项目选中状态）
+   * 在 Ctrl/Shift+click 多选后调用，避免重新加载数据
+   */
+  protected updateSelectionUI(): void {
+    this.updateSelectionModeClass();
+    this.updateItemSelectionState();
   }
 
   /**
@@ -1529,6 +1542,7 @@ export abstract class PanelManagerBase {
       batchToolbarMiddle,
       toolbarContext: this.toolbarContext,
       renderView: () => this.renderView(),
+      updateSelectionUI: () => this.updateSelectionUI(),
       items: items
     };
 
