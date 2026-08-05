@@ -1629,9 +1629,8 @@ export abstract class PanelManagerBase {
    * 处理取消选择
    */
   protected handleBatchCancel(): void {
-    batchToolbarMiddle.clearSelection(this.toolbarContext);
-    // 重新渲染视图以清除选中状态
-    this.renderView();
+    // 退出批量模式即可，无需重新加载数据
+    this.exitBatchMode();
   }
 
   // ==================== 标签拖拽操作 ====================
