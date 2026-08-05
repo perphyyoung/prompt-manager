@@ -99,7 +99,8 @@ export abstract class BaseEventStrategy implements IEventStrategy {
         context.batchToolbarMiddle.removeSelection(context.toolbarContext, id);
       }
 
-      context.renderView();
+      // 只更新选中状态的 UI，不重新加载数据
+      itemEl.classList.toggle('is-selected', isChecked);
     };
 
     container.addEventListener("click", clickHandler);
