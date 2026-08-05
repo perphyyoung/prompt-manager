@@ -36,18 +36,30 @@ export class HoverTooltipManager {
 
   /**
    * 加载图像路径（带缓存）
-   * 使用全局 CacheManager 替代局部 Map
+   * 路径缓存由 ImagePanelManager 在 loadData/loadMore 时统一预填充
+   * 此方法仅读缓存；缓存缺失时通过 cachedIImage 或单 IPC 兜底，不再触发数据库查询
    */
   async loadImagePaths(imageId: string): Promise<ImagePathInfo> {
-    // 优先从全局缓存获取原图路径
+    // 优先从缓存读取
     let originalPath = cacheManager.getImagePath(imageId, 'original');
 
-    // 如果缓存中没有，按 ID 查询图像并缓存路径
     if (!originalPath) {
-      const img = await window.electronAPI.getImageById(imageId);
-      if (img && img.relativePath) {
-        originalPath = await window.electronAPI.getImagePath(img.relativePath);
-        cacheManager.setImagePath(imageId, 'original', originalPath);
+      // 兜底 1：尝试从元数据缓存拿 relativePath
+      const cachedImg = cacheManager.getImageCache().peek(imageId) as { relativePath?: string } | undefined;
+      if (cachedImg?.relativePath) {
+        originalPath = await window.electronAPI.getImagePath(cachedImg.relativePath);
+        if (originalPath) {
+          cacheManager.setImagePath(imageId, 'original', originalPath);
+        }
+      } else {
+        // 兜底 2：单次按 ID 查元数据（仅在路径缓存完全缺失时使用）
+        const img = await window.electronAPI.getImageById(imageId);
+        if (img && img.relativePath) {
+          originalPath = await window.electronAPI.getImagePath(img.relativePath);
+          if (originalPath) {
+            cacheManager.setImagePath(imageId, 'original', originalPath);
+          }
+        }
       }
     }
 

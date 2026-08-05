@@ -116,6 +116,24 @@ export class CacheManager {
     }
   }
 
+  /**
+   * 批量预缓存图像路径（保持 LRU 顺序：保留已存在的，追加新的）
+   * @param entries - 图像 ID 与完整路径的对应关系
+   * @param type - 路径类型: 'original' | 'thumbnail'
+   */
+  setImagePaths(
+    entries: Array<{ imageId: string; fullPath: string }>,
+    type: 'original' | 'thumbnail'
+  ): void {
+    if (entries.length === 0) return;
+    const cache = this.getImagePathCache();
+    for (const { imageId, fullPath } of entries) {
+      if (imageId && fullPath) {
+        cache.set(`${type}_${imageId}`, fullPath);
+      }
+    }
+  }
+
   // ==================== 数据对象缓存快捷方法 ====================
 
   /**

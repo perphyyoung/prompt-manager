@@ -263,12 +263,15 @@ export class ImagePanelManager extends PanelManagerBase {
       this.hasMore = true;
       this.loadedImageIds.clear();
       const page = await this.fetchPage();
-      cacheManager.cacheImages(page.items);
+      // 增量缓存元数据（不调用 cacheImages 避免清空改变 LRU 顺序）
       for (const img of page.items) {
+        cacheManager.cacheImage(img);
         this.loadedImageIds.add(String(img.id));
       }
       this.totalCount = page.totalCount;
       this.hasMore = page.items.length < page.totalCount;
+      // 预缓存路径（原图 + 缩略图）—— 路径缓存的唯一写入点
+      await this.prefetchImagePaths(page.items);
       return page.items;
     } catch (error) {
       cacheManager.getImageCache().clear();
@@ -282,6 +285,57 @@ export class ImagePanelManager extends PanelManagerBase {
   private async fetchPage(): Promise<{ items: IImage[]; totalCount: number }> {
     const options = this.buildPaginatedOptions();
     return await window.electronAPI.getImagesPaginated(options);
+  }
+
+  /**
+   * 预缓存一批图像的完整路径（原图 + 缩略图）
+   * 仅写入缓存缺失的项，已存在的不重复请求
+   * 这是路径缓存的唯一写入点
+   */
+  private async prefetchImagePaths(items: IImage[]): Promise<void> {
+    if (items.length === 0) return;
+
+    const originalEntries: Array<{ imageId: string; fullPath: string }> = [];
+    const thumbnailEntries: Array<{ imageId: string; fullPath: string }> = [];
+    const needOriginalRelative: string[] = [];
+    const needThumbnailRelative: string[] = [];
+
+    for (const img of items) {
+      const id = String(img.id);
+      // 原图路径：使用 relativePath
+      if (img.relativePath && !cacheManager.getImagePath(id, 'original')) {
+        needOriginalRelative.push(img.relativePath);
+        originalEntries.push({ imageId: id, fullPath: '' }); // 占位，下一步填充
+      }
+      // 缩略图路径：使用 thumbnailPath
+      const thumbPath = img.thumbnailPath || img.relativePath;
+      if (thumbPath && !cacheManager.getImagePath(id, 'thumbnail')) {
+        needThumbnailRelative.push(thumbPath);
+        thumbnailEntries.push({ imageId: id, fullPath: '' });
+      }
+    }
+
+    try {
+      if (needOriginalRelative.length > 0) {
+        const fullPaths = await window.electronAPI.getImagesPaths(needOriginalRelative);
+        needOriginalRelative.forEach((_, i) => {
+          originalEntries[i].fullPath = fullPaths[i] || '';
+        });
+        // 过滤空路径
+        const valid = originalEntries.filter(e => e.fullPath);
+        cacheManager.setImagePaths(valid, 'original');
+      }
+      if (needThumbnailRelative.length > 0) {
+        const fullPaths = await window.electronAPI.getImagesPaths(needThumbnailRelative);
+        needThumbnailRelative.forEach((_, i) => {
+          thumbnailEntries[i].fullPath = fullPaths[i] || '';
+        });
+        const valid = thumbnailEntries.filter(e => e.fullPath);
+        cacheManager.setImagePaths(valid, 'thumbnail');
+      }
+    } catch (error) {
+      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to prefetch image paths:', error);
+    }
   }
 
   /**
@@ -301,6 +355,10 @@ export class ImagePanelManager extends PanelManagerBase {
       for (const img of newItems) {
         this.loadedImageIds.add(String(img.id));
         cacheManager.cacheImage(img);
+      }
+      // 预缓存新加载项的路径
+      if (newItems.length > 0) {
+        await this.prefetchImagePaths(newItems);
       }
 
       this.filteredImages = [...this.filteredImages, ...newItems];
@@ -484,31 +542,49 @@ export class ImagePanelManager extends PanelManagerBase {
 
     const itemIds = new Set(items.map(img => String(img.id)));
     const cards = container.querySelectorAll('.image-card');
+    const uncached: Array<{ imageId: string; relativePath: string; card: HTMLElement }> = [];
+
     for (const card of cards) {
       const imageId = (card as HTMLElement).dataset.id;
       if (!imageId || !itemIds.has(imageId)) continue;
 
-      const img = this.filteredImages.find(i => String(i.id) === imageId) || this.images.find(i => String(i.id) === imageId);
-      if (!img) continue;
-
-      const imagePath = img.thumbnailPath || img.relativePath;
-      if (!imagePath) continue;
-
-      try {
-        // 先检查缓存
-        let fullPath = cacheManager.getImagePath(imageId, 'thumbnail');
-        if (!fullPath) {
-          // 缓存未命中，调用 IPC 获取
-          fullPath = await window.electronAPI.getImagePath(imagePath as string);
-          cacheManager.setImagePath(imageId, 'thumbnail', fullPath);
-        }
+      // 路径缓存的"纯读"：仅当缓存命中时直接使用
+      const cachedPath = cacheManager.getImagePath(imageId, 'thumbnail');
+      if (cachedPath) {
         const bgElement = card.querySelector('.image-card-bg, .card__bg');
         if (bgElement) {
-          (bgElement as HTMLElement).style.backgroundImage = `url('file://${fullPath.replace(/\\/g, '/')}')`;
+          (bgElement as HTMLElement).style.backgroundImage = `url('file://${cachedPath.replace(/\\/g, '/')}')`;
         }
-      } catch (error) {
-        window.electronAPI.logError('ImagePanelManager.ts', 'Failed to load card background:', error);
+        continue;
       }
+
+      // 缓存未命中（极端情况：分页预缓存前已渲染） → 收集后单次 IPC 兜底
+      const img = this.filteredImages.find(i => String(i.id) === imageId) || this.images.find(i => String(i.id) === imageId);
+      const imagePath = img?.thumbnailPath || img?.relativePath;
+      if (img && imagePath) {
+        uncached.push({ imageId, relativePath: imagePath, card: card as HTMLElement });
+      }
+    }
+
+    if (uncached.length === 0) return;
+
+    try {
+      const relativePaths = uncached.map(u => u.relativePath);
+      const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
+      const entries: Array<{ imageId: string; fullPath: string }> = [];
+      uncached.forEach((u, i) => {
+        const fullPath = fullPaths[i];
+        if (fullPath) {
+          entries.push({ imageId: u.imageId, fullPath });
+          const bgElement = u.card.querySelector('.image-card-bg, .card__bg');
+          if (bgElement) {
+            (bgElement as HTMLElement).style.backgroundImage = `url('file://${fullPath.replace(/\\/g, '/')}')`;
+          }
+        }
+      });
+      cacheManager.setImagePaths(entries, 'thumbnail');
+    } catch (error) {
+      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to load card backgrounds (fallback):', error);
     }
   }
 
@@ -589,12 +665,16 @@ export class ImagePanelManager extends PanelManagerBase {
       try {
         const relativePaths = uncachedPaths.map(p => p.relativePath);
         const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
+        const entries: Array<{ imageId: string; fullPath: string }> = [];
         uncachedPaths.forEach((item, i) => {
           const fullPath = fullPaths[i];
-          itemInfoList[item.index].fullPath = fullPath;
-          // 存入缓存
-          cacheManager.setImagePath(itemInfoList[item.index].imageId, 'thumbnail', fullPath);
+          if (fullPath) {
+            itemInfoList[item.index].fullPath = fullPath;
+            entries.push({ imageId: itemInfoList[item.index].imageId, fullPath });
+          }
         });
+        // 批量写入缓存
+        cacheManager.setImagePaths(entries, 'thumbnail');
       } catch (error) {
         window.electronAPI.logError('ImagePanelManager.ts', 'Failed to load list thumbnails:', error);
       }
@@ -980,6 +1060,9 @@ export class ImagePanelManager extends PanelManagerBase {
         this.loadedImageIds.add(String(img.id));
         cacheManager.cacheImage(img);
       }
+
+      // 补充路径缓存（仅缺失的项）
+      await this.prefetchImagePaths(result.items);
 
       // 增量更新 DOM：只更新变化的数据，不重新加载缩略图
       this.updateDomIncrementally(result.items);
