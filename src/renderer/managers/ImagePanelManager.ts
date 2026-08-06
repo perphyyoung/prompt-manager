@@ -178,6 +178,16 @@ export class ImagePanelManager extends PanelManagerBase {
         const img = item as IImage;
         const relativePath = typeof img.relativePath === 'string' ? img.relativePath : undefined;
         return relativePath || null;
+      },
+
+      getListTitle: (item: IPanelItem): string => {
+        const img = item as IImage;
+        return img.fileName || '无文件名';
+      },
+
+      getListContent: (item: IPanelItem): string => {
+        const img = item as IImage & { promptRefs?: Array<{ promptContent?: string }> };
+        return img.promptRefs?.[0]?.promptContent || '';
       }
     };
   }
@@ -1086,63 +1096,9 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
-   * 增量更新列表视图 DOM
+   * 增量更新列表视图 DOM（继承自基类 PanelManagerBase）
+   * 基类已实现 title/content/tags/note/favorite 的通用更新逻辑
    */
-  private updateListDomIncrementally(items: IImage[]): void {
-    const container = document.getElementById(Constants.Ids.IMAGE_LIST);
-    if (!container) return;
-
-    for (const img of items) {
-      const item = container.querySelector(`[data-id="${img.id}"]`) as HTMLElement;
-      if (!item) continue;
-
-      // 更新列表项 list-item--favorite class
-      item.classList.toggle('list-item--favorite', !!img.isFavorite);
-
-      // 更新收藏按钮状态
-      const favoriteBtn = item.querySelector('.favorite-btn');
-      if (favoriteBtn) {
-        const isActive = !!img.isFavorite;
-        favoriteBtn.classList.toggle('active', isActive);
-        favoriteBtn.innerHTML = isActive ? Constants.ICONS.favorite.filled : Constants.ICONS.favorite.outline;
-      }
-
-      // 更新标签区域
-      const tagsContainer = item.querySelector('.list-item__tags');
-      if (tagsContainer) {
-        tagsContainer.innerHTML = TagUI.generateTagsHtml(
-          img.tags || [],
-          'tag-display',
-          'tag-display-empty'
-        );
-      }
-
-      // 更新备注区域
-      // 注意：note section 的渲染条件是 item.note 存在，因此首次添加备注时 DOM 中没有 .list-item__note
-      // 需要在 img.note 有值但容器不存在时主动创建
-      let noteContainer = item.querySelector('.list-item__note') as HTMLElement;
-      if (img.note) {
-        if (!noteContainer) {
-          // 找到 text-content 容器，把 note 插入到尾部（与 STANDARD_LAYOUT 顺序一致）
-          const textContent = item.querySelector('.list-item__text-content');
-          if (textContent) {
-            noteContainer = document.createElement('div');
-            noteContainer.className = 'list-item__note';
-            textContent.appendChild(noteContainer);
-          }
-        }
-        if (noteContainer) {
-          noteContainer.textContent = img.note;
-          noteContainer.title = img.note;
-          noteContainer.style.display = '';
-        }
-      } else if (noteContainer) {
-        noteContainer.textContent = '';
-        noteContainer.removeAttribute('title');
-        noteContainer.style.display = 'none';
-      }
-    }
-  }
 
   /**
    * 渲染标签 HTML

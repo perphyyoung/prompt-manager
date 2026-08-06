@@ -145,6 +145,16 @@ export class PromptPanelManager extends PanelManagerBase {
         if (!prompt.images || prompt.images.length === 0) return null;
         const firstImage = prompt.images[0] as ImageInfo;
         return firstImage.relativePath || null;
+      },
+
+      getListTitle: (item: IPanelItem): string => {
+        const prompt = item as IPrompt;
+        return prompt.title || '无标题';
+      },
+
+      getListContent: (item: IPanelItem): string => {
+        const prompt = item as IPrompt;
+        return prompt.content || '';
       }
     };
   }

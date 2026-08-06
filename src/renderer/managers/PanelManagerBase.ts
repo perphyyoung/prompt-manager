@@ -85,6 +85,12 @@ interface IUIConfig {
 
   // 获取本地保存位置路径（用于右键菜单）
   getOpenLocationPath(item: IPanelItem): string | null;
+
+  // 列表项显示用的标题（原始值，基类负责转义）
+  getListTitle(item: IPanelItem): string;
+
+  // 列表项显示用的内容（原始值，基类负责转义）
+  getListContent(item: IPanelItem): string;
 }
 
 /**
@@ -1504,6 +1510,77 @@ export abstract class PanelManagerBase {
   protected updateSelectionUI(): void {
     this.updateSelectionModeClass();
     this.updateItemSelectionState();
+  }
+
+  /**
+   * 增量更新列表视图 DOM
+   * 通用实现：title/content/tags/note/favorite
+   * 子类可通过覆盖 updateListItemContent 提供个性化逻辑
+   */
+  protected updateListDomIncrementally(items: IPanelItem[]): void {
+    const config = this.getUIConfig();
+    const container = document.getElementById(config.listContainerId);
+    if (!container) return;
+
+    for (const item of items) {
+      const li = container.querySelector(`[data-id="${item.id}"]`) as HTMLElement;
+      if (!li) continue;
+
+      // 收藏状态
+      const isFavorite = !!item.isFavorite;
+      li.classList.toggle('list-item--favorite', isFavorite);
+      const favoriteBtn = li.querySelector('.favorite-btn');
+      if (favoriteBtn) {
+        favoriteBtn.classList.toggle('active', isFavorite);
+        favoriteBtn.innerHTML = isFavorite ? Constants.ICONS.favorite.filled : Constants.ICONS.favorite.outline;
+      }
+
+      // 标题
+      const titleEl = li.querySelector('.list-item__title');
+      if (titleEl) {
+        titleEl.textContent = config.getListTitle(item);
+      }
+
+      // 内容
+      const contentEl = li.querySelector('.list-item__content');
+      if (contentEl) {
+        contentEl.textContent = config.getListContent(item);
+      }
+
+      // 标签
+      const tagsContainer = li.querySelector('.list-item__tags');
+      if (tagsContainer) {
+        tagsContainer.innerHTML = TagUI.generateTagsHtml(
+          item.tags || [],
+          'tag-display',
+          'tag-display-empty'
+        );
+      }
+
+      // 备注
+      // 首次有备注时 DOM 中没有 .list-item__note（受 condition 控制），需主动创建
+      let noteContainer = li.querySelector('.list-item__note') as HTMLElement;
+      const noteText = (item as { note?: string }).note;
+      if (noteText) {
+        if (!noteContainer) {
+          const textContent = li.querySelector('.list-item__text-content');
+          if (textContent) {
+            noteContainer = document.createElement('div');
+            noteContainer.className = 'list-item__note';
+            textContent.appendChild(noteContainer);
+          }
+        }
+        if (noteContainer) {
+          noteContainer.textContent = noteText;
+          noteContainer.title = noteText;
+          noteContainer.style.display = '';
+        }
+      } else if (noteContainer) {
+        noteContainer.textContent = '';
+        noteContainer.removeAttribute('title');
+        noteContainer.style.display = 'none';
+      }
+    }
   }
 
   /**
