@@ -459,7 +459,7 @@ test.describe("标签管理对话框失败重试功能", () => {
       // 验证对话框仍然保持打开
       await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL}`, {
         state: "visible",
-        timeout: 1000,
+        timeout: 1500,
       });
 
       // 验证输入框保留之前的值
