@@ -1118,17 +1118,28 @@ export class ImagePanelManager extends PanelManagerBase {
       }
 
       // 更新备注区域
-      const noteContainer = item.querySelector('.list-item__note') as HTMLElement;
-      if (noteContainer) {
-        if (img.note) {
+      // 注意：note section 的渲染条件是 item.note 存在，因此首次添加备注时 DOM 中没有 .list-item__note
+      // 需要在 img.note 有值但容器不存在时主动创建
+      let noteContainer = item.querySelector('.list-item__note') as HTMLElement;
+      if (img.note) {
+        if (!noteContainer) {
+          // 找到 text-content 容器，把 note 插入到尾部（与 STANDARD_LAYOUT 顺序一致）
+          const textContent = item.querySelector('.list-item__text-content');
+          if (textContent) {
+            noteContainer = document.createElement('div');
+            noteContainer.className = 'list-item__note';
+            textContent.appendChild(noteContainer);
+          }
+        }
+        if (noteContainer) {
           noteContainer.textContent = img.note;
           noteContainer.title = img.note;
           noteContainer.style.display = '';
-        } else {
-          noteContainer.textContent = '';
-          noteContainer.removeAttribute('title');
-          noteContainer.style.display = 'none';
         }
+      } else if (noteContainer) {
+        noteContainer.textContent = '';
+        noteContainer.removeAttribute('title');
+        noteContainer.style.display = 'none';
       }
     }
   }
