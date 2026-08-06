@@ -457,7 +457,7 @@ const DB_CONFIG = {
         return parsed;
       }
     }
-    return 100; // 默认值
+    return 200; // 默认值
   }
 };
 
