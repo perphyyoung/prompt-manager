@@ -11,6 +11,7 @@ import { batchToolbarMiddle } from '../../middle/index.ts';
 import { IImage } from '../../types/entities.ts';
 import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
+import { TagUI } from './TagUI.ts';
 
 interface PromptRef {
   promptId: string;
@@ -1051,6 +1052,7 @@ export class ImagePanelManager extends PanelManagerBase {
 
   /**
    * 增量更新网格视图 DOM
+   * 注意：网格卡片没有 note 区域（UnifiedCardRenderer 仅渲染 4 行：按钮/内容/标签/信息）
    */
   private updateGridDomIncrementally(items: IImage[]): void {
     const container = document.getElementById(Constants.Ids.IMAGE_GRID);
@@ -1069,6 +1071,16 @@ export class ImagePanelManager extends PanelManagerBase {
         const isActive = !!img.isFavorite;
         favoriteBtn.classList.toggle('active', isActive);
         favoriteBtn.innerHTML = isActive ? Constants.ICONS.favorite.filled : Constants.ICONS.favorite.outline;
+      }
+
+      // 更新标签区域（row3）
+      const tagsContainer = card.querySelector('.image-card-row3');
+      if (tagsContainer) {
+        tagsContainer.innerHTML = TagUI.generateTagsHtml(
+          img.tags || [],
+          'tag-display',
+          'tag-display-empty'
+        );
       }
     }
   }
@@ -1093,6 +1105,30 @@ export class ImagePanelManager extends PanelManagerBase {
         const isActive = !!img.isFavorite;
         favoriteBtn.classList.toggle('active', isActive);
         favoriteBtn.innerHTML = isActive ? Constants.ICONS.favorite.filled : Constants.ICONS.favorite.outline;
+      }
+
+      // 更新标签区域
+      const tagsContainer = item.querySelector('.list-item__tags');
+      if (tagsContainer) {
+        tagsContainer.innerHTML = TagUI.generateTagsHtml(
+          img.tags || [],
+          'tag-display',
+          'tag-display-empty'
+        );
+      }
+
+      // 更新备注区域
+      const noteContainer = item.querySelector('.list-item__note') as HTMLElement;
+      if (noteContainer) {
+        if (img.note) {
+          noteContainer.textContent = img.note;
+          noteContainer.title = img.note;
+          noteContainer.style.display = '';
+        } else {
+          noteContainer.textContent = '';
+          noteContainer.removeAttribute('title');
+          noteContainer.style.display = 'none';
+        }
       }
     }
   }
