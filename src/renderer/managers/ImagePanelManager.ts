@@ -1021,6 +1021,17 @@ export class ImagePanelManager extends PanelManagerBase {
 
       const result = await window.electronAPI.getImagesPaginated(options);
 
+      // 检测 DOM 中不存在的新项（如新建/上传的图像）：
+      // 增量更新只能修改/删除已有元素，无法创建新元素，
+      // 存在新项时降级为全量渲染，确保新卡片正确显示
+      const container = this.getCurrentContainer();
+      const hasNewItem =
+        container !== null && result.items.some((item) => !container.querySelector(`[data-id="${item.id}"]`));
+      if (hasNewItem) {
+        await this.renderView();
+        return;
+      }
+
       // 更新缓存和 filteredImages
       this.filteredImages = result.items;
       this.filteredItems = result.items;

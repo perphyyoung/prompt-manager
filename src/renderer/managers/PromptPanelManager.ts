@@ -1169,6 +1169,17 @@ export class PromptPanelManager extends PanelManagerBase {
 
       const result = await window.electronAPI.getPromptsPaginated(options);
 
+      // 检测 DOM 中不存在的新项（如新建的提示词）：
+      // 增量更新只能修改/删除已有元素，无法创建新元素，
+      // 存在新项时降级为全量渲染，确保新卡片正确显示
+      const container = this.getCurrentContainer();
+      const hasNewItem =
+        container !== null && result.items.some((item) => !container.querySelector(`[data-id="${item.id}"]`));
+      if (hasNewItem) {
+        await this.renderView();
+        return;
+      }
+
       // 更新缓存和 filteredPrompts
       this.filteredPrompts = result.items;
       this.filteredItems = result.items;
