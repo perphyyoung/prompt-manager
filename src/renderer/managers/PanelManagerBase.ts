@@ -1693,8 +1693,8 @@ export abstract class PanelManagerBase {
     const visibleItems = this.getVisibleItems();
     const allIds = visibleItems.map((item: IPanelItem) => String(item.id));
     batchToolbarMiddle.invertSelection(this.toolbarContext, allIds);
-    // 重新渲染视图以更新选中状态
-    this.renderView();
+    // 仅更新选中状态 UI，避免 renderView 触发 loadData 重置分页
+    this.updateSelectionUI();
   }
 
   /**

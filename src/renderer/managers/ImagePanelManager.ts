@@ -898,7 +898,8 @@ export class ImagePanelManager extends PanelManagerBase {
       if (image) {
         image.isDeleted = true;
       }
-      await this.renderView();
+      // 增量刷新：保持分页位置，仅移除已删除项，避免重置到第一页
+      await this.refreshIncremental();
       this.app.eventBus.emit(Events.IMAGES_CHANGED, { images: this.images });
 
       // 通知提示词面板刷新（关联的提示词已移除该图像）

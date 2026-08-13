@@ -1057,7 +1057,8 @@ export class PromptPanelManager extends PanelManagerBase {
       if (prompt) {
         prompt.isDeleted = true;
       }
-      await this.renderView();
+      // 增量刷新：保持分页位置，仅移除已删除项，避免重置到第一页
+      await this.refreshIncremental();
       this.app.eventBus.emit(Events.PROMPTS_CHANGED, { prompts: this.prompts });
 
       // 通知图像面板刷新（关联的图像已移除该提示词）
