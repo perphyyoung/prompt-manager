@@ -1175,8 +1175,8 @@ body * {
 }
 
 /* 列表项选中样式 - 统一使用背景色 */
-.list-item--selected,
-.list-item--selected:hover {
+.list-item.is-selected,
+.list-item.is-selected:hover {
   background: var(--selection-overlay);
 }
 

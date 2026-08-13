@@ -64,7 +64,7 @@ export class UnifiedListRenderer {
     }
 
     if (context.isSelected) {
-      classes.push(`${config.blockClass}--selected`);
+      classes.push('is-selected');
     }
 
     // 提示词特有：是否有图像
