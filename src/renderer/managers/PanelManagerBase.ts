@@ -1513,6 +1513,28 @@ export abstract class PanelManagerBase {
   }
 
   /**
+   * 清理增量刷新后不再匹配当前结果集的 DOM 项
+   * 用于数据变更导致项从筛选结果中消失的场景（如"无标"筛选下添加标签）
+   * @param items - 更新后的结果集
+   */
+  protected removeStaleDomItems(items: IPanelItem[]): void {
+    const config = this.getUIConfig();
+    const itemIds = new Set(items.map((i) => String(i.id)));
+    const selector = config.getCardDropSelector();
+
+    [config.gridContainerId, config.listContainerId].forEach((containerId) => {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.querySelectorAll(selector).forEach((el) => {
+        const elId = (el as HTMLElement).dataset.id;
+        if (elId && !itemIds.has(String(elId))) {
+          el.remove();
+        }
+      });
+    });
+  }
+
+  /**
    * 增量更新列表视图 DOM
    * 通用实现：title/content/tags/note/favorite
    * 子类可通过覆盖 updateListItemContent 提供个性化逻辑

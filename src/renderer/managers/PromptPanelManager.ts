@@ -1184,6 +1184,9 @@ export class PromptPanelManager extends PanelManagerBase {
       // 补充路径缓存（仅缺失的项）
       await this.prefetchPromptImagePaths(result.items);
 
+      // 清理不再匹配筛选结果的 DOM 项（如"无标"筛选下添加标签）
+      this.removeStaleDomItems(result.items);
+
       // 增量更新 DOM：只更新变化的数据，不重新加载缩略图
       this.updateDomIncrementally(result.items);
 
