@@ -594,6 +594,21 @@ ipcMain.handle('get-prompts', async (event, sortBy, sortOrder) => {
   return await db.getPrompts(sortBy, sortOrder);
 });
 
+// 分页获取 Prompts
+ipcMain.handle('get-prompts-paginated', async (event, options) => {
+  return await db.getPromptsPaginated(options);
+});
+
+// 统计提示词标签数量
+ipcMain.handle('count-prompt-tags', async (event, options) => {
+  return await db.countPromptTags(options);
+});
+
+// 统计提示词特殊标签数量
+ipcMain.handle('count-prompt-special-tags', async (event, options) => {
+  return await db.countPromptSpecialTags(options);
+});
+
 // 添加 Prompt
 ipcMain.handle('add-prompt', async (event, prompt) => {
   const newPrompt = {

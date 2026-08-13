@@ -383,6 +383,53 @@ export interface ImageCleanupInfo {
 }
 
 /**
+ * 分页获取提示词选项
+ */
+export interface GetPromptsPaginatedOptions {
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  searchQuery?: string;
+  tagNames?: string[];
+  specialTags?: string[];
+  isSafe?: boolean;
+  invertedFilter?: boolean;
+  limit: number;
+  offset: number;
+}
+
+/**
+ * 分页获取提示词结果
+ */
+export interface PaginatedPromptsResult {
+  items: Prompt[];
+  totalCount: number;
+}
+
+/**
+ * 提示词标签计数选项
+ */
+export interface CountPromptTagsOptions {
+  searchQuery?: string;
+  tagNames?: string[];
+  specialTags?: string[];
+  isSafe?: boolean;
+  invertedFilter?: boolean;
+}
+
+/**
+ * 提示词特殊标签计数结果
+ */
+export interface PromptSpecialTagCounts {
+  favorite: number;
+  safe: number;
+  unsafe: number;
+  multiImage: number;
+  noImage: number;
+  noTag: number;
+  singleLang: number;
+}
+
+/**
  * 查询选项
  */
 export interface QueryOptions {

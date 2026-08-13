@@ -1,6 +1,6 @@
 {
   "name": "prompt-manager",
-  "version": "0.11.22",
+  "version": "0.11.23",
   "description": "本地提示词管理工具",
   "main": "out/main/index.js",
   "type": "module",
@@ -90,5 +90,6 @@
     "typescript": "^6.0.2",
     "vite": "^8.0.2",
     "vitest": "^4.1.4"
-  }
+  },
+  "packageManager": "pnpm@11.21.0+sha512.521705bce689924eac72f5a3587122f362689ef6571e55ba80076fd637c11132ecffada26fad4ea79c485bfddbfd3d5a2a5b05805a77e893de71ec8a6cca3bb1"
 }

@@ -26,6 +26,7 @@ import type {
   UpdateTagGroupParams,
   MapPromptOptions, MapImageOptions, GetImagesOptions,
   GetImagesPaginatedOptions, PaginatedImagesResult, CountImageTagsOptions, ImageSpecialTagCounts,
+  GetPromptsPaginatedOptions, PaginatedPromptsResult, CountPromptTagsOptions, PromptSpecialTagCounts,
   RunResult, TagSyncResult, Statistics, UnreferencedImage,
   ImageFilePaths, ImageCleanupInfo
 } from './database-types.js';
@@ -948,6 +949,200 @@ async function getPrompts(sortBy = 'updatedAt', sortOrder = 'desc'): Promise<Pro
 
   // 使用批量查询获取图像，避免 N+1 问题
   return getPromptsWithImages(rows);
+}
+
+/**
+ * 提示词特殊标签到 SQL 条件的映射
+ * 键值需与 src/constants.ts 中的特殊标签常量保持一致
+ */
+const PROMPT_SPECIAL_TAG_CONDITIONS: Record<string, string> = {
+  '收藏': 'p.is_favorite = 1',
+  '安全': 'p.is_safe != 0',
+  '敏感': 'p.is_safe = 0',
+  '多图': '(SELECT COUNT(*) FROM prompt_image_relations pir WHERE pir.prompt_id = p.id) >= 2',
+  '无图': 'NOT EXISTS (SELECT 1 FROM prompt_image_relations pir WHERE pir.prompt_id = p.id)',
+  '无标': 'NOT EXISTS (SELECT 1 FROM prompt_tag_relations ptr WHERE ptr.prompt_id = p.id)',
+  '单语': "COALESCE(p.content_translate, '') = ''"
+};
+
+/**
+ * 构建提示词分页/计数查询的 WHERE 条件和参数
+ * @param options - 查询选项
+ * @returns WHERE 子句和参数数组
+ */
+function buildPromptFilterWhere(options: { searchQuery?: string; tagNames?: string[]; specialTags?: string[]; isSafe?: boolean; invertedFilter?: boolean }): { whereClause: string; params: any[] } {
+  const conditions: string[] = ['p.is_deleted = 0'];
+  const params: any[] = [];
+
+  if (options.isSafe) {
+    conditions.push('p.is_safe != 0');
+  }
+
+  if (options.searchQuery && options.searchQuery.trim()) {
+    const query = `%${options.searchQuery.trim()}%`;
+    conditions.push(`(p.title LIKE ? OR p.content LIKE ? OR p.content_translate LIKE ? OR p.note LIKE ? OR EXISTS (SELECT 1 FROM prompt_tag_relations ptr_search JOIN prompt_tags pt_search ON ptr_search.tag_id = pt_search.id WHERE ptr_search.prompt_id = p.id AND pt_search.name LIKE ?))`);
+    params.push(query, query, query, query, query);
+  }
+
+  // 构建标签筛选条件（普通标签 + 特殊标签）
+  const tagConditions: string[] = [];
+
+  if (options.tagNames && options.tagNames.length > 0) {
+    const placeholders = options.tagNames.map(() => '?').join(',');
+    tagConditions.push(`(SELECT COUNT(DISTINCT pt_tag.name) FROM prompt_tag_relations ptr_tag JOIN prompt_tags pt_tag ON ptr_tag.tag_id = pt_tag.id WHERE ptr_tag.prompt_id = p.id AND pt_tag.name IN (${placeholders})) = ${options.tagNames.length}`);
+    params.push(...options.tagNames);
+  }
+
+  if (options.specialTags && options.specialTags.length > 0) {
+    for (const tag of options.specialTags) {
+      const condition = PROMPT_SPECIAL_TAG_CONDITIONS[tag];
+      if (condition) {
+        tagConditions.push(condition);
+      }
+    }
+  }
+
+  if (tagConditions.length > 0) {
+    const combinedTagCondition = tagConditions.join(' AND ');
+    if (options.invertedFilter) {
+      conditions.push(`NOT (${combinedTagCondition})`);
+    } else {
+      conditions.push(combinedTagCondition);
+    }
+  }
+
+  return {
+    whereClause: conditions.join(' AND '),
+    params
+  };
+}
+
+/**
+ * 分页获取提示词（不包括已删除的）
+ * @param options - 分页和筛选选项
+ */
+async function getPromptsPaginated(options: GetPromptsPaginatedOptions): Promise<PaginatedPromptsResult> {
+  const sortFieldMap: Record<string, string> = {
+    'createdAt': 'p.created_at',
+    'updatedAt': 'p.updated_at',
+    'title': 'p.title'
+  };
+
+  const sortBy = options.sortBy || 'updatedAt';
+  const sortOrder = options.sortOrder || 'desc';
+  const sortField = sortFieldMap[sortBy] || 'p.updated_at';
+  const order = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+  const { whereClause, params } = buildPromptFilterWhere(options);
+  const limit = Math.max(1, options.limit);
+  const offset = Math.max(0, options.offset);
+
+  const promptSql = `
+    SELECT p.*,
+           (SELECT GROUP_CONCAT(DISTINCT pt.name)
+            FROM prompt_tag_relations ptr
+            JOIN prompt_tags pt ON ptr.tag_id = pt.id
+            WHERE ptr.prompt_id = p.id) as tags
+    FROM prompts p
+    WHERE ${whereClause}
+    ORDER BY ${sortField} ${order}
+    LIMIT ? OFFSET ?
+  `;
+
+  const queryParams = [...params, limit, offset];
+  const rows = await all<PromptRow>(promptSql, queryParams);
+
+  const [items, totalCount] = await Promise.all([
+    getPromptsWithImages(rows),
+    countPrompts(options)
+  ]);
+
+  return {
+    items,
+    totalCount
+  };
+}
+
+/**
+ * 统计满足条件的提示词总数
+ * @param options - 筛选选项（不含 limit/offset）
+ */
+async function countPrompts(options: Omit<GetPromptsPaginatedOptions, 'limit' | 'offset'>): Promise<number> {
+  const { whereClause, params } = buildPromptFilterWhere(options);
+
+  const sql = `
+    SELECT COUNT(*) as count
+    FROM prompts p
+    WHERE ${whereClause}
+  `;
+
+  const row = await get<{ count: number }>(sql, params);
+  return row?.count || 0;
+}
+
+/**
+ * 统计提示词标签数量（基于当前筛选条件）
+ * @param options - 筛选选项
+ */
+async function countPromptTags(options: CountPromptTagsOptions): Promise<Record<string, number>> {
+  const { whereClause, params } = buildPromptFilterWhere(options);
+
+  const sql = `
+    SELECT pt.name as tag_name, COUNT(DISTINCT p.id) as count
+    FROM prompts p
+    JOIN prompt_tag_relations ptr ON p.id = ptr.prompt_id
+    JOIN prompt_tags pt ON ptr.tag_id = pt.id
+    WHERE ${whereClause}
+    GROUP BY pt.name
+  `;
+
+  const rows = await all<{ tag_name: string; count: number }>(sql, params);
+  const result: Record<string, number> = {};
+  for (const row of rows) {
+    result[row.tag_name] = row.count;
+  }
+  return result;
+}
+
+/**
+ * 统计提示词特殊标签数量（基于当前筛选条件）
+ * @param options - 筛选选项
+ */
+async function countPromptSpecialTags(options: CountPromptTagsOptions): Promise<PromptSpecialTagCounts> {
+  const { whereClause, params } = buildPromptFilterWhere(options);
+
+  const sql = `
+    SELECT
+      SUM(CASE WHEN p.is_favorite = 1 THEN 1 ELSE 0 END) as favorite,
+      SUM(CASE WHEN p.is_safe != 0 THEN 1 ELSE 0 END) as safe,
+      SUM(CASE WHEN p.is_safe = 0 THEN 1 ELSE 0 END) as unsafe,
+      SUM(CASE WHEN (SELECT COUNT(*) FROM prompt_image_relations pir WHERE pir.prompt_id = p.id) >= 2 THEN 1 ELSE 0 END) as multi_image,
+      SUM(CASE WHEN NOT EXISTS (SELECT 1 FROM prompt_image_relations pir WHERE pir.prompt_id = p.id) THEN 1 ELSE 0 END) as no_image,
+      SUM(CASE WHEN NOT EXISTS (SELECT 1 FROM prompt_tag_relations ptr WHERE ptr.prompt_id = p.id) THEN 1 ELSE 0 END) as no_tag,
+      SUM(CASE WHEN COALESCE(p.content_translate, '') = '' THEN 1 ELSE 0 END) as single_lang
+    FROM prompts p
+    WHERE ${whereClause}
+  `;
+
+  const row = await get<{
+    favorite: number;
+    safe: number;
+    unsafe: number;
+    multi_image: number;
+    no_image: number;
+    no_tag: number;
+    single_lang: number;
+  }>(sql, params);
+
+  return {
+    favorite: row?.favorite || 0,
+    safe: row?.safe || 0,
+    unsafe: row?.unsafe || 0,
+    multiImage: row?.multi_image || 0,
+    noImage: row?.no_image || 0,
+    noTag: row?.no_tag || 0,
+    singleLang: row?.single_lang || 0
+  };
 }
 
 /**
@@ -3275,6 +3470,10 @@ export {
   all,
   // Prompt 操作
   getPrompts,
+  getPromptsPaginated,
+  countPrompts,
+  countPromptTags,
+  countPromptSpecialTags,
   getPromptById,
   isTitleExists,
   addPrompt,

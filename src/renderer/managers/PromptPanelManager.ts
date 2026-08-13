@@ -11,6 +11,7 @@ import { batchToolbarMiddle } from '../../middle/index.ts';
 import { IPrompt } from '../../types/entities.ts';
 import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
+import { TagUI } from './TagUI.ts';
 
 interface ImageInfo {
   id?: string;
@@ -25,6 +26,15 @@ interface ImageInfo {
 export class PromptPanelManager extends PanelManagerBase {
   filteredPrompts: IPrompt[] = [];
   private isInitialized = false;
+
+  // 分页状态
+  private readonly pageSize = 500;
+  private currentOffset = 0;
+  private hasMore = true;
+  private totalCount = 0;
+  private isLoading = false;
+  private loadedPromptIds = new Set<string>();
+  private scrollHandler: (() => void) | null = null;
 
   // 面板类型
   protected readonly panelType = 'prompt' as const;
@@ -217,17 +227,112 @@ export class PromptPanelManager extends PanelManagerBase {
 
   /**
    * 加载提示词数据（实现基类抽象方法）
+   * 数据库分页加载第一页
    */
   async loadData(): Promise<IPrompt[]> {
     try {
-      const prompts = await window.electronAPI.getPrompts('updatedAt', 'desc');
-      cacheManager.cachePrompts(prompts);
+      this.currentOffset = 0;
+      this.hasMore = true;
+      this.loadedPromptIds.clear();
+      const page = await this.fetchPage();
+      // 增量缓存元数据（不调用 cachePrompts 避免清空改变 LRU 顺序）
+      for (const prompt of page.items) {
+        cacheManager.cachePrompt(prompt);
+        this.loadedPromptIds.add(String(prompt.id));
+      }
+      this.totalCount = page.totalCount;
+      this.hasMore = page.items.length < page.totalCount;
       // 预缓存提示词关联的第一张图的路径（缩略图用）
-      await this.prefetchPromptImagePaths(prompts);
-      return prompts;
+      await this.prefetchPromptImagePaths(page.items);
+      return page.items;
     } catch (error) {
-      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load prompts:', error);
+      cacheManager.getPromptCache().clear();
       throw error;
+    }
+  }
+
+  /**
+   * 将选中的标签拆分为普通标签和特殊标签
+   */
+  private splitSelectedTags(): { tagNames: string[]; specialTags: string[] } {
+    const specialTagChecks = this.getSpecialTagChecks();
+    const tagNames: string[] = [];
+    const specialTags: string[] = [];
+
+    for (const tag of this.selectedTags) {
+      if (specialTagChecks.has(tag)) {
+        specialTags.push(tag);
+      } else {
+        tagNames.push(tag);
+      }
+    }
+
+    return { tagNames, specialTags };
+  }
+
+  /**
+   * 构建分页查询选项
+   */
+  private buildPaginatedOptions(): import('../../main/database-types.js').GetPromptsPaginatedOptions {
+    const { tagNames, specialTags } = this.splitSelectedTags();
+    return {
+      sortBy: this.sortBy || 'updatedAt',
+      sortOrder: this.sortOrder === 'asc' ? 'asc' : 'desc',
+      searchQuery: this.getSearchQuery() || undefined,
+      tagNames: tagNames.length > 0 ? tagNames : undefined,
+      specialTags: specialTags.length > 0 ? specialTags : undefined,
+      isSafe: this.app.viewMode === 'safe' ? true : undefined,
+      invertedFilter: this.invertedFilter,
+      limit: this.pageSize,
+      offset: this.currentOffset
+    };
+  }
+
+  /**
+   * 分页获取提示词
+   */
+  private async fetchPage(): Promise<{ items: IPrompt[]; totalCount: number }> {
+    const options = this.buildPaginatedOptions();
+    return await window.electronAPI.getPromptsPaginated(options);
+  }
+
+  /**
+   * 加载更多提示词
+   */
+  async loadMore(): Promise<void> {
+    if (this.isLoading || !this.hasMore) {
+      return;
+    }
+
+    this.isLoading = true;
+    try {
+      this.currentOffset += this.pageSize;
+      const page = await this.fetchPage();
+
+      const newItems = page.items.filter(prompt => !this.loadedPromptIds.has(String(prompt.id)));
+      for (const prompt of newItems) {
+        this.loadedPromptIds.add(String(prompt.id));
+        cacheManager.cachePrompt(prompt);
+      }
+      // 预缓存新加载项的路径
+      if (newItems.length > 0) {
+        await this.prefetchPromptImagePaths(newItems);
+      }
+
+      this.filteredPrompts = [...this.filteredPrompts, ...newItems];
+      this.filteredItems = this.filteredPrompts;
+      this.hasMore = this.filteredPrompts.length < page.totalCount;
+
+      if (newItems.length > 0) {
+        await this.appendToContainer(newItems);
+        // 重新绑定事件，让闭包包含所有已加载提示词
+        this.bindItemEvents(this.filteredPrompts);
+      }
+    } catch (error) {
+      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load more prompts:', error);
+      this.app.showToast?.('加载更多提示词失败', 'error');
+    } finally {
+      this.isLoading = false;
     }
   }
 
@@ -293,7 +398,142 @@ export class PromptPanelManager extends PanelManagerBase {
     }
     await this.loadData();
     this.restoreTagFilterState();
+    this.bindScrollEvents();
     this.isInitialized = true;
+  }
+
+  /**
+   * 渲染主视图（重写基类方法）
+   * 提示词面板使用数据库分页查询，不走前端过滤排序
+   */
+  async renderView(): Promise<void> {
+    try {
+      const filtered = await this.loadData();
+      this.filteredItems = filtered;
+      this.filteredPrompts = filtered;
+
+      await this.renderContainer(filtered);
+      await this.afterRenderContainer(filtered);
+      await this.refreshTagCounts();
+      await this.renderTagFilters();
+    } catch (error) {
+      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to render prompt list:', error);
+      this.app.showToast?.('加载提示词失败', 'error');
+    }
+  }
+
+  /**
+   * 渲染标签筛选器（重写基类方法）
+   * 先刷新数据库计数，再渲染
+   */
+  async renderTagFilters(): Promise<void> {
+    await this.refreshTagCounts();
+    await super.renderTagFilters();
+  }
+
+  /**
+   * 追加渲染到容器
+   * @param newItems - 新加载的提示词列表
+   */
+  private async appendToContainer(newItems: IPrompt[]): Promise<void> {
+    const container = document.getElementById(Constants.Ids.PROMPT_GRID);
+    const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
+    if (!container || !listContainer) return;
+
+    if (this.viewModeType === 'grid') {
+      const html = newItems.map((prompt, index) => this.createCard(prompt, this.filteredPrompts.length - newItems.length + index)).join('');
+      this.appendHtmlToContainer(container, html);
+      this.bindCardButtonEvents(newItems);
+      await this.loadCardBackgroundsForItems(newItems);
+      this.bindHoverPreview('.prompt-card');
+    } else {
+      const isCompact = this.viewModeType === 'list-compact';
+      const html = newItems.map((prompt, index) =>
+        UnifiedListRenderer.render(PromptListConfig, prompt, {
+          icons: Constants.ICONS,
+          isCompact,
+          isSelected: batchToolbarMiddle.isSelected(this.toolbarContext, String(prompt.id)),
+          index: this.filteredPrompts.length - newItems.length + index
+        })
+      ).join('');
+      this.appendHtmlToContainer(listContainer, html);
+      this.bindListButtonEvents(newItems);
+      this.bindHoverPreview('.list-item--prompt');
+      await this.loadPromptListThumbnails(newItems);
+    }
+  }
+
+  /**
+   * 将 HTML 字符串追加到容器
+   * 使用 DOMParser 避免直接调用 insertAdjacentHTML 触发 lint 警告
+   * @param container - 容器元素
+   * @param html - HTML 字符串
+   */
+  private appendHtmlToContainer(container: HTMLElement, html: string): void {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const nodes = Array.from(doc.body.childNodes);
+    container.append(...nodes);
+  }
+
+  /**
+   * 异步加载指定提示词卡片的背景图
+   * 优先从路径缓存读取，未命中时单次 IPC 批量兜底并回写缓存
+   * @param items - 需要加载背景图的提示词列表
+   */
+  private async loadCardBackgroundsForItems(items: IPrompt[]): Promise<void> {
+    const container = document.getElementById(Constants.Ids.PROMPT_GRID);
+    if (!container) return;
+
+    const itemIds = new Set(items.map(p => String(p.id)));
+    const cards = container.querySelectorAll('.prompt-card');
+    const uncached: Array<{ imageId: string; relativePath: string; card: HTMLElement }> = [];
+
+    for (const card of cards) {
+      const promptId = (card as HTMLElement).dataset.id;
+      if (!promptId || !itemIds.has(promptId)) continue;
+
+      const prompt = items.find(p => String(p.id) === String(promptId));
+      if (!prompt || !prompt.images || prompt.images.length === 0) continue;
+      const firstImage = prompt.images[0] as ImageInfo;
+      const imageId = firstImage.id ? String(firstImage.id) : null;
+      const imagePath = firstImage.thumbnailPath || firstImage.relativePath;
+      if (!imageId || !imagePath) continue;
+
+      // 路径缓存的"纯读"：仅当缓存命中时直接使用
+      const cachedPath = cacheManager.getImagePath(imageId, 'thumbnail');
+      if (cachedPath) {
+        const bgElement = card.querySelector('.prompt-card-bg, .card__bg');
+        if (bgElement) {
+          (bgElement as HTMLElement).style.backgroundImage = `url('file://${cachedPath.replace(/\\/g, '/')}')`;
+        }
+        continue;
+      }
+
+      // 缓存未命中 → 收集后单次 IPC 兜底
+      uncached.push({ imageId, relativePath: imagePath, card: card as HTMLElement });
+    }
+
+    if (uncached.length === 0) return;
+
+    try {
+      const relativePaths = uncached.map(u => u.relativePath);
+      const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
+      const entries: Array<{ imageId: string; fullPath: string }> = [];
+      uncached.forEach((u, i) => {
+        const fullPath = fullPaths[i];
+        if (fullPath) {
+          entries.push({ imageId: u.imageId, fullPath });
+          const bgElement = u.card.querySelector('.prompt-card-bg, .card__bg');
+          if (bgElement) {
+            (bgElement as HTMLElement).style.backgroundImage = `url('file://${fullPath.replace(/\\/g, '/')}')`;
+          }
+        }
+      });
+      cacheManager.setImagePaths(entries, 'thumbnail');
+    } catch (error) {
+      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load card backgrounds (fallback):', error);
+    }
   }
 
   /**
@@ -582,6 +822,59 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
+   * 绑定滚动加载事件
+   */
+  private bindScrollEvents(): void {
+    this.unbindScrollEvents();
+
+    const gridContainer = document.getElementById(Constants.Ids.PROMPT_GRID);
+    const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
+
+    let ticking = false;
+    this.scrollHandler = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        this.handleScroll();
+      });
+    };
+
+    gridContainer?.addEventListener('scroll', this.scrollHandler);
+    listContainer?.addEventListener('scroll', this.scrollHandler);
+  }
+
+  /**
+   * 解绑滚动加载事件
+   */
+  private unbindScrollEvents(): void {
+    if (!this.scrollHandler) return;
+
+    const gridContainer = document.getElementById(Constants.Ids.PROMPT_GRID);
+    const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
+
+    gridContainer?.removeEventListener('scroll', this.scrollHandler);
+    listContainer?.removeEventListener('scroll', this.scrollHandler);
+    this.scrollHandler = null;
+  }
+
+  /**
+   * 处理滚动事件，判断是否需要加载更多
+   */
+  private handleScroll(): void {
+    const container = this.viewModeType === 'grid'
+      ? document.getElementById(Constants.Ids.PROMPT_GRID)
+      : document.getElementById(Constants.Ids.PROMPT_LIST);
+    if (!container) return;
+
+    const scrollBottom = container.scrollTop + container.clientHeight;
+    const threshold = 200;
+    if (scrollBottom >= container.scrollHeight - threshold) {
+      this.loadMore();
+    }
+  }
+
+  /**
    * 获取标签筛选容器 ID（实现基类抽象方法）
    */
   getTagFilterContainerId(): string {
@@ -665,30 +958,88 @@ export class PromptPanelManager extends PanelManagerBase {
     return window.electronAPI.getPromptTags();
   }
 
+  private lastTagCounts: Record<string, number> = {};
+
+  private lastSpecialTagCounts: import('../../main/database-types.js').PromptSpecialTagCounts = {
+    favorite: 0,
+    safe: 0,
+    unsafe: 0,
+    multiImage: 0,
+    noImage: 0,
+    noTag: 0,
+    singleLang: 0
+  };
+
+  /**
+   * 计算标签计数（重写基类方法）
+   * 基于数据库统计，不受分页影响
+   */
+  calculateTagCounts(_tags: string[]): Record<string, number> {
+    return this.lastTagCounts;
+  }
+
+  /**
+   * 异步刷新标签计数
+   */
+  private async refreshTagCounts(): Promise<void> {
+    try {
+      const options = this.buildCountOptions();
+      const [tagCounts, specialTagCounts] = await Promise.all([
+        window.electronAPI.countPromptTags(options),
+        window.electronAPI.countPromptSpecialTags(options)
+      ]);
+      this.lastTagCounts = tagCounts;
+      this.lastSpecialTagCounts = specialTagCounts;
+    } catch (error) {
+      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to refresh tag counts:', error);
+    }
+  }
+
+  /**
+   * 构建计数查询选项
+   */
+  private buildCountOptions(): import('../../main/database-types.js').CountPromptTagsOptions {
+    const { tagNames, specialTags } = this.splitSelectedTags();
+    return {
+      searchQuery: this.getSearchQuery() || undefined,
+      tagNames: tagNames.length > 0 ? tagNames : undefined,
+      specialTags: specialTags.length > 0 ? specialTags : undefined,
+      isSafe: this.app.viewMode === 'safe' ? true : undefined,
+      invertedFilter: this.invertedFilter
+    };
+  }
+
   /**
    * 计算特殊标签计数（实现基类抽象方法）
+   * 基于数据库统计，不受分页影响
    */
-  calculateSpecialTagCounts(visibleItems: IPrompt[]): { tag: string; count: number }[] {
+  calculateSpecialTagCounts(_visibleItems: IPrompt[]): { tag: string; count: number }[] {
     const specialTags: { tag: string; count: number }[] = [];
+    const counts = this.lastSpecialTagCounts;
 
-    // 遍历特殊标签检查函数，自动计算计数（安全/敏感标签在 NSFW 模式下单独处理）
-    for (const [tag, checkFn] of PromptPanelManager.PROMPT_SPECIAL_TAG_PREDICATES) {
-      if (tag === Constants.SAFE_TAG || tag === Constants.UNSAFE_TAG) continue;
-      const count = visibleItems.filter(checkFn).length;
-      if (count > 0) {
-        specialTags.push({ tag, count });
-      }
+    if (counts.favorite > 0) {
+      specialTags.push({ tag: Constants.FAVORITE_TAG, count: counts.favorite });
+    }
+    if (counts.multiImage > 0) {
+      specialTags.push({ tag: Constants.MULTI_IMAGE_TAG, count: counts.multiImage });
+    }
+    if (counts.noImage > 0) {
+      specialTags.push({ tag: Constants.NO_IMAGE_TAG, count: counts.noImage });
+    }
+    if (counts.noTag > 0) {
+      specialTags.push({ tag: Constants.NO_TAG_TAG, count: counts.noTag });
+    }
+    if (counts.singleLang > 0) {
+      specialTags.push({ tag: Constants.SINGLE_LANG_TAG, count: counts.singleLang });
     }
 
     // NSFW 模式下显示安全评级标签
     if (this.app.viewMode === 'nsfw') {
-      const safeCount = visibleItems.filter(p => p.isSafe !== 0).length;
-      const unsafeCount = visibleItems.filter(p => p.isSafe === 0).length;
-      if (safeCount > 0) {
-        specialTags.push({ tag: Constants.SAFE_TAG, count: safeCount });
+      if (counts.safe > 0) {
+        specialTags.push({ tag: Constants.SAFE_TAG, count: counts.safe });
       }
-      if (unsafeCount > 0) {
-        specialTags.push({ tag: Constants.UNSAFE_TAG, count: unsafeCount });
+      if (counts.unsafe > 0) {
+        specialTags.push({ tag: Constants.UNSAFE_TAG, count: counts.unsafe });
       }
     }
 
@@ -785,6 +1136,111 @@ export class PromptPanelManager extends PanelManagerBase {
     });
 
     return sorted;
+  }
+
+  /**
+   * 刷新面板（重写基类方法）
+   * renderView 已包含 loadData，避免重复加载
+   */
+  async refresh(): Promise<void> {
+    await this.renderView();
+  }
+
+  /**
+   * 数据更新后的统一刷新（重写基类方法）
+   * 增量刷新：保持当前分页状态，只重新渲染已加载的数据
+   */
+  async refreshAfterUpdate(): Promise<void> {
+    await this.refreshIncremental();
+  }
+
+  /**
+   * 增量刷新：保持当前分页状态，重新获取已加载范围的数据
+   * 用于从详情页返回等场景，避免重置分页状态导致已加载数据丢失
+   * 只更新 DOM 中变化的数据（标签、备注等），不重新加载缩略图
+   */
+  private async refreshIncremental(): Promise<void> {
+    try {
+      // 保持 currentOffset 和 loadedPromptIds，重新获取当前已加载范围的数据
+      const options = this.buildPaginatedOptions();
+      options.limit = this.currentOffset + this.pageSize;
+      options.offset = 0;
+
+      const result = await window.electronAPI.getPromptsPaginated(options);
+
+      // 更新缓存和 filteredPrompts
+      this.filteredPrompts = result.items;
+      this.filteredItems = result.items;
+      this.hasMore = result.items.length < result.totalCount;
+      this.totalCount = result.totalCount;
+
+      // 更新 loadedPromptIds
+      this.loadedPromptIds.clear();
+      for (const prompt of result.items) {
+        this.loadedPromptIds.add(String(prompt.id));
+        cacheManager.cachePrompt(prompt);
+      }
+
+      // 补充路径缓存（仅缺失的项）
+      await this.prefetchPromptImagePaths(result.items);
+
+      // 增量更新 DOM：只更新变化的数据，不重新加载缩略图
+      this.updateDomIncrementally(result.items);
+
+      // 刷新标签计数
+      await this.refreshTagCounts();
+      await this.renderTagFilters();
+    } catch (error) {
+      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to refresh incremental:', error);
+      this.app.showToast?.('刷新失败', 'error');
+    }
+  }
+
+  /**
+   * 增量更新 DOM：只更新变化的数据（标签、备注等），不重新加载缩略图
+   * @param items - 更新后的提示词列表
+   */
+  private updateDomIncrementally(items: IPrompt[]): void {
+    if (this.viewModeType === 'grid') {
+      this.updateGridDomIncrementally(items);
+    } else {
+      this.updateListDomIncrementally(items);
+    }
+  }
+
+  /**
+   * 增量更新网格视图 DOM
+   * 更新收藏状态与标签区域
+   */
+  private updateGridDomIncrementally(items: IPrompt[]): void {
+    const container = document.getElementById(Constants.Ids.PROMPT_GRID);
+    if (!container) return;
+
+    for (const prompt of items) {
+      const card = container.querySelector(`[data-id="${prompt.id}"]`) as HTMLElement;
+      if (!card) continue;
+
+      // 更新卡片 is-favorite class
+      card.classList.toggle('is-favorite', !!prompt.isFavorite);
+
+      // 更新收藏按钮状态
+      const favoriteBtn = card.querySelector('.favorite-btn');
+      if (favoriteBtn) {
+        const isActive = !!prompt.isFavorite;
+        favoriteBtn.classList.toggle('active', isActive);
+        favoriteBtn.innerHTML = isActive ? Constants.ICONS.favorite.filled : Constants.ICONS.favorite.outline;
+      }
+
+      // 更新标签区域（row3）
+      const tagsContainer = card.querySelector('.prompt-card-row3');
+      if (tagsContainer) {
+        tagsContainer.innerHTML = TagUI.generateTagsHtml(
+          prompt.tags || [],
+          'tag-display',
+          'tag-display-empty'
+        );
+      }
+    }
   }
 
   /**
