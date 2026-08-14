@@ -1215,7 +1215,7 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 检测提示词首图是否变化（如详情页"设为首张"），并同步刷新背景图/缩略图
+   * 检测提示词首图是否变化（如详情页"设为首张"、解除全部图像关联），并同步刷新背景图/缩略图
    * 仅处理首图 ID 变化的项，其余项零开销
    * @param prompts - 更新后的提示词列表
    */
@@ -1225,6 +1225,7 @@ export class PromptPanelManager extends PanelManagerBase {
 
     // 对比 DOM 上记录的首图 ID（data-first-image）与新数据的首图 ID
     const changed: IPrompt[] = [];
+    const cleared: HTMLElement[] = [];
     for (const prompt of prompts) {
       const el = container.querySelector(`[data-id="${prompt.id}"]`) as HTMLElement | null;
       if (!el) continue;
@@ -1235,8 +1236,18 @@ export class PromptPanelManager extends PanelManagerBase {
       if (newFirstId !== oldFirstId) {
         // 同步更新属性，保证 hover 预览也指向新首图
         el.dataset.firstImage = newFirstId;
-        changed.push(prompt);
+        if (newFirstId) {
+          changed.push(prompt);
+        } else {
+          // 图像关联已全部解除：清除背景图/缩略图，恢复无图占位
+          cleared.push(el);
+        }
       }
+    }
+
+    // 先清除已无图的项
+    for (const el of cleared) {
+      this.clearFirstImageDom(el);
     }
 
     if (changed.length === 0) return;
@@ -1247,6 +1258,30 @@ export class PromptPanelManager extends PanelManagerBase {
     } else {
       await this.loadPromptListThumbnails(changed);
     }
+  }
+
+  /**
+   * 清除指定 DOM 项的首图背景/缩略图，恢复无图占位状态
+   * @param el - 卡片或列表项元素
+   */
+  private clearFirstImageDom(el: HTMLElement): void {
+    if (this.viewModeType === 'grid') {
+      // 网格视图：清除卡片背景图
+      const bgElement = el.querySelector('.prompt-card-bg, .card__bg');
+      if (bgElement) {
+        (bgElement as HTMLElement).style.backgroundImage = '';
+      }
+      return;
+    }
+
+    // 列表视图：将缩略图替换为占位符，并移除"有图"标记
+    const thumbnail = el.querySelector('.list-item__thumbnail');
+    if (thumbnail) {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'list-item__thumbnail-placeholder';
+      thumbnail.replaceWith(placeholder);
+    }
+    el.classList.remove('list-item--prompt--has-images');
   }
 
   /**
