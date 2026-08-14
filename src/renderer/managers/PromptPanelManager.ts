@@ -11,7 +11,6 @@ import { batchToolbarMiddle } from '../../middle/index.ts';
 import { IPrompt } from '../../types/entities.ts';
 import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
-import { TagUI } from './TagUI.ts';
 
 interface ImageInfo {
   id?: string;
@@ -35,6 +34,9 @@ export class PromptPanelManager extends PanelManagerBase {
   private isLoading = false;
   private loadedPromptIds = new Set<string>();
   private scrollHandler: (() => void) | null = null;
+
+  // 数据指纹：记录当前已渲染项的指纹，用于增量刷新时识别变化项
+  private promptFingerprints = new Map<string, string>();
 
   // 面板类型
   protected readonly panelType = 'prompt' as const;
@@ -244,6 +246,10 @@ export class PromptPanelManager extends PanelManagerBase {
       this.hasMore = page.items.length < page.totalCount;
       // 预缓存提示词关联的第一张图的路径（缩略图用）
       await this.prefetchPromptImagePaths(page.items);
+      // 重建指纹基准（全量渲染后所有项视为"已同步"）
+      this.promptFingerprints = new Map(
+        page.items.map(p => [String(p.id), this.getPromptFingerprint(p)])
+      );
       return page.items;
     } catch (error) {
       cacheManager.getPromptCache().clear();
@@ -325,6 +331,10 @@ export class PromptPanelManager extends PanelManagerBase {
 
       if (newItems.length > 0) {
         await this.appendToContainer(newItems);
+        // 补录新加载项的指纹
+        for (const prompt of newItems) {
+          this.promptFingerprints.set(String(prompt.id), this.getPromptFingerprint(prompt));
+        }
         // 重新绑定事件，让闭包包含所有已加载提示词
         this.bindItemEvents(this.filteredPrompts);
       }
@@ -1156,9 +1166,28 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
+   * 计算提示词数据指纹，用于检测变化
+   * 包含所有影响 UI 展示的字段，新增字段自动纳入
+   */
+  private getPromptFingerprint(prompt: IPrompt): string {
+    return JSON.stringify({
+      t: prompt.title,
+      c: prompt.content,
+      ct: (prompt as Record<string, unknown>).contentTranslate,
+      tg: prompt.tags,
+      f: prompt.isFavorite,
+      s: prompt.isSafe,
+      n: (prompt as Record<string, unknown>).note,
+      im: (prompt.images || []).map((img: ImageInfo | string) =>
+        typeof img === 'object' ? img.id ?? '' : img
+      ),
+    });
+  }
+
+  /**
    * 增量刷新：保持当前分页状态，重新获取已加载范围的数据
+   * 使用指纹 diff 自动识别变化项，对变化项做单元素重建
    * 用于从详情页返回等场景，避免重置分页状态导致已加载数据丢失
-   * 只更新 DOM 中变化的数据（标签、备注等），不重新加载缩略图
    */
   private async refreshIncremental(): Promise<void> {
     try {
@@ -1170,7 +1199,7 @@ export class PromptPanelManager extends PanelManagerBase {
       const result = await window.electronAPI.getPromptsPaginated(options);
 
       // 检测 DOM 中不存在的新项（如新建的提示词）：
-      // 增量更新只能修改/删除已有元素，无法创建新元素，
+      // 增量更新只能修改/替换已有元素，无法创建新元素，
       // 存在新项时降级为全量渲染，确保新卡片正确显示
       const container = this.getCurrentContainer();
       const hasNewItem =
@@ -1199,11 +1228,8 @@ export class PromptPanelManager extends PanelManagerBase {
       // 清理不再匹配筛选结果的 DOM 项（如"无标"筛选下添加标签）
       this.removeStaleDomItems(result.items);
 
-      // 检测首图变化（如详情页"设为首张"）并同步刷新背景图/缩略图
-      await this.refreshChangedFirstImages(result.items);
-
-      // 增量更新 DOM：只更新变化的数据，不重新加载缩略图
-      this.updateDomIncrementally(result.items);
+      // 指纹 diff：自动识别变化项并重建 DOM
+      await this.rebuildChangedItems(result.items);
 
       // 刷新标签计数
       await this.refreshTagCounts();
@@ -1215,119 +1241,65 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 检测提示词首图是否变化（如详情页"设为首张"、解除全部图像关联），并同步刷新背景图/缩略图
-   * 仅处理首图 ID 变化的项，其余项零开销
-   * @param prompts - 更新后的提示词列表
+   * 指纹 diff：对变化项执行单元素重建
+   * 替换 DOM 后自动加载背景图/缩略图并重绑事件
    */
-  private async refreshChangedFirstImages(prompts: IPrompt[]): Promise<void> {
+  private async rebuildChangedItems(prompts: IPrompt[]): Promise<void> {
     const container = this.getCurrentContainer();
     if (!container) return;
 
-    // 对比 DOM 上记录的首图 ID（data-first-image）与新数据的首图 ID
     const changed: IPrompt[] = [];
-    const cleared: HTMLElement[] = [];
+
     for (const prompt of prompts) {
-      const el = container.querySelector(`[data-id="${prompt.id}"]`) as HTMLElement | null;
-      if (!el) continue;
+      const id = String(prompt.id);
+      const newFingerprint = this.getPromptFingerprint(prompt);
+      const oldFingerprint = this.promptFingerprints.get(id);
 
-      const first = prompt.images?.[0] as ImageInfo | string | undefined;
-      const newFirstId = first ? String(typeof first === 'object' ? first.id ?? '' : first) : '';
-      const oldFirstId = el.dataset.firstImage || '';
-      if (newFirstId !== oldFirstId) {
-        // 同步更新属性，保证 hover 预览也指向新首图
-        el.dataset.firstImage = newFirstId;
-        if (newFirstId) {
-          changed.push(prompt);
-        } else {
-          // 图像关联已全部解除：清除背景图/缩略图，恢复无图占位
-          cleared.push(el);
-        }
+      if (oldFingerprint === newFingerprint) continue;
+
+      const oldEl = container.querySelector(`[data-id="${id}"]`) as HTMLElement | null;
+      if (!oldEl) continue;
+
+      // 从旧元素获取索引，保证重建后 data-index 一致
+      const index = parseInt(oldEl.dataset.index || '0', 10);
+
+      // 生成新 HTML 并替换
+      let newHtml: string;
+      if (this.viewModeType === 'grid') {
+        newHtml = this.createCard(prompt, index);
+      } else {
+        const isCompact = this.viewModeType === 'list-compact';
+        newHtml = UnifiedListRenderer.render(PromptListConfig, prompt, {
+          icons: Constants.ICONS,
+          isCompact,
+          isSelected: batchToolbarMiddle.isSelected(this.toolbarContext, id),
+          index,
+        });
       }
-    }
 
-    // 先清除已无图的项
-    for (const el of cleared) {
-      this.clearFirstImageDom(el);
+      const template = document.createElement('template');
+      template.innerHTML = newHtml.trim();
+      const newEl = template.content.firstChild as HTMLElement | null;
+      if (!newEl) continue;
+
+      oldEl.replaceWith(newEl);
+      changed.push(prompt);
+
+      // 更新指纹
+      this.promptFingerprints.set(id, newFingerprint);
     }
 
     if (changed.length === 0) return;
 
-    // 网格视图：更新卡片背景图；列表视图：更新缩略图
+    // 加载背景图/缩略图并重绑按钮事件
     if (this.viewModeType === 'grid') {
       await this.loadCardBackgroundsForItems(changed);
+      this.bindCardButtonEvents(changed);
+      this.bindHoverPreview('.prompt-card');
     } else {
       await this.loadPromptListThumbnails(changed);
-    }
-  }
-
-  /**
-   * 清除指定 DOM 项的首图背景/缩略图，恢复无图占位状态
-   * @param el - 卡片或列表项元素
-   */
-  private clearFirstImageDom(el: HTMLElement): void {
-    if (this.viewModeType === 'grid') {
-      // 网格视图：清除卡片背景图
-      const bgElement = el.querySelector('.prompt-card-bg, .card__bg');
-      if (bgElement) {
-        (bgElement as HTMLElement).style.backgroundImage = '';
-      }
-      return;
-    }
-
-    // 列表视图：将缩略图替换为占位符，并移除"有图"标记
-    const thumbnail = el.querySelector('.list-item__thumbnail');
-    if (thumbnail) {
-      const placeholder = document.createElement('div');
-      placeholder.className = 'list-item__thumbnail-placeholder';
-      thumbnail.replaceWith(placeholder);
-    }
-    el.classList.remove('list-item--prompt--has-images');
-  }
-
-  /**
-   * 增量更新 DOM：只更新变化的数据（标签、备注等），不重新加载缩略图
-   * @param items - 更新后的提示词列表
-   */
-  private updateDomIncrementally(items: IPrompt[]): void {
-    if (this.viewModeType === 'grid') {
-      this.updateGridDomIncrementally(items);
-    } else {
-      this.updateListDomIncrementally(items);
-    }
-  }
-
-  /**
-   * 增量更新网格视图 DOM
-   * 更新收藏状态与标签区域
-   */
-  private updateGridDomIncrementally(items: IPrompt[]): void {
-    const container = document.getElementById(Constants.Ids.PROMPT_GRID);
-    if (!container) return;
-
-    for (const prompt of items) {
-      const card = container.querySelector(`[data-id="${prompt.id}"]`) as HTMLElement;
-      if (!card) continue;
-
-      // 更新卡片 is-favorite class
-      card.classList.toggle('is-favorite', !!prompt.isFavorite);
-
-      // 更新收藏按钮状态
-      const favoriteBtn = card.querySelector('.favorite-btn');
-      if (favoriteBtn) {
-        const isActive = !!prompt.isFavorite;
-        favoriteBtn.classList.toggle('active', isActive);
-        favoriteBtn.innerHTML = isActive ? Constants.ICONS.favorite.filled : Constants.ICONS.favorite.outline;
-      }
-
-      // 更新标签区域（row3）
-      const tagsContainer = card.querySelector('.prompt-card-row3');
-      if (tagsContainer) {
-        tagsContainer.innerHTML = TagUI.generateTagsHtml(
-          prompt.tags || [],
-          'tag-display',
-          'tag-display-empty'
-        );
-      }
+      this.bindListButtonEvents(changed);
+      this.bindHoverPreview('.list-item--prompt');
     }
   }
 
