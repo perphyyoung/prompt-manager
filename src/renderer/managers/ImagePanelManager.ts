@@ -1,4 +1,4 @@
-import { cacheManager, searchMatches } from '../../utils/index.ts';
+import { cacheManager, searchMatches, cyrb53 } from '../../utils/index.ts';
 import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
 import { localStorageManager } from '../configs/LocalStorageConfig.ts';
@@ -11,7 +11,6 @@ import { batchToolbarMiddle } from '../../middle/index.ts';
 import { IImage } from '../../types/entities.ts';
 import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
-import { TagUI } from './TagUI.ts';
 
 interface PromptRef {
   promptId: string;
@@ -287,6 +286,10 @@ export class ImagePanelManager extends PanelManagerBase {
       this.hasMore = page.items.length < page.totalCount;
       // 预缓存路径（原图 + 缩略图）—— 路径缓存的唯一写入点
       await this.prefetchImagePaths(page.items);
+      // 重建指纹基准（全量渲染后所有项视为"已同步"）
+      this.itemFingerprints = new Map(
+        page.items.map(img => [String(img.id), this.getItemFingerprint(img)])
+      );
       return page.items;
     } catch (error) {
       cacheManager.getImageCache().clear();
@@ -339,6 +342,10 @@ export class ImagePanelManager extends PanelManagerBase {
 
       if (newItems.length > 0) {
         await this.appendToContainer(newItems);
+        // 补录新加载项的指纹
+        for (const img of newItems) {
+          this.itemFingerprints.set(String(img.id), this.getItemFingerprint(img));
+        }
         // 重新绑定事件，让闭包包含所有已加载图像
         this.bindItemEvents(this.filteredImages);
       }
@@ -495,6 +502,56 @@ export class ImagePanelManager extends PanelManagerBase {
       selectedIds: batchToolbarMiddle.getSelectedIds(this.toolbarContext),
       index
     });
+  }
+
+  /**
+   * 计算图像数据指纹（实现基类抽象方法）
+   * 包含所有影响 UI 展示的字段，新增字段自动纳入
+   * 不含 updatedAt（仅影响排序，不影响展示），避免每次刷新都触发重建
+   */
+  protected getItemFingerprint(img: IImage): string {
+    const imgWithPrompt = img as ImageWithPromptContent;
+    return cyrb53(
+      JSON.stringify({
+        fn: img.fileName,
+        tg: img.tags,
+        f: img.isFavorite,
+        s: img.isSafe,
+        n: (img as Record<string, unknown>).note,
+        tp: img.thumbnailPath,
+        rp: img.relativePath,
+        pr: (imgWithPrompt.promptRefs || []).map(r => ({ id: r.promptId, c: r.promptContent }))
+      })
+    );
+  }
+
+  /**
+   * 渲染单个图像的 HTML（实现基类抽象方法）
+   * 按当前视图模式生成网格卡片或列表项，index 需与旧元素保持一致
+   */
+  protected renderSingleItemHtml(img: IImage, index: number, isSelected: boolean): string {
+    if (this.viewModeType === 'grid') {
+      return this.createCard(img, index);
+    }
+    const isCompact = this.viewModeType === 'list-compact';
+    return UnifiedListRenderer.render(ImageListConfig, img, {
+      icons: Constants.ICONS,
+      isCompact,
+      isSelected,
+      index
+    });
+  }
+
+  /**
+   * 加载变化图像的缩略图/背景图（实现基类抽象方法）
+   * 替换 DOM 后需重新加载图片，旧元素上的背景/缩略图随替换一并移除
+   */
+  protected async loadItemImagesForChanged(images: IImage[]): Promise<void> {
+    if (this.viewModeType === 'grid') {
+      await this.loadCardBackgroundsForItems(images);
+    } else {
+      await this.loadImageListThumbnailsForItems(images);
+    }
   }
 
   /**
@@ -1051,8 +1108,8 @@ export class ImagePanelManager extends PanelManagerBase {
       // 清理不再匹配筛选结果的 DOM 项（如"无图"筛选下添加图片）
       this.removeStaleDomItems(result.items);
 
-      // 增量更新 DOM：只更新变化的数据，不重新加载缩略图
-      this.updateDomIncrementally(result.items);
+      // 指纹 diff：自动识别变化项并重建 DOM
+      await this.rebuildChangedItems(result.items);
 
       // 刷新标签计数
       await this.refreshTagCounts();
@@ -1062,58 +1119,6 @@ export class ImagePanelManager extends PanelManagerBase {
       this.app.showToast?.('刷新失败', 'error');
     }
   }
-
-  /**
-   * 增量更新 DOM：只更新变化的数据（标签、备注等），不重新加载缩略图
-   * @param items - 更新后的图像列表
-   */
-  private updateDomIncrementally(items: IImage[]): void {
-    if (this.viewModeType === 'grid') {
-      this.updateGridDomIncrementally(items);
-    } else {
-      this.updateListDomIncrementally(items);
-    }
-  }
-
-  /**
-   * 增量更新网格视图 DOM
-   * 注意：网格卡片没有 note 区域（UnifiedCardRenderer 仅渲染 4 行：按钮/内容/标签/信息）
-   */
-  private updateGridDomIncrementally(items: IImage[]): void {
-    const container = document.getElementById(Constants.Ids.IMAGE_GRID);
-    if (!container) return;
-
-    for (const img of items) {
-      const card = container.querySelector(`[data-id="${img.id}"]`) as HTMLElement;
-      if (!card) continue;
-
-      // 更新卡片 is-favorite class
-      card.classList.toggle('is-favorite', !!img.isFavorite);
-
-      // 更新收藏按钮状态
-      const favoriteBtn = card.querySelector('.favorite-btn');
-      if (favoriteBtn) {
-        const isActive = !!img.isFavorite;
-        favoriteBtn.classList.toggle('active', isActive);
-        favoriteBtn.innerHTML = isActive ? Constants.ICONS.favorite.filled : Constants.ICONS.favorite.outline;
-      }
-
-      // 更新标签区域（row3）
-      const tagsContainer = card.querySelector('.image-card-row3');
-      if (tagsContainer) {
-        tagsContainer.innerHTML = TagUI.generateTagsHtml(
-          img.tags || [],
-          'tag-display',
-          'tag-display-empty'
-        );
-      }
-    }
-  }
-
-  /**
-   * 增量更新列表视图 DOM（继承自基类 PanelManagerBase）
-   * 基类已实现 title/content/tags/note/favorite 的通用更新逻辑
-   */
 
   /**
    * 渲染标签 HTML

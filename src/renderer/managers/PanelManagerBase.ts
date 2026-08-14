@@ -110,6 +110,9 @@ export abstract class PanelManagerBase {
   protected selectedTags: Set<string> = new Set();
   protected invertedFilter = false;
 
+  // 数据指纹：记录当前已渲染项的指纹，用于增量刷新时识别变化项
+  protected itemFingerprints = new Map<string, string>();
+
   // 视图设置（在子类构造函数中初始化）
   viewModeType!: string;
   sortBy!: string;
@@ -370,6 +373,87 @@ export abstract class PanelManagerBase {
    * @returns HTML 字符串
    */
   abstract createCard(item: IPanelItem): string;
+
+  /**
+   * 计算项的数据指纹（子类实现，覆盖该面板影响 UI 展示的字段）
+   * 用于增量刷新时识别数据变化项，新增字段自动纳入
+   * @abstract
+   * @param item - 项目对象
+   * @returns 指纹字符串
+   */
+  protected abstract getItemFingerprint(item: IPanelItem): string;
+
+  /**
+   * 渲染单个项的 HTML（子类实现，按当前视图模式生成网格卡片或列表项）
+   * @abstract
+   * @param item - 项目对象
+   * @param index - 排序索引（需保持与旧元素一致）
+   * @param isSelected - 是否处于选中状态
+   * @returns HTML 字符串
+   */
+  protected abstract renderSingleItemHtml(item: IPanelItem, index: number, isSelected: boolean): string;
+
+  /**
+   * 加载变化项的缩略图/背景图（子类实现）
+   * 替换 DOM 后需重新加载图片，旧元素上的背景/缩略图随替换一并移除
+   * @abstract
+   * @param items - 已重建的变化项
+   */
+  protected abstract loadItemImagesForChanged(items: IPanelItem[]): Promise<void>;
+
+  /**
+   * 指纹 diff：对数据变化的项执行单元素重建
+   * 替换 DOM 后加载缩略图/背景图并重绑事件，其余项零开销
+   * 事件委托（点击/多选/拖拽）自动生效，无需重绑
+   * @param items - 更新后的项目列表
+   */
+  protected async rebuildChangedItems(items: IPanelItem[]): Promise<void> {
+    const container = this.getCurrentContainer();
+    if (!container) return;
+
+    const changed: IPanelItem[] = [];
+
+    for (const item of items) {
+      const id = String(item.id);
+      const newFingerprint = this.getItemFingerprint(item);
+      const oldFingerprint = this.itemFingerprints.get(id);
+
+      if (oldFingerprint === newFingerprint) continue;
+
+      const oldEl = container.querySelector(`[data-id="${id}"]`) as HTMLElement | null;
+      if (!oldEl) continue;
+
+      // 从旧元素获取索引，保证重建后 data-index 一致
+      const index = parseInt(oldEl.dataset.index || '0', 10);
+      const isSelected = batchToolbarMiddle.isSelected(this.toolbarContext, id);
+
+      // 生成新 HTML 并替换
+      const newHtml = this.renderSingleItemHtml(item, index, isSelected);
+      const template = document.createElement('template');
+      template.innerHTML = newHtml.trim();
+      const newEl = template.content.firstChild as HTMLElement | null;
+      if (!newEl) continue;
+
+      oldEl.replaceWith(newEl);
+      changed.push(item);
+      this.itemFingerprints.set(id, newFingerprint);
+    }
+
+    if (changed.length === 0) return;
+
+    // 加载缩略图/背景图（子类实现）
+    await this.loadItemImagesForChanged(changed);
+
+    // 重绑按钮事件与 hover 预览（逐元素绑定，重建后需重新绑定）
+    const config = this.getUIConfig();
+    if (this.viewModeType === 'grid') {
+      this.bindCardButtonEvents(changed);
+      this.bindHoverPreview(config.cardSelector);
+    } else {
+      this.bindListButtonEvents(changed);
+      this.bindHoverPreview(config.listItemSelector);
+    }
+  }
 
   /**
    * 绑定卡片按钮事件（通用实现）

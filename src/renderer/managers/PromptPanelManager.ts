@@ -35,9 +35,6 @@ export class PromptPanelManager extends PanelManagerBase {
   private loadedPromptIds = new Set<string>();
   private scrollHandler: (() => void) | null = null;
 
-  // 数据指纹：记录当前已渲染项的指纹，用于增量刷新时识别变化项
-  private promptFingerprints = new Map<string, string>();
-
   // 面板类型
   protected readonly panelType = 'prompt' as const;
 
@@ -247,8 +244,8 @@ export class PromptPanelManager extends PanelManagerBase {
       // 预缓存提示词关联的第一张图的路径（缩略图用）
       await this.prefetchPromptImagePaths(page.items);
       // 重建指纹基准（全量渲染后所有项视为"已同步"）
-      this.promptFingerprints = new Map(
-        page.items.map(p => [String(p.id), this.getPromptFingerprint(p)])
+      this.itemFingerprints = new Map(
+        page.items.map(p => [String(p.id), this.getItemFingerprint(p)])
       );
       return page.items;
     } catch (error) {
@@ -333,7 +330,7 @@ export class PromptPanelManager extends PanelManagerBase {
         await this.appendToContainer(newItems);
         // 补录新加载项的指纹
         for (const prompt of newItems) {
-          this.promptFingerprints.set(String(prompt.id), this.getPromptFingerprint(prompt));
+          this.itemFingerprints.set(String(prompt.id), this.getItemFingerprint(prompt));
         }
         // 重新绑定事件，让闭包包含所有已加载提示词
         this.bindItemEvents(this.filteredPrompts);
@@ -1166,10 +1163,10 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 计算提示词数据指纹，用于检测变化
+   * 计算提示词数据指纹（实现基类抽象方法）
    * 包含所有影响 UI 展示的字段，新增字段自动纳入
    */
-  private getPromptFingerprint(prompt: IPrompt): string {
+  protected getItemFingerprint(prompt: IPrompt): string {
     return cyrb53(
       JSON.stringify({
         t: prompt.title,
@@ -1243,65 +1240,31 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 指纹 diff：对变化项执行单元素重建
-   * 替换 DOM 后自动加载背景图/缩略图并重绑事件
+   * 渲染单个提示词的 HTML（实现基类抽象方法）
+   * 按当前视图模式生成网格卡片或列表项，index 需与旧元素保持一致
    */
-  private async rebuildChangedItems(prompts: IPrompt[]): Promise<void> {
-    const container = this.getCurrentContainer();
-    if (!container) return;
-
-    const changed: IPrompt[] = [];
-
-    for (const prompt of prompts) {
-      const id = String(prompt.id);
-      const newFingerprint = this.getPromptFingerprint(prompt);
-      const oldFingerprint = this.promptFingerprints.get(id);
-
-      if (oldFingerprint === newFingerprint) continue;
-
-      const oldEl = container.querySelector(`[data-id="${id}"]`) as HTMLElement | null;
-      if (!oldEl) continue;
-
-      // 从旧元素获取索引，保证重建后 data-index 一致
-      const index = parseInt(oldEl.dataset.index || '0', 10);
-
-      // 生成新 HTML 并替换
-      let newHtml: string;
-      if (this.viewModeType === 'grid') {
-        newHtml = this.createCard(prompt, index);
-      } else {
-        const isCompact = this.viewModeType === 'list-compact';
-        newHtml = UnifiedListRenderer.render(PromptListConfig, prompt, {
-          icons: Constants.ICONS,
-          isCompact,
-          isSelected: batchToolbarMiddle.isSelected(this.toolbarContext, id),
-          index,
-        });
-      }
-
-      const template = document.createElement('template');
-      template.innerHTML = newHtml.trim();
-      const newEl = template.content.firstChild as HTMLElement | null;
-      if (!newEl) continue;
-
-      oldEl.replaceWith(newEl);
-      changed.push(prompt);
-
-      // 更新指纹
-      this.promptFingerprints.set(id, newFingerprint);
-    }
-
-    if (changed.length === 0) return;
-
-    // 加载背景图/缩略图并重绑按钮事件
+  protected renderSingleItemHtml(prompt: IPrompt, index: number, isSelected: boolean): string {
     if (this.viewModeType === 'grid') {
-      await this.loadCardBackgroundsForItems(changed);
-      this.bindCardButtonEvents(changed);
-      this.bindHoverPreview('.prompt-card');
+      return this.createCard(prompt, index);
+    }
+    const isCompact = this.viewModeType === 'list-compact';
+    return UnifiedListRenderer.render(PromptListConfig, prompt, {
+      icons: Constants.ICONS,
+      isCompact,
+      isSelected,
+      index,
+    });
+  }
+
+  /**
+   * 加载变化提示词的缩略图/背景图（实现基类抽象方法）
+   * 替换 DOM 后需重新加载图片，旧元素上的背景/缩略图随替换一并移除
+   */
+  protected async loadItemImagesForChanged(prompts: IPrompt[]): Promise<void> {
+    if (this.viewModeType === 'grid') {
+      await this.loadCardBackgroundsForItems(prompts);
     } else {
-      await this.loadPromptListThumbnails(changed);
-      this.bindListButtonEvents(changed);
-      this.bindHoverPreview('.list-item--prompt');
+      await this.loadPromptListThumbnails(prompts);
     }
   }
 
