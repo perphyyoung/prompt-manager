@@ -2595,7 +2595,17 @@ async function replaceImage(oldId: string, newId: string): Promise<boolean> {
       [newId, oldId]
     );
 
-    // 4. 同步更新新图像和相关提示词的更新时间
+    // 4. 迁移元数据字段（收藏/备注/安全状态），保留用户手工设置
+    await run(
+      `UPDATE images
+       SET note = (SELECT note FROM images WHERE id = ?),
+           is_favorite = (SELECT is_favorite FROM images WHERE id = ?),
+           is_safe = (SELECT is_safe FROM images WHERE id = ?)
+       WHERE id = ?`,
+      [oldId, oldId, oldId, newId]
+    );
+
+    // 5. 同步更新新图像和相关提示词的更新时间
     const now = dbTime();
     await run(
       'UPDATE images SET updated_at = ? WHERE id = ?',
