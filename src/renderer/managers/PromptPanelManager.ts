@@ -1199,6 +1199,9 @@ export class PromptPanelManager extends PanelManagerBase {
       // 清理不再匹配筛选结果的 DOM 项（如"无标"筛选下添加标签）
       this.removeStaleDomItems(result.items);
 
+      // 检测首图变化（如详情页"设为首张"）并同步刷新背景图/缩略图
+      await this.refreshChangedFirstImages(result.items);
+
       // 增量更新 DOM：只更新变化的数据，不重新加载缩略图
       this.updateDomIncrementally(result.items);
 
@@ -1208,6 +1211,41 @@ export class PromptPanelManager extends PanelManagerBase {
     } catch (error) {
       window.electronAPI.logError('PromptPanelManager.ts', 'Failed to refresh incremental:', error);
       this.app.showToast?.('刷新失败', 'error');
+    }
+  }
+
+  /**
+   * 检测提示词首图是否变化（如详情页"设为首张"），并同步刷新背景图/缩略图
+   * 仅处理首图 ID 变化的项，其余项零开销
+   * @param prompts - 更新后的提示词列表
+   */
+  private async refreshChangedFirstImages(prompts: IPrompt[]): Promise<void> {
+    const container = this.getCurrentContainer();
+    if (!container) return;
+
+    // 对比 DOM 上记录的首图 ID（data-first-image）与新数据的首图 ID
+    const changed: IPrompt[] = [];
+    for (const prompt of prompts) {
+      const el = container.querySelector(`[data-id="${prompt.id}"]`) as HTMLElement | null;
+      if (!el) continue;
+
+      const first = prompt.images?.[0] as ImageInfo | string | undefined;
+      const newFirstId = first ? String(typeof first === 'object' ? first.id ?? '' : first) : '';
+      const oldFirstId = el.dataset.firstImage || '';
+      if (newFirstId !== oldFirstId) {
+        // 同步更新属性，保证 hover 预览也指向新首图
+        el.dataset.firstImage = newFirstId;
+        changed.push(prompt);
+      }
+    }
+
+    if (changed.length === 0) return;
+
+    // 网格视图：更新卡片背景图；列表视图：更新缩略图
+    if (this.viewModeType === 'grid') {
+      await this.loadCardBackgroundsForItems(changed);
+    } else {
+      await this.loadPromptListThumbnails(changed);
     }
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "prompt-manager",
-  "version": "0.11.30",
+  "version": "0.11.31",
   "description": "本地提示词管理工具",
   "main": "out/main/index.js",
   "type": "module",
@@ -16,6 +16,7 @@
     "dev": "pnpm run build && electron-vite dev",
     "build": "pnpm run check:constants && electron-vite build",
     "check": "pnpm run check:constants && pnpm run typecheck && pnpm run lint",
+    "check:all": "pnpm run check:constants && pnpm run typecheck && pnpm run lint && sentrux check .",
     "check:constants": "tsx scripts/check-constants.ts",
     "typecheck": "tsc --noEmit --incremental",
     "test": "vitest run",
