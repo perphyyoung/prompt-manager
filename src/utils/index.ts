@@ -59,3 +59,6 @@ export {
 
 // ========== 搜索工具 ==========
 export { searchMatches } from './SearchUtils.ts';
+
+// ========== 哈希工具 ==========
+export { cyrb53 } from './HashUtils.ts';

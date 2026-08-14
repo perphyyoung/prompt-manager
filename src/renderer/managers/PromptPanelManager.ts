@@ -1,4 +1,4 @@
-import { cacheManager } from '../../utils/index.ts';
+import { cacheManager, cyrb53 } from '../../utils/index.ts';
 import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
 import { localStorageManager } from '../configs/LocalStorageConfig.ts';
@@ -1170,18 +1170,20 @@ export class PromptPanelManager extends PanelManagerBase {
    * 包含所有影响 UI 展示的字段，新增字段自动纳入
    */
   private getPromptFingerprint(prompt: IPrompt): string {
-    return JSON.stringify({
-      t: prompt.title,
-      c: prompt.content,
-      ct: (prompt as Record<string, unknown>).contentTranslate,
-      tg: prompt.tags,
-      f: prompt.isFavorite,
-      s: prompt.isSafe,
-      n: (prompt as Record<string, unknown>).note,
-      im: (prompt.images || []).map((img: ImageInfo | string) =>
-        typeof img === 'object' ? img.id ?? '' : img
-      ),
-    });
+    return cyrb53(
+      JSON.stringify({
+        t: prompt.title,
+        c: prompt.content,
+        ct: (prompt as Record<string, unknown>).contentTranslate,
+        tg: prompt.tags,
+        f: prompt.isFavorite,
+        s: prompt.isSafe,
+        n: (prompt as Record<string, unknown>).note,
+        im: (prompt.images || []).map((img: ImageInfo | string) =>
+          typeof img === 'object' ? img.id ?? '' : img
+        ),
+      }),
+    );
   }
 
   /**
