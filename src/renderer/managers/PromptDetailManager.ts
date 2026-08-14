@@ -1175,16 +1175,18 @@ export class PromptDetailManager extends DetailViewManager {
 
     // 获取所有图像的完整路径并渲染
     const previews = await Promise.all(
-      validImages.map(async (imgRef: { id: string }, index: number) => {
-        const img =
-          cacheManager.getCachedImage(imgRef.id) ||
-          (allImages?.find((i: { id?: string }) => i.id === imgRef.id) as {
-            relativePath?: string;
-            thumbnailPath?: string;
-            tags?: string[];
-            fileName?: string;
-            id: string;
-          } | null);
+      validImages.map(async (imgRef: {
+        id: string;
+        relativePath?: string;
+        thumbnailPath?: string;
+        tags?: string[];
+        fileName?: string;
+      }, index: number) => {
+        const cached = cacheManager.getCachedImage(imgRef.id);
+        const fetched = allImages?.find((i: { id?: string }) => i.id === imgRef.id);
+        // 兜底使用 imgRef 自身：其来自 prompt.images，含 relativePath/thumbnailPath，
+        // 避免因 getImageCache 未命中（多图仅缓存了首图）而丢弃其余图像
+        const img = cached || fetched || imgRef;
         if (!img) return "";
         const imgPath = (img.relativePath || img.thumbnailPath) as string | undefined;
         if (!imgPath) return "";
