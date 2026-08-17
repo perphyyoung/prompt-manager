@@ -1141,9 +1141,11 @@ export class PromptDetailManager extends DetailViewManager {
     // 提取有效图像 ID
     const validImageIds = validImages.map((img: { id: string }) => img.id);
 
-    // 检查缓存是否已填充：尝试获取第一个图像
+    // 检查缓存是否已填充：所有图像都在缓存中才跳过批量查询，
+    // 否则用 getImagesByIds 补齐 tags 等完整信息（prompt.images 仅含基础路径字段）
     const imageCacheReady =
-      validImageIds.length > 0 && cacheManager.getCachedImage(validImageIds[0]);
+      validImageIds.length > 0 &&
+      validImageIds.every((id: string) => cacheManager.getCachedImage(id));
 
     // 获取图像完整信息：缓存已填充则直接使用，否则按 ID 批量获取
     const allImages = imageCacheReady
