@@ -51,7 +51,7 @@ import type {
 class PromptManager implements IApp {
   // 缓存管理器
   cacheManager: ICacheManager;
-  currentImagesCache: ReturnType<typeof cacheManager.createCache>;
+  promptRefImagesCache: ReturnType<typeof cacheManager.createCache>;
 
   // 状态
   viewMode: string;
@@ -110,7 +110,7 @@ class PromptManager implements IApp {
   constructor() {
     // 使用 CacheManager 管理缓存
     this.cacheManager = cacheManager;
-    this.currentImagesCache = cacheManager.createCache('currentImages', 100);
+    this.promptRefImagesCache = cacheManager.createCache('promptRefImages', 100);
 
     // 从 localStorage 加载 viewMode（在创建面板管理器之前）
     this.viewMode = localStorageManager.get<string>(Constants.LocalStorageKey.VIEW_MODE);

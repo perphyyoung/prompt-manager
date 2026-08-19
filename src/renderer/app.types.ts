@@ -196,7 +196,7 @@ export interface IApp {
 
   // 缓存
   cacheManager: ICacheManager;  
-  currentImagesCache: LRUCache;
+  promptRefImagesCache: LRUCache;
 
   // 其他管理器（在 init 后可用）
   trashManager: { loadTrash: () => Promise<void> } | null;

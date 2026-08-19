@@ -391,7 +391,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
     // 通过API获取缓存中的图像顺序
     const cacheImageIds = await page.evaluate(() => {
-      const cache = (window as any).app?.currentImagesCache;
+      const cache = (window as any).app?.promptRefImagesCache;
       if (!cache) return [];
       return Array.from(cache.values()).map((img: any) => String(img.id));
     });
@@ -426,7 +426,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
     // 通过API获取缓存中的图像顺序
     const cacheImageIds = await page.evaluate(() => {
-      const cache = (window as any).app?.currentImagesCache;
+      const cache = (window as any).app?.promptRefImagesCache;
       if (!cache) return [];
       return Array.from(cache.values()).map((img: any) => String(img.id));
     });

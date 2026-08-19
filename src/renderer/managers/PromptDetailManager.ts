@@ -191,14 +191,14 @@ export class PromptDetailManager extends DetailViewManager {
    */
   private async loadImages(prompt: IPromptExtended): Promise<void> {
     // 清空 currentImages 缓存
-    this.app.currentImagesCache.clear();
+    this.app.promptRefImagesCache.clear();
 
     // 同步图像到 uploadStrategy
     const images: unknown[] = [];
     if (prompt.images && Array.isArray(prompt.images)) {
       prompt.images.forEach((img) => {
         if (img && img.id) {
-          this.app.currentImagesCache.set(String(img.id), img as unknown as IImage);
+          this.app.promptRefImagesCache.set(String(img.id), img as unknown as IImage);
           images.push(img);
         }
       });
@@ -725,7 +725,7 @@ export class PromptDetailManager extends DetailViewManager {
         : targetPrompt;
 
       // 强制重置 currentImages 缓存，确保导航时不会残留旧数据
-      this.app.currentImagesCache.clear();
+      this.app.promptRefImagesCache.clear();
 
       await this.updateView(nextPrompt);
     };
@@ -880,7 +880,7 @@ export class PromptDetailManager extends DetailViewManager {
         if (!imageId) return;
 
         // 获取图像数据
-        const images = Array.from(this.app.currentImagesCache.values());
+        const images = Array.from(this.app.promptRefImagesCache.values());
         const image = images.find((img) => String(img.id) === String(imageId));
         if (!image) return;
 
@@ -1008,7 +1008,7 @@ export class PromptDetailManager extends DetailViewManager {
 
       // 更新缓存并保存（使用完整图像数据，包含 relativePath）
       for (const image of result.images) {
-        this.app.currentImagesCache.set(String(image.id), image as unknown as IImage);
+        this.app.promptRefImagesCache.set(String(image.id), image as unknown as IImage);
       }
 
       // 更新全局图像缓存，确保 renderImagePreviews 能获取完整信息
@@ -1019,7 +1019,7 @@ export class PromptDetailManager extends DetailViewManager {
       ) as HTMLInputElement | null;
       const promptId = promptIdInput?.value;
       if (promptId) {
-        const updatedImages = Array.from(this.app.currentImagesCache.values());
+        const updatedImages = Array.from(this.app.promptRefImagesCache.values());
         await this.savePromptField("images", updatedImages);
       }
 
@@ -1041,7 +1041,7 @@ export class PromptDetailManager extends DetailViewManager {
    */
   async handleRemoveImage(index: number): Promise<void> {
     // 从缓存中获取当前所有图像
-    const currentImages = Array.from(this.app.currentImagesCache.values());
+    const currentImages = Array.from(this.app.promptRefImagesCache.values());
 
     if (index < 0 || index >= currentImages.length) {
       window.electronAPI.logError(
@@ -1068,9 +1068,9 @@ export class PromptDetailManager extends DetailViewManager {
     currentImages.splice(index, 1);
 
     // 更新缓存
-    this.app.currentImagesCache.clear();
+    this.app.promptRefImagesCache.clear();
     currentImages.forEach((img) => {
-      this.app.currentImagesCache.set(String(img.id), img);
+      this.app.promptRefImagesCache.set(String(img.id), img);
     });
 
     // 同步到 uploadStrategy
@@ -1097,7 +1097,7 @@ export class PromptDetailManager extends DetailViewManager {
    */
   async handleSetFirst(index: number): Promise<void> {
     // 从缓存获取当前图像列表
-    const images = Array.from(this.app.currentImagesCache.values());
+    const images = Array.from(this.app.promptRefImagesCache.values());
 
     // 验证索引有效性
     if (index <= 0 || index >= images.length) {
@@ -1109,9 +1109,9 @@ export class PromptDetailManager extends DetailViewManager {
     images.unshift(item);
 
     // 更新缓存
-    this.app.currentImagesCache.clear();
+    this.app.promptRefImagesCache.clear();
     images.forEach((img) => {
-      this.app.currentImagesCache.set(String(img.id), img);
+      this.app.promptRefImagesCache.set(String(img.id), img);
     });
 
     // 保存到数据库
@@ -1135,7 +1135,7 @@ export class PromptDetailManager extends DetailViewManager {
     if (!container) return;
 
     // 从 CacheManager 获取当前图像列表
-    const cachedImages = Array.from(this.app.currentImagesCache.values());
+    const cachedImages = Array.from(this.app.promptRefImagesCache.values());
     const validImages = cachedImages.filter((img: { id?: string }) => img.id);
 
     // 提取有效图像 ID
@@ -1261,7 +1261,7 @@ export class PromptDetailManager extends DetailViewManager {
         e.stopPropagation();
         const item = img.closest(".image-preview-item");
         const index = parseInt((item as HTMLElement).dataset.index || "0");
-        const images = Array.from(this.app.currentImagesCache.values());
+        const images = Array.from(this.app.promptRefImagesCache.values());
         this.app.openFullscreen?.(images, index);
       });
     });
@@ -1322,8 +1322,8 @@ export class PromptDetailManager extends DetailViewManager {
       this.app.imageSelectorManager.open({
         onConfirm: (selectedImage: IImage) => {
           if (selectedImage && selectedImage.id) {
-            if (!this.app.currentImagesCache.has(String(selectedImage.id))) {
-              this.app.currentImagesCache.set(String(selectedImage.id), selectedImage);
+            if (!this.app.promptRefImagesCache.has(String(selectedImage.id))) {
+              this.app.promptRefImagesCache.set(String(selectedImage.id), selectedImage);
             }
 
             this.renderImagePreviews();
@@ -1333,7 +1333,7 @@ export class PromptDetailManager extends DetailViewManager {
             ) as HTMLInputElement | null;
             const promptId = promptIdInput?.value;
             if (promptId) {
-              const updatedImages = Array.from(this.app.currentImagesCache.values());
+              const updatedImages = Array.from(this.app.promptRefImagesCache.values());
               this.savePromptField("images", updatedImages);
             }
           }
@@ -1378,7 +1378,7 @@ export class PromptDetailManager extends DetailViewManager {
     this.unsubscribeFromImagesChanged();
 
     // 清理图像缓存
-    this.app.currentImagesCache.clear();
+    this.app.promptRefImagesCache.clear();
 
     await super.close();
 

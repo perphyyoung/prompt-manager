@@ -528,7 +528,7 @@ export class ImageDetailManager extends DetailViewManager {
     });
 
     // 原地更新 currentImagesCache，不改变 LRU 顺序
-    const cachedImage = this.app.currentImagesCache.peek(imageId);
+    const cachedImage = this.app.promptRefImagesCache.peek(imageId);
     if (cachedImage) {
       cachedImage.tags = tags;
     }
