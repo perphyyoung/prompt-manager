@@ -108,10 +108,6 @@ class PromptManager implements IApp {
   private confirmResolve?: ((value: boolean) => void) | null;
 
   constructor() {
-    // ========== 基本状态初始化 ==========
-    // 缓存管理器
-    this.cacheManager = cacheManager;
-
     // 使用 CacheManager 管理缓存
     this.cacheManager = cacheManager;
     this.currentImagesCache = cacheManager.createCache('currentImages', 100);
@@ -764,37 +760,6 @@ class PromptManager implements IApp {
    */
   async renderStatistics() {
     await this.statisticsManager?.renderStatistics();
-  }
-
-  /**
-   * 添加图像到当前提示词
-   * @param selectedImage - 选择的图像
-   */
-  async addImageToCurrentPrompt(selectedImage: { id: string; path: string }) {
-    // 检查是否已存在
-    const existing = this.currentImagesCache.get(String(selectedImage.id));
-    if (!existing) {
-      this.currentImagesCache.set(String(selectedImage.id), {
-        id: selectedImage.id,
-        path: selectedImage.path,
-        isExisting: true
-      });
-
-      // 触发图像预览重新渲染事件
-      document.dispatchEvent(new CustomEvent('renderImagePreviews'));
-
-      this.showToast('Image added');
-
-      // 立即保存到数据库
-      const promptIdEl = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
-      const promptId = promptIdEl?.value;
-      if (promptId) {
-        const updatedImages = Array.from(this.currentImagesCache.values());
-        await this.savePromptField('images', updatedImages);
-      }
-    } else {
-      this.showToast('Image already exists', 'info');
-    }
   }
 
   /**
