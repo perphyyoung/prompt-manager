@@ -2659,10 +2659,12 @@ body * {
 
 /* 图像选择器样式 */
 .image-selector-search {
-  margin-bottom: 16px;
+  margin-bottom: 0;
   position: relative;
   display: flex;
   align-items: center;
+  flex: 1;
+  min-width: 0;
 }
 
 .image-selector-search input {
