@@ -354,7 +354,9 @@ export class PromptPanelManager extends PanelManagerBase {
         for (const prompt of newItems) {
           this.itemFingerprints.set(String(prompt.id), this.getItemFingerprint(prompt));
         }
-        this.virtualScroller?.refresh();
+        // 强制刷新：进度条跳转后原始窗口区间不变，非强制刷新会因区间相同被跳过，
+        // 导致已渲染钳制窗口之外的新加载卡片不显示
+        this.virtualScroller?.refresh(true);
       }
     } catch (error) {
       window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load more prompts:', error);
@@ -505,11 +507,19 @@ export class PromptPanelManager extends PanelManagerBase {
     }
 
     const prev = this.lastWindowRange;
+    // 进度条快速拖动时窗口可越过已加载数据边界（totalCount 是数据库总数，
+    // filteredPrompts 仅含已加载分页）；未加载区钳制为空，避免对 undefined 渲染卡片报错，
+    // 缺口由 ensureWindowData 触发 loadMore 追加数据后补渲染
+    const viewRange: VisibleRange = {
+      start: Math.min(range.start, this.filteredPrompts.length),
+      end: Math.min(range.end, this.filteredPrompts.length)
+    };
+
     // 有重叠即可增量修补（head/tail 增删），无重叠说明窗口跳跃过大，走全量重建
-    const canPatch = prev !== null && range.start < prev.end && prev.start < range.end;
+    const canPatch = prev !== null && viewRange.start < prev.end && prev.start < viewRange.end;
 
     if (!prev || !canPatch) {
-      this.rebuildWindow(wrapper, range);
+      this.rebuildWindow(wrapper, viewRange);
       return;
     }
 
@@ -521,26 +531,26 @@ export class PromptPanelManager extends PanelManagerBase {
       return Array.from(doc.body.childNodes);
     };
 
-    if (range.start > prev.start) {
-      for (let i = 0; i < range.start - prev.start; i++) {
+    if (viewRange.start > prev.start) {
+      for (let i = 0; i < viewRange.start - prev.start; i++) {
         wrapper.firstElementChild?.remove();
       }
-    } else if (range.start < prev.start) {
+    } else if (viewRange.start < prev.start) {
       const frag = document.createDocumentFragment();
-      for (let i = range.start; i < prev.start; i++) {
+      for (let i = viewRange.start; i < prev.start; i++) {
         frag.append(...parseNodes(this.filteredPrompts[i], i));
       }
       wrapper.insertBefore(frag, wrapper.firstChild);
     }
 
-    if (range.end > prev.end) {
+    if (viewRange.end > prev.end) {
       const frag = document.createDocumentFragment();
-      for (let i = prev.end; i < range.end; i++) {
+      for (let i = prev.end; i < viewRange.end; i++) {
         frag.append(...parseNodes(this.filteredPrompts[i], i));
       }
       wrapper.append(frag);
-    } else if (range.end < prev.end) {
-      for (let i = 0; i < prev.end - range.end; i++) {
+    } else if (viewRange.end < prev.end) {
+      for (let i = 0; i < prev.end - viewRange.end; i++) {
         wrapper.lastElementChild?.remove();
       }
     }
@@ -551,7 +561,7 @@ export class PromptPanelManager extends PanelManagerBase {
       void this.loadCardBackgroundsForItems(added);
       this.bindHoverPreview('.prompt-card');
     }
-    this.lastWindowRange = { start: range.start, end: range.end };
+    this.lastWindowRange = { start: viewRange.start, end: viewRange.end };
     this.ensureWindowData();
   }
 
