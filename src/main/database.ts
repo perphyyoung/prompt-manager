@@ -2482,20 +2482,18 @@ async function updateImagesBatch(updates: UpdateThumbnailParams[]): Promise<void
     return;
   }
 
-  const now = dbTime();
-
   return runInTransaction(async () => {
     if (!db) {
       throw new Error('Database not initialized');
     }
     const stmt = db.prepare(
-      'UPDATE images SET thumbnail_path = ?, updated_at = ? WHERE id = ?'
+      'UPDATE images SET thumbnail_path = ? WHERE id = ?'
     );
 
     try {
       for (const update of updates) {
         await new Promise<void>((resolve, reject) => {
-          stmt.run(update.thumbnailPath, now, update.id, (err: Error | null) => {
+          stmt.run(update.thumbnailPath, update.id, (err: Error | null) => {
             if (err) reject(err);
             else resolve();
           });
