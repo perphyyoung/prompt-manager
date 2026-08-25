@@ -201,14 +201,19 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
-   * 获取图像列表（从缓存读取）
+   * 获取当前已加载的图像列表
+   * filteredImages 为权威数据源（含已加载的全部分页）；
+   * LRU 缓存容量有限会被淘汰，仅作初始兜底，
+   * 避免滚动后缓存淘汰导致拖拽标签等按 id 查找失败
    */
   get images(): IImage[] {
-    return Array.from(this.app.cacheManager.getImageCache().values());
+    return this.filteredImages.length > 0
+      ? this.filteredImages
+      : Array.from(this.app.cacheManager.getImageCache().values());
   }
 
   getItems(): IImage[] {
-    return Array.from(this.app.cacheManager.getImageCache().values());
+    return this.images;
   }
 
   /**
