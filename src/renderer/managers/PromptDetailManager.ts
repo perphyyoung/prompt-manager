@@ -93,7 +93,18 @@ export class PromptDetailManager extends DetailViewManager {
 
     try {
       // 从缓存获取最新的提示词数据，确保 isSafe 是最新的
-      const latestPrompt = cacheManager.getCachedPrompt(prompt.id) || prompt;
+      let latestPrompt = cacheManager.getCachedPrompt(prompt.id) || prompt;
+
+      // 完整性守卫：缓存条目缺少 images 字段时（如从图像详情跳转，
+      // ImageDetailManager.collectPromptRefs 会构造无 images 的最小 IPrompt 并写入缓存），
+      // 拉取全量数据并回写缓存，避免提示词详情参考图像丢失
+      if (!Array.isArray(latestPrompt.images)) {
+        const fullPrompt = await window.electronAPI.getPromptById(latestPrompt.id);
+        if (fullPrompt) {
+          cacheManager.cachePrompt(fullPrompt);
+          latestPrompt = fullPrompt;
+        }
+      }
 
       this.currentItem = latestPrompt as unknown as { id: string | number; [key: string]: unknown };
 
