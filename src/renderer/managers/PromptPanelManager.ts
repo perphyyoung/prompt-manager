@@ -260,6 +260,15 @@ export class PromptPanelManager extends PanelManagerBase {
     this.hasMore = page.items.length < page.totalCount;
     // 预缓存提示词关联的第一张图的路径（缩略图用）
     await this.prefetchPromptImagePaths(page.items);
+    // 校验本页引用图像的缩略图文件完整性，缺失的由主进程按需重建（懒自愈）
+    const firstImageIds: string[] = [];
+    for (const p of page.items) {
+      if (p.images && p.images.length > 0) {
+        const first = p.images[0] as ImageInfo;
+        if (first.id) firstImageIds.push(String(first.id));
+      }
+    }
+    await this.ensureThumbnailsForPage(firstImageIds);
     // 重建指纹基准（全量渲染后所有项视为"已同步"）
     this.itemFingerprints = new Map(
       page.items.map(p => [String(p.id), this.getItemFingerprint(p)])
@@ -590,6 +599,29 @@ export class PromptPanelManager extends PanelManagerBase {
     const loadedCount = this.filteredPrompts.length;
     if (range.end >= loadedCount - Math.floor(this.pageSize / 2)) {
       void this.loadMore();
+    }
+  }
+
+  /**
+   * 校验本页引用图像的缩略图文件完整性；缺失且原图存在时由主进程按需重建（懒自愈）。
+   * 修复结果同步到路径缓存，并强制当前窗口重建以加载新背景。
+   */
+  private async ensureThumbnailsForPage(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    try {
+      const result = await window.electronAPI.ensureImageThumbnails(ids);
+      if (result.fixed.length === 0) return;
+
+      cacheManager.setImagePaths(
+        result.fixed.map(f => ({ imageId: f.id, fullPath: f.fullPath })),
+        'thumbnail'
+      );
+      // 提示词卡片背景经路径缓存读取，无需更新 prompt 对象；
+      // 既有窗口节点的背景图指向已失效路径，强制全量重建
+      this.lastWindowRange = null;
+      this.virtualScroller?.refresh(true);
+    } catch (error) {
+      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to ensure thumbnails:', error);
     }
   }
 

@@ -4,6 +4,7 @@ import { ElectronDataClearApi } from '../services/ElectronDataClearApi.ts';
 import { DuplicatePreventionMixin } from '../../utils/index.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { ErrorHandler } from '../renderer_utils/index.ts';
+import { progressDialog } from '../components/ProgressDialog.ts';
 import type { IClosableElement } from '../../types/entities.ts';
 import { localStorageManager } from '../configs/LocalStorageConfig.ts';
 
@@ -199,6 +200,9 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     // 清空数据
     document.getElementById(Constants.Ids.CLEAR_ALL_DATA_BTN)?.addEventListener('click', () => this.clearAllData());
 
+    // 重建全部缩略图
+    document.getElementById(Constants.Ids.REBUILD_THUMBNAILS_BTN)?.addEventListener('click', () => this.rebuildThumbnails());
+
     // 视图模式
     const viewModeToggle = document.getElementById(Constants.Ids.VIEW_MODE_TOGGLE) as HTMLInputElement | null;
     if (viewModeToggle) {
@@ -389,6 +393,34 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
         error,
         { showToast: false }
       );
+    }
+  }
+
+  /**
+   * 重建全部缩略图
+   * 扫描所有图像，重新生成丢失的缩略图文件（幂等：已存在的跳过）
+   */
+  private rebuildingThumbnails = false;
+  private async rebuildThumbnails(): Promise<void> {
+    if (this.rebuildingThumbnails) return;
+    this.rebuildingThumbnails = true;
+
+    const progressCallback = (progress: { current: number; total: number; fileName: string }) => {
+      const percent = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
+      progressDialog.updateProgress(percent, `正在重建缩略图... (${progress.current}/${progress.total})`, progress.fileName || '');
+    };
+    window.electronAPI.onRebuildThumbnailsProgress(progressCallback);
+    progressDialog.show({ title: '正在重建缩略图...', status: '准备中...' });
+
+    try {
+      const result = await window.electronAPI.rebuildThumbnails();
+      progressDialog.complete(`重建完成：成功 ${result.regenerated} 张，失败 ${result.failed} 张`);
+    } catch (error) {
+      window.electronAPI.logError('SettingsManager.ts', 'Failed to rebuild thumbnails:', error);
+      progressDialog.error('重建缩略图失败');
+    } finally {
+      window.electronAPI.offRebuildThumbnailsProgress(progressCallback);
+      this.rebuildingThumbnails = false;
     }
   }
 

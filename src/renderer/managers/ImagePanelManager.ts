@@ -303,6 +303,8 @@ export class ImagePanelManager extends PanelManagerBase {
     this.hasMore = page.items.length < page.totalCount;
     // 预缓存路径（原图 + 缩略图）—— 主要预填充入口，兜底写入见 loadCardBackgroundsForItems
     await this.prefetchImagePaths(page.items);
+    // 校验本页缩略图文件完整性，缺失的由主进程按需重建（懒自愈）
+    await this.ensureThumbnailsForPage(page.items.map(img => String(img.id)));
     // 重建指纹基准（全量渲染后所有项视为"已同步"）
     this.itemFingerprints = new Map(
       page.items.map(img => [String(img.id), this.getItemFingerprint(img)])
@@ -702,6 +704,34 @@ export class ImagePanelManager extends PanelManagerBase {
     this.virtualScroller = null;
     this.virtualWrapper = null;
     this.lastWindowRange = null;
+  }
+
+  /**
+   * 校验本页缩略图文件完整性；缺失且原图存在时由主进程按需重建（懒自愈）。
+   * 修复结果同步到路径缓存与 filtered 数据，并强制当前窗口重建以加载新背景。
+   * 每页仅在分页加载时校验一次，正常情况为主进程 N 次 fs.access，开销可忽略。
+   */
+  private async ensureThumbnailsForPage(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    try {
+      const result = await window.electronAPI.ensureImageThumbnails(ids);
+      if (result.fixed.length === 0) return;
+
+      cacheManager.setImagePaths(
+        result.fixed.map(f => ({ imageId: f.id, fullPath: f.fullPath })),
+        'thumbnail'
+      );
+      const byId = new Map(result.fixed.map(f => [f.id, f.relativePath]));
+      for (const img of this.filteredImages) {
+        const rel = byId.get(String(img.id));
+        if (rel) img.thumbnailPath = rel;
+      }
+      // 既有窗口节点的背景图指向已失效路径，强制全量重建以加载新背景
+      this.lastWindowRange = null;
+      this.virtualScroller?.refresh(true);
+    } catch (error) {
+      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to ensure thumbnails:', error);
+    }
   }
 
   /**

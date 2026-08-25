@@ -63,6 +63,9 @@ interface IBackupManifest {
  */
 const backupProgressCallbacks = new WeakMap<BackupProgressCallback, (_event: IpcRendererEvent, progress: IBackupProgress) => void>();
 
+type RebuildThumbnailsProgressCallback = (progress: { current: number; total: number; fileName: string }) => void;
+const rebuildThumbnailsProgressCallbacks = new WeakMap<RebuildThumbnailsProgressCallback, (_event: IpcRendererEvent, progress: { current: number; total: number; fileName: string }) => void>();
+
 // ==================== API 定义 ====================
 
 interface IElectronAPI {
@@ -103,6 +106,10 @@ interface IElectronAPI {
   openImageLocation: (relativePath: string) => Promise<void>;
   openImageFiles: () => Promise<string[]>;
   clearAllData: () => Promise<string>;
+  ensureImageThumbnails: (ids: string[]) => Promise<{ fixed: Array<{ id: string; relativePath: string; fullPath: string }>; missing: string[] }>;
+  rebuildThumbnails: () => Promise<{ success: boolean; regenerated: number; failed: number; total: number }>;
+  onRebuildThumbnailsProgress: (callback: (progress: { current: number; total: number; fileName: string }) => void) => void;
+  offRebuildThumbnailsProgress: (callback: (progress: { current: number; total: number; fileName: string }) => void) => void;
   getImages: (sortBy: string, sortOrder: string) => Promise<IImage[]>;
   getImagesPaginated: (options: import('../main/database-types.js').GetImagesPaginatedOptions) => Promise<{ items: IImage[]; totalCount: number }>;
   getImageIdsByFilter: (options: Omit<import('../main/database-types.js').GetImagesPaginatedOptions, 'limit' | 'offset'>) => Promise<string[]>;
@@ -371,6 +378,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ==================== 完整备份 ====================
   exportFullBackup: () => ipcRenderer.invoke('export-full-backup'),
   importFullBackup: () => ipcRenderer.invoke('import-full-backup'),
+  ensureImageThumbnails: (ids: string[]) => ipcRenderer.invoke('ensure-image-thumbnails', ids),
+  rebuildThumbnails: () => ipcRenderer.invoke('rebuild-thumbnails'),
+  onRebuildThumbnailsProgress: (callback: (progress: { current: number; total: number; fileName: string }) => void) => {
+    const wrappedCallback = (_event: IpcRendererEvent, progress: { current: number; total: number; fileName: string }) => callback(progress);
+    rebuildThumbnailsProgressCallbacks.set(callback, wrappedCallback);
+    ipcRenderer.on('rebuild-thumbnails-progress', wrappedCallback);
+  },
+  offRebuildThumbnailsProgress: (callback: (progress: { current: number; total: number; fileName: string }) => void) => {
+    const wrappedCallback = rebuildThumbnailsProgressCallbacks.get(callback);
+    if (wrappedCallback) {
+      ipcRenderer.removeListener('rebuild-thumbnails-progress', wrappedCallback);
+      rebuildThumbnailsProgressCallbacks.delete(callback);
+    }
+  },
   onBackupProgress: (callback: BackupProgressCallback) => {
     const wrappedCallback = (_event: IpcRendererEvent, progress: IBackupProgress) => callback(progress);
     // 使用 WeakMap 存储包装后的回调，避免内存泄漏

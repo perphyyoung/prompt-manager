@@ -1177,6 +1177,71 @@ ipcMain.handle('get-images', async (event, sortBy, sortOrder) => {
   }
 });
 
+// 校验并按需重建缩略图（懒自愈）：缩略图文件缺失且原图存在时按需生成并更新 DB
+ipcMain.handle('ensure-image-thumbnails', async (event, ids: string[]) => {
+  try {
+    const fixed: Array<{ id: string; relativePath: string; fullPath: string }> = [];
+    const missing: string[] = [];
+
+    for (const id of ids || []) {
+      const image = await db.getImageById(id);
+      if (!image) {
+        missing.push(id);
+        continue;
+      }
+
+      // 缩略图存在则跳过（generateThumbnail 本身幂等，这里省去无谓的生成调用）
+      const thumbRelative = image.thumbnailPath || '';
+      if (thumbRelative) {
+        try {
+          await fs.access(path.join(currentDataDir, thumbRelative));
+          continue;
+        } catch {
+          // 缩略图缺失，继续重建流程
+        }
+      }
+
+      // 原图也缺失则标记为不可恢复
+      const sourceAbs = path.join(currentDataDir, image.relativePath);
+      try {
+        await fs.access(sourceAbs);
+      } catch {
+        missing.push(id);
+        continue;
+      }
+
+      const parts = image.relativePath.split('/');
+      const subDir = parts.length >= 2 ? parts[1] : '';
+      const info = await generateThumbnail(sourceAbs, image.storedName, subDir);
+      if (!info) {
+        missing.push(id);
+        continue;
+      }
+      await db.updateImagesBatch([{ id, thumbnailPath: info.relativePath }]);
+      fixed.push({ id, relativePath: info.relativePath, fullPath: info.thumbnailPath });
+    }
+
+    return { fixed, missing };
+  } catch (error) {
+    logError('Main', 'Ensure image thumbnails error:', error);
+    throw error;
+  }
+});
+
+// 全量重建缩略图（设置页手动触发），进度经 sender 推送
+ipcMain.handle('rebuild-thumbnails', async (event) => {
+  try {
+    return await regenerateAllThumbnails((current, total, fileName) => {
+      if (!event.sender.isDestroyed()) {
+        event.sender.send('rebuild-thumbnails-progress', { current, total, fileName });
+      }
+    });
+  } catch (error) {
+    logError('Main', 'Rebuild thumbnails error:', error);
+    throw error;
+  }
+});
+
 // 分页获取图像信息
 ipcMain.handle('get-images-paginated', async (event, options) => {
   try {

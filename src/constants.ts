@@ -352,6 +352,7 @@ export class Constants {
     PROMPT_TAG_FILTER_INVERT_BTN: "promptTagFilterInvertBtn",
     PROMPT_SCROLL_BAR: "promptScrollBar",
     IMAGE_SCROLL_BAR: "imageScrollBar",
+    REBUILD_THUMBNAILS_BTN: "rebuildThumbnailsBtn",
 
     // 输入对话框
     INPUT_MODAL_TITLE: "inputModalTitle",
