@@ -11,3 +11,4 @@ export { SaveStrategy, PromptSaveStrategy, ImageSaveStrategy } from './SaveStrat
 export { focusInput } from './DomUtils.ts';
 export { VirtualScroller, type VisibleRange, type VirtualScrollerConfig } from './VirtualScroller.ts';
 export { VirtualScrollBar, type VirtualScrollBarOptions } from './VirtualScrollBar.ts';
+export { VirtualWindowRenderer, type IVirtualWindowHost } from './VirtualWindowRenderer.ts';

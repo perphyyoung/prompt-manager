@@ -9,7 +9,7 @@ import { DialogConfig } from '../services/index.ts';
 import { batchToolbarMiddle } from '../../middle/index.ts';
 
 import { IPrompt } from '../../types/entities.ts';
-import { VirtualScroller, VirtualScrollBar, type VisibleRange } from '../renderer_utils/index.ts';
+import { VirtualScrollBar, VirtualWindowRenderer, type VisibleRange } from '../renderer_utils/index.ts';
 import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
 
@@ -39,11 +39,8 @@ export class PromptPanelManager extends PanelManagerBase {
   private loadedPromptIds = new Set<string>();
   private scrollHandler: (() => void) | null = null;
 
-  // 虚拟滚动
-  private virtualScroller: VirtualScroller | null = null;
-  private lastWindowRange: VisibleRange | null = null;
-  private virtualWrapper: HTMLElement | null = null;
-  private lastColumns = 0;
+  // 虚拟滚动（窗口渲染机制统一由 VirtualWindowRenderer 实现）
+  private windowRenderer: VirtualWindowRenderer<IPrompt> | null = null;
   private scrollBar: VirtualScrollBar | null = null;
   private scrollBarResizeObserver: ResizeObserver | null = null;
 
@@ -356,7 +353,7 @@ export class PromptPanelManager extends PanelManagerBase {
         }
         // 强制刷新：进度条跳转后原始窗口区间不变，非强制刷新会因区间相同被跳过，
         // 导致已渲染钳制窗口之外的新加载卡片不显示
-        this.virtualScroller?.refresh(true);
+        this.windowRenderer?.refresh(true);
       }
     } catch (error) {
       window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load more prompts:', error);
@@ -470,7 +467,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * @param _newItems - 新加载的提示词列表（已并入全量数组，无需单独处理）
    */
   private async appendToContainer(_newItems: IPrompt[]): Promise<void> {
-    this.virtualScroller?.refresh();
+    this.windowRenderer?.refresh();
   }
 
   /**
@@ -492,111 +489,10 @@ export class PromptPanelManager extends PanelManagerBase {
 
   /**
    * 渲染可见窗口内的卡片（VirtualScroller 回调）
-   * 与上次窗口有重叠且列数未变时走增量路径（head/tail 增删节点，复用已有卡片 DOM，
-   * 背景图不重复加载）；窗口跳跃、首次渲染或几何变化时全量重建
+   * 窗口计算、增量修补与越界钳制统一由 VirtualWindowRenderer 实现
    */
   private renderWindow(range: VisibleRange): void {
-    const wrapper = this.virtualWrapper;
-    if (!wrapper) return;
-
-    // 几何失效：列数变化后既有节点的坐标全部过期，强制全量重建
-    const columns = this.getPromptColumns();
-    if (columns !== this.lastColumns) {
-      this.lastWindowRange = null;
-      this.lastColumns = columns;
-    }
-
-    const prev = this.lastWindowRange;
-    // 进度条快速拖动时窗口可越过已加载数据边界（totalCount 是数据库总数，
-    // filteredPrompts 仅含已加载分页）；未加载区钳制为空，避免对 undefined 渲染卡片报错，
-    // 缺口由 ensureWindowData 触发 loadMore 追加数据后补渲染
-    const viewRange: VisibleRange = {
-      start: Math.min(range.start, this.filteredPrompts.length),
-      end: Math.min(range.end, this.filteredPrompts.length)
-    };
-
-    // 有重叠即可增量修补（head/tail 增删），无重叠说明窗口跳跃过大，走全量重建
-    const canPatch = prev !== null && viewRange.start < prev.end && prev.start < viewRange.end;
-
-    if (!prev || !canPatch) {
-      this.rebuildWindow(wrapper, viewRange);
-      return;
-    }
-
-    // ---- 增量路径：仅创建/移除进出视口的卡片 ----
-    const added: IPrompt[] = [];
-    const parseNodes = (prompt: IPrompt, index: number): Node[] => {
-      added.push(prompt);
-      const doc = new DOMParser().parseFromString(this.createPositionedCard(prompt, index), 'text/html');
-      return Array.from(doc.body.childNodes);
-    };
-
-    if (viewRange.start > prev.start) {
-      for (let i = 0; i < viewRange.start - prev.start; i++) {
-        wrapper.firstElementChild?.remove();
-      }
-    } else if (viewRange.start < prev.start) {
-      const frag = document.createDocumentFragment();
-      for (let i = viewRange.start; i < prev.start; i++) {
-        frag.append(...parseNodes(this.filteredPrompts[i], i));
-      }
-      wrapper.insertBefore(frag, wrapper.firstChild);
-    }
-
-    if (viewRange.end > prev.end) {
-      const frag = document.createDocumentFragment();
-      for (let i = prev.end; i < viewRange.end; i++) {
-        frag.append(...parseNodes(this.filteredPrompts[i], i));
-      }
-      wrapper.append(frag);
-    } else if (viewRange.end < prev.end) {
-      for (let i = 0; i < prev.end - viewRange.end; i++) {
-        wrapper.lastElementChild?.remove();
-      }
-    }
-
-    this.bindItemEvents(this.filteredPrompts);
-    if (added.length > 0) {
-      this.bindCardButtonEvents(added);
-      void this.loadCardBackgroundsForItems(added);
-      this.bindHoverPreview('.prompt-card');
-    }
-    this.lastWindowRange = { start: viewRange.start, end: viewRange.end };
-    this.ensureWindowData();
-  }
-
-  /**
-   * 生成带 absolute 定位壳的卡片 HTML
-   */
-  private createPositionedCard(prompt: IPrompt, index: number): string {
-    const columns = Math.max(1, this.getPromptColumns());
-    const row = Math.floor(index / columns);
-    const col = index % columns;
-    const top = row * this.getPromptRowHeight();
-    const left = col * this.getPromptRowHeight();
-    return `<div class="virtual-item" style="top:${top}px;left:${left}px;width:${this.cardSize}px;height:${this.cardSize}px">${this.createCard(prompt, index)}</div>`;
-  }
-
-  /** 全量重建窗口内容 */
-  private rebuildWindow(wrapper: HTMLElement, range: VisibleRange): void {
-    const html = Array.from(
-      { length: Math.max(0, range.end - range.start) },
-      (_, i) => this.createPositionedCard(this.filteredPrompts[range.start + i], range.start + i)
-    ).join('');
-
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    wrapper.replaceChildren(...Array.from(doc.body.childNodes));
-
-    this.bindItemEvents(this.filteredPrompts);
-    const windowItems = this.filteredPrompts.slice(range.start, range.end);
-    if (windowItems.length > 0) {
-      this.bindCardButtonEvents(windowItems);
-      void this.loadCardBackgroundsForItems(windowItems);
-    }
-    this.bindHoverPreview('.prompt-card');
-    this.lastWindowRange = { start: range.start, end: range.end };
-    this.ensureWindowData();
+    this.windowRenderer?.render(range);
   }
 
   /**
@@ -604,7 +500,7 @@ export class PromptPanelManager extends PanelManagerBase {
    */
   private ensureWindowData(): void {
     if (this.isLoading || !this.hasMore) return;
-    const range = this.virtualScroller?.getVisibleRange();
+    const range = this.windowRenderer?.getVisibleRange();
     if (!range || range.end === 0) return;
     const loadedCount = this.filteredPrompts.length;
     if (range.end >= loadedCount - Math.floor(this.pageSize / 2)) {
@@ -628,8 +524,7 @@ export class PromptPanelManager extends PanelManagerBase {
       );
       // 提示词卡片背景经路径缓存读取，无需更新 prompt 对象；
       // 既有窗口节点的背景图指向已失效路径，强制全量重建
-      this.lastWindowRange = null;
-      this.virtualScroller?.refresh(true);
+      this.windowRenderer?.requestFullRerender();
     } catch (error) {
       window.electronAPI.logError('PromptPanelManager.ts', 'Failed to ensure thumbnails:', error);
     }
@@ -654,7 +549,7 @@ export class PromptPanelManager extends PanelManagerBase {
         const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
         container.scrollTop = (startIndex / maxOffset) * maxScrollTop;
         // 瞬时赋值可能不触发 scroll 事件，主动同步窗口
-        this.virtualScroller?.refresh();
+        this.windowRenderer?.refresh();
       }
     });
     this.syncScrollBarLayout();
@@ -808,32 +703,31 @@ export class PromptPanelManager extends PanelManagerBase {
 
     // totalCount 为数据库全量计数：wrapper 总高立即覆盖全部数据，
     // 初始窗口经 rAF 异步渲染
-    this.virtualScroller!.setTotalCount(this.totalCount);
+    this.windowRenderer?.setTotalCount(this.totalCount);
     this.initScrollBar();
   }
 
+  /** 创建虚拟窗口渲染器并挂载（面板差异经宿主回调注入） */
   private setupVirtualScroller(container: HTMLElement, wrapper: HTMLElement): void {
     this.destroyVirtualScroller();
-    this.lastWindowRange = null;
-    this.virtualWrapper = wrapper;
-    this.lastColumns = this.getPromptColumns();
-    this.virtualScroller = new VirtualScroller(
-      {
-        container,
-        wrapper,
-        getRowHeight: () => this.getPromptRowHeight(),
-        getColumns: () => this.getPromptColumns()
-      },
-      (range) => this.renderWindow(range)
-    );
-    this.virtualScroller.observeResize();
+    this.windowRenderer = new VirtualWindowRenderer<IPrompt>({
+      getData: () => this.filteredPrompts,
+      getColumns: () => this.getPromptColumns(),
+      getRowHeight: () => this.getPromptRowHeight(),
+      getCardSize: () => this.cardSize,
+      renderCardHtml: (prompt, index) => this.createCard(prompt, index),
+      onBindContainerEvents: (data) => this.bindItemEvents(data),
+      onBindItemButtons: (items) => this.bindCardButtonEvents(items),
+      onLoadItemImages: async (items) => { await this.loadCardBackgroundsForItems(items); },
+      onBindHoverPreview: () => this.bindHoverPreview('.prompt-card'),
+      onWindowSettled: () => this.ensureWindowData()
+    });
+    this.windowRenderer.attach(container, wrapper);
   }
 
   private destroyVirtualScroller(): void {
-    this.virtualScroller?.destroy();
-    this.virtualScroller = null;
-    this.virtualWrapper = null;
-    this.lastWindowRange = null;
+    this.windowRenderer?.destroy();
+    this.windowRenderer = null;
   }
 
   /**
@@ -911,7 +805,7 @@ export class PromptPanelManager extends PanelManagerBase {
     if (!container) return;
 
     // 刷新可见窗口（rAF 合帧）；窗口落位后的数据补齐由 ensureWindowData 兜底
-    this.virtualScroller?.refresh();
+    this.windowRenderer?.refresh();
     this.ensureWindowData();
 
     // 反向同步自定义滚动条 thumb
@@ -1293,8 +1187,7 @@ export class PromptPanelManager extends PanelManagerBase {
    */
   setCardSize(size: number): void {
     super.setCardSize(size);
-    this.lastWindowRange = null;
-    this.virtualScroller?.refresh(true);
+    this.windowRenderer?.requestFullRerender();
     this.scrollBar?.update();
   }
 
