@@ -9,8 +9,12 @@ import { DialogConfig } from '../services/index.ts';
 import { batchToolbarMiddle } from '../../middle/index.ts';
 
 import { IImage } from '../../types/entities.ts';
+import { VirtualScroller, type VisibleRange } from '../renderer_utils/index.ts';
 import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
+
+/** .grid-view 的 gap 值（px），与 styles.css 保持一致 */
+const GRID_GAP = 16;
 
 interface PromptRef {
   promptId: string;
@@ -37,6 +41,10 @@ export class ImagePanelManager extends PanelManagerBase {
   private isLoading = false;
   private loadedImageIds = new Set<string>();
   private scrollHandler: (() => void) | null = null;
+
+  // 虚拟滚动
+  private virtualScroller: VirtualScroller | null = null;
+  private lastWindowRange: VisibleRange | null = null;
 
   // 面板类型
   protected readonly panelType = 'image' as const;
@@ -342,13 +350,11 @@ export class ImagePanelManager extends PanelManagerBase {
       this.hasMore = this.filteredImages.length < page.totalCount;
 
       if (newItems.length > 0) {
-        await this.appendToContainer(newItems);
-        // 补录新加载项的指纹
+        // 补录新加载项的指纹（DOM 渲染由虚拟窗口按需完成）
         for (const img of newItems) {
           this.itemFingerprints.set(String(img.id), this.getItemFingerprint(img));
         }
-        // 重新绑定事件，让闭包包含所有已加载图像
-        this.bindItemEvents(this.filteredImages);
+        this.virtualScroller?.refresh();
       }
     } catch (error) {
       window.electronAPI.logError('ImagePanelManager.ts', 'Failed to load more images:', error);
@@ -356,6 +362,9 @@ export class ImagePanelManager extends PanelManagerBase {
     } finally {
       this.isLoading = false;
     }
+
+    // 窗口仍接近未加载边界时继续追赶（快速拖动滚动条场景）
+    this.checkWindowNeedsMoreData();
   }
 
   /**
@@ -402,6 +411,7 @@ export class ImagePanelManager extends PanelManagerBase {
 
   /**
    * 渲染容器（实现基类抽象方法）
+   * 虚拟滚动：totalCount 已知时撑起完整滚动高度，DOM 只渲染可见窗口
    */
   async renderContainer(filtered: IImage[]): Promise<void> {
     this.filteredImages = filtered;
@@ -410,6 +420,7 @@ export class ImagePanelManager extends PanelManagerBase {
     const currentSearchQuery = this.getSearchQuery();
 
     if (filtered.length === 0) {
+      this.destroyVirtualScroller();
       if (currentSearchQuery) {
         PanelRenderer.showEmptyState(Constants.Ids.IMAGE_GRID, Constants.Ids.IMAGE_EMPTY_STATE, `未找到匹配"${currentSearchQuery}"的图像`, '搜索无结果');
       } else if (this.selectedTags.size > 0) {
@@ -425,42 +436,162 @@ export class ImagePanelManager extends PanelManagerBase {
 
     // 渲染网格视图（图像主页仅保留网格视图）
     container!.style.display = 'grid';
-
-    // 渲染网格视图
-    PanelRenderer.renderGrid(filtered, (img) => this.createCard(img as IImage), Constants.Ids.IMAGE_GRID);
-    this.bindItemEvents(filtered);
-    this.bindCardButtonEvents(filtered);
-    this.loadCardBackgrounds();
-    this.bindHoverPreview('.image-card');
+    container!.innerHTML = '';
+    this.setupVirtualScroller(container!);
     this.bindCardDropEvents(container!);
+
+    // totalCount 为数据库全量计数：占位高度立即覆盖全部数据，
+    // 初始窗口经 rAF 异步渲染
+    this.virtualScroller!.setTotalCount(this.totalCount);
   }
 
   /**
    * 追加渲染到容器
-   * @param newItems - 新加载的图像列表
+   * 虚拟滚动模式：数据已并入 filteredImages，仅刷新窗口使新数据按需渲染
+   * @param _newItems - 新加载的图像列表（已并入全量数组，无需单独处理）
    */
-  private async appendToContainer(newItems: IImage[]): Promise<void> {
-    const container = document.getElementById(Constants.Ids.IMAGE_GRID);
-    if (!container) return;
-
-    const html = newItems.map((img, index) => this.createCard(img, this.filteredImages.length - newItems.length + index)).join('');
-    this.appendHtmlToContainer(container, html);
-    this.bindCardButtonEvents(newItems);
-    await this.loadCardBackgroundsForItems(newItems);
-    this.bindHoverPreview('.image-card');
+  private async appendToContainer(_newItems: IImage[]): Promise<void> {
+    this.virtualScroller?.refresh();
   }
 
   /**
-   * 将 HTML 字符串追加到容器
-   * 使用 DOMParser 避免直接调用 insertAdjacentHTML 触发 lint 警告
-   * @param container - 容器元素
-   * @param html - HTML 字符串
+   * 设置卡片尺寸（重写基类）
+   * 卡片尺寸变化影响网格行高与列数，需强制重算占位与窗口
    */
-  private appendHtmlToContainer(container: HTMLElement, html: string): void {
+  setCardSize(size: number): void {
+    super.setCardSize(size);
+    this.virtualScroller?.refresh(true);
+  }
+
+  /**
+   * 网格行高 = 卡片尺寸 + 行间距（.grid-view gap: 16px）
+   */
+  private getGridRowHeight(): number {
+    return this.cardSize + GRID_GAP;
+  }
+
+  /**
+   * 每行列数：容器可用宽度内能放下多少个 (卡片 + 间距)
+   */
+  private getGridColumns(): number {
+    const container = document.getElementById(Constants.Ids.IMAGE_GRID);
+    if (!container) return 1;
+    const usableWidth = container.clientWidth - 8; // padding-right: 8px
+    return Math.max(1, Math.floor((usableWidth + GRID_GAP) / this.getGridRowHeight()));
+  }
+
+  /**
+   * 渲染可见窗口内的卡片（VirtualScroller 回调）
+   * 与上次窗口有重叠时走增量路径（head/tail 增删节点，复用已有卡片 DOM，
+   * 背景图不重复加载）；窗口跳跃或首次渲染时全量重建
+   */
+  private renderWindow(range: VisibleRange): void {
+    const container = document.getElementById(Constants.Ids.IMAGE_GRID);
+    if (!container) return;
+
+    const prev = this.lastWindowRange;
+    // 有重叠即可增量修补（head/tail 增删），无重叠说明窗口跳跃过大，走全量重建
+    const canPatch = prev !== null && range.start < prev.end && prev.start < range.end;
+
+    if (!prev || !canPatch) {
+      this.rebuildWindow(container, range);
+      return;
+    }
+
+    // ---- 增量路径：仅创建/移除进出视口的卡片 ----
+    const added: IImage[] = [];
+    const parseNodes = (img: IImage, index: number): Node[] => {
+      added.push(img);
+      const doc = new DOMParser().parseFromString(this.createCard(img, index), 'text/html');
+      return Array.from(doc.body.childNodes);
+    };
+
+    if (range.start > prev.start) {
+      // 向下滚动：移除头部多余卡片
+      for (let i = 0; i < range.start - prev.start; i++) {
+        container.firstElementChild?.remove();
+      }
+    } else if (range.start < prev.start) {
+      // 向上滚动：头部插入新进入的卡片
+      const frag = document.createDocumentFragment();
+      for (let i = range.start; i < prev.start; i++) {
+        frag.append(...parseNodes(this.filteredImages[i], i));
+      }
+      container.insertBefore(frag, container.firstChild);
+    }
+
+    if (range.end > prev.end) {
+      // 尾部追加新进入的卡片
+      const frag = document.createDocumentFragment();
+      for (let i = prev.end; i < range.end; i++) {
+        frag.append(...parseNodes(this.filteredImages[i], i));
+      }
+      container.append(frag);
+    } else if (range.end < prev.end) {
+      for (let i = 0; i < prev.end - range.end; i++) {
+        container.lastElementChild?.remove();
+      }
+    }
+
+    this.bindItemEvents(this.filteredImages);
+    if (added.length > 0) {
+      this.bindCardButtonEvents(added);
+      void this.loadCardBackgroundsForItems(added);
+      this.bindHoverPreview('.image-card');
+    }
+    this.lastWindowRange = { start: range.start, end: range.end };
+  }
+
+  /** 全量重建窗口内容 */
+  private rebuildWindow(container: HTMLElement, range: VisibleRange): void {
+    const windowItems = this.filteredImages.slice(range.start, range.end);
+    const html = windowItems.map((img, i) => this.createCard(img, range.start + i)).join('');
+
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    const nodes = Array.from(doc.body.childNodes);
-    container.append(...nodes);
+    container.replaceChildren(...Array.from(doc.body.childNodes));
+
+    // 容器级事件委托需绑定最新全量数组；按钮/背景图/hover 为逐元素绑定，仅窗口内重绑
+    this.bindItemEvents(this.filteredImages);
+    if (windowItems.length > 0) {
+      this.bindCardButtonEvents(windowItems);
+      void this.loadCardBackgroundsForItems(windowItems);
+    }
+    this.bindHoverPreview('.image-card');
+    this.lastWindowRange = { start: range.start, end: range.end };
+  }
+
+  private setupVirtualScroller(container: HTMLElement): void {
+    this.destroyVirtualScroller();
+    this.lastWindowRange = null;
+    this.virtualScroller = new VirtualScroller(
+      {
+        container,
+        getRowHeight: () => this.getGridRowHeight(),
+        getColumns: () => this.getGridColumns()
+      },
+      (range) => this.renderWindow(range)
+    );
+    this.virtualScroller.observeResize();
+  }
+
+  private destroyVirtualScroller(): void {
+    this.virtualScroller?.destroy();
+    this.virtualScroller = null;
+  }
+
+  /**
+   * 可见窗口尾部接近已加载数据边界时继续分页加载；
+   * loadMore 完成后会再次调用自身，支持快速拖动滚动条时连续追赶
+   */
+  private checkWindowNeedsMoreData(): void {
+    if (this.isLoading || !this.hasMore) return;
+    const range = this.virtualScroller?.getVisibleRange();
+    if (!range) return;
+    const loadedCount = this.filteredImages.length;
+    if (range.end >= loadedCount - Math.floor(this.pageSize / 2)) {
+      void this.loadMore();
+    }
   }
 
   /**
@@ -511,13 +642,6 @@ export class ImagePanelManager extends PanelManagerBase {
    */
   protected async loadItemImagesForChanged(images: IImage[]): Promise<void> {
     await this.loadCardBackgroundsForItems(images);
-  }
-
-  /**
-   * 异步加载卡片背景图（实现基类抽象方法）
-   */
-  async loadCardBackgrounds(): Promise<void> {
-    await this.loadCardBackgroundsForItems(this.filteredImages);
   }
 
   /**
@@ -791,11 +915,9 @@ export class ImagePanelManager extends PanelManagerBase {
     const container = document.getElementById(Constants.Ids.IMAGE_GRID);
     if (!container) return;
 
-    const scrollBottom = container.scrollTop + container.clientHeight;
-    const threshold = 200;
-    if (scrollBottom >= container.scrollHeight - threshold) {
-      this.loadMore();
-    }
+    // 刷新可见窗口（rAF 合帧）
+    this.virtualScroller?.refresh();
+    this.checkWindowNeedsMoreData();
   }
 
   /**
@@ -932,12 +1054,10 @@ export class ImagePanelManager extends PanelManagerBase {
 
       const result = await window.electronAPI.getImagesPaginated(options);
 
-      // 检测 DOM 中不存在的新项（如新建/上传的图像）：
-      // 增量更新只能修改/删除已有元素，无法创建新元素，
+      // 检测数据集中新增的项（如新建/上传的图像）：
+      // 虚拟滚动下不可见项不在 DOM 中，改用已加载集合判断；
       // 存在新项时降级为全量渲染，确保新卡片正确显示
-      const container = this.getCurrentContainer();
-      const hasNewItem =
-        container !== null && result.items.some((item) => !container.querySelector(`[data-id="${item.id}"]`));
+      const hasNewItem = result.items.some((item) => !this.loadedImageIds.has(String(item.id)));
       if (hasNewItem) {
         await this.renderView();
         return;

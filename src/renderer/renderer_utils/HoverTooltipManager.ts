@@ -22,6 +22,8 @@ export class HoverTooltipManager {
   private hoverTimer: ReturnType<typeof setTimeout> | null = null;
   private currentElement: Element | null = null;
   private app: IApp;
+  /** 已绑定 hover 的元素（bind 幂等，避免重复叠加监听器） */
+  private boundElements = new WeakSet<Element>();
 
   constructor(app: IApp, tooltipId: string, contentId: string, imageId: string) {
     this.app = app;
@@ -75,6 +77,8 @@ export class HoverTooltipManager {
     const { getContent, getImageId, delay = 500 } = options;
 
     document.querySelectorAll(selector).forEach(element => {
+      if (this.boundElements.has(element)) return;
+      this.boundElements.add(element);
       element.addEventListener('mouseenter', async (e) => {
         const content = getContent ? getContent(element) : '';
         if (content === null) return;
