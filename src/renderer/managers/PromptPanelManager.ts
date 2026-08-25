@@ -29,6 +29,8 @@ interface ImageInfo {
 export class PromptPanelManager extends PanelManagerBase {
   filteredPrompts: IPrompt[] = [];
   private isInitialized = false;
+  /** 列表网格是否已渲染（用于面板切换时跳过重建以保留滚动位置与分页状态） */
+  private listViewRendered = false;
 
   // 分页状态
   private readonly pageSize = 100;
@@ -433,6 +435,18 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
+   * 确保列表已渲染（重写基类方法）
+   * 面板每次切换都会触发本方法：已渲染过则跳过重建，保留滚动位置与分页状态；
+   * 切走期间的数据变更由 PROMPTS_CHANGED 事件的增量刷新兜底
+   */
+  async ensureRendered(): Promise<void> {
+    if (!this.listViewRendered) {
+      await this.renderView();
+    }
+    await this.renderTagFilters();
+  }
+
+  /**
    * 渲染主视图（重写基类方法）
    * 提示词面板使用数据库分页查询，不走前端过滤排序
    */
@@ -677,6 +691,8 @@ export class PromptPanelManager extends PanelManagerBase {
       this.scrollBarResizeObserver = null;
       this.scrollBar?.destroy();
       this.scrollBar = null;
+      // 空态下列表未渲染，复位标志以保证"从无到有"时能正常渲染
+      this.listViewRendered = false;
       if (currentSearchQuery) {
         PanelRenderer.showEmptyState(Constants.Ids.PROMPT_GRID, Constants.Ids.PROMPT_EMPTY_STATE, `未找到匹配"${currentSearchQuery}"的提示词`, '搜索无结果');
       } else if (this.selectedTags.size > 0) {
@@ -705,6 +721,8 @@ export class PromptPanelManager extends PanelManagerBase {
     // 初始窗口经 rAF 异步渲染
     this.windowRenderer?.setTotalCount(this.totalCount);
     this.initScrollBar();
+    // 列表网格已渲染，后续面板切换可跳过重建
+    this.listViewRendered = true;
   }
 
   /** 创建虚拟窗口渲染器并挂载（面板差异经宿主回调注入） */
