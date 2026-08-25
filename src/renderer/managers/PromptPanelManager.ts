@@ -247,29 +247,25 @@ export class PromptPanelManager extends PanelManagerBase {
    * 数据库分页加载第一页
    */
   async loadData(): Promise<IPrompt[]> {
-    try {
-      this.currentOffset = 0;
-      this.hasMore = true;
-      this.loadedPromptIds.clear();
-      const page = await this.fetchPage();
-      // 增量缓存元数据（不调用 cachePrompts 避免清空改变 LRU 顺序）
-      for (const prompt of page.items) {
-        cacheManager.cachePrompt(prompt);
-        this.loadedPromptIds.add(String(prompt.id));
-      }
-      this.totalCount = page.totalCount;
-      this.hasMore = page.items.length < page.totalCount;
-      // 预缓存提示词关联的第一张图的路径（缩略图用）
-      await this.prefetchPromptImagePaths(page.items);
-      // 重建指纹基准（全量渲染后所有项视为"已同步"）
-      this.itemFingerprints = new Map(
-        page.items.map(p => [String(p.id), this.getItemFingerprint(p)])
-      );
-      return page.items;
-    } catch (error) {
-      cacheManager.getPromptCache().clear();
-      throw error;
+    this.currentOffset = 0;
+    this.hasMore = true;
+    this.loadedPromptIds.clear();
+    const page = await this.fetchPage();
+    // 增量缓存元数据（不调用 cachePrompts 避免清空改变 LRU 顺序）
+    for (const prompt of page.items) {
+      cacheManager.cachePrompt(prompt);
+      this.loadedPromptIds.add(String(prompt.id));
     }
+    this.totalCount = page.totalCount;
+    this.hasMore = page.items.length < page.totalCount;
+    // 预缓存提示词关联的第一张图的路径（缩略图用）
+    await this.prefetchPromptImagePaths(page.items);
+    // 重建指纹基准（全量渲染后所有项视为"已同步"）
+    this.itemFingerprints = new Map(
+      page.items.map(p => [String(p.id), this.getItemFingerprint(p)])
+    );
+    // 失败时保留旧缓存：数据仍以数据库为准，清空只会导致后续全部重新 IPC
+    return page.items;
   }
 
   /**

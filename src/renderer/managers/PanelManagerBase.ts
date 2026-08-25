@@ -197,13 +197,9 @@ export abstract class PanelManagerBase {
           : async (ids) => {
               const result = await window.electronAPI.softDeleteImages(ids);
               return { success: result.success, deleted: result.deleted };
-            },
-        clearCache: () => {
-          const cache = this.panelType === 'prompt'
-            ? cacheManager.getPromptCache()
-            : cacheManager.getImageCache();
-          cache.clear();
-        }
+            }
+        // 不再全量 clear 元数据缓存：软删除残留由 LRU 自然淘汰，
+        // 面板刷新后以 filtered 数组为权威，残留条目无读取路径
       },
       addTag: {
         processItems: async (ids: string[], tagNames: string[]) => {

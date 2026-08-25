@@ -14,7 +14,6 @@ import type {
   IBatchTagManagerConfig,
 } from "../../types/entities.ts";
 import type { IApp } from '../app.types.ts';
-import { cacheManager } from "../../utils/CacheManager.ts";
 interface DetailViewManagerOptions {
   app: IApp;
   modalId: string;
@@ -587,10 +586,8 @@ export abstract class DetailViewManager {
         batchApi: async (ids) => {
           const result = await window.electronAPI.softDeletePrompts(ids);
           return { success: result.success, deleted: result.deleted };
-        },
-        clearCache: () => {
-          cacheManager.getPromptCache().clear();
-        },
+        }
+        // 不再全量 clear 元数据缓存：软删除残留由 LRU 自然淘汰，无读取路径
       },
       addTag: {
         processItems: async () => {

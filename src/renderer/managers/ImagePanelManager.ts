@@ -290,29 +290,25 @@ export class ImagePanelManager extends PanelManagerBase {
    * 加载图像列表数据（实现基类抽象方法）
    */
   async loadData(): Promise<IImage[]> {
-    try {
-      this.currentOffset = 0;
-      this.hasMore = true;
-      this.loadedImageIds.clear();
-      const page = await this.fetchPage();
-      // 增量缓存元数据（不调用 cacheImages 避免清空改变 LRU 顺序）
-      for (const img of page.items) {
-        cacheManager.cacheImage(img);
-        this.loadedImageIds.add(String(img.id));
-      }
-      this.totalCount = page.totalCount;
-      this.hasMore = page.items.length < page.totalCount;
-      // 预缓存路径（原图 + 缩略图）—— 路径缓存的唯一写入点
-      await this.prefetchImagePaths(page.items);
-      // 重建指纹基准（全量渲染后所有项视为"已同步"）
-      this.itemFingerprints = new Map(
-        page.items.map(img => [String(img.id), this.getItemFingerprint(img)])
-      );
-      return page.items;
-    } catch (error) {
-      cacheManager.getImageCache().clear();
-      throw error;
+    this.currentOffset = 0;
+    this.hasMore = true;
+    this.loadedImageIds.clear();
+    const page = await this.fetchPage();
+    // 增量缓存元数据（不调用 cacheImages 避免清空改变 LRU 顺序）
+    for (const img of page.items) {
+      cacheManager.cacheImage(img);
+      this.loadedImageIds.add(String(img.id));
     }
+    this.totalCount = page.totalCount;
+    this.hasMore = page.items.length < page.totalCount;
+    // 预缓存路径（原图 + 缩略图）—— 主要预填充入口，兜底写入见 loadCardBackgroundsForItems
+    await this.prefetchImagePaths(page.items);
+    // 重建指纹基准（全量渲染后所有项视为"已同步"）
+    this.itemFingerprints = new Map(
+      page.items.map(img => [String(img.id), this.getItemFingerprint(img)])
+    );
+    // 失败时保留旧缓存：数据仍以数据库为准，清空只会导致后续全部重新 IPC
+    return page.items;
   }
 
   /**

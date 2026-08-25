@@ -1012,7 +1012,8 @@ export class PromptDetailManager extends DetailViewManager {
       }
 
       // 更新全局图像缓存，确保 renderImagePreviews 能获取完整信息
-      cacheManager.cacheImages(result.images);
+      // 追加式写入：不清空主列表已缓存的元数据
+      cacheManager.cacheImagesAppend(result.images);
 
       const promptIdInput = document.getElementById(
         Constants.Ids.PROMPT_DETAIL_ID,

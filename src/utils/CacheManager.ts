@@ -16,6 +16,7 @@ export class CacheManager {
 
   /**
    * 创建或获取命名缓存
+   * 注意：幂等设计——已存在的同名缓存不会应用新的 maxSize（容量调整需重启会话）
    * @param name - 缓存名称
    * @param maxSize - 最大缓存条目数
    * @returns LRU 缓存实例
@@ -71,13 +72,25 @@ export class CacheManager {
   }
 
   // ==================== 图像路径缓存快捷方法 ====================
+  // 缩略图路径高频读取（每张卡片渲染都需要），容量放大；
+  // 原图路径缓存当前仅覆盖 hover 预览的高频访问——两个详情界面
+  // （ImageDetailManager / PromptDetailManager）与全屏查看为低频单次查询，
+  // 直接经 electronAPI.getImagePath(relativePath) 获取，不经过本缓存。
+  // 两个独立 LRU 避免互相挤占；键为纯 imageId；
+  // 读取统一用 peek，不扰动淘汰顺序。
 
-  /**
-   * 获取图像路径缓存
-   * @returns LRU 缓存实例
-   */
-  getImagePathCache(): LRUCache {
-    return this.createCache('imagePaths', 500);
+  /** 缩略图路径缓存（高频） */
+  private getThumbnailPathCache(): LRUCache {
+    return this.createCache('thumbnailPaths', 5000);
+  }
+
+  /** 原图路径缓存（低频，仅 hover 预览） */
+  private getOriginalPathCache(): LRUCache {
+    return this.createCache('originalPaths', 1000);
+  }
+
+  private getPathCache(type: 'original' | 'thumbnail'): LRUCache {
+    return type === 'thumbnail' ? this.getThumbnailPathCache() : this.getOriginalPathCache();
   }
 
   /**
@@ -87,8 +100,7 @@ export class CacheManager {
    * @returns 完整路径或 undefined
    */
   getImagePath(imageId: string, type: 'original' | 'thumbnail' = 'original'): string | undefined {
-    const cache = this.getImagePathCache();
-    return cache.get(`${type}_${imageId}`) as string | undefined;
+    return this.getPathCache(type).peek(imageId) as string | undefined;
   }
 
   /**
@@ -98,8 +110,7 @@ export class CacheManager {
    * @param path - 完整路径
    */
   setImagePath(imageId: string, type: 'original' | 'thumbnail', path: string): void {
-    const cache = this.getImagePathCache();
-    cache.set(`${type}_${imageId}`, path);
+    this.getPathCache(type).set(imageId, path);
   }
 
   /**
@@ -107,17 +118,17 @@ export class CacheManager {
    * @param imageId - 图像 ID（可选，不提供则清除所有）
    */
   clearImagePathCache(imageId?: string): void {
-    const cache = this.getImagePathCache();
-    if (imageId) {
-      cache.delete(`original_${imageId}`);
-      cache.delete(`thumbnail_${imageId}`);
-    } else {
-      cache.clear();
+    for (const cache of [this.getThumbnailPathCache(), this.getOriginalPathCache()]) {
+      if (imageId) {
+        cache.delete(imageId);
+      } else {
+        cache.clear();
+      }
     }
   }
 
   /**
-   * 批量预缓存图像路径（保持 LRU 顺序：保留已存在的，追加新的）
+   * 批量预写入图像路径（保持 LRU 顺序：保留已存在的，追加新的）
    * @param entries - 图像 ID 与完整路径的对应关系
    * @param type - 路径类型: 'original' | 'thumbnail'
    */
@@ -126,17 +137,18 @@ export class CacheManager {
     type: 'original' | 'thumbnail'
   ): void {
     if (entries.length === 0) return;
-    const cache = this.getImagePathCache();
+    const cache = this.getPathCache(type);
     for (const { imageId, fullPath } of entries) {
       if (imageId && fullPath) {
-        cache.set(`${type}_${imageId}`, fullPath);
+        cache.set(imageId, fullPath);
       }
     }
   }
 
   /**
    * 预缓存一批图像的完整路径（原图 + 缩略图）
-   * 仅写入缓存缺失的项。这是路径缓存的唯一写入点。
+   * 仅写入缓存缺失的项。主要预填充入口（分页加载后调用）；
+   * 各渲染兜底路径（如 loadCardBackgroundsForItems 未命中批量查询）也会写入
    * @param images - 图像列表
    * @param electronAPI - 渲染进程的 electronAPI（用于 getImagesPaths）
    * @returns 是否有新项写入
@@ -241,6 +253,7 @@ export class CacheManager {
 
   /**
    * 批量缓存图像
+   * 注意：会先清空缓存再写入（全量替换语义）
    * @param images - 图像数组
    */
   cacheImages(images: IImage[]): void {
@@ -251,6 +264,18 @@ export class CacheManager {
         cache.set(String(image.id), image);
       }
     });
+  }
+
+  /**
+   * 追加式批量缓存图像
+   * 不清空现有缓存，仅写入/覆盖给定项——用于局部场景（如详情页选择图像）
+   * 需要向全局缓存补充数据、且不能破坏主列表已缓存的元数据
+   * @param images - 图像数组
+   */
+  cacheImagesAppend(images: IImage[]): void {
+    for (const image of images) {
+      this.cacheImage(image);
+    }
   }
 
   /**

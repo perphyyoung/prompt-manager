@@ -550,7 +550,7 @@ class PromptManager implements IApp {
       }
     } catch (error) {
       window.electronAPI.logError('App', 'Failed to load prompts:', error);
-      cacheManager.getPromptCache().clear();
+      // 失败时保留旧缓存：数据仍以数据库为准，清空只会导致后续全部重新 IPC
       if (this.promptPanelManager) {
         await this.promptPanelManager.renderView();
         await this.promptPanelManager.renderTagFilters();
