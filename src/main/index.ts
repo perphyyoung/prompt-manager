@@ -1175,6 +1175,16 @@ ipcMain.handle('get-images-paginated', async (event, options) => {
   }
 });
 
+// 获取满足筛选条件的全部图像 id（用于"全选"批量操作）
+ipcMain.handle('get-image-ids-by-filter', async (event, options) => {
+  try {
+    return await db.getImageIdsByFilter(options);
+  } catch (error) {
+    logError('Main', 'Get image ids by filter error:', error);
+    throw error;
+  }
+});
+
 // 统计图像标签数量
 ipcMain.handle('count-image-tags', async (event, options) => {
   try {

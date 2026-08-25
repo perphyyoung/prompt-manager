@@ -2210,6 +2210,23 @@ async function countImages(options: Omit<GetImagesPaginatedOptions, 'limit' | 'o
 }
 
 /**
+ * 获取满足筛选条件的全部图像 id（轻量查询，用于"全选"等批量操作）
+ * @param options - 筛选选项（不含 limit/offset）
+ */
+async function getImageIdsByFilter(options: Omit<GetImagesPaginatedOptions, 'limit' | 'offset'>): Promise<string[]> {
+  const { whereClause, params } = buildImageFilterWhere(options);
+
+  const sql = `
+    SELECT i.id
+    FROM images i
+    WHERE ${whereClause}
+  `;
+
+  const rows = await all<{ id: string }>(sql, params);
+  return rows.map((r) => r.id);
+}
+
+/**
  * 统计图像标签数量（基于当前筛选条件）
  * @param options - 筛选选项
  */
@@ -3516,6 +3533,7 @@ export {
   getImages,
   getImagesPaginated,
   countImages,
+  getImageIdsByFilter,
   countImageTags,
   countImageSpecialTags,
   getImagesByIds,

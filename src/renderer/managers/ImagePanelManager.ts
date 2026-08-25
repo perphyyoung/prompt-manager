@@ -600,6 +600,22 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
+   * 全选（重写基类）
+   * 按当前筛选条件从数据库取全量 id，可选中尚未分页加载的图像；
+   * 失败时降级为基类行为（仅选中已加载项）
+   */
+  async selectAllVisibleItems(): Promise<void> {
+    try {
+      const ids = await window.electronAPI.getImageIdsByFilter(this.buildCountOptions());
+      batchToolbarMiddle.selectAll(this.toolbarContext, ids);
+      this.updateSelectionUI();
+    } catch (error) {
+      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to select all images by filter:', error);
+      super.selectAllVisibleItems();
+    }
+  }
+
+  /**
    * 创建图像卡片 HTML（实现基类抽象方法）
    */
   createCard(img: IImage, index?: number): string {
