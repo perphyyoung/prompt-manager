@@ -1090,6 +1090,8 @@ body * {
   overflow-y: auto;
   flex: 1;
   padding-right: 8px;
+  /* 虚拟滚动：内容整屏替换时禁用浏览器滚动锚定，避免滚动位置被拉回 */
+  overflow-anchor: none;
 }
 
 .list-view {
@@ -1099,6 +1101,95 @@ body * {
   overflow-y: auto;
   flex: 1;
   padding-right: 8px;
+  overflow-anchor: none;
+}
+
+/* ==================== 虚拟滚动（wrapper + absolute 定位） ==================== */
+
+/* 内容包裹层：固定总高撑起 scrollHeight，可见卡片绝对定位其上 */
+.virtual-wrapper {
+  position: relative;
+}
+
+/* 卡片定位壳：由索引计算 top/left，尺寸与网格轨道一致 */
+.virtual-item {
+  position: absolute;
+}
+
+.virtual-item > .image-card,
+.virtual-item > .prompt-card {
+  width: 100%;
+  height: 100%;
+}
+
+/* 隐藏原生滚动条（配合自定义滚动条使用） */
+.hide-native-scrollbar {
+  scrollbar-width: none;
+}
+
+.hide-native-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ==================== 自定义虚拟滚动条 ==================== */
+
+/* 位置与高度由 JS 与图像网格容器实时对齐 */
+.virtual-scrollbar {
+  position: fixed;
+  right: 6px;
+  z-index: 100;
+}
+
+.vsb {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.vsb__page-btn {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  padding: 0;
+  border-radius: var(--radius);
+  transition: all 0.15s ease;
+}
+
+.vsb__page-btn:hover {
+  opacity: 1;
+  background: var(--border-color);
+}
+
+.vsb__track {
+  flex: 1;
+  width: 8px;
+  position: relative;
+  border-radius: 4px;
+  background: var(--border-color);
+  cursor: pointer;
+}
+
+.vsb__thumb {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  border-radius: 4px;
+  background: var(--text-secondary);
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.vsb__thumb:hover {
+  opacity: 0.85;
 }
 
 /* ============================================

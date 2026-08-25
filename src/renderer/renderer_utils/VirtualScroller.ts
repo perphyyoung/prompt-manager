@@ -1,15 +1,23 @@
 /**
- * 虚拟滚动器
- * 仅负责"哪些项可见"的窗口计算与占位高度（padding-top/bottom）维护，
+ * 虚拟滚动器（lap 模式：wrapper 固定高度 + 子项 absolute 定位）
+ *
+ * 仅负责"哪些项可见"的窗口计算与内容包裹层总高维护，
  * DOM 渲染由使用者通过 onWindowChange 回调完成。
  *
- * 前提：容器为滚动容器，子项按等高行排布（网格 grid-auto-rows 或固定高列表项），
- * 未渲染区间的高度由容器 padding 撑起，保证滚动条比例与总项数一致。
+ * 结构：
+ *   container（滚动容器）
+ *   └─ wrapper（height = 总行数 × 行高，position:relative）
+ *      └─ 可见卡片（position:absolute，top/left 由索引计算）
+ *
+ * wrapper 高度恒定 → scrollHeight 稳定 → 无 scroll anchoring 冲突，
+ * 内容整屏替换不影响滚动位置。
  */
 
 export interface VirtualScrollerConfig {
-  /** 滚动容器（同时是内容容器） */
+  /** 滚动容器 */
   container: HTMLElement;
+  /** 内容包裹层：固定总高撑起 scrollHeight，可见卡片绝对定位其上 */
+  wrapper: HTMLElement;
   /** 返回单行高度（px，含行间距） */
   getRowHeight: () => number;
   /** 返回每行列数 */
@@ -27,6 +35,7 @@ const DEFAULT_BUFFER_ROWS = 2;
 
 export class VirtualScroller {
   private readonly container: HTMLElement;
+  private readonly wrapper: HTMLElement;
   private readonly getRowHeight: () => number;
   private readonly getColumns: () => number;
   private readonly onWindowChange: (range: VisibleRange) => void;
@@ -43,6 +52,7 @@ export class VirtualScroller {
     bufferRows: number = DEFAULT_BUFFER_ROWS
   ) {
     this.container = config.container;
+    this.wrapper = config.wrapper;
     this.getRowHeight = config.getRowHeight;
     this.getColumns = config.getColumns;
     this.onWindowChange = onWindowChange;
@@ -96,29 +106,27 @@ export class VirtualScroller {
     this.resizeObserver.observe(this.container);
   }
 
-  /** 清理占位与监听，容器恢复为普通容器 */
+  /** 清理占位与监听 */
   destroy(): void {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
-    this.container.style.paddingTop = '';
-    this.container.style.paddingBottom = '';
+    this.wrapper.style.height = '';
     this.totalCount = 0;
     this.lastRange = { start: -1, end: -1 };
   }
 
-  /** 计算当前窗口并更新占位高度 */
+  /** 计算当前窗口并维护 wrapper 总高 */
   private computeAndEmit(): void {
-    if (this.totalCount === 0) {
-      this.container.style.paddingTop = '0px';
-      this.container.style.paddingBottom = '0px';
-      return;
-    }
-
     const rowHeight = this.getRowHeight();
     const columns = Math.max(1, this.getColumns());
+    const totalRows = Math.ceil(this.totalCount / columns);
+
+    // wrapper 固定总高撑起 scrollHeight（不随窗口渲染变化）
+    this.wrapper.style.height = `${totalRows * rowHeight}px`;
+
+    if (this.totalCount === 0) return;
     if (rowHeight <= 0) return;
 
-    const totalRows = Math.ceil(this.totalCount / columns);
     const scrollTop = this.container.scrollTop;
     const viewportHeight = this.container.clientHeight || 1;
 
@@ -127,10 +135,6 @@ export class VirtualScroller {
 
     const startRow = Math.max(0, firstVisibleRow - this.bufferRows);
     const endRow = Math.min(totalRows, firstVisibleRow + visibleRowCount + this.bufferRows);
-
-    // 用 padding 撑起未渲染区间的高度
-    this.container.style.paddingTop = `${startRow * rowHeight}px`;
-    this.container.style.paddingBottom = `${(totalRows - endRow) * rowHeight}px`;
 
     const range: VisibleRange = {
       start: startRow * columns,

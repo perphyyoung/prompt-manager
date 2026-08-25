@@ -9,7 +9,7 @@ import { DialogConfig } from '../services/index.ts';
 import { batchToolbarMiddle } from '../../middle/index.ts';
 
 import { IImage } from '../../types/entities.ts';
-import { VirtualScroller, type VisibleRange } from '../renderer_utils/index.ts';
+import { VirtualScroller, VirtualScrollBar, type VisibleRange } from '../renderer_utils/index.ts';
 import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
 
@@ -45,6 +45,10 @@ export class ImagePanelManager extends PanelManagerBase {
   // 虚拟滚动
   private virtualScroller: VirtualScroller | null = null;
   private lastWindowRange: VisibleRange | null = null;
+  private virtualWrapper: HTMLElement | null = null;
+  private lastColumns = 0;
+  private scrollBar: VirtualScrollBar | null = null;
+  private scrollBarResizeObserver: ResizeObserver | null = null;
 
   // 面板类型
   protected readonly panelType = 'image' as const;
@@ -426,6 +430,10 @@ export class ImagePanelManager extends PanelManagerBase {
 
     if (filtered.length === 0) {
       this.destroyVirtualScroller();
+      this.scrollBarResizeObserver?.disconnect();
+      this.scrollBarResizeObserver = null;
+      this.scrollBar?.destroy();
+      this.scrollBar = null;
       if (currentSearchQuery) {
         PanelRenderer.showEmptyState(Constants.Ids.IMAGE_GRID, Constants.Ids.IMAGE_EMPTY_STATE, `未找到匹配"${currentSearchQuery}"的图像`, '搜索无结果');
       } else if (this.selectedTags.size > 0) {
@@ -440,14 +448,81 @@ export class ImagePanelManager extends PanelManagerBase {
     PanelRenderer.hideEmptyState(Constants.Ids.IMAGE_GRID, Constants.Ids.IMAGE_EMPTY_STATE);
 
     // 渲染网格视图（图像主页仅保留网格视图）
-    container!.style.display = 'grid';
+    // wrapper 模式下不再使用 CSS grid 排布（卡片由 absolute 定位），覆盖为块级滚动容器
+    container!.style.display = 'block';
     container!.innerHTML = '';
-    this.setupVirtualScroller(container!);
+
+    // lap 模式：固定高度 wrapper 撑起 scrollHeight，可见卡片 absolute 定位其上，
+    // 内容替换不产生文档流位移，scrollHeight 恒定
+    const wrapper = document.createElement('div');
+    wrapper.className = 'virtual-wrapper';
+    container!.appendChild(wrapper);
+    this.setupVirtualScroller(container!, wrapper);
     this.bindCardDropEvents(container!);
 
-    // totalCount 为数据库全量计数：占位高度立即覆盖全部数据，
+    // totalCount 为数据库全量计数：wrapper 总高立即覆盖全部数据，
     // 初始窗口经 rAF 异步渲染
     this.virtualScroller!.setTotalCount(this.totalCount);
+    this.initScrollBar();
+  }
+
+  /**
+   * 初始化右侧自定义滚动条（替代原生滚动条与跳转按钮）
+   */
+  private initScrollBar(): void {
+    const mount = document.getElementById(Constants.Ids.IMAGE_SCROLL_BAR);
+    if (!mount) return;
+
+    const grid = document.getElementById(Constants.Ids.IMAGE_GRID);
+    this.scrollBar?.destroy();
+    this.scrollBar = new VirtualScrollBar({
+      mount,
+      getTotal: () => this.totalCount,
+      getPageSize: () => this.getGridColumns() * Math.max(1, Math.ceil(this.getViewportRows())),
+      onSeek: (startIndex) => {
+        const container = document.getElementById(Constants.Ids.IMAGE_GRID);
+        if (!container) return;
+        const maxOffset = Math.max(1, this.totalCount - this.getPageSizeItems());
+        const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+        container.scrollTop = (startIndex / maxOffset) * maxScrollTop;
+        // 瞬时赋值可能不触发 scroll 事件，主动同步窗口
+        this.virtualScroller?.refresh();
+      }
+    });
+    this.syncScrollBarLayout();
+
+    // 网格尺寸变化（窗口缩放、标签筛选折叠）时重新对齐滚动条并刷新 thumb
+    this.scrollBarResizeObserver?.disconnect();
+    this.scrollBarResizeObserver = new ResizeObserver(() => {
+      this.syncScrollBarLayout();
+      this.scrollBar?.update();
+    });
+    if (grid) this.scrollBarResizeObserver.observe(grid);
+  }
+
+  /**
+   * 将滚动条与图像网格容器的可视区域实时对齐（位置与高度），
+   * 标签筛选折叠/窗口缩放引起的尺寸变化由 ResizeObserver 自动响应
+   */
+  private syncScrollBarLayout(): void {
+    const grid = document.getElementById(Constants.Ids.IMAGE_GRID);
+    const bar = document.getElementById(Constants.Ids.IMAGE_SCROLL_BAR);
+    if (!grid || !bar) return;
+    const rect = grid.getBoundingClientRect();
+    bar.style.top = `${rect.top}px`;
+    bar.style.height = `${rect.height}px`;
+  }
+
+  /** 一屏可视行数 */
+  private getViewportRows(): number {
+    const container = document.getElementById(Constants.Ids.IMAGE_GRID);
+    if (!container) return 1;
+    return Math.max(1, Math.ceil(container.clientHeight / this.getGridRowHeight()));
+  }
+
+  /** 一屏项数（列数 × 可视行数） */
+  private getPageSizeItems(): number {
+    return Math.max(1, this.getGridColumns() * this.getViewportRows());
   }
 
   /**
@@ -461,11 +536,13 @@ export class ImagePanelManager extends PanelManagerBase {
 
   /**
    * 设置卡片尺寸（重写基类）
-   * 卡片尺寸变化影响网格行高与列数，需强制重算占位与窗口
+   * 卡片尺寸变化影响网格行高与列数，既有节点坐标全部过期，强制全量重建
    */
   setCardSize(size: number): void {
     super.setCardSize(size);
+    this.lastWindowRange = null;
     this.virtualScroller?.refresh(true);
+    this.scrollBar?.update();
   }
 
   /**
@@ -487,19 +564,26 @@ export class ImagePanelManager extends PanelManagerBase {
 
   /**
    * 渲染可见窗口内的卡片（VirtualScroller 回调）
-   * 与上次窗口有重叠时走增量路径（head/tail 增删节点，复用已有卡片 DOM，
-   * 背景图不重复加载）；窗口跳跃或首次渲染时全量重建
+   * 与上次窗口有重叠且列数未变时走增量路径（head/tail 增删节点，复用已有卡片 DOM，
+   * 背景图不重复加载）；窗口跳跃、首次渲染或几何变化时全量重建
    */
   private renderWindow(range: VisibleRange): void {
-    const container = document.getElementById(Constants.Ids.IMAGE_GRID);
-    if (!container) return;
+    const wrapper = this.virtualWrapper;
+    if (!wrapper) return;
+
+    // 几何失效：列数变化后既有节点的坐标全部过期，强制全量重建
+    const columns = this.getGridColumns();
+    if (columns !== this.lastColumns) {
+      this.lastWindowRange = null;
+      this.lastColumns = columns;
+    }
 
     const prev = this.lastWindowRange;
     // 有重叠即可增量修补（head/tail 增删），无重叠说明窗口跳跃过大，走全量重建
     const canPatch = prev !== null && range.start < prev.end && prev.start < range.end;
 
     if (!prev || !canPatch) {
-      this.rebuildWindow(container, range);
+      this.rebuildWindow(wrapper, range);
       return;
     }
 
@@ -507,14 +591,14 @@ export class ImagePanelManager extends PanelManagerBase {
     const added: IImage[] = [];
     const parseNodes = (img: IImage, index: number): Node[] => {
       added.push(img);
-      const doc = new DOMParser().parseFromString(this.createCard(img, index), 'text/html');
+      const doc = new DOMParser().parseFromString(this.createPositionedCard(img, index), 'text/html');
       return Array.from(doc.body.childNodes);
     };
 
     if (range.start > prev.start) {
       // 向下滚动：移除头部多余卡片
       for (let i = 0; i < range.start - prev.start; i++) {
-        container.firstElementChild?.remove();
+        wrapper.firstElementChild?.remove();
       }
     } else if (range.start < prev.start) {
       // 向上滚动：头部插入新进入的卡片
@@ -522,7 +606,7 @@ export class ImagePanelManager extends PanelManagerBase {
       for (let i = range.start; i < prev.start; i++) {
         frag.append(...parseNodes(this.filteredImages[i], i));
       }
-      container.insertBefore(frag, container.firstChild);
+      wrapper.insertBefore(frag, wrapper.firstChild);
     }
 
     if (range.end > prev.end) {
@@ -531,10 +615,10 @@ export class ImagePanelManager extends PanelManagerBase {
       for (let i = prev.end; i < range.end; i++) {
         frag.append(...parseNodes(this.filteredImages[i], i));
       }
-      container.append(frag);
+      wrapper.append(frag);
     } else if (range.end < prev.end) {
       for (let i = 0; i < prev.end - range.end; i++) {
-        container.lastElementChild?.remove();
+        wrapper.lastElementChild?.remove();
       }
     }
 
@@ -548,17 +632,33 @@ export class ImagePanelManager extends PanelManagerBase {
     this.ensureWindowData();
   }
 
+  /**
+   * 生成带 absolute 定位壳的卡片 HTML
+   * top/left 由全局索引与当前列数计算，与 wrapper 高度公式一致
+   */
+  private createPositionedCard(img: IImage, index: number): string {
+    const columns = Math.max(1, this.getGridColumns());
+    const row = Math.floor(index / columns);
+    const col = index % columns;
+    const top = row * this.getGridRowHeight();
+    const left = col * this.getGridRowHeight();
+    return `<div class="virtual-item" style="top:${top}px;left:${left}px;width:${this.cardSize}px;height:${this.cardSize}px">${this.createCard(img, index)}</div>`;
+  }
+
   /** 全量重建窗口内容 */
-  private rebuildWindow(container: HTMLElement, range: VisibleRange): void {
-    const windowItems = this.filteredImages.slice(range.start, range.end);
-    const html = windowItems.map((img, i) => this.createCard(img, range.start + i)).join('');
+  private rebuildWindow(wrapper: HTMLElement, range: VisibleRange): void {
+    const html = Array.from(
+      { length: Math.max(0, range.end - range.start) },
+      (_, i) => this.createPositionedCard(this.filteredImages[range.start + i], range.start + i)
+    ).join('');
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    container.replaceChildren(...Array.from(doc.body.childNodes));
+    wrapper.replaceChildren(...Array.from(doc.body.childNodes));
 
     // 容器级事件委托需绑定最新全量数组；按钮/背景图/hover 为逐元素绑定，仅窗口内重绑
     this.bindItemEvents(this.filteredImages);
+    const windowItems = this.filteredImages.slice(range.start, range.end);
     if (windowItems.length > 0) {
       this.bindCardButtonEvents(windowItems);
       void this.loadCardBackgroundsForItems(windowItems);
@@ -584,12 +684,15 @@ export class ImagePanelManager extends PanelManagerBase {
     }
   }
 
-  private setupVirtualScroller(container: HTMLElement): void {
+  private setupVirtualScroller(container: HTMLElement, wrapper: HTMLElement): void {
     this.destroyVirtualScroller();
     this.lastWindowRange = null;
+    this.virtualWrapper = wrapper;
+    this.lastColumns = this.getGridColumns();
     this.virtualScroller = new VirtualScroller(
       {
         container,
+        wrapper,
         getRowHeight: () => this.getGridRowHeight(),
         getColumns: () => this.getGridColumns()
       },
@@ -601,6 +704,8 @@ export class ImagePanelManager extends PanelManagerBase {
   private destroyVirtualScroller(): void {
     this.virtualScroller?.destroy();
     this.virtualScroller = null;
+    this.virtualWrapper = null;
+    this.lastWindowRange = null;
   }
 
   /**
@@ -943,6 +1048,14 @@ export class ImagePanelManager extends PanelManagerBase {
     // 刷新可见窗口（rAF 合帧）；窗口落位后的数据补齐由 ensureWindowData 兜底
     this.virtualScroller?.refresh();
     this.ensureWindowData();
+
+    // 反向同步自定义滚动条 thumb
+    if (this.scrollBar) {
+      const maxScrollTop = Math.max(1, container.scrollHeight - container.clientHeight);
+      const ratio = Math.min(1, Math.max(0, container.scrollTop / maxScrollTop));
+      const maxOffset = Math.max(1, this.totalCount - this.getPageSizeItems());
+      this.scrollBar.setStartIndex(Math.round(ratio * maxOffset));
+    }
   }
 
   /**
