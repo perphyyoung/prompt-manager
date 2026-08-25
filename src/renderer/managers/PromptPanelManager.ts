@@ -9,8 +9,12 @@ import { DialogConfig } from '../services/index.ts';
 import { batchToolbarMiddle } from '../../middle/index.ts';
 
 import { IPrompt } from '../../types/entities.ts';
+import { VirtualScroller, VirtualScrollBar, type VisibleRange } from '../renderer_utils/index.ts';
 import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
+
+/** .grid-view 的 gap 值（px），与 styles.css 保持一致 */
+const GRID_GAP = 16;
 
 interface ImageInfo {
   id?: string;
@@ -27,13 +31,21 @@ export class PromptPanelManager extends PanelManagerBase {
   private isInitialized = false;
 
   // 分页状态
-  private readonly pageSize = 500;
+  private readonly pageSize = 100;
   private currentOffset = 0;
   private hasMore = true;
   private totalCount = 0;
   private isLoading = false;
   private loadedPromptIds = new Set<string>();
   private scrollHandler: (() => void) | null = null;
+
+  // 虚拟滚动
+  private virtualScroller: VirtualScroller | null = null;
+  private lastWindowRange: VisibleRange | null = null;
+  private virtualWrapper: HTMLElement | null = null;
+  private lastColumns = 0;
+  private scrollBar: VirtualScrollBar | null = null;
+  private scrollBarResizeObserver: ResizeObserver | null = null;
 
   // 面板类型
   protected readonly panelType = 'prompt' as const;
@@ -177,10 +189,15 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 获取提示词列表（从缓存读取）
+   * 获取当前已加载的提示词列表
+   * filteredPrompts 为权威数据源（含已加载的全部分页）；
+   * LRU 缓存容量有限会被淘汰，仅作初始兜底，
+   * 避免滚动后缓存淘汰导致拖拽标签等按 id 查找失败
    */
   get prompts(): IPrompt[] {
-    return Array.from(this.app.cacheManager.getPromptCache().values());
+    return this.filteredPrompts.length > 0
+      ? this.filteredPrompts
+      : Array.from(this.app.cacheManager.getPromptCache().values());
   }
 
   /**
@@ -328,13 +345,11 @@ export class PromptPanelManager extends PanelManagerBase {
       this.hasMore = this.filteredPrompts.length < page.totalCount;
 
       if (newItems.length > 0) {
-        await this.appendToContainer(newItems);
-        // 补录新加载项的指纹
+        // 补录新加载项的指纹（DOM 渲染由虚拟窗口按需完成）
         for (const prompt of newItems) {
           this.itemFingerprints.set(String(prompt.id), this.getItemFingerprint(prompt));
         }
-        // 重新绑定事件，让闭包包含所有已加载提示词
-        this.bindItemEvents(this.filteredPrompts);
+        this.virtualScroller?.refresh();
       }
     } catch (error) {
       window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load more prompts:', error);
@@ -342,6 +357,9 @@ export class PromptPanelManager extends PanelManagerBase {
     } finally {
       this.isLoading = false;
     }
+
+    // 窗口仍接近未加载数据边界时继续追赶（快速拖动滚动条场景）
+    this.ensureWindowData();
   }
 
   /**
@@ -441,17 +459,200 @@ export class PromptPanelManager extends PanelManagerBase {
 
   /**
    * 追加渲染到容器
-   * @param newItems - 新加载的提示词列表
+   * 虚拟滚动模式：数据已并入 filteredPrompts，仅刷新窗口使新数据按需渲染
+   * @param _newItems - 新加载的提示词列表（已并入全量数组，无需单独处理）
    */
-  private async appendToContainer(newItems: IPrompt[]): Promise<void> {
-    const container = document.getElementById(Constants.Ids.PROMPT_GRID);
-    if (!container) return;
+  private async appendToContainer(_newItems: IPrompt[]): Promise<void> {
+    this.virtualScroller?.refresh();
+  }
 
-    const html = newItems.map((prompt, index) => this.createCard(prompt, this.filteredPrompts.length - newItems.length + index)).join('');
-    this.appendHtmlToContainer(container, html);
-    this.bindCardButtonEvents(newItems);
-    await this.loadCardBackgroundsForItems(newItems);
+  /**
+   * 网格行高 = 卡片尺寸 + 行间距（.grid-view gap: 16px）
+   */
+  private getPromptRowHeight(): number {
+    return this.cardSize + GRID_GAP;
+  }
+
+  /**
+   * 每行列数：容器可用宽度内能放下多少个 (卡片 + 间距)
+   */
+  private getPromptColumns(): number {
+    const container = document.getElementById(Constants.Ids.PROMPT_GRID);
+    if (!container) return 1;
+    const usableWidth = container.clientWidth - 8; // padding-right: 8px
+    return Math.max(1, Math.floor((usableWidth + GRID_GAP) / this.getPromptRowHeight()));
+  }
+
+  /**
+   * 渲染可见窗口内的卡片（VirtualScroller 回调）
+   * 与上次窗口有重叠且列数未变时走增量路径（head/tail 增删节点，复用已有卡片 DOM，
+   * 背景图不重复加载）；窗口跳跃、首次渲染或几何变化时全量重建
+   */
+  private renderWindow(range: VisibleRange): void {
+    const wrapper = this.virtualWrapper;
+    if (!wrapper) return;
+
+    // 几何失效：列数变化后既有节点的坐标全部过期，强制全量重建
+    const columns = this.getPromptColumns();
+    if (columns !== this.lastColumns) {
+      this.lastWindowRange = null;
+      this.lastColumns = columns;
+    }
+
+    const prev = this.lastWindowRange;
+    // 有重叠即可增量修补（head/tail 增删），无重叠说明窗口跳跃过大，走全量重建
+    const canPatch = prev !== null && range.start < prev.end && prev.start < range.end;
+
+    if (!prev || !canPatch) {
+      this.rebuildWindow(wrapper, range);
+      return;
+    }
+
+    // ---- 增量路径：仅创建/移除进出视口的卡片 ----
+    const added: IPrompt[] = [];
+    const parseNodes = (prompt: IPrompt, index: number): Node[] => {
+      added.push(prompt);
+      const doc = new DOMParser().parseFromString(this.createPositionedCard(prompt, index), 'text/html');
+      return Array.from(doc.body.childNodes);
+    };
+
+    if (range.start > prev.start) {
+      for (let i = 0; i < range.start - prev.start; i++) {
+        wrapper.firstElementChild?.remove();
+      }
+    } else if (range.start < prev.start) {
+      const frag = document.createDocumentFragment();
+      for (let i = range.start; i < prev.start; i++) {
+        frag.append(...parseNodes(this.filteredPrompts[i], i));
+      }
+      wrapper.insertBefore(frag, wrapper.firstChild);
+    }
+
+    if (range.end > prev.end) {
+      const frag = document.createDocumentFragment();
+      for (let i = prev.end; i < range.end; i++) {
+        frag.append(...parseNodes(this.filteredPrompts[i], i));
+      }
+      wrapper.append(frag);
+    } else if (range.end < prev.end) {
+      for (let i = 0; i < prev.end - range.end; i++) {
+        wrapper.lastElementChild?.remove();
+      }
+    }
+
+    this.bindItemEvents(this.filteredPrompts);
+    if (added.length > 0) {
+      this.bindCardButtonEvents(added);
+      void this.loadCardBackgroundsForItems(added);
+      this.bindHoverPreview('.prompt-card');
+    }
+    this.lastWindowRange = { start: range.start, end: range.end };
+    this.ensureWindowData();
+  }
+
+  /**
+   * 生成带 absolute 定位壳的卡片 HTML
+   */
+  private createPositionedCard(prompt: IPrompt, index: number): string {
+    const columns = Math.max(1, this.getPromptColumns());
+    const row = Math.floor(index / columns);
+    const col = index % columns;
+    const top = row * this.getPromptRowHeight();
+    const left = col * this.getPromptRowHeight();
+    return `<div class="virtual-item" style="top:${top}px;left:${left}px;width:${this.cardSize}px;height:${this.cardSize}px">${this.createCard(prompt, index)}</div>`;
+  }
+
+  /** 全量重建窗口内容 */
+  private rebuildWindow(wrapper: HTMLElement, range: VisibleRange): void {
+    const html = Array.from(
+      { length: Math.max(0, range.end - range.start) },
+      (_, i) => this.createPositionedCard(this.filteredPrompts[range.start + i], range.start + i)
+    ).join('');
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    wrapper.replaceChildren(...Array.from(doc.body.childNodes));
+
+    this.bindItemEvents(this.filteredPrompts);
+    const windowItems = this.filteredPrompts.slice(range.start, range.end);
+    if (windowItems.length > 0) {
+      this.bindCardButtonEvents(windowItems);
+      void this.loadCardBackgroundsForItems(windowItems);
+    }
     this.bindHoverPreview('.prompt-card');
+    this.lastWindowRange = { start: range.start, end: range.end };
+    this.ensureWindowData();
+  }
+
+  /**
+   * 窗口落位后确保数据覆盖：窗口尾部接近已加载数据边界时触发分页追赶。
+   */
+  private ensureWindowData(): void {
+    if (this.isLoading || !this.hasMore) return;
+    const range = this.virtualScroller?.getVisibleRange();
+    if (!range || range.end === 0) return;
+    const loadedCount = this.filteredPrompts.length;
+    if (range.end >= loadedCount - Math.floor(this.pageSize / 2)) {
+      void this.loadMore();
+    }
+  }
+
+  /**
+   * 初始化右侧自定义滚动条（替代原生滚动条与跳转按钮）
+   */
+  private initScrollBar(): void {
+    const mount = document.getElementById(Constants.Ids.PROMPT_SCROLL_BAR);
+    if (!mount) return;
+
+    this.scrollBar?.destroy();
+    this.scrollBar = new VirtualScrollBar({
+      mount,
+      getTotal: () => this.totalCount,
+      getPageSize: () => this.getPromptColumns() * Math.max(1, Math.ceil(this.getViewportRows())),
+      onSeek: (startIndex) => {
+        const container = document.getElementById(Constants.Ids.PROMPT_GRID);
+        if (!container) return;
+        const maxOffset = Math.max(1, this.totalCount - this.getPageSizeItems());
+        const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+        container.scrollTop = (startIndex / maxOffset) * maxScrollTop;
+        // 瞬时赋值可能不触发 scroll 事件，主动同步窗口
+        this.virtualScroller?.refresh();
+      }
+    });
+    this.syncScrollBarLayout();
+
+    // 网格尺寸变化（窗口缩放、标签筛选折叠）时重新对齐滚动条并刷新 thumb
+    this.scrollBarResizeObserver?.disconnect();
+    this.scrollBarResizeObserver = new ResizeObserver(() => {
+      this.syncScrollBarLayout();
+      this.scrollBar?.update();
+    });
+    const grid = document.getElementById(Constants.Ids.PROMPT_GRID);
+    if (grid) this.scrollBarResizeObserver.observe(grid);
+  }
+
+  /**
+   * 将滚动条与提示词网格容器的可视区域实时对齐（位置与高度）
+   */
+  private syncScrollBarLayout(): void {
+    const grid = document.getElementById(Constants.Ids.PROMPT_GRID);
+    const bar = document.getElementById(Constants.Ids.PROMPT_SCROLL_BAR);
+    if (!grid || !bar) return;
+    const rect = grid.getBoundingClientRect();
+    bar.style.top = `${rect.top}px`;
+    bar.style.height = `${rect.height}px`;
+  }
+
+  /** 一屏可视行数 */
+  private getViewportRows(): number {
+    const container = document.getElementById(Constants.Ids.PROMPT_GRID);
+    if (!container) return 1;
+    return Math.max(1, Math.ceil(container.clientHeight / this.getPromptRowHeight()));
+  }
+
+  /** 一屏项数（列数 × 可视行数） */
+  private getPageSizeItems(): number {
+    return Math.max(1, this.getPromptColumns() * this.getViewportRows());
   }
 
   /**
@@ -529,6 +730,7 @@ export class PromptPanelManager extends PanelManagerBase {
 
   /**
    * 渲染容器（实现基类抽象方法）
+   * 虚拟滚动：totalCount 已知时撑起完整滚动高度，DOM 只渲染可见窗口
    */
   async renderContainer(filtered: IPrompt[]): Promise<void> {
     this.filteredPrompts = filtered;
@@ -537,6 +739,11 @@ export class PromptPanelManager extends PanelManagerBase {
     const currentSearchQuery = this.getSearchQuery();
 
     if (filtered.length === 0) {
+      this.destroyVirtualScroller();
+      this.scrollBarResizeObserver?.disconnect();
+      this.scrollBarResizeObserver = null;
+      this.scrollBar?.destroy();
+      this.scrollBar = null;
       if (currentSearchQuery) {
         PanelRenderer.showEmptyState(Constants.Ids.PROMPT_GRID, Constants.Ids.PROMPT_EMPTY_STATE, `未找到匹配"${currentSearchQuery}"的提示词`, '搜索无结果');
       } else if (this.selectedTags.size > 0) {
@@ -550,15 +757,45 @@ export class PromptPanelManager extends PanelManagerBase {
 
     PanelRenderer.hideEmptyState(Constants.Ids.PROMPT_GRID, Constants.Ids.PROMPT_EMPTY_STATE);
 
-    // 渲染网格视图（提示词主页仅保留网格视图）
-    container!.style.display = 'grid';
+    // wrapper 模式下不再使用 CSS grid 排布（卡片由 absolute 定位），覆盖为块级滚动容器
+    container!.style.display = 'block';
+    container!.innerHTML = '';
 
-    PanelRenderer.renderGrid(filtered, (prompt) => this.createCard(prompt as IPrompt), Constants.Ids.PROMPT_GRID);
-    this.bindItemEvents(filtered);
-    this.bindCardButtonEvents(filtered);
-    this.loadCardBackgrounds();
-    this.bindHoverPreview('.prompt-card');
+    // lap 模式：固定高度 wrapper 撑起 scrollHeight，可见卡片 absolute 定位其上
+    const wrapper = document.createElement('div');
+    wrapper.className = 'virtual-wrapper';
+    container!.appendChild(wrapper);
+    this.setupVirtualScroller(container!, wrapper);
     this.bindCardDropEvents(container!);
+
+    // totalCount 为数据库全量计数：wrapper 总高立即覆盖全部数据，
+    // 初始窗口经 rAF 异步渲染
+    this.virtualScroller!.setTotalCount(this.totalCount);
+    this.initScrollBar();
+  }
+
+  private setupVirtualScroller(container: HTMLElement, wrapper: HTMLElement): void {
+    this.destroyVirtualScroller();
+    this.lastWindowRange = null;
+    this.virtualWrapper = wrapper;
+    this.lastColumns = this.getPromptColumns();
+    this.virtualScroller = new VirtualScroller(
+      {
+        container,
+        wrapper,
+        getRowHeight: () => this.getPromptRowHeight(),
+        getColumns: () => this.getPromptColumns()
+      },
+      (range) => this.renderWindow(range)
+    );
+    this.virtualScroller.observeResize();
+  }
+
+  private destroyVirtualScroller(): void {
+    this.virtualScroller?.destroy();
+    this.virtualScroller = null;
+    this.virtualWrapper = null;
+    this.lastWindowRange = null;
   }
 
   /**
@@ -635,10 +872,16 @@ export class PromptPanelManager extends PanelManagerBase {
     const container = document.getElementById(Constants.Ids.PROMPT_GRID);
     if (!container) return;
 
-    const scrollBottom = container.scrollTop + container.clientHeight;
-    const threshold = 200;
-    if (scrollBottom >= container.scrollHeight - threshold) {
-      this.loadMore();
+    // 刷新可见窗口（rAF 合帧）；窗口落位后的数据补齐由 ensureWindowData 兜底
+    this.virtualScroller?.refresh();
+    this.ensureWindowData();
+
+    // 反向同步自定义滚动条 thumb
+    if (this.scrollBar) {
+      const maxScrollTop = Math.max(1, container.scrollHeight - container.clientHeight);
+      const ratio = Math.min(1, Math.max(0, container.scrollTop / maxScrollTop));
+      const maxOffset = Math.max(1, this.totalCount - this.getPageSizeItems());
+      this.scrollBar.setStartIndex(Math.round(ratio * maxOffset));
     }
   }
 
@@ -958,12 +1201,10 @@ export class PromptPanelManager extends PanelManagerBase {
 
       const result = await window.electronAPI.getPromptsPaginated(options);
 
-      // 检测 DOM 中不存在的新项（如新建的提示词）：
-      // 增量更新只能修改/替换已有元素，无法创建新元素，
+      // 检测数据集中新增的项（如新建的提示词）：
+      // 虚拟滚动下不可见项不在 DOM 中，改用已加载集合判断；
       // 存在新项时降级为全量渲染，确保新卡片正确显示
-      const container = this.getCurrentContainer();
-      const hasNewItem =
-        container !== null && result.items.some((item) => !container.querySelector(`[data-id="${item.id}"]`));
+      const hasNewItem = result.items.some((item) => !this.loadedPromptIds.has(String(item.id)));
       if (hasNewItem) {
         await this.renderView();
         return;
@@ -1006,6 +1247,17 @@ export class PromptPanelManager extends PanelManagerBase {
    */
   protected renderSingleItemHtml(prompt: IPrompt, index: number, _isSelected: boolean): string {
     return this.createCard(prompt, index);
+  }
+
+  /**
+   * 设置卡片尺寸（重写基类）
+   * 卡片尺寸变化影响网格行高与列数，既有节点坐标全部过期，强制全量重建
+   */
+  setCardSize(size: number): void {
+    super.setCardSize(size);
+    this.lastWindowRange = null;
+    this.virtualScroller?.refresh(true);
+    this.scrollBar?.update();
   }
 
   /**

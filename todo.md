@@ -1,39 +1,31 @@
-# 图像/提示词主页加载优化待办
+# 提示词主页同步改造待办（虚拟滚动 + 自定义滚动条）✅ 已完成
 
-> 参考：D:\code\git\lap 加载思路。
-> 已完成：视图收敛网格、pageSize=100、虚拟滚动接入（padding 占位版）、全选走数据库 id、增量窗口渲染、LRU 数据源修复。
+> 目标：将图像主页已完成并验证的滚动体系原样移植到 `PromptPanelManager`。
+> 复用组件（零改动）：`renderer_utils/VirtualScroller.ts`、`VirtualScrollBar.ts`；
+> 共享 CSS：`.grid-view` overflow-anchor、`.virtual-item > .prompt-card` 均已就绪。
 
-## 当前待办：滚动体系重构为 lap 模式
+## A. 虚拟滚动接入 ✅
 
-### Phase A：网格切换为"wrapper + absolute 定位"虚拟化（根治滚动异常）
+- [x] `pageSize` 500 → 100
+- [x] renderContainer：display 覆盖为 block、创建 virtual-wrapper、setupVirtualScroller、setTotalCount
+- [x] 定位辅助三件套：getPromptRowHeight / getPromptColumns / createPositionedCard
+- [x] renderWindow / rebuildWindow / ensureWindowData 三件套移植
+- [x] appendToContainer 退化为 refresh()；loadMore 尾部 ensureWindowData 追赶
+- [x] handleScroll：refresh + ensureWindowData + 滚动条反向同步
+- [x] setCardSize 重写（几何失效 + scrollBar.update）
+- [x] 几何失效：列数变化强制全量重建
+- [x] refreshIncremental 的 hasNewItem 改基于 loadedPromptIds
+- [x] 数据源修正：prompts getter / getItems() 以 filteredPrompts 为权威，LRU 仅兜底
 
-背景：当前 padding 占位 + 文档流卡片模型与 Chromium scroll anchoring 天然冲突，
-导致跳转不准/滚动条表现异常。lap 的 VirtualScroll 用固定高度 wrapper + absolute 子项，
-scrollHeight 恒定，无此问题。
+## B. 自定义滚动条 ✅
 
-- [ ] styles.css：`.grid-view` 加 `overflow-anchor: none`；图像主页容器隐藏原生滚动条
-- [ ] renderContainer：容器内创建 `virtual-wrapper`（height = totalRows × rowHeight），padding 机制废弃
-- [ ] VirtualScroller.setTotalCount 同步设置 wrapper 高度
-- [ ] rebuildWindow / 增量 patch：卡片外包 `.virtual-item{position:absolute}` 壳，top/left 由索引与列数计算
-- [ ] 几何失效规则：列数/卡尺变化（resize、slider）时 lastWindowRange = null 强制全量重建
+- [x] index.html：promptGrid 加 hide-native-scrollbar；新增 promptScrollBar 挂载点
+- [x] constants.ts：PROMPT_SCROLL_BAR
+- [x] initScrollBar / syncScrollBarLayout / getViewportRows / getPageSizeItems 移植
+- [x] handleScroll 反向同步 thumb；ResizeObserver 对齐网格尺寸变化
 
-### Phase B：自定义滚动条组件替代原生滚动条与跳转按钮（仅图像主页）
+## 验证
 
-参考 lap ScrollBar.vue（total/pageSize/modelValue 三输入，双向比例同步）：
-
-- [ ] 新建 renderer_utils/VirtualScrollBar.ts：track/thumb + 上/下翻页图标；拖动 thumb → index = round(ratio × (total − pageSize)) → 映射容器 scrollTop
-- [ ] 容器 scroll → 反向同公式更新 thumb（双通道同步）
-- [ ] pageSize 动态 = columns × 可视行数
-- [ ] index.html：imageScrollNav 容器改造为滚动条挂载点
-- [ ] markers/时间线预览不做（可选后期）
-
-### 验证
-
-- [ ] pnpm check 全绿
-- [ ] e2e 冒烟：5-main-panel-refactor / 17-main-grid-batch-toolbar
-- [ ] 手动：大数据量拖动 thumb 直达任意位置、末尾数据自动补齐、slider/resize 后布局正确
-
-## 其他遗留
-
-- [ ] 提示词主页是否同步虚拟滚动 + 自定义滚动条（待图像主页稳定后决策）
-- [ ] 批量操作万级选中时逐 id IPC 循环较慢，可下沉为按条件集合的 SQL 操作（优化项）
+- [x] pnpm check 全绿
+- [x] e2e 冒烟 42 用例通过：17 批量工具栏（图像+提示词）/ 7 多选 / 2 标签拖拽
+- [ ] 手动：大数据量拖动 thumb 直达任意位置、末尾数据自动补齐、卡片尺寸滑杆缩放、搜索/筛选切换、详情往返刷新

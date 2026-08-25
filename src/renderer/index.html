@@ -362,9 +362,11 @@
             </div>
           </div>
 
-          <div id="promptGrid" class="grid-view">
+          <div id="promptGrid" class="grid-view hide-native-scrollbar">
             <!-- Prompt 卡片将在这里动态生成 -->
           </div>
+          <!-- 自定义虚拟滚动条 -->
+          <div id="promptScrollBar" class="virtual-scrollbar"></div>
 
           <div id="promptEmptyState" class="empty-state" style="display: none">
             <svg
