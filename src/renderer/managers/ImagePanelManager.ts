@@ -369,7 +369,7 @@ export class ImagePanelManager extends PanelManagerBase {
     }
 
     // 窗口仍接近未加载边界时继续追赶（快速拖动滚动条场景）
-    this.checkWindowNeedsMoreData();
+    this.ensureWindowData();
   }
 
   /**
@@ -545,6 +545,7 @@ export class ImagePanelManager extends PanelManagerBase {
       this.bindHoverPreview('.image-card');
     }
     this.lastWindowRange = { start: range.start, end: range.end };
+    this.ensureWindowData();
   }
 
   /** 全量重建窗口内容 */
@@ -564,6 +565,23 @@ export class ImagePanelManager extends PanelManagerBase {
     }
     this.bindHoverPreview('.image-card');
     this.lastWindowRange = { start: range.start, end: range.end };
+    this.ensureWindowData();
+  }
+
+  /**
+   * 窗口落位后确保数据覆盖：窗口尾部接近已加载数据边界时触发分页追赶。
+   * 在 renderWindow 尾部调用（而非仅在 scroll 事件中判断），
+   * 保证使用的是真实落位后的新窗口，避免跳转到底部等场景下
+   * 因旧窗口判断失误导致底部数据永不补齐
+   */
+  private ensureWindowData(): void {
+    if (this.isLoading || !this.hasMore) return;
+    const range = this.virtualScroller?.getVisibleRange();
+    if (!range || range.end === 0) return;
+    const loadedCount = this.filteredImages.length;
+    if (range.end >= loadedCount - Math.floor(this.pageSize / 2)) {
+      void this.loadMore();
+    }
   }
 
   private setupVirtualScroller(container: HTMLElement): void {
@@ -583,20 +601,6 @@ export class ImagePanelManager extends PanelManagerBase {
   private destroyVirtualScroller(): void {
     this.virtualScroller?.destroy();
     this.virtualScroller = null;
-  }
-
-  /**
-   * 可见窗口尾部接近已加载数据边界时继续分页加载；
-   * loadMore 完成后会再次调用自身，支持快速拖动滚动条时连续追赶
-   */
-  private checkWindowNeedsMoreData(): void {
-    if (this.isLoading || !this.hasMore) return;
-    const range = this.virtualScroller?.getVisibleRange();
-    if (!range) return;
-    const loadedCount = this.filteredImages.length;
-    if (range.end >= loadedCount - Math.floor(this.pageSize / 2)) {
-      void this.loadMore();
-    }
   }
 
   /**
@@ -936,9 +940,9 @@ export class ImagePanelManager extends PanelManagerBase {
     const container = document.getElementById(Constants.Ids.IMAGE_GRID);
     if (!container) return;
 
-    // 刷新可见窗口（rAF 合帧）
+    // 刷新可见窗口（rAF 合帧）；窗口落位后的数据补齐由 ensureWindowData 兜底
     this.virtualScroller?.refresh();
-    this.checkWindowNeedsMoreData();
+    this.ensureWindowData();
   }
 
   /**
@@ -1149,13 +1153,6 @@ export class ImagePanelManager extends PanelManagerBase {
    */
   protected getCurrentContainer(): HTMLElement | null {
     return document.getElementById(Constants.Ids.IMAGE_GRID);
-  }
-
-  /**
-   * 获取滚动导航按钮 ID（实现基类抽象方法）
-   */
-  getScrollNavId(): string {
-    return Constants.Ids.IMAGE_SCROLL_NAV;
   }
 
   /**

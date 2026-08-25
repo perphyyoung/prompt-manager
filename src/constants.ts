@@ -350,8 +350,6 @@ export class Constants {
     PROMPT_TAG_FILTER_ORDER_BTN: "promptTagFilterOrderBtn",
     IMAGE_TAG_FILTER_INVERT_BTN: "imageTagFilterInvertBtn",
     PROMPT_TAG_FILTER_INVERT_BTN: "promptTagFilterInvertBtn",
-    PROMPT_SCROLL_NAV: "promptScrollNav",
-    IMAGE_SCROLL_NAV: "imageScrollNav",
 
     // 输入对话框
     INPUT_MODAL_TITLE: "inputModalTitle",
