@@ -748,13 +748,6 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 渲染列表视图（子类实现）
-   * @abstract
-   * @param filtered - 筛选后的项目列表
-   */
-  abstract renderListView(filtered: IPanelItem[]): Promise<void>;
-
-  /**
    * 获取标签筛选容器 ID（子类实现）
    * @abstract
    * @returns 容器 ID

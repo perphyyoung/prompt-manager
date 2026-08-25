@@ -443,13 +443,6 @@ test.describe("图像详情界面数据库字段读取", () => {
       timeout: 1000,
     });
 
-    // 确保切换到网格视图
-    await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}.active`, {
-      state: "visible",
-      timeout: 1000,
-    });
-
     // 直接点击自己创建的图像卡片
     const targetCard = page.locator(`.image-card[data-id="${imageId}"]`);
     await expect(targetCard).toBeVisible({ timeout: 1000 });

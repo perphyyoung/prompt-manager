@@ -321,18 +321,6 @@ export class Constants {
     IMAGE_MANAGER_BTN: "imageManagerBtn",
     PROMPT_MANAGER_BTN: "promptManagerBtn",
 
-    // 网格视图切换按钮
-    IMAGE_GRID_VIEW_BTN: "imageGridViewBtn",
-    PROMPT_GRID_VIEW_BTN: "promptGridViewBtn",
-
-    // 列表视图切换按钮
-    IMAGE_LIST_VIEW_BTN: "imageListViewBtn",
-    PROMPT_LIST_VIEW_BTN: "promptListViewBtn",
-
-    // 紧凑视图切换按钮
-    IMAGE_COMPACT_VIEW_BTN: "imageCompactViewBtn",
-    PROMPT_COMPACT_VIEW_BTN: "promptCompactViewBtn",
-
     // 标签管理器按钮
     IMAGE_TAG_MANAGER_BTN: "imageTagManagerBtn",
     PROMPT_TAG_MANAGER_BTN: "promptTagManagerBtn",

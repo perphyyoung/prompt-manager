@@ -671,13 +671,6 @@ export class ElectronTestHelper {
       state: "visible",
       timeout: 1000,
     });
-    await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
-    await page.waitForSelector(
-      `#${Constants.Ids.PROMPT_GRID_VIEW_BTN}.active`,
-      {
-        timeout: 1000,
-      },
-    );
 
     // 2. 获取创建前的提示词数量
     const promptCountBefore = await page.evaluate(async () => {
@@ -799,41 +792,35 @@ export class ElectronTestHelper {
       timeout: 1000,
     });
 
-    // 1. 确保切换到网格视图
-    await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
-    await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}.active`, {
-      timeout: 1000,
-    });
-
-    // 2. 点击上传图像按钮, 打开上传模态框
+    // 1. 点击上传图像按钮, 打开上传模态框
     await page.click(`#${Constants.Ids.IMAGE_ADD_BTN}`);
 
-    // 3. 等待上传模态框出现
+    // 2. 等待上传模态框出现
     await page.waitForSelector(`#${Constants.Ids.IMAGE_UPLOAD_MODAL}.active`, {
       state: "visible",
       timeout: 1000,
     });
 
-    // 4. 使用通用辅助方法上传图像
+    // 3. 使用通用辅助方法上传图像
     const newImageId = await this._uploadSingleImageViaUI(
       `#${Constants.Ids.MODAL_IMAGE_UPLOAD_AREA}`,
       `#${Constants.Ids.MODAL_IMAGE_PREVIEW_LIST}`,
       `#${Constants.Ids.CONFIRM_IMAGE_UPLOAD_BTN}`,
     );
 
-    // 5. 等待模态框关闭
+    // 4. 等待模态框关闭
     await page.waitForSelector(`#${Constants.Ids.IMAGE_UPLOAD_MODAL}`, {
       state: "hidden",
       timeout: 1000,
     });
 
-    // 6. 等待新卡片出现在视图中
+    // 5. 等待新卡片出现在视图中
     await page.waitForSelector(`.image-card[data-id="${newImageId}"]`, {
       state: "visible",
       timeout: 1000,
     });
 
-    // 7. 如果需要，创建关联的提示词
+    // 6. 如果需要，创建关联的提示词
     if (withPrompt) {
       const promptData: Omit<IPrompt, "id"> = {
         title: this.generatePromptTitle("linked"),
@@ -1966,8 +1953,7 @@ export async function createPromptTagGroup(
  * 进入图像网格视图
  * Steps to enter target interface:
  * 1. Click imageManagerBtn to switch to image panel
- * 2. Click imageGridViewBtn to ensure grid view
- * 3. Wait for image grid container to be visible
+ * 2. Wait for image grid container to be visible
  */
 export async function enterImageGridView(page: any, screenshotPath?: string) {
   // 使用快捷键切换到图像主界面（自动关闭可能打开的模态框）
@@ -1976,7 +1962,6 @@ export async function enterImageGridView(page: any, screenshotPath?: string) {
     state: "visible",
     timeout: 1000,
   });
-  await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
 
   // 等待图像网格容器可见（不依赖卡片存在）
   await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID}`, {
@@ -1995,8 +1980,7 @@ export async function enterImageGridView(page: any, screenshotPath?: string) {
  * 进入提示词网格视图
  * Steps to enter target interface:
  * 1. Click promptManagerBtn to switch to prompt panel
- * 2. Click promptGridViewBtn to ensure grid view
- * 3. Wait for prompt panel to be active
+ * 2. Wait for prompt panel to be active
  */
 export async function enterPromptGridView(page: any, screenshotPath?: string) {
   // 使用快捷键切换到提示词主界面（自动关闭可能打开的模态框）
@@ -2005,7 +1989,6 @@ export async function enterPromptGridView(page: any, screenshotPath?: string) {
     state: "visible",
     timeout: 1000,
   });
-  await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
 
   // 等待提示词网格容器可见（不依赖卡片存在）
   await page.waitForSelector(`#${Constants.Ids.PROMPT_GRID}`, {
@@ -2018,192 +2001,6 @@ export async function enterPromptGridView(page: any, screenshotPath?: string) {
   }
 
   return page.locator(".prompt-card").first();
-}
-
-/**
- * 进入图像列表视图
- * Steps to enter target interface:
- * 1. Click imageManagerBtn to switch to image panel
- * 2. Click imageListViewBtn to switch to list view
- * 3. Wait for list-item--image elements to be visible
- */
-export async function enterImageListView(page: any, screenshotPath?: string) {
-  // 使用快捷键切换到图像主界面（自动关闭可能打开的模态框）
-  await page.keyboard.press("Control+i");
-  await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
-    state: "visible",
-    timeout: 1000,
-  });
-
-  // 点击列表视图按钮
-  await page.click(`#${Constants.Ids.IMAGE_LIST_VIEW_BTN}`);
-
-  // 等待图像列表容器可见
-  await page.waitForSelector(`#${Constants.Ids.IMAGE_LIST}`, {
-    state: "visible",
-    timeout: 1000,
-  });
-  await page
-    .waitForSelector(`#${Constants.Ids.PROMPT_LIST}`, {
-      state: "hidden",
-      timeout: 1000,
-    })
-    .catch(() => {});
-
-  // 等待图像列表项可见
-  const firstItem = page.locator(".list-item--image").first();
-  await expect(firstItem).toBeVisible({ timeout: 1000 });
-
-  if (screenshotPath) {
-    await page.screenshot({ path: screenshotPath });
-  }
-
-  return firstItem;
-}
-
-/**
- * 进入提示词列表视图
- * Steps to enter target interface:
- * 1. Click promptManagerBtn to switch to prompt panel
- * 2. Click promptListViewBtn to switch to list view
- * 3. Wait for list-item--prompt elements to be visible
- */
-export async function enterPromptListView(page: any, screenshotPath?: string) {
-  // 使用快捷键切换到提示词主界面（自动关闭可能打开的模态框）
-  await page.keyboard.press("Control+p");
-  await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
-    state: "visible",
-    timeout: 1000,
-  });
-
-  // 点击列表视图按钮
-  await page.click(`#${Constants.Ids.PROMPT_LIST_VIEW_BTN}`);
-
-  // 等待提示词列表容器可见
-  await page.waitForSelector(`#${Constants.Ids.PROMPT_LIST}`, {
-    state: "visible",
-    timeout: 1000,
-  });
-  await page
-    .waitForSelector(`#${Constants.Ids.IMAGE_LIST}`, {
-      state: "hidden",
-      timeout: 1000,
-    })
-    .catch(() => {});
-
-  // 等待提示词列表项可见
-  const firstItem = page.locator(".list-item--prompt").first();
-  await expect(firstItem).toBeVisible({ timeout: 1000 });
-
-  if (screenshotPath) {
-    await page.screenshot({ path: screenshotPath });
-  }
-
-  return firstItem;
-}
-
-/**
- * 进入图像紧凑视图
- * Steps to enter target interface:
- * 1. Click imageManagerBtn to switch to image panel
- * 2. Click imageCompactViewBtn to switch to compact view
- * 3. Wait for list-item--image.list-item--compact elements to be visible
- */
-export async function enterImageCompactView(
-  page: any,
-  screenshotPath?: string,
-) {
-  // 使用快捷键切换到图像主界面（自动关闭可能打开的模态框和批量工具栏）
-  await page.keyboard.press("Control+i");
-  await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
-    state: "visible",
-    timeout: 1000,
-  });
-  await page
-    .waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
-      state: "hidden",
-      timeout: 1000,
-    })
-    .catch(() => {});
-
-  // 点击紧凑视图按钮
-  await page.click(`#${Constants.Ids.IMAGE_COMPACT_VIEW_BTN}`);
-
-  // 等待图像列表容器可见
-  await page.waitForSelector(`#${Constants.Ids.IMAGE_LIST}`, {
-    state: "visible",
-    timeout: 1000,
-  });
-  await page
-    .waitForSelector(`#${Constants.Ids.PROMPT_LIST}`, {
-      state: "hidden",
-      timeout: 1000,
-    })
-    .catch(() => {});
-
-  // 等待图像紧凑列表项可见
-  const firstItem = page
-    .locator(".list-item--image.list-item--compact")
-    .first();
-  await expect(firstItem).toBeVisible({ timeout: 1000 });
-
-  if (screenshotPath) {
-    await page.screenshot({ path: screenshotPath });
-  }
-
-  return firstItem;
-}
-
-/**
- * 进入提示词紧凑视图
- * Steps to enter target interface:
- * 1. Click promptManagerBtn to switch to prompt panel
- * 2. Click promptCompactViewBtn to switch to compact view
- * 3. Wait for list-item--prompt.list-item--compact elements to be visible
- */
-export async function enterPromptCompactView(
-  page: any,
-  screenshotPath?: string,
-) {
-  // 使用快捷键切换到提示词主界面（自动关闭可能打开的模态框和批量工具栏）
-  await page.keyboard.press("Control+p");
-  await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
-    state: "visible",
-    timeout: 1000,
-  });
-  await page
-    .waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
-      state: "hidden",
-      timeout: 1000,
-    })
-    .catch(() => {});
-
-  // 点击紧凑视图按钮
-  await page.click(`#${Constants.Ids.PROMPT_COMPACT_VIEW_BTN}`);
-
-  // 等待提示词列表容器可见
-  await page.waitForSelector(`#${Constants.Ids.PROMPT_LIST}`, {
-    state: "visible",
-    timeout: 1000,
-  });
-  await page
-    .waitForSelector(`#${Constants.Ids.IMAGE_LIST}`, {
-      state: "hidden",
-      timeout: 1000,
-    })
-    .catch(() => {});
-
-  // 等待提示词紧凑列表项可见
-  const firstItem = page
-    .locator(".list-item--prompt.list-item--compact")
-    .first();
-  await expect(firstItem).toBeVisible({ timeout: 1000 });
-
-  if (screenshotPath) {
-    await page.screenshot({ path: screenshotPath });
-  }
-
-  return firstItem;
 }
 
 // ========== 详情界面辅助函数 ==========
@@ -2266,13 +2063,6 @@ export async function enterImageDetailView(page: any, screenshotPath?: string) {
     timeout: 1000,
   });
 
-  // 确保切换到网格视图（点击网格视图按钮）
-  await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
-  await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}.active`, {
-    state: "visible",
-    timeout: 1000,
-  });
-
   // 确保图像网格已加载
   await page.waitForSelector(".image-card", {
     state: "visible",
@@ -2326,13 +2116,6 @@ export async function enterPromptDetailView(
   // 使用快捷键切换到提示词主界面（自动关闭可能打开的模态框）
   await page.keyboard.press("Control+p");
   await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
-    state: "visible",
-    timeout: 1000,
-  });
-
-  // 确保切换到网格视图（点击网格视图按钮）
-  await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
-  await page.waitForSelector(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}.active`, {
     state: "visible",
     timeout: 1000,
   });
@@ -2420,7 +2203,6 @@ export async function getFirstImageId(page: any): Promise<string> {
     state: "visible",
     timeout: 1000,
   });
-  await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
 
   const firstCard = page.locator(".image-card").first();
   await expect(firstCard).toBeVisible({ timeout: 1000 });
@@ -2437,7 +2219,6 @@ export async function getFirstPromptId(page: any): Promise<string> {
     state: "visible",
     timeout: 1000,
   });
-  await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
 
   const firstCard = page.locator(".prompt-card").first();
   await expect(firstCard).toBeVisible({ timeout: 1000 });
@@ -2668,8 +2449,7 @@ export async function openPromptDetailById(
     timeout: 1000,
   });
 
-  // 确保网格视图
-  await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
+  // 确保网格容器可见
   await page.waitForSelector(`#${Constants.Ids.PROMPT_GRID}`, {
     state: "visible",
     timeout: 1000,

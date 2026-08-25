@@ -3,7 +3,7 @@ import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
 import { localStorageManager } from '../configs/LocalStorageConfig.ts';
 import type { IApp } from '../app.types.ts';
-import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig, UnifiedListRenderer, PromptListConfig } from './SharedComponents/index.ts';
+import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig } from './SharedComponents/index.ts';
 import { Constants, Events } from '../../constants.ts';
 import { DialogConfig } from '../services/index.ts';
 import { batchToolbarMiddle } from '../../middle/index.ts';
@@ -69,7 +69,8 @@ export class PromptPanelManager extends PanelManagerBase {
     });
 
     // 从 localStorage 加载设置（在 super 之后，init 之前）
-    this.viewModeType = localStorageManager.get<string>(this.storageKeys.viewMode);
+    // 提示词主页仅保留网格视图
+    this.viewModeType = 'grid';
     this.sortBy = localStorageManager.get<string>(this.storageKeys.sortBy);
     this.sortOrder = localStorageManager.get<string>(this.storageKeys.sortOrder);
     this.cardSize = localStorageManager.get<number>(this.storageKeys.cardSize);
@@ -444,30 +445,13 @@ export class PromptPanelManager extends PanelManagerBase {
    */
   private async appendToContainer(newItems: IPrompt[]): Promise<void> {
     const container = document.getElementById(Constants.Ids.PROMPT_GRID);
-    const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
-    if (!container || !listContainer) return;
+    if (!container) return;
 
-    if (this.viewModeType === 'grid') {
-      const html = newItems.map((prompt, index) => this.createCard(prompt, this.filteredPrompts.length - newItems.length + index)).join('');
-      this.appendHtmlToContainer(container, html);
-      this.bindCardButtonEvents(newItems);
-      await this.loadCardBackgroundsForItems(newItems);
-      this.bindHoverPreview('.prompt-card');
-    } else {
-      const isCompact = this.viewModeType === 'list-compact';
-      const html = newItems.map((prompt, index) =>
-        UnifiedListRenderer.render(PromptListConfig, prompt, {
-          icons: Constants.ICONS,
-          isCompact,
-          isSelected: batchToolbarMiddle.isSelected(this.toolbarContext, String(prompt.id)),
-          index: this.filteredPrompts.length - newItems.length + index
-        })
-      ).join('');
-      this.appendHtmlToContainer(listContainer, html);
-      this.bindListButtonEvents(newItems);
-      this.bindHoverPreview('.list-item--prompt');
-      await this.loadPromptListThumbnails(newItems);
-    }
+    const html = newItems.map((prompt, index) => this.createCard(prompt, this.filteredPrompts.length - newItems.length + index)).join('');
+    this.appendHtmlToContainer(container, html);
+    this.bindCardButtonEvents(newItems);
+    await this.loadCardBackgroundsForItems(newItems);
+    this.bindHoverPreview('.prompt-card');
   }
 
   /**
@@ -550,7 +534,6 @@ export class PromptPanelManager extends PanelManagerBase {
     this.filteredPrompts = filtered;
 
     const container = document.getElementById(Constants.Ids.PROMPT_GRID);
-    const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
     const currentSearchQuery = this.getSearchQuery();
 
     if (filtered.length === 0) {
@@ -562,32 +545,20 @@ export class PromptPanelManager extends PanelManagerBase {
       } else {
         PanelRenderer.showEmptyState(Constants.Ids.PROMPT_GRID, Constants.Ids.PROMPT_EMPTY_STATE, '暂无提示词');
       }
-      if (listContainer) listContainer.style.display = 'none';
       return;
     }
 
     PanelRenderer.hideEmptyState(Constants.Ids.PROMPT_GRID, Constants.Ids.PROMPT_EMPTY_STATE);
 
-    // 根据视图模式渲染
-    if (this.viewModeType === 'grid') {
-      container!.style.display = 'grid';
-      if (listContainer) listContainer.style.display = 'none';
+    // 渲染网格视图（提示词主页仅保留网格视图）
+    container!.style.display = 'grid';
 
-      // 渲染网格视图
-      PanelRenderer.renderGrid(filtered, (prompt) => this.createCard(prompt as IPrompt), Constants.Ids.PROMPT_GRID);
-      this.bindItemEvents(filtered);
-      this.bindCardButtonEvents(filtered);
-      this.loadCardBackgrounds();
-      this.bindHoverPreview('.prompt-card');
-      this.bindCardDropEvents(container!);
-    } else {
-      // 列表视图
-      container!.style.display = 'none';
-      if (listContainer) {
-        listContainer.style.display = 'flex';
-        await this.renderListView(filtered);
-      }
-    }
+    PanelRenderer.renderGrid(filtered, (prompt) => this.createCard(prompt as IPrompt), Constants.Ids.PROMPT_GRID);
+    this.bindItemEvents(filtered);
+    this.bindCardButtonEvents(filtered);
+    this.loadCardBackgrounds();
+    this.bindHoverPreview('.prompt-card');
+    this.bindCardDropEvents(container!);
   }
 
   /**
@@ -601,210 +572,6 @@ export class PromptPanelManager extends PanelManagerBase {
       selectedIds: batchToolbarMiddle.getSelectedIds(this.toolbarContext),
       index
     });
-  }
-
-  /**
-   * 渲染提示词列表视图（实现基类抽象方法）
-   */
-  async renderListView(filtered: IPrompt[]): Promise<void> {
-    const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
-    if (!listContainer) return;
-
-    const isCompact = this.viewModeType === 'list-compact';
-
-    // 使用统一列表渲染器生成列表项 HTML
-    const listItemsHtml = filtered.map((prompt, index) =>
-      UnifiedListRenderer.render(PromptListConfig, prompt, {
-        icons: Constants.ICONS,
-        isCompact,
-        isSelected: batchToolbarMiddle.isSelected(this.toolbarContext, String(prompt.id)),
-        index
-      })
-    );
-
-    listContainer.innerHTML = listItemsHtml.join('');
-
-    // 异步加载提示词列表缩略图
-    await this.loadPromptListThumbnails(filtered);
-
-    // 绑定事件
-    this.bindItemEvents(filtered);
-    this.bindListButtonEvents(filtered);
-    this.bindHoverPreview('.list-item--prompt');
-    this.bindCardDropEvents(listContainer);
-    // updateToolbarUI 由调用方（setViewMode/onChange）统一处理，避免重复调用
-  }
-
-  /**
-   * 异步加载提示词列表缩略图
-   * 优先从路径缓存读取，未命中时单次 IPC 批量兜底
-   */
-  async loadPromptListThumbnails(filtered: IPrompt[]): Promise<void> {
-    const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
-    if (!listContainer) return;
-
-    const items = listContainer.querySelectorAll('.list-item--prompt');
-
-    // 第一步：补齐元数据缓存
-    const imageIdToInfo = await this.collectFirstImageMetadata(items, filtered);
-
-    // 第二步：构建缩略图目标（先读路径缓存）
-    const { targets, uncachedIds, uncachedPaths } = this.buildThumbnailTargets(items, filtered, imageIdToInfo);
-    if (targets.length === 0) return;
-
-    // 第三步：未命中项 IPC 兜底
-    await this.fetchMissingThumbnailPaths(targets, uncachedIds, uncachedPaths);
-
-    // 第四步：应用所有缩略图
-    this.applyThumbnailTargets(targets);
-  }
-
-  /**
-   * 从列表项中提取每个 prompt 的第一张图 ID，并补齐元数据缓存
-   */
-  private async collectFirstImageMetadata(
-    items: NodeListOf<Element>,
-    filtered: IPrompt[]
-  ): Promise<Map<string, ImageInfo>> {
-    const imageIdToInfo = new Map<string, ImageInfo>();
-    const missingImageIds: string[] = [];
-
-    for (const item of items) {
-      const resolved = this.resolveFirstImageFromItem(item, filtered);
-      if (!resolved) continue;
-      const { imageId, imageIdStr } = resolved;
-
-      const cached = cacheManager.getCachedImage(imageIdStr);
-      if (cached) {
-        imageIdToInfo.set(imageIdStr, cached as ImageInfo);
-      } else if (!imageIdToInfo.has(imageIdStr)) {
-        imageIdToInfo.set(imageIdStr, { id: imageId });
-        missingImageIds.push(imageIdStr);
-      }
-    }
-
-    if (missingImageIds.length === 0) return imageIdToInfo;
-
-    try {
-      const fetchedImages = await window.electronAPI.getImagesByIds(missingImageIds);
-      for (const img of fetchedImages) {
-        if (img && img.id) {
-          cacheManager.cacheImage(img);
-          imageIdToInfo.set(String(img.id), img as ImageInfo);
-        }
-      }
-    } catch (error) {
-      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to fetch images by ids:', error);
-    }
-
-    return imageIdToInfo;
-  }
-
-  /**
-   * 构建缩略图渲染目标：优先读路径缓存，未命中收集待 IPC 兜底
-   */
-  private buildThumbnailTargets(
-    items: NodeListOf<Element>,
-    filtered: IPrompt[],
-    imageIdToInfo: Map<string, ImageInfo>
-  ): {
-    targets: Array<{ thumbnailEl: HTMLImageElement | null; fullPath: string }>;
-    uncachedIds: string[];
-    uncachedPaths: string[];
-  } {
-    const targets: Array<{ thumbnailEl: HTMLImageElement | null; fullPath: string }> = [];
-    const uncachedIds: string[] = [];
-    const uncachedPaths: string[] = [];
-
-    for (const item of items) {
-      const resolved = this.resolveFirstImageFromItem(item, filtered);
-      if (!resolved) continue;
-      const { imageIdStr } = resolved;
-
-      const img = imageIdToInfo.get(imageIdStr);
-      if (!img) continue;
-
-      const imagePath = img.thumbnailPath || img.relativePath;
-      if (!imagePath) continue;
-
-      const thumbnailEl = item.querySelector('.list-item__thumbnail') as HTMLImageElement | null;
-      const cachedPath = cacheManager.getImagePath(imageIdStr, 'thumbnail');
-      if (cachedPath) {
-        targets.push({ thumbnailEl, fullPath: cachedPath });
-      } else {
-        targets.push({ thumbnailEl, fullPath: '' });
-        uncachedIds.push(imageIdStr);
-        uncachedPaths.push(imagePath);
-      }
-    }
-
-    return { targets, uncachedIds, uncachedPaths };
-  }
-
-  /**
-   * 对未命中路径缓存的项，单次 IPC 批量获取并回写缓存
-   */
-  private async fetchMissingThumbnailPaths(
-    targets: Array<{ thumbnailEl: HTMLImageElement | null; fullPath: string }>,
-    uncachedIds: string[],
-    uncachedPaths: string[]
-  ): Promise<void> {
-    if (uncachedPaths.length === 0) return;
-
-    try {
-      const fullPaths = await window.electronAPI.getImagesPaths(uncachedPaths);
-      const entries: Array<{ imageId: string; fullPath: string }> = [];
-      let uncachedIdx = 0;
-      for (const target of targets) {
-        if (!target.fullPath && uncachedIdx < uncachedPaths.length) {
-          const fullPath = fullPaths[uncachedIdx];
-          const imageId = uncachedIds[uncachedIdx];
-          if (fullPath) {
-            target.fullPath = fullPath;
-            if (imageId) {
-              entries.push({ imageId, fullPath });
-            }
-          }
-          uncachedIdx++;
-        }
-      }
-      if (entries.length > 0) {
-        cacheManager.setImagePaths(entries, 'thumbnail');
-      }
-    } catch (error) {
-      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load prompt list thumbnails:', error);
-    }
-  }
-
-  /**
-   * 应用所有缩略图到 DOM
-   */
-  private applyThumbnailTargets(
-    targets: Array<{ thumbnailEl: HTMLImageElement | null; fullPath: string }>
-  ): void {
-    for (const target of targets) {
-      if (!target.thumbnailEl || !target.fullPath) continue;
-      target.thumbnailEl.src = `file://${target.fullPath.replace(/"/g, '&quot;')}`;
-    }
-  }
-
-  /**
-   * 从列表项中解析对应的 prompt 第一张图 ID
-   * 返回 null 表示该 item 无关联图
-   */
-  private resolveFirstImageFromItem(
-    item: Element,
-    filtered: IPrompt[]
-  ): { imageId: string; imageIdStr: string } | null {
-    const promptId = (item as HTMLElement).dataset.id;
-    const prompt = filtered.find(p => String(p.id) === String(promptId));
-    if (!prompt || !prompt.images || prompt.images.length === 0) return null;
-
-    const firstImage = prompt.images[0];
-    const imageId = typeof firstImage === 'object' ? (firstImage as ImageInfo).id : firstImage;
-    if (!imageId) return null;
-
-    return { imageId, imageIdStr: String(imageId) };
   }
 
   /**
@@ -835,7 +602,6 @@ export class PromptPanelManager extends PanelManagerBase {
     this.unbindScrollEvents();
 
     const gridContainer = document.getElementById(Constants.Ids.PROMPT_GRID);
-    const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
 
     let ticking = false;
     this.scrollHandler = () => {
@@ -848,7 +614,6 @@ export class PromptPanelManager extends PanelManagerBase {
     };
 
     gridContainer?.addEventListener('scroll', this.scrollHandler);
-    listContainer?.addEventListener('scroll', this.scrollHandler);
   }
 
   /**
@@ -858,10 +623,8 @@ export class PromptPanelManager extends PanelManagerBase {
     if (!this.scrollHandler) return;
 
     const gridContainer = document.getElementById(Constants.Ids.PROMPT_GRID);
-    const listContainer = document.getElementById(Constants.Ids.PROMPT_LIST);
 
     gridContainer?.removeEventListener('scroll', this.scrollHandler);
-    listContainer?.removeEventListener('scroll', this.scrollHandler);
     this.scrollHandler = null;
   }
 
@@ -869,9 +632,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 处理滚动事件，判断是否需要加载更多
    */
   private handleScroll(): void {
-    const container = this.viewModeType === 'grid'
-      ? document.getElementById(Constants.Ids.PROMPT_GRID)
-      : document.getElementById(Constants.Ids.PROMPT_LIST);
+    const container = document.getElementById(Constants.Ids.PROMPT_GRID);
     if (!container) return;
 
     const scrollBottom = container.scrollTop + container.clientHeight;
@@ -1243,17 +1004,8 @@ export class PromptPanelManager extends PanelManagerBase {
    * 渲染单个提示词的 HTML（实现基类抽象方法）
    * 按当前视图模式生成网格卡片或列表项，index 需与旧元素保持一致
    */
-  protected renderSingleItemHtml(prompt: IPrompt, index: number, isSelected: boolean): string {
-    if (this.viewModeType === 'grid') {
-      return this.createCard(prompt, index);
-    }
-    const isCompact = this.viewModeType === 'list-compact';
-    return UnifiedListRenderer.render(PromptListConfig, prompt, {
-      icons: Constants.ICONS,
-      isCompact,
-      isSelected,
-      index,
-    });
+  protected renderSingleItemHtml(prompt: IPrompt, index: number, _isSelected: boolean): string {
+    return this.createCard(prompt, index);
   }
 
   /**
@@ -1261,11 +1013,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 替换 DOM 后需重新加载图片，旧元素上的背景/缩略图随替换一并移除
    */
   protected async loadItemImagesForChanged(prompts: IPrompt[]): Promise<void> {
-    if (this.viewModeType === 'grid') {
-      await this.loadCardBackgroundsForItems(prompts);
-    } else {
-      await this.loadPromptListThumbnails(prompts);
-    }
+    await this.loadCardBackgroundsForItems(prompts);
   }
 
   /**
@@ -1288,11 +1036,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 获取当前视图的容器元素
    */
   protected getCurrentContainer(): HTMLElement | null {
-    if (this.viewModeType === 'grid') {
-      return document.getElementById(Constants.Ids.PROMPT_GRID);
-    } else {
-      return document.getElementById(Constants.Ids.PROMPT_LIST);
-    }
+    return document.getElementById(Constants.Ids.PROMPT_GRID);
   }
 
   /**
@@ -1312,7 +1056,7 @@ export class PromptPanelManager extends PanelManagerBase {
 
 /**
  * 提示词统一事件策略
- * 支持网格视图、列表视图和紧凑列表视图
+ * 提示词主页仅保留网格视图
  */
 class PromptEventStrategy extends BaseEventStrategy {
   constructor(
@@ -1323,20 +1067,11 @@ class PromptEventStrategy extends BaseEventStrategy {
   }
 
   protected getSelectors(): IEventStrategySelectors {
-    if (this.viewMode === 'grid') {
-      return {
-        checkbox: '.card-checkbox',
-        item: '.prompt-card',
-        exclude: ['.action-btn', '.card-checkbox'],
-      };
-    } else {
-      // list 和 list-compact 使用相同的选择器
-      return {
-        checkbox: '.list-item__checkbox',
-        item: '.list-item--prompt',
-        exclude: ['.list-item__checkbox', '.list-item__actions'],
-      };
-    }
+    return {
+      checkbox: '.card-checkbox',
+      item: '.prompt-card',
+      exclude: ['.action-btn', '.card-checkbox'],
+    };
   }
 
   protected handleOpenDetail(item: IEventStrategyItem): void {

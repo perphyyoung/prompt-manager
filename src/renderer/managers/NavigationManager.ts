@@ -34,8 +34,6 @@ interface IApp {
   imageTagManager?: {
     hideBatchToolbar: () => void;
   } | null;
-  updatePromptViewButtons: (viewMode: string) => void;
-  updateImageViewButtons: (viewMode: string) => void;
   eventBus: {
     emit: (event: string, data?: unknown) => void;
   };
@@ -93,7 +91,6 @@ export class NavigationManager {
       name: 'prompt',
       onShow: async () => {
         if (this.app.promptPanelManager) {
-          this.app.updatePromptViewButtons(this.app.promptPanelManager.viewModeType);
           await this.app.promptPanelManager.ensureRendered();
         }
       }
@@ -105,7 +102,6 @@ export class NavigationManager {
       name: 'image',
       onShow: async () => {
         if (this.app.imagePanelManager) {
-          this.app.updateImageViewButtons(this.app.imagePanelManager.viewModeType);
           await this.app.imagePanelManager.ensureRendered();
         }
       }

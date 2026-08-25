@@ -259,8 +259,6 @@ export interface IApp {
   on(event: string, callback: (data?: unknown) => void): void;
   off(event: string, callback: (data?: unknown) => void): void;
   emit(event: string, data?: unknown): void;
-  updatePromptViewButtons(mode: string): void;
-  updateImageViewButtons(mode: string): void;
   openImageTagManagerModal: () => void;
   openPromptTagManagerModal: () => void;
 }

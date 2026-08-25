@@ -12,7 +12,7 @@ import { Constants } from "../src/constants.ts";
  * 3. 批量工具栏按钮功能（反选、添加标签、收藏、删除、取消选择）（图像和提示词）
  * 4. Ctrl+A 全选（图像和提示词）
  * 5. 批量收藏功能（图像和提示词）
- * 6. 多选后切换视图保留选择状态（图像和提示词）
+ * 6. 多选后切换视图保留选择状态（提示词）
  */
 test.describe("主界面卡片视图多选功能", () => {
   // ========== 初始化 ==========
@@ -31,7 +31,6 @@ test.describe("主界面卡片视图多选功能", () => {
       state: "visible",
       timeout: 1000,
     });
-    await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
     await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID}`, {
       state: "visible",
       timeout: 1000,
@@ -327,44 +326,6 @@ test.describe("主界面卡片视图多选功能", () => {
       await batchToolbar.waitFor({ state: "hidden", timeout: 1000 });
     });
 
-    test("图像多选后切换视图保留选择状态 - 验证网格视图和列表视图之间切换时保留选择状态", async ({
-      electronTest,
-      page,
-    }) => {
-      await electronTest.logTestStart();
-      // 注意：不在此调用 enterImageGridView，因为 beforeAll 已准备好视图
-
-      const firstCard = page.locator(".image-card").first();
-      await firstCard.hover();
-      await firstCard.locator(".card-checkbox").click();
-
-      await page.waitForSelector(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`, {
-        state: "visible",
-      });
-
-      await page.click(`#${Constants.Ids.IMAGE_LIST_VIEW_BTN}`);
-      await page.waitForSelector(".list-item--image", {
-        state: "visible",
-        timeout: 1000,
-      });
-
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`,
-      );
-      await expect(batchToolbar).toBeVisible();
-
-      const countText = batchToolbar.locator(".batch-toolbar-count");
-      await expect(countText).toContainText("1");
-
-      await page.click(`#${Constants.Ids.IMAGE_GRID_VIEW_BTN}`);
-      await page.waitForSelector(".image-card", {
-        state: "visible",
-        timeout: 1000,
-      });
-
-      await expect(batchToolbar).toBeVisible();
-      await expect(countText).toContainText("1");
-    });
   });
 
   test.describe("提示词面板多选功能", () => {
@@ -375,7 +336,6 @@ test.describe("主界面卡片视图多选功能", () => {
         state: "visible",
         timeout: 1000,
       });
-      await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
       await page.waitForSelector(`#${Constants.Ids.PROMPT_GRID}`, {
         state: "visible",
         timeout: 1000,
@@ -679,46 +639,6 @@ test.describe("主界面卡片视图多选功能", () => {
       // 清理：退出批量模式
       await page.keyboard.press("Escape");
       await batchToolbar.waitFor({ state: "hidden", timeout: 1000 });
-    });
-
-    test("提示词多选后切换视图保留选择状态 - 验证网格视图和列表视图之间切换时保留选择状态", async ({
-      electronTest,
-      page,
-    }) => {
-      await electronTest.logTestStart();
-      // 注意：不在此调用 enterPromptGridView，因为 beforeAll 已准备好视图
-
-      const firstCard = page.locator(".prompt-card").first();
-      await firstCard.hover();
-      await firstCard.locator(".card-checkbox").click();
-
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`,
-        { state: "visible" },
-      );
-
-      await page.click(`#${Constants.Ids.PROMPT_LIST_VIEW_BTN}`);
-      await page.waitForSelector(".list-item--prompt", {
-        state: "visible",
-        timeout: 1000,
-      });
-
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`,
-      );
-      await expect(batchToolbar).toBeVisible();
-
-      const countText = batchToolbar.locator(".batch-toolbar-count");
-      await expect(countText).toContainText("1");
-
-      await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
-      await page.waitForSelector(".prompt-card", {
-        state: "visible",
-        timeout: 1000,
-      });
-
-      await expect(batchToolbar).toBeVisible();
-      await expect(countText).toContainText("1");
     });
   });
 });

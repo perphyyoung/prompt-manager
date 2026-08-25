@@ -52,7 +52,6 @@ test.describe('提示词详情界面"设首张"功能', () => {
       state: "visible",
       timeout: 1000,
     });
-    await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
     await electronTest.refreshData();
   });
 

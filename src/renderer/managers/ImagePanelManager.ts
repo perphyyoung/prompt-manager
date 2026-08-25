@@ -3,7 +3,7 @@ import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
 import { localStorageManager } from '../configs/LocalStorageConfig.ts';
 import type { IApp } from '../app.types.ts';
-import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig, UnifiedListRenderer, ImageListConfig } from './SharedComponents/index.ts';
+import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig } from './SharedComponents/index.ts';
 import { Constants, Events } from '../../constants.ts';
 import { DialogConfig } from '../services/index.ts';
 import { batchToolbarMiddle } from '../../middle/index.ts';
@@ -30,7 +30,7 @@ export class ImagePanelManager extends PanelManagerBase {
   private isInitialized = false;
 
   // 分页状态
-  private readonly pageSize = 500;
+  private readonly pageSize = 100;
   private currentOffset = 0;
   private hasMore = true;
   private totalCount = 0;
@@ -71,7 +71,8 @@ export class ImagePanelManager extends PanelManagerBase {
     });
 
     // 从 localStorage 加载设置（在 super 之后，init 之前）
-    this.viewModeType = localStorageManager.get<string>(this.storageKeys.viewMode);
+    // 图像主页仅保留网格视图
+    this.viewModeType = 'grid';
     this.sortBy = localStorageManager.get<string>(this.storageKeys.sortBy);
     this.sortOrder = localStorageManager.get<string>(this.storageKeys.sortOrder);
     this.cardSize = localStorageManager.get<number>(this.storageKeys.cardSize);
@@ -406,7 +407,6 @@ export class ImagePanelManager extends PanelManagerBase {
     this.filteredImages = filtered;
 
     const container = document.getElementById(Constants.Ids.IMAGE_GRID);
-    const listContainer = document.getElementById(Constants.Ids.IMAGE_LIST);
     const currentSearchQuery = this.getSearchQuery();
 
     if (filtered.length === 0) {
@@ -418,32 +418,21 @@ export class ImagePanelManager extends PanelManagerBase {
       } else {
         PanelRenderer.showEmptyState(Constants.Ids.IMAGE_GRID, Constants.Ids.IMAGE_EMPTY_STATE, '暂无图像');
       }
-      if (listContainer) listContainer.style.display = 'none';
       return;
     }
 
     PanelRenderer.hideEmptyState(Constants.Ids.IMAGE_GRID, Constants.Ids.IMAGE_EMPTY_STATE);
 
-    // 根据视图模式渲染
-    if (this.viewModeType === 'grid') {
-      container!.style.display = 'grid';
-      if (listContainer) listContainer.style.display = 'none';
+    // 渲染网格视图（图像主页仅保留网格视图）
+    container!.style.display = 'grid';
 
-      // 渲染网格视图
-      PanelRenderer.renderGrid(filtered, (img) => this.createCard(img as IImage), Constants.Ids.IMAGE_GRID);
-      this.bindItemEvents(filtered);
-      this.bindCardButtonEvents(filtered);
-      this.loadCardBackgrounds();
-      this.bindHoverPreview('.image-card');
-      this.bindCardDropEvents(container!);
-    } else {
-      // 列表视图
-      container!.style.display = 'none';
-      if (listContainer) {
-        listContainer.style.display = 'flex';
-        await this.renderListView(filtered);
-      }
-    }
+    // 渲染网格视图
+    PanelRenderer.renderGrid(filtered, (img) => this.createCard(img as IImage), Constants.Ids.IMAGE_GRID);
+    this.bindItemEvents(filtered);
+    this.bindCardButtonEvents(filtered);
+    this.loadCardBackgrounds();
+    this.bindHoverPreview('.image-card');
+    this.bindCardDropEvents(container!);
   }
 
   /**
@@ -452,30 +441,13 @@ export class ImagePanelManager extends PanelManagerBase {
    */
   private async appendToContainer(newItems: IImage[]): Promise<void> {
     const container = document.getElementById(Constants.Ids.IMAGE_GRID);
-    const listContainer = document.getElementById(Constants.Ids.IMAGE_LIST);
-    if (!container || !listContainer) return;
+    if (!container) return;
 
-    if (this.viewModeType === 'grid') {
-      const html = newItems.map((img, index) => this.createCard(img, this.filteredImages.length - newItems.length + index)).join('');
-      this.appendHtmlToContainer(container, html);
-      this.bindCardButtonEvents(newItems);
-      await this.loadCardBackgroundsForItems(newItems);
-      this.bindHoverPreview('.image-card');
-    } else {
-      const isCompact = this.viewModeType === 'list-compact';
-      const html = newItems.map((img, index) =>
-        UnifiedListRenderer.render(ImageListConfig, img, {
-          icons: Constants.ICONS,
-          isCompact,
-          isSelected: batchToolbarMiddle.isSelected(this.toolbarContext, String(img.id)),
-          index: this.filteredImages.length - newItems.length + index
-        })
-      ).join('');
-      this.appendHtmlToContainer(listContainer, html);
-      this.bindListButtonEvents(newItems);
-      this.bindHoverPreview('.list-item--image');
-      await this.loadImageListThumbnailsForItems(newItems);
-    }
+    const html = newItems.map((img, index) => this.createCard(img, this.filteredImages.length - newItems.length + index)).join('');
+    this.appendHtmlToContainer(container, html);
+    this.bindCardButtonEvents(newItems);
+    await this.loadCardBackgroundsForItems(newItems);
+    this.bindHoverPreview('.image-card');
   }
 
   /**
@@ -529,17 +501,8 @@ export class ImagePanelManager extends PanelManagerBase {
    * 渲染单个图像的 HTML（实现基类抽象方法）
    * 按当前视图模式生成网格卡片或列表项，index 需与旧元素保持一致
    */
-  protected renderSingleItemHtml(img: IImage, index: number, isSelected: boolean): string {
-    if (this.viewModeType === 'grid') {
-      return this.createCard(img, index);
-    }
-    const isCompact = this.viewModeType === 'list-compact';
-    return UnifiedListRenderer.render(ImageListConfig, img, {
-      icons: Constants.ICONS,
-      isCompact,
-      isSelected,
-      index
-    });
+  protected renderSingleItemHtml(img: IImage, index: number, _isSelected: boolean): string {
+    return this.createCard(img, index);
   }
 
   /**
@@ -547,11 +510,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 替换 DOM 后需重新加载图片，旧元素上的背景/缩略图随替换一并移除
    */
   protected async loadItemImagesForChanged(images: IImage[]): Promise<void> {
-    if (this.viewModeType === 'grid') {
-      await this.loadCardBackgroundsForItems(images);
-    } else {
-      await this.loadImageListThumbnailsForItems(images);
-    }
+    await this.loadCardBackgroundsForItems(images);
   }
 
   /**
@@ -615,105 +574,6 @@ export class ImagePanelManager extends PanelManagerBase {
     } catch (error) {
       window.electronAPI.logError('ImagePanelManager.ts', 'Failed to load card backgrounds (fallback):', error);
     }
-  }
-
-  /**
-   * 渲染图像列表视图（实现基类抽象方法）
-   */
-  async renderListView(filtered: IImage[]): Promise<void> {
-    const listContainer = document.getElementById(Constants.Ids.IMAGE_LIST);
-    if (!listContainer) return;
-
-    const isCompact = this.viewModeType === 'list-compact';
-
-    // 使用统一列表渲染器生成列表项 HTML
-    listContainer.innerHTML = filtered.map((img, index) =>
-      UnifiedListRenderer.render(ImageListConfig, img, {
-        icons: Constants.ICONS,
-        isCompact,
-        isSelected: batchToolbarMiddle.isSelected(this.toolbarContext, String(img.id)),
-        index
-      })
-    ).join('');
-
-    // 绑定事件（必须在加载缩略图之前，因为 bindItemEvents 会调用 unbindEvents 重置 DOM）
-    this.bindItemEvents(filtered);
-    this.bindListButtonEvents(filtered);
-    this.bindHoverPreview('.list-item--image');
-    this.bindCardDropEvents(listContainer);
-
-    // 异步加载列表缩略图（必须在 bindItemEvents 之后，避免 unbindEvents 重置 DOM 导致缩略图丢失）
-    await this.loadImageListThumbnails();
-  }
-
-  /**
-   * 异步加载列表视图缩略图
-   */
-  async loadImageListThumbnails(): Promise<void> {
-    await this.loadImageListThumbnailsForItems(this.filteredImages);
-  }
-
-  /**
-   * 异步加载指定列表项的缩略图
-   * @param items - 需要加载缩略图的图像列表
-   */
-  private async loadImageListThumbnailsForItems(items: IImage[]): Promise<void> {
-    const listContainer = document.getElementById(Constants.Ids.IMAGE_LIST);
-    if (!listContainer) return;
-
-    const itemIds = new Set(items.map(img => String(img.id)));
-    const listItems = listContainer.querySelectorAll('.list-item--image');
-
-    // 收集所有列表项的路径信息，区分缓存命中和未命中
-    const itemInfoList: Array<{ wrapper: Element | null; imageId: string; fullPath?: string }> = [];
-    const uncachedPaths: Array<{ index: number; relativePath: string }> = [];
-
-    for (const item of listItems) {
-      const imageId = (item as HTMLElement).dataset.id;
-      if (!imageId || !itemIds.has(imageId)) continue;
-
-      const imagePath = (item as HTMLElement).dataset.imagePath;
-      if (!imagePath) continue;
-
-      const wrapper = item.querySelector('.list-item__thumbnail-wrapper');
-      const itemIndex = itemInfoList.length;
-      itemInfoList.push({ wrapper, imageId });
-
-      // 先检查缓存
-      const cachedPath = cacheManager.getImagePath(imageId, 'thumbnail');
-      if (cachedPath) {
-        itemInfoList[itemIndex].fullPath = cachedPath;
-      } else {
-        // 缓存未命中，加入待获取列表
-        uncachedPaths.push({ index: itemIndex, relativePath: imagePath });
-      }
-    }
-
-    // 批量获取未缓存的路径
-    if (uncachedPaths.length > 0) {
-      try {
-        const relativePaths = uncachedPaths.map(p => p.relativePath);
-        const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
-        const entries: Array<{ imageId: string; fullPath: string }> = [];
-        uncachedPaths.forEach((item, i) => {
-          const fullPath = fullPaths[i];
-          if (fullPath) {
-            itemInfoList[item.index].fullPath = fullPath;
-            entries.push({ imageId: itemInfoList[item.index].imageId, fullPath });
-          }
-        });
-        // 批量写入缓存
-        cacheManager.setImagePaths(entries, 'thumbnail');
-      } catch (error) {
-        window.electronAPI.logError('ImagePanelManager.ts', 'Failed to load list thumbnails:', error);
-      }
-    }
-
-    // 渲染所有缩略图
-    itemInfoList.forEach((info) => {
-      if (!info.wrapper || !info.fullPath) return;
-      info.wrapper.innerHTML = `<img src="file://${info.fullPath.replace(/\\/g, '/').replace(/"/g, '&quot;')}" alt="" class="list-item__thumbnail">`;
-    });
   }
 
   /**
@@ -898,7 +758,6 @@ export class ImagePanelManager extends PanelManagerBase {
     this.unbindScrollEvents();
 
     const gridContainer = document.getElementById(Constants.Ids.IMAGE_GRID);
-    const listContainer = document.getElementById(Constants.Ids.IMAGE_LIST);
 
     let ticking = false;
     this.scrollHandler = () => {
@@ -911,7 +770,6 @@ export class ImagePanelManager extends PanelManagerBase {
     };
 
     gridContainer?.addEventListener('scroll', this.scrollHandler);
-    listContainer?.addEventListener('scroll', this.scrollHandler);
   }
 
   /**
@@ -921,10 +779,8 @@ export class ImagePanelManager extends PanelManagerBase {
     if (!this.scrollHandler) return;
 
     const gridContainer = document.getElementById(Constants.Ids.IMAGE_GRID);
-    const listContainer = document.getElementById(Constants.Ids.IMAGE_LIST);
 
     gridContainer?.removeEventListener('scroll', this.scrollHandler);
-    listContainer?.removeEventListener('scroll', this.scrollHandler);
     this.scrollHandler = null;
   }
 
@@ -932,9 +788,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 处理滚动事件，判断是否需要加载更多
    */
   private handleScroll(): void {
-    const container = this.viewModeType === 'grid'
-      ? document.getElementById(Constants.Ids.IMAGE_GRID)
-      : document.getElementById(Constants.Ids.IMAGE_LIST);
+    const container = document.getElementById(Constants.Ids.IMAGE_GRID);
     if (!container) return;
 
     const scrollBottom = container.scrollTop + container.clientHeight;
@@ -1153,11 +1007,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 获取当前视图的容器元素
    */
   protected getCurrentContainer(): HTMLElement | null {
-    if (this.viewModeType === 'grid') {
-      return document.getElementById(Constants.Ids.IMAGE_GRID);
-    } else {
-      return document.getElementById(Constants.Ids.IMAGE_LIST);
-    }
+    return document.getElementById(Constants.Ids.IMAGE_GRID);
   }
 
   /**
@@ -1177,7 +1027,7 @@ export class ImagePanelManager extends PanelManagerBase {
 
 /**
  * 图像统一事件策略
- * 支持网格视图、列表视图和紧凑列表视图
+ * 图像主页仅保留网格视图
  */
 class ImageEventStrategy extends BaseEventStrategy {
   constructor(
@@ -1188,20 +1038,11 @@ class ImageEventStrategy extends BaseEventStrategy {
   }
 
   protected getSelectors(): IEventStrategySelectors {
-    if (this.viewMode === 'grid') {
-      return {
-        checkbox: '.card-checkbox',
-        item: '.image-card',
-        exclude: ['.action-btn', '.card-checkbox'],
-      };
-    } else {
-      // list 和 list-compact 使用相同的选择器
-      return {
-        checkbox: '.list-item__checkbox',
-        item: '.list-item--image',
-        exclude: ['.list-item__checkbox', '.list-item__actions'],
-      };
-    }
+    return {
+      checkbox: '.card-checkbox',
+      item: '.image-card',
+      exclude: ['.action-btn', '.card-checkbox'],
+    };
   }
 
   protected handleOpenDetail(item: IEventStrategyItem): void {

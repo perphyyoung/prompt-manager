@@ -20,7 +20,6 @@ interface ISearchSortManagerDeps {
     sortOrder: string;
     cardSize: number;
     setCardSize: (size: number) => void;
-    setViewMode: (mode: string) => void;
   } | null;
   imagePanelManager: {
     renderView: () => void;
@@ -29,10 +28,7 @@ interface ISearchSortManagerDeps {
     sortOrder: string;
     cardSize: number;
     setCardSize: (size: number) => void;
-    setViewMode: (mode: string) => void;
   } | null;
-  updatePromptViewButtons?: (viewMode: string) => void;
-  updateImageViewButtons?: (viewMode: string) => void;
 }
 
 /**
@@ -74,7 +70,6 @@ export class SearchSortManager {
     }
     this.bindSearchEvents();
     this.bindSortEvents();
-    this.bindViewToggleEvents();
     this.isInitialized = true;
   }
 
@@ -222,36 +217,6 @@ export class SearchSortManager {
    * 绑定视图切换事件
    * @private
    */
-  private bindViewToggleEvents(): void {
-    // 提示词视图
-    document.getElementById(Constants.Ids.PROMPT_GRID_VIEW_BTN)?.addEventListener('click', () => {
-      this.app.promptPanelManager?.setViewMode('grid');
-      this.app.updatePromptViewButtons?.('grid');
-    });
-    document.getElementById(Constants.Ids.PROMPT_LIST_VIEW_BTN)?.addEventListener('click', () => {
-      this.app.promptPanelManager?.setViewMode('list');
-      this.app.updatePromptViewButtons?.('list');
-    });
-    document.getElementById(Constants.Ids.PROMPT_COMPACT_VIEW_BTN)?.addEventListener('click', () => {
-      this.app.promptPanelManager?.setViewMode('list-compact');
-      this.app.updatePromptViewButtons?.('list-compact');
-    });
-
-    // 图像视图
-    document.getElementById(Constants.Ids.IMAGE_GRID_VIEW_BTN)?.addEventListener('click', () => {
-      this.app.imagePanelManager?.setViewMode('grid');
-      this.app.updateImageViewButtons?.('grid');
-    });
-    document.getElementById(Constants.Ids.IMAGE_LIST_VIEW_BTN)?.addEventListener('click', () => {
-      this.app.imagePanelManager?.setViewMode('list');
-      this.app.updateImageViewButtons?.('list');
-    });
-    document.getElementById(Constants.Ids.IMAGE_COMPACT_VIEW_BTN)?.addEventListener('click', () => {
-      this.app.imagePanelManager?.setViewMode('list-compact');
-      this.app.updateImageViewButtons?.('list-compact');
-    });
-  }
-
   /**
    * 绑定排序事件
    * @private

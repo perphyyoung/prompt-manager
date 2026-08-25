@@ -250,16 +250,6 @@ test.describe("提示词详情界面数据库字段读取", () => {
       timeout: 1000,
     });
 
-    // 确保切换到网格视图
-    await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
-    await page.waitForSelector(
-      `#${Constants.Ids.PROMPT_GRID_VIEW_BTN}.active`,
-      {
-        state: "visible",
-        timeout: 1000,
-      },
-    );
-
     // 等待提示词网格加载
     await page.waitForSelector(".prompt-card", {
       state: "visible",
@@ -393,7 +383,6 @@ test.describe("提示词详情界面数据库字段读取", () => {
       state: "visible",
       timeout: 1000,
     });
-    await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
     await page.locator(`.prompt-card[data-id="${promptIdWithImage}"]`).click();
     await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`, {
       state: "visible",
@@ -516,7 +505,6 @@ test.describe("提示词详情界面数据库字段读取", () => {
       state: "visible",
       timeout: 1000,
     });
-    await page.click(`#${Constants.Ids.PROMPT_GRID_VIEW_BTN}`);
     await page.locator(`.prompt-card[data-id="${promptIdWithImage}"]`).click();
     await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`, {
       state: "visible",

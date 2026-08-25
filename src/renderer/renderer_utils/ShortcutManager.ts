@@ -56,11 +56,6 @@ export class ShortcutManager {
     // 搜索
     this.register('Ctrl+F', 'focusSearch', '聚焦搜索框');
 
-    // 视图切换
-    this.register('Ctrl+1', 'viewGrid', '网格视图');
-    this.register('Ctrl+2', 'viewList', '列表视图');
-    this.register('Ctrl+3', 'viewCompact', '紧凑视图');
-
     // 标签管理
     this.register('Ctrl+T', 'toggleTags', '切换标签面板');
 
@@ -270,17 +265,6 @@ export class ShortcutManager {
           this.focusSearch();
           break;
 
-        // 视图切换
-        case 'viewGrid':
-          this.setViewMode('grid');
-          break;
-        case 'viewList':
-          this.setViewMode('list');
-          break;
-        case 'viewCompact':
-          this.setViewMode('compact');
-          break;
-
         // 标签管理
         case 'toggleTags':
           this.toggleTagsPanel();
@@ -369,16 +353,6 @@ export class ShortcutManager {
         searchInput.focus();
         searchInput.select();
       }
-    }
-  }
-
-  /**
-   * 设置视图模式
-   */
-  setViewMode(mode: string): void {
-    if (this.app.promptPanelManager) {
-      this.app.promptPanelManager.viewModeType = mode;
-      this.app.promptPanelManager.renderView();
     }
   }
 
