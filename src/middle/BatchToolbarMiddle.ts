@@ -45,10 +45,7 @@ export interface BatchBusinessConfig {
     processItems: (ids: string[], tagNames: string[]) => Promise<void>;
   };
   favorite: {
-    batchApi: (
-      ids: string[],
-      favorite: boolean,
-    ) => Promise<{ success: boolean; updated?: number } | void>;
+    batchApi: (ids: string[]) => Promise<{ success: boolean; updated?: number } | void>;
   };
 }
 
@@ -418,22 +415,20 @@ export class BatchToolbarMiddle {
   }
 
   /**
-   * 批量收藏
+   * 批量切换收藏状态（已收藏→取消，未收藏→收藏）
    * @param context - 工具栏上下文
    * @param ids - 项目 ID 数组
-   * @param favorite - 是否收藏
    */
   async batchFavorite(
     context: ToolbarContext,
     ids: string[],
-    favorite: boolean,
   ): Promise<void> {
     const config = this.states.get(context)?.businessConfig.favorite;
     if (!config) {
       throw new Error(`未配置 ${context} 的批量收藏业务逻辑`);
     }
 
-    await config.batchApi(ids, favorite);
+    await config.batchApi(ids);
   }
 
   /**

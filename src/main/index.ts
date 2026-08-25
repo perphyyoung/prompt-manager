@@ -851,6 +851,18 @@ ipcMain.handle('add-prompt-tags', async (event, promptId, tagNames) => {
   }
 });
 
+// 批量为多个提示词添加标签（集合操作）
+ipcMain.handle('add-prompt-tags-batch', async (event, promptIds, tagNames) => {
+  try {
+    const result = await db.addPromptTagsBatch(promptIds, tagNames);
+    addTagsToCache(tagNames);
+    return result;
+  } catch (error) {
+    logError('Main', 'Add prompt tags batch error:', error);
+    throw error;
+  }
+});
+
 // 删除提示词标签
 ipcMain.handle('delete-prompt-tag', async (event, tag) => {
   try {
@@ -1287,6 +1299,18 @@ ipcMain.handle('add-image-tags', async (event, imageId, tagNames) => {
     return true;
   } catch (error) {
     logError('Main', 'Add image tags error:', error);
+    throw error;
+  }
+});
+
+// 批量为多张图像添加标签（集合操作）
+ipcMain.handle('add-image-tags-batch', async (event, imageIds, tagNames) => {
+  try {
+    const result = await db.addImageTagsBatch(imageIds, tagNames);
+    addTagsToCache(tagNames);
+    return result;
+  } catch (error) {
+    logError('Main', 'Add image tags batch error:', error);
     throw error;
   }
 });

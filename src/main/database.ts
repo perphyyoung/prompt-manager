@@ -1869,6 +1869,37 @@ async function addPromptTags(promptId: string, tagNames: string[]): Promise<void
 }
 
 /**
+ * 批量为多个提示词添加标签（集合操作，单事务），语义同 addImageTagsBatch
+ * @param promptIds - 提示词 ID 数组
+ * @param tagNames - 标签名数组
+ */
+async function addPromptTagsBatch(promptIds: string[], tagNames: string[]): Promise<{ success: boolean; added: number }> {
+  if (promptIds.length === 0 || tagNames.length === 0) return { success: true, added: 0 };
+
+  return runInTransaction(async () => {
+    const tagIdMap = await getOrCreateTags('prompt_tags', tagNames);
+    let added = 0;
+
+    const placeholders = promptIds.map(() => '?').join(',');
+    for (const [, tagId] of tagIdMap) {
+      const result = await run(
+        `INSERT OR IGNORE INTO prompt_tag_relations (prompt_id, tag_id)
+         SELECT id, ? FROM prompts WHERE id IN (${placeholders})`,
+        [tagId, ...promptIds]
+      );
+      added += result.changes || 0;
+    }
+
+    if (added > 0) {
+      const now = dbTime();
+      await run(`UPDATE prompts SET updated_at = ? WHERE id IN (${placeholders})`, [now, ...promptIds]);
+    }
+
+    return { success: true, added };
+  });
+}
+
+/**
  * 获取使用指定标签的提示词列表
  * @param tagName - 标签名称
  * @returns 提示词ID列表
@@ -3097,6 +3128,39 @@ async function addImageTags(imageId: string, tagNames: string[]): Promise<void> 
 }
 
 /**
+ * 批量为多张图像添加标签（集合操作，单事务）
+ * 每个标签一条 INSERT...SELECT（仅关联真实存在的图像，OR IGNORE 去重已有关联），
+ * 避免 N 张图像 × M 个标签的逐条 IPC/SQL 循环
+ * @param imageIds - 图像 ID 数组
+ * @param tagNames - 标签名数组
+ */
+async function addImageTagsBatch(imageIds: string[], tagNames: string[]): Promise<{ success: boolean; added: number }> {
+  if (imageIds.length === 0 || tagNames.length === 0) return { success: true, added: 0 };
+
+  return runInTransaction(async () => {
+    const tagIdMap = await getOrCreateTags('image_tags', tagNames);
+    let added = 0;
+
+    const placeholders = imageIds.map(() => '?').join(',');
+    for (const [, tagId] of tagIdMap) {
+      const result = await run(
+        `INSERT OR IGNORE INTO image_tag_relations (image_id, tag_id)
+         SELECT id, ? FROM images WHERE id IN (${placeholders})`,
+        [tagId, ...imageIds]
+      );
+      added += result.changes || 0;
+    }
+
+    if (added > 0) {
+      const now = dbTime();
+      await run(`UPDATE images SET updated_at = ? WHERE id IN (${placeholders})`, [now, ...imageIds]);
+    }
+
+    return { success: true, added };
+  });
+}
+
+/**
  * 删除图像标签
  * 从 image_tags 表中删除标签
  * @param name - 标签名称
@@ -3431,25 +3495,14 @@ async function batchFavoritePrompts(ids: string[]): Promise<{ success: boolean; 
   const now = dbTime();
 
   return runInTransaction(async () => {
-    // 先获取当前收藏状态
+    // 集合级切换收藏状态（已收藏→取消，未收藏→收藏）
     const placeholders = ids.map(() => '?').join(',');
-    const rows = await all<{ id: string; is_favorite: number }>(
-      `SELECT id, is_favorite FROM prompts WHERE id IN (${placeholders})`,
-      [...ids]
+    const result = await run(
+      `UPDATE prompts SET is_favorite = 1 - is_favorite, updated_at = ? WHERE id IN (${placeholders})`,
+      [now, ...ids]
     );
 
-    // 批量更新：切换收藏状态
-    let updatedCount = 0;
-    for (const row of rows) {
-      const newStatus = row.is_favorite ? 0 : 1;
-      const result = await run(
-        'UPDATE prompts SET is_favorite = ?, updated_at = ? WHERE id = ?',
-        [newStatus, now, row.id]
-      );
-      updatedCount += result.changes || 0;
-    }
-
-    return { success: true, updated: updatedCount };
+    return { success: true, updated: result.changes || 0 };
   });
 }
 
@@ -3465,25 +3518,14 @@ async function batchFavoriteImages(ids: string[]): Promise<{ success: boolean; u
   const now = dbTime();
 
   return runInTransaction(async () => {
-    // 先获取当前收藏状态
+    // 集合级切换收藏状态（已收藏→取消，未收藏→收藏）
     const placeholders = ids.map(() => '?').join(',');
-    const rows = await all<{ id: string; is_favorite: number }>(
-      `SELECT id, is_favorite FROM images WHERE id IN (${placeholders})`,
-      [...ids]
+    const result = await run(
+      `UPDATE images SET is_favorite = 1 - is_favorite, updated_at = ? WHERE id IN (${placeholders})`,
+      [now, ...ids]
     );
 
-    // 批量更新：切换收藏状态
-    let updatedCount = 0;
-    for (const row of rows) {
-      const newStatus = row.is_favorite ? 0 : 1;
-      const result = await run(
-        'UPDATE images SET is_favorite = ?, updated_at = ? WHERE id = ?',
-        [newStatus, now, row.id]
-      );
-      updatedCount += result.changes || 0;
-    }
-
-    return { success: true, updated: updatedCount };
+    return { success: true, updated: result.changes || 0 };
   });
 }
 
@@ -3565,6 +3607,8 @@ export {
   getImageTags,
   addImageTag,
   addImageTags,
+  addImageTagsBatch,
+  addPromptTagsBatch,
   deleteImageTag,
   deleteImageTags,
   assignImageTagToBelongGroup,

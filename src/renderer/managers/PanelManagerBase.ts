@@ -1792,23 +1792,23 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 处理批量收藏
+   * 处理批量切换收藏状态（已收藏→取消，未收藏→收藏）
    */
   protected async handleBatchFavorite(): Promise<void> {
     const selectedIds = Array.from(batchToolbarMiddle.getSelectedIds(this.toolbarContext));
     if (selectedIds.length === 0) return;
 
     try {
-      await batchToolbarMiddle.batchFavorite(this.toolbarContext, selectedIds, true);
+      await batchToolbarMiddle.batchFavorite(this.toolbarContext, selectedIds);
       await this.refreshAfterUpdate();
 
       const isPrompt = this.panelType === 'prompt';
-      this.app.showToast?.(`已收藏 ${selectedIds.length} 个${isPrompt ? '提示词' : '图像'}`, 'success');
-      // 收藏成功后退出批量模式
+      this.app.showToast?.(`已切换 ${selectedIds.length} 个${isPrompt ? '提示词' : '图像'}的收藏状态`, 'success');
+      // 切换成功后退出批量模式
       this.exitBatchMode();
     } catch (error) {
-      window.electronAPI.logError('PanelManagerBase.ts', 'Failed to batch fav', error);
-      this.app.showToast?.('批量收藏失败', 'error');
+      window.electronAPI.logError('PanelManagerBase.ts', 'Failed to batch toggle favorite', error);
+      this.app.showToast?.('切换收藏状态失败', 'error');
     }
   }
 

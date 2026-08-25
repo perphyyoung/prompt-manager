@@ -162,27 +162,15 @@ async function linkToItems(
   // 去重
   const uniqueIds = [...new Set(targetIds)];
 
-  // 关联到每个项目
-  for (const id of uniqueIds) {
-    await addTagsToItem(type, id, tagNames);
+  // 集合级批量关联：单次 IPC + 主进程事务内集合 SQL，
+  // 替代逐项目循环（万级全选场景下从 N 次 IPC 降为 1 次）
+  if (type === 'image') {
+    await window.electronAPI.addImageTagsBatch(uniqueIds, tagNames);
+  } else {
+    await window.electronAPI.addPromptTagsBatch(uniqueIds, tagNames);
   }
 
   return { linked: true, count: uniqueIds.length };
-}
-
-/**
- * 添加标签到单个项目
- */
-async function addTagsToItem(
-  type: DataType,
-  itemId: string,
-  tagNames: string[]
-): Promise<void> {
-  if (type === 'image') {
-    await window.electronAPI.addImageTags(itemId, tagNames);
-  } else {
-    await window.electronAPI.addPromptTags(itemId, tagNames);
-  }
 }
 
 /**

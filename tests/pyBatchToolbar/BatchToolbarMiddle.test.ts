@@ -217,10 +217,10 @@ describe('BatchToolbarMiddle', () => {
       await middle.batchAddTag('promptMain', ['id1'], ['tag1', 'tag2']);
     });
 
-    it('应该支持批量收藏', async () => {
+    it('应该支持批量切换收藏状态', async () => {
       middle.init('promptMain', mockBusinessConfig);
 
-      await middle.batchFavorite('promptMain', ['id1'], true);
+      await middle.batchFavorite('promptMain', ['id1']);
     });
   });
 

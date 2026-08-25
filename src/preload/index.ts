@@ -133,6 +133,7 @@ interface IElectronAPI {
   getPromptTags: () => Promise<string[]>;
   addPromptTag: (tag: string) => Promise<void>;
   addPromptTags: (promptId: string, tagNames: string[]) => Promise<void>;
+  addPromptTagsBatch: (promptIds: string[], tagNames: string[]) => Promise<{ success: boolean; added: number }>;
   deletePromptTag: (tag: string) => Promise<void>;
   deletePromptTags: (tags: string[]) => Promise<{ success: boolean; deleted: number; tags: string[] }>;
   renamePromptTag: (oldTag: string, newTag: string) => Promise<void>;
@@ -150,6 +151,7 @@ interface IElectronAPI {
   getImageTags: () => Promise<string[]>;
   addImageTag: (tag: string) => Promise<void>;
   addImageTags: (imageId: string, tagNames: string[]) => Promise<void>;
+  addImageTagsBatch: (imageIds: string[], tagNames: string[]) => Promise<{ success: boolean; added: number }>;
   updateImage: (id: string, updates: Partial<IImage>) => Promise<void>;
   renameImageTag: (oldTag: string, newTag: string) => Promise<void>;
   deleteImageTag: (tag: string) => Promise<void>;
@@ -298,6 +300,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPromptTags: () => ipcRenderer.invoke('get-prompt-tags'),
   addPromptTag: (tag: string) => ipcRenderer.invoke('add-prompt-tag', tag),
   addPromptTags: (promptId: string, tagNames: string[]) => ipcRenderer.invoke('add-prompt-tags', promptId, tagNames),
+  addPromptTagsBatch: (promptIds: string[], tagNames: string[]) => ipcRenderer.invoke('add-prompt-tags-batch', promptIds, tagNames),
   deletePromptTag: (tag: string) => ipcRenderer.invoke('delete-prompt-tag', tag),
   deletePromptTags: (tags: string[]) => ipcRenderer.invoke('delete-prompt-tags', tags),
   renamePromptTag: (oldTag: string, newTag: string) => ipcRenderer.invoke('rename-prompt-tag', oldTag, newTag),
@@ -315,6 +318,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getImageTags: () => ipcRenderer.invoke('get-image-tags'),
   addImageTag: (tag: string) => ipcRenderer.invoke('add-image-tag', tag),
   addImageTags: (imageId: string, tagNames: string[]) => ipcRenderer.invoke('add-image-tags', imageId, tagNames),
+  addImageTagsBatch: (imageIds: string[], tagNames: string[]) => ipcRenderer.invoke('add-image-tags-batch', imageIds, tagNames),
   updateImage: (id: string, updates: Partial<IImage>) => ipcRenderer.invoke('update-image', id, updates),
   renameImageTag: (oldTag: string, newTag: string) => ipcRenderer.invoke('rename-image-tag', oldTag, newTag),
   deleteImageTag: (tag: string) => ipcRenderer.invoke('delete-image-tag', tag),
