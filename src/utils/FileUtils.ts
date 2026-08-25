@@ -46,14 +46,8 @@ export async function copyDirectory(source: string, target: string): Promise<voi
  * 复制目录选项
  */
 interface CopyDirectoryWithProgressOptions {
-  /** 进度回调 */
-  onProgress?: (progress: number, fileName: string) => void;
-  /** 总大小（用于计算进度） */
-  totalSize?: number;
-  /** 基础进度值 */
-  baseProgress?: number;
-  /** 进度权重 */
-  progressWeight?: number;
+  /** 进度回调：每复制完一个文件触发，报告已复制数量与总数 */
+  onProgress?: (copiedCount: number, totalCount: number, fileName: string) => void;
 }
 
 /**
@@ -77,7 +71,7 @@ export async function copyDirectoryWithProgress(
   target: string,
   options: CopyDirectoryWithProgressOptions = {}
 ): Promise<CopyResult> {
-  const { onProgress, totalSize = 0, baseProgress = 0, progressWeight = 1 } = options;
+  const { onProgress } = options;
 
   try {
     await fs.access(source);
@@ -85,34 +79,57 @@ export async function copyDirectoryWithProgress(
     return { copiedCount: 0, copiedSize: 0 };
   }
 
-  await fs.mkdir(target, { recursive: true });
-  const entries = await fs.readdir(source, { withFileTypes: true });
+  const totalCount = await countFiles(source);
 
   let copiedCount = 0;
   let copiedSize = 0;
 
-  for (const entry of entries) {
-    const sourcePath = path.join(source, entry.name);
-    const targetPath = path.join(target, entry.name);
+  async function walk(src: string, dst: string): Promise<void> {
+    await fs.mkdir(dst, { recursive: true });
+    const entries = await fs.readdir(src, { withFileTypes: true });
 
-    if (entry.isDirectory()) {
-      const result = await copyDirectoryWithProgress(sourcePath, targetPath, options);
-      copiedCount += result.copiedCount;
-      copiedSize += result.copiedSize;
-    } else {
-      const stats = await fs.stat(sourcePath);
-      await fs.copyFile(sourcePath, targetPath);
-      copiedCount++;
-      copiedSize += stats.size;
+    for (const entry of entries) {
+      const sourcePath = path.join(src, entry.name);
+      const targetPath = path.join(dst, entry.name);
 
-      if (onProgress && totalSize > 0) {
-        const fileProgress = (copiedSize / totalSize) * progressWeight;
-        onProgress(baseProgress + fileProgress, entry.name);
+      if (entry.isDirectory()) {
+        await walk(sourcePath, targetPath);
+      } else {
+        const stats = await fs.stat(sourcePath);
+        await fs.copyFile(sourcePath, targetPath);
+        copiedCount++;
+        copiedSize += stats.size;
+
+        if (onProgress && totalCount > 0) {
+          onProgress(copiedCount, totalCount, entry.name);
+        }
       }
     }
   }
 
+  await walk(source, target);
+
   return { copiedCount, copiedSize };
+}
+
+/**
+ * 递归统计目录下文件总数
+ * @param dir - 目录路径
+ * @returns 文件总数
+ */
+async function countFiles(dir: string): Promise<number> {
+  let count = 0;
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      count += await countFiles(path.join(dir, entry.name));
+    } else {
+      count++;
+    }
+  }
+
+  return count;
 }
 
 /**

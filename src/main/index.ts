@@ -1939,12 +1939,12 @@ ipcMain.handle('export-full-backup', async () => {
       });
       
       await copyDirectoryWithProgress(imagesSource, imagesTarget, {
-        onProgress: (progress, fileName) => {
-          const percent = 15 + progress * 65;
+        onProgress: (copiedCount, totalCount, fileName) => {
+          const percent = 15 + (copiedCount / totalCount) * 65;
           sendBackupProgress({
             stage: 'images',
             percent: Math.round(percent),
-            status: '正在复制图像文件...',
+            status: `正在复制图像文件... (${copiedCount}/${totalCount})`,
             detail: fileName
           });
         }
@@ -2105,12 +2105,12 @@ ipcMain.handle('import-full-backup', async () => {
         });
         
         await copyDirectoryWithProgress(imagesSource, imagesTarget, {
-          onProgress: (progress, fileName) => {
-            const percent = 50 + progress * 40;
+          onProgress: (copiedCount, totalCount, fileName) => {
+            const percent = 50 + (copiedCount / totalCount) * 40;
             sendBackupProgress({
               stage: 'images',
               percent: Math.round(percent),
-              status: '正在恢复图像文件...',
+              status: `正在恢复图像文件... (${copiedCount}/${totalCount})`,
               detail: fileName
             });
           }

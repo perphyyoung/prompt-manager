@@ -91,7 +91,7 @@ describe('FileUtils', () => {
   });
 
   describe('copyDirectoryWithProgress', () => {
-    it('should copy directory and report progress', async () => {
+    it('should copy directory and report progress by file count', async () => {
       const sourceDir = path.join(tempDir, 'source');
       const targetDir = path.join(tempDir, 'target');
 
@@ -99,20 +99,48 @@ describe('FileUtils', () => {
       await fs.writeFile(path.join(sourceDir, 'file1.txt'), 'a'.repeat(100));
       await fs.writeFile(path.join(sourceDir, 'file2.txt'), 'b'.repeat(200));
 
-      const progressCalls: Array<{ progress: number; fileName: string }> = [];
-      const onProgress = (progress: number, fileName: string): void => {
-        progressCalls.push({ progress, fileName });
+      const progressCalls: Array<{
+        copiedCount: number;
+        totalCount: number;
+        fileName: string;
+      }> = [];
+      const onProgress = (copiedCount: number, totalCount: number, fileName: string): void => {
+        progressCalls.push({ copiedCount, totalCount, fileName });
       };
 
       const result = await copyDirectoryWithProgress(sourceDir, targetDir, {
-        onProgress,
-        totalSize: 300,
-        progressWeight: 1
+        onProgress
       });
 
       expect(result.copiedCount).toBe(2);
       expect(result.copiedSize).toBe(300);
-      expect(progressCalls.length).toBeGreaterThan(0);
+      expect(progressCalls.length).toBe(2);
+      expect(progressCalls.every((c) => c.totalCount === 2)).toBe(true);
+      expect(progressCalls.map((c) => c.copiedCount)).toEqual([1, 2]);
+      expect(progressCalls[progressCalls.length - 1].fileName).toBe('file2.txt');
+    });
+
+    it('should report nested files with top-level total count', async () => {
+      const sourceDir = path.join(tempDir, 'source');
+      const targetDir = path.join(tempDir, 'target');
+      const nestedDir = path.join(sourceDir, 'nested');
+
+      await fs.mkdir(nestedDir, { recursive: true });
+      await fs.writeFile(path.join(sourceDir, 'file1.txt'), 'a');
+      await fs.writeFile(path.join(nestedDir, 'file2.txt'), 'b');
+      await fs.writeFile(path.join(nestedDir, 'file3.txt'), 'c');
+
+      const progressCalls: Array<{ copiedCount: number; totalCount: number }> = [];
+      const result = await copyDirectoryWithProgress(sourceDir, targetDir, {
+        onProgress: (copiedCount, totalCount) => {
+          progressCalls.push({ copiedCount, totalCount });
+        }
+      });
+
+      expect(result.copiedCount).toBe(3);
+      expect(progressCalls.length).toBe(3);
+      expect(progressCalls.every((c) => c.totalCount === 3)).toBe(true);
+      expect(progressCalls[progressCalls.length - 1].copiedCount).toBe(3);
     });
 
     it('should return zero stats when source does not exist', async () => {
