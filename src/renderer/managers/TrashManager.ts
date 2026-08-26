@@ -3,7 +3,7 @@ import type { IDialogContext, IClosableElement } from '../../types/entities.ts';
 import { UnifiedCardRenderer, PromptTrashConfig, ImageTrashConfig } from './SharedComponents/index.ts';
 import { Constants, ElementId, Events } from '../../constants.ts';
 import { PromptTrashHandler, ImageTrashHandler } from './handlers/index.ts';
-import { localTime, cacheManager } from '../../utils/index.ts';
+import { cacheManager } from '../../utils/index.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import type { TrashHandler, TrashItem } from './handlers/TrashHandler.ts';
 import type { IApp, IEventBus, IPanelManager } from '../app.types.ts';
@@ -466,38 +466,6 @@ export class TrashManager {
     if (!cacheManager || !this.currentHandler) return;
 
     cacheManager.removeCachedItem(itemId, this.currentHandler.type);
-  }
-
-  /**
-   * 添加到回收站（内部使用）
-   * @param item - 项目信息
-   */
-  async addItem(item: Partial<TrashItem>): Promise<void> {
-    if (!this.currentHandler) return;
-    const newItem: TrashItem = {
-      id: item.id || '',
-      type: this.currentHandler.type,
-      deletedAt: localTime(),
-      ...item
-    };
-    this.trashItems.unshift(newItem);
-    await this.renderTrashList();
-  }
-
-  /**
-   * 获取回收站项目数量
-   * @returns 项目数量
-   */
-  getCount(): number {
-    return this.trashItems.length;
-  }
-
-  /**
-   * 获取回收站项目
-   * @returns 项目列表
-   */
-  getItems(): TrashItem[] {
-    return this.trashItems;
   }
 
   /**

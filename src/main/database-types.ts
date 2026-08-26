@@ -468,26 +468,17 @@ export interface TagSyncResult {
 }
 
 /**
- * 统计数据结果
+ * 统计数据汇总（SQL 聚合计数，isSafeOnly 时仅统计 is_safe = 1 的项目）
  */
 export interface Statistics {
-  prompts: {
-    total: number;
-    active: number;
-    deleted: number;
-    tags: number;
-  };
-  images: {
-    total: number;
-    referenced: number;
-    unreferenced: number;
-    deleted: number;
-    tags: number;
-  };
-  relations: {
-    total: number;
-    promptsWithImages: number;
-  };
+  totalPrompts: number;
+  deletedPrompts: number;
+  favoritePrompts: number;
+  promptsWithImages: number;
+  totalImages: number;
+  deletedImages: number;
+  favoriteImages: number;
+  referencedImages: number;
 }
 
 /**

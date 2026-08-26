@@ -589,7 +589,7 @@ function createTray() {
 
 // IPC 处理器
 
-// 获取所有 Prompts
+// 获取所有 Prompts（含已删除；供 e2e 测试与备份统计使用）
 ipcMain.handle('get-prompts', async (event, sortBy, sortOrder) => {
   return await db.getPrompts(sortBy, sortOrder);
 });
@@ -970,12 +970,6 @@ ipcMain.handle('rename-prompt-tag', async (event, oldTag, newTag) => {
   }
 });
 
-// 搜索 Prompts
-ipcMain.handle('search-prompts', async (event, query) => {
-  if (!query) return await db.getPrompts();
-  return await db.searchPrompts(query);
-});
-
 // 导出 Prompts
 ipcMain.handle('export-prompts', async (event, prompts) => {
   if (!mainWindow) throw new Error('Main window is not available');
@@ -1292,16 +1286,6 @@ ipcMain.handle('get-images-by-ids', async (event, ids) => {
   }
 });
 
-// 获取所有图像（用于统计）
-ipcMain.handle('get-all-images-for-stats', async () => {
-  try {
-    return await db.getAllImages();
-  } catch (error) {
-    logError('Main', 'Get all images for stats error:', error);
-    throw error;
-  }
-});
-
 // 根据 ID 获取提示词信息
 ipcMain.handle('get-prompt-by-id', async (event, promptId) => {
   try {
@@ -1594,10 +1578,10 @@ ipcMain.handle('clear-all-data', async () => {
   }
 });
 
-// 获取统计数据
-ipcMain.handle('get-statistics', async () => {
+// 获取统计数据（SQL 聚合）
+ipcMain.handle('get-statistics', async (event, isSafeOnly: boolean) => {
   try {
-    return await db.getStatistics();
+    return await db.getStatistics(isSafeOnly);
   } catch (error) {
     logError('Main', 'Get statistics error:', error);
     throw error;

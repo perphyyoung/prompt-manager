@@ -1,5 +1,4 @@
-import { cacheManager, searchMatches, cyrb53 } from '../../utils/index.ts';
-import { timeToTimestamp } from '../../utils/TimeUtils.ts';
+import { cacheManager, cyrb53 } from '../../utils/index.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
 import { localStorageManager } from '../configs/LocalStorageConfig.ts';
 import type { IApp } from '../app.types.ts';
@@ -9,7 +8,7 @@ import { DialogConfig } from '../services/index.ts';
 import { batchToolbarMiddle } from '../../middle/index.ts';
 
 import { IImage } from '../../types/entities.ts';
-import { VirtualScrollBar, VirtualWindowRenderer, type VisibleRange } from '../renderer_utils/index.ts';
+import { VirtualScrollBar, VirtualWindowRenderer } from '../renderer_utils/index.ts';
 import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
 
@@ -224,14 +223,6 @@ export class ImagePanelManager extends PanelManagerBase {
    */
   getSearchQuery(): string {
     return this.app.searchSortManager?.getImageSearchQuery() || '';
-  }
-
-  /**
-   * 检查图像是否匹配搜索查询（实现基类抽象方法）
-   * 支持文件名、标签、备注搜索
-   */
-  matchesSearch(img: IImage, lowerQuery: string): boolean {
-    return searchMatches(img, lowerQuery);
   }
 
   /**
@@ -541,15 +532,6 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
-   * 追加渲染到容器
-   * 虚拟滚动模式：数据已并入 filteredImages，仅刷新窗口使新数据按需渲染
-   * @param _newItems - 新加载的图像列表（已并入全量数组，无需单独处理）
-   */
-  private async appendToContainer(_newItems: IImage[]): Promise<void> {
-    this.windowRenderer?.refresh();
-  }
-
-  /**
    * 设置卡片尺寸（重写基类）
    * 卡片尺寸变化影响网格行高与列数，既有节点坐标全部过期，强制全量重建
    */
@@ -574,14 +556,6 @@ export class ImagePanelManager extends PanelManagerBase {
     if (!container) return 1;
     const usableWidth = container.clientWidth - 8; // padding-right: 8px
     return Math.max(1, Math.floor((usableWidth + GRID_GAP) / this.getGridRowHeight()));
-  }
-
-  /**
-   * 渲染可见窗口内的卡片（VirtualScroller 回调）
-   * 窗口计算、增量修补与越界钳制统一由 VirtualWindowRenderer 实现
-   */
-  private renderWindow(range: VisibleRange): void {
-    this.windowRenderer?.render(range);
   }
 
   /**
@@ -1057,54 +1031,6 @@ export class ImagePanelManager extends PanelManagerBase {
   }
 
   /**
-   * 排序图像列表（实现基类抽象方法）
-   */
-  sortItems(items: IImage[], sortBy: string, sortOrder: string): IImage[] {
-    const sorted = [...items];
-    const order = sortOrder === 'asc' ? 1 : -1;
-
-    sorted.sort((a, b) => {
-      let valueA: string | number | undefined, valueB: string | number | undefined;
-
-      switch (sortBy) {
-        case 'updatedAt':
-          valueA = timeToTimestamp(a.updatedAt);
-          valueB = timeToTimestamp(b.updatedAt);
-          break;
-        case 'createdAt':
-          valueA = timeToTimestamp(a.createdAt);
-          valueB = timeToTimestamp(b.createdAt);
-          break;
-        case 'fileName':
-          valueA = (a.fileName || '').toLowerCase();
-          valueB = (b.fileName || '').toLowerCase();
-          break;
-        case 'width':
-          valueA = a.width || 0;
-          valueB = b.width || 0;
-          break;
-        case 'height':
-          valueA = a.height || 0;
-          valueB = b.height || 0;
-          break;
-        case 'fileSize':
-          valueA = a.fileSize || 0;
-          valueB = b.fileSize || 0;
-          break;
-        default:
-          valueA = timeToTimestamp(a.updatedAt);
-          valueB = timeToTimestamp(b.updatedAt);
-      }
-
-      if (valueA < valueB) return -1 * order;
-      if (valueA > valueB) return 1 * order;
-      return 0;
-    });
-
-    return sorted;
-  }
-
-  /**
    * 刷新面板（重写基类方法）
    * renderView 已包含 loadData，避免重复加载
    */
@@ -1172,19 +1098,6 @@ export class ImagePanelManager extends PanelManagerBase {
       window.electronAPI.logError('ImagePanelManager.ts', 'Failed to refresh incremental:', error);
       this.app.showToast?.('刷新失败', 'error');
     }
-  }
-
-  /**
-   * 渲染标签 HTML
-   */
-  private renderTagsHtml(tags: string[], isFavorite?: number): string {
-    if (tags.length === 0 && !isFavorite) return '';
-
-    const tagHtml = tags.slice(0, 3).map(tag => `<span class="image-card-tag">${tag}</span>`).join('');
-    const moreCount = tags.length - 3;
-    const moreHtml = moreCount > 0 ? `<span class="image-card-tag image-card-tag--more">+${moreCount}</span>` : '';
-
-    return tagHtml + moreHtml;
   }
 
   /**

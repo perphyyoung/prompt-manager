@@ -316,14 +316,6 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 获取可见项目数量
-   * @returns 可见项目数量
-   */
-  getVisibleItemCount(): number {
-    return this.filteredItems?.length || 0;
-  }
-
-  /**
    * 获取搜索查询（子类实现）
    * @abstract
    * @returns 搜索查询字符串
@@ -331,15 +323,6 @@ export abstract class PanelManagerBase {
   getSearchQuery(): string {
     return ''; // 默认返回空字符串，表示不搜索
   }
-
-  /**
-   * 检查项目是否匹配搜索查询（子类实现）
-   * @abstract
-   * @param item - 项目对象
-   * @param lowerQuery - 小写的搜索查询
-   * @returns 是否匹配
-   */
-  abstract matchesSearch(item: IPanelItem, lowerQuery: string): boolean;
 
   /**
    * 获取特殊标签检查函数 Map（子类实现）
@@ -617,86 +600,6 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 异步加载卡片背景图（通用实现）
-   * 优先从路径缓存读取，未命中时单次 IPC 批量兜底并回写缓存
-   */
-  async loadCardBackgrounds(): Promise<void> {
-    const config = this.getUIConfig();
-    const container = document.getElementById(config.gridContainerId);
-    if (!container) return;
-
-    const cards = container.querySelectorAll(config.cardSelector);
-    const items = this.getItems();
-
-    // 收集所有卡片的路径信息：优先从路径缓存读取
-    const cardInfoList: Array<{ card: Element; fullPath: string }> = [];
-    const uncachedIds: string[] = [];
-    const uncachedPaths: string[] = [];
-
-    for (const card of cards) {
-      const id = (card as HTMLElement).dataset.id;
-      const item = items.find(i => String(i.id) === String(id));
-      if (!item) continue;
-
-      const imagePath = config.getCardImagePath(item);
-      if (!imagePath) continue;
-
-      // 尝试从路径缓存读取（按 imageId 命中）
-      const imageId = config.getCardImageId?.(item);
-      if (imageId) {
-        const cached = cacheManager.getImagePath(imageId, 'thumbnail');
-        if (cached) {
-          cardInfoList.push({ card, fullPath: cached });
-          continue;
-        }
-      }
-
-      // 缓存未命中：记录 imageId 用于回写，relativePath 用于 IPC
-      uncachedIds.push(imageId || '');
-      uncachedPaths.push(imagePath);
-      cardInfoList.push({ card, fullPath: '' });
-    }
-
-    if (cardInfoList.length === 0) return;
-
-    // 仅对未命中的项单次 IPC 批量获取
-    if (uncachedPaths.length > 0) {
-      try {
-        const fullPaths = await window.electronAPI.getImagesPaths(uncachedPaths);
-        const entries: Array<{ imageId: string; fullPath: string }> = [];
-        let uncachedIdx = 0;
-        for (const info of cardInfoList) {
-          if (!info.fullPath && uncachedIdx < uncachedPaths.length) {
-            const fullPath = fullPaths[uncachedIdx];
-            const imageId = uncachedIds[uncachedIdx];
-            if (fullPath) {
-              info.fullPath = fullPath;
-              if (imageId) {
-                entries.push({ imageId, fullPath });
-              }
-            }
-            uncachedIdx++;
-          }
-        }
-        if (entries.length > 0) {
-          cacheManager.setImagePaths(entries, 'thumbnail');
-        }
-      } catch (error) {
-        window.electronAPI.logError('PanelManagerBase.ts', 'Failed to load card backgrounds:', error);
-      }
-    }
-
-    // 应用所有背景图
-    for (const info of cardInfoList) {
-      if (!info.fullPath) continue;
-      const bgElement = info.card.querySelector(config.cardBgSelector);
-      if (bgElement) {
-        (bgElement as HTMLElement).style.backgroundImage = `url('file://${info.fullPath.replace(/\\/g, '/')}')`;
-      }
-    }
-  }
-
-  /**
    * 绑定悬停预览（子类实现）
    * @abstract
    * @param selector - CSS 选择器
@@ -860,16 +763,6 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 排序项目列表（子类实现）
-   * @abstract
-   * @param items - 项目列表
-   * @param sortBy - 排序字段
-   * @param sortOrder - 排序顺序
-   * @returns 排序后的列表
-   */
-  abstract sortItems(items: IPanelItem[], sortBy: string, sortOrder: string): IPanelItem[];
-
-  /**
    * 订阅事件（子类可选实现）
    */
   subscribeToEvents(): void {
@@ -933,68 +826,10 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 渲染主列表（模板方法）
+   * 渲染主列表（子类完整实现：数据库分页查询 + 虚拟窗口渲染）
+   * @abstract
    */
-  async renderView(): Promise<void> {
-    try {
-      const items = this.getItems();
-
-      // 过滤项目
-      let filtered = items;
-
-      // 过滤已删除的项目
-      filtered = filtered.filter((item: IPanelItem) => !item.isDeleted);
-
-      // 根据 viewMode 过滤
-      const currentViewMode = this.app.viewMode;
-      if (currentViewMode === 'safe') {
-        filtered = filtered.filter((item: IPanelItem) => item.isSafe !== 0);
-      }
-
-      // 标签筛选（多选时同时符合）
-      if (this.selectedTags.size > 0) {
-        const specialTagChecks = this.getSpecialTagChecks();
-        filtered = filtered.filter((item: IPanelItem) => {
-          const matchesAll = Array.from(this.selectedTags).every(tag => {
-            const checkFn = specialTagChecks.get(tag);
-            if (checkFn) {
-              return checkFn(item);
-            }
-            // 普通标签
-            if (!item.tags) {
-              (window as { electronAPI?: { logError?: (context: string, message: string, data?: unknown) => void } }).electronAPI?.logError?.('PanelManagerBase.ts', `Item ${item.id} has no tags property`, item);
-              return false;
-            }
-            return item.tags.includes(tag);
-          });
-          // 反选模式：排除匹配的项目
-          return this.invertedFilter ? !matchesAll : matchesAll;
-        });
-      }
-
-      // 搜索过滤
-      const currentSearchQuery = this.getSearchQuery();
-      if (currentSearchQuery) {
-        const lowerQuery = currentSearchQuery.toLowerCase();
-        filtered = filtered.filter((item: IPanelItem) => this.matchesSearch(item, lowerQuery));
-      }
-
-      // 排序
-      filtered = this.sortItems(filtered, this.sortBy, this.sortOrder);
-
-      // 保存筛选后的列表
-      this.filteredItems = filtered;
-
-      // 子类实现具体的渲染逻辑
-      await this.renderContainer(filtered);
-
-      // 执行渲染后的通用后续处理
-      await this.afterRenderContainer(filtered);
-    } catch (error) {
-      (window as { electronAPI?: { logError?: (context: string, message: string, data?: unknown) => void } }).electronAPI?.logError?.('PanelManagerBase.ts', `Failed to render ${this.getItemType()} list:`, error);
-      this.app.showToast?.(`加载${this.getItemType()}失败`, 'error');
-    }
-  }
+  abstract renderView(): Promise<void>;
 
   /**
    * 渲染容器后的通用后续处理
@@ -1431,13 +1266,6 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 更新工具栏 UI
-   */
-  updateToolbarUI(): void {
-    // 由 BatchToolbarMiddle 自动同步
-  }
-
-  /**
    * 进入批量模式
    */
   enterBatchMode(): void {
@@ -1604,77 +1432,6 @@ export abstract class PanelManagerBase {
         }
       });
     });
-  }
-
-  /**
-   * 增量更新列表视图 DOM
-   * 通用实现：title/content/tags/note/favorite
-   * 子类可通过覆盖 updateListItemContent 提供个性化逻辑
-   */
-  protected updateListDomIncrementally(items: IPanelItem[]): void {
-    const config = this.getUIConfig();
-    const container = document.getElementById(config.listContainerId);
-    if (!container) return;
-
-    for (const item of items) {
-      const li = container.querySelector(`[data-id="${item.id}"]`) as HTMLElement;
-      if (!li) continue;
-
-      // 收藏状态
-      const isFavorite = !!item.isFavorite;
-      li.classList.toggle('list-item--favorite', isFavorite);
-      const favoriteBtn = li.querySelector('.favorite-btn');
-      if (favoriteBtn) {
-        favoriteBtn.classList.toggle('active', isFavorite);
-        favoriteBtn.innerHTML = isFavorite ? Constants.ICONS.favorite.filled : Constants.ICONS.favorite.outline;
-      }
-
-      // 标题
-      const titleEl = li.querySelector('.list-item__title');
-      if (titleEl) {
-        titleEl.textContent = config.getListTitle(item);
-      }
-
-      // 内容
-      const contentEl = li.querySelector('.list-item__content');
-      if (contentEl) {
-        contentEl.textContent = config.getListContent(item);
-      }
-
-      // 标签
-      const tagsContainer = li.querySelector('.list-item__tags');
-      if (tagsContainer) {
-        tagsContainer.innerHTML = TagUI.generateTagsHtml(
-          item.tags || [],
-          'tag-display',
-          'tag-display-empty'
-        );
-      }
-
-      // 备注
-      // 首次有备注时 DOM 中没有 .list-item__note（受 condition 控制），需主动创建
-      let noteContainer = li.querySelector('.list-item__note') as HTMLElement;
-      const noteText = (item as { note?: string }).note;
-      if (noteText) {
-        if (!noteContainer) {
-          const textContent = li.querySelector('.list-item__text-content');
-          if (textContent) {
-            noteContainer = document.createElement('div');
-            noteContainer.className = 'list-item__note';
-            textContent.appendChild(noteContainer);
-          }
-        }
-        if (noteContainer) {
-          noteContainer.textContent = noteText;
-          noteContainer.title = noteText;
-          noteContainer.style.display = '';
-        }
-      } else if (noteContainer) {
-        noteContainer.textContent = '';
-        noteContainer.removeAttribute('title');
-        noteContainer.style.display = 'none';
-      }
-    }
   }
 
   /**

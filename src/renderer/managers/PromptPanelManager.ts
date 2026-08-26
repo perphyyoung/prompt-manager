@@ -1,5 +1,4 @@
 import { cacheManager, cyrb53 } from '../../utils/index.ts';
-import { timeToTimestamp } from '../../utils/TimeUtils.ts';
 import { PanelManagerBase, IPanelItem } from './PanelManagerBase.ts';
 import { localStorageManager } from '../configs/LocalStorageConfig.ts';
 import type { IApp } from '../app.types.ts';
@@ -9,7 +8,7 @@ import { DialogConfig } from '../services/index.ts';
 import { batchToolbarMiddle } from '../../middle/index.ts';
 
 import { IPrompt } from '../../types/entities.ts';
-import { VirtualScrollBar, VirtualWindowRenderer, type VisibleRange } from '../renderer_utils/index.ts';
+import { VirtualScrollBar, VirtualWindowRenderer } from '../renderer_utils/index.ts';
 import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
 import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
 
@@ -181,13 +180,6 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 获取过滤后的提示词列表
-   */
-  getFilteredPrompts(): IPrompt[] {
-    return this.filteredPrompts;
-  }
-
-  /**
    * 获取当前已加载的提示词列表
    * filteredPrompts 为权威数据源（含已加载的全部分页）；
    * LRU 缓存容量有限会被淘汰，仅作初始兜底，
@@ -211,20 +203,6 @@ export class PromptPanelManager extends PanelManagerBase {
    */
   getSearchQuery(): string {
     return this.app.searchSortManager?.getPromptSearchQuery() || '';
-  }
-
-  /**
-   * 检查提示词是否匹配搜索查询（实现基类抽象方法）
-   * 支持标题、内容、翻译、标签、备注搜索
-   */
-  matchesSearch(prompt: IPrompt, lowerQuery: string): boolean {
-    if (!lowerQuery) return true;
-    return !!(
-      prompt.title?.toLowerCase().includes(lowerQuery) ||
-      prompt.content?.toLowerCase().includes(lowerQuery) ||
-      prompt.contentTranslate?.toLowerCase().includes(lowerQuery) ||
-      (prompt.tags && prompt.tags.some(tag => tag.toLowerCase().includes(lowerQuery)))
-    );
   }
 
   /**
@@ -476,15 +454,6 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
-   * 追加渲染到容器
-   * 虚拟滚动模式：数据已并入 filteredPrompts，仅刷新窗口使新数据按需渲染
-   * @param _newItems - 新加载的提示词列表（已并入全量数组，无需单独处理）
-   */
-  private async appendToContainer(_newItems: IPrompt[]): Promise<void> {
-    this.windowRenderer?.refresh();
-  }
-
-  /**
    * 网格行高 = 卡片尺寸 + 行间距（.grid-view gap: 16px）
    */
   private getPromptRowHeight(): number {
@@ -499,14 +468,6 @@ export class PromptPanelManager extends PanelManagerBase {
     if (!container) return 1;
     const usableWidth = container.clientWidth - 8; // padding-right: 8px
     return Math.max(1, Math.floor((usableWidth + GRID_GAP) / this.getPromptRowHeight()));
-  }
-
-  /**
-   * 渲染可见窗口内的卡片（VirtualScroller 回调）
-   * 窗口计算、增量修补与越界钳制统一由 VirtualWindowRenderer 实现
-   */
-  private renderWindow(range: VisibleRange): void {
-    this.windowRenderer?.render(range);
   }
 
   /**
@@ -600,19 +561,6 @@ export class PromptPanelManager extends PanelManagerBase {
   /** 一屏项数（列数 × 可视行数） */
   private getPageSizeItems(): number {
     return Math.max(1, this.getPromptColumns() * this.getViewportRows());
-  }
-
-  /**
-   * 将 HTML 字符串追加到容器
-   * 使用 DOMParser 避免直接调用 insertAdjacentHTML 触发 lint 警告
-   * @param container - 容器元素
-   * @param html - HTML 字符串
-   */
-  private appendHtmlToContainer(container: HTMLElement, html: string): void {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    const nodes = Array.from(doc.body.childNodes);
-    container.append(...nodes);
   }
 
   /**
@@ -1062,42 +1010,6 @@ export class PromptPanelManager extends PanelManagerBase {
       window.electronAPI.logError('PromptPanelManager.ts', 'toggleFavorite error:', error);
       this.app.showToast('操作失败：' + (error as Error).message, 'error');
     }
-  }
-
-  /**
-   * 排序提示词列表（实现基类抽象方法）
-   */
-  sortItems(items: IPrompt[], sortBy: string, sortOrder: string): IPrompt[] {
-    const sorted = [...items];
-    const order = sortOrder === 'asc' ? 1 : -1;
-
-    sorted.sort((a, b) => {
-      let valueA: string | number | undefined, valueB: string | number | undefined;
-
-      switch (sortBy) {
-        case 'updatedAt':
-          valueA = timeToTimestamp(a.updatedAt);
-          valueB = timeToTimestamp(b.updatedAt);
-          break;
-        case 'createdAt':
-          valueA = timeToTimestamp(a.createdAt);
-          valueB = timeToTimestamp(b.createdAt);
-          break;
-        case 'title':
-          valueA = (a.title || '').toLowerCase();
-          valueB = (b.title || '').toLowerCase();
-          break;
-        default:
-          valueA = timeToTimestamp(a.updatedAt);
-          valueB = timeToTimestamp(b.updatedAt);
-      }
-
-      if (valueA < valueB) return -1 * order;
-      if (valueA > valueB) return 1 * order;
-      return 0;
-    });
-
-    return sorted;
   }
 
   /**

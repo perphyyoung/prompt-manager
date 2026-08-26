@@ -103,44 +103,31 @@ export class StatisticsManager {
 
   /**
    * 计算统计数据
+   * 计数走主进程 SQL 聚合（getStatistics），标签组为轻量小表直接查询，
+   * 避免把全量提示词/图像经 IPC 拉进渲染进程做 JS 计数
    */
   async calculateStatistics(): Promise<IStatistics> {
-    // 获取所有数据（包括已删除的）
-    const prompts = await window.electronAPI.getPrompts('', '');
-    const allImages = await window.electronAPI.getAllImagesForStats();
-    const promptTagGroups = await window.electronAPI.getPromptTagGroups();
-    const imageTagGroups = await window.electronAPI.getImageTagGroups();
-
-    // 根据当前视图模式过滤数据（safe 模式只显示 isSafe=1 的项目）
     const isSafeMode = this.app.viewMode === 'safe';
-    const filteredPrompts = isSafeMode ? prompts.filter(p => p.isSafe !== 0) : prompts;
-    const filteredImages = isSafeMode ? allImages.filter(i => i.isSafe !== 0) : allImages;
+    const [stats, promptTagGroups, imageTagGroups] = await Promise.all([
+      window.electronAPI.getStatistics(isSafeMode),
+      window.electronAPI.getPromptTagGroups(),
+      window.electronAPI.getImageTagGroups()
+    ]);
 
-    // 提示词统计（基于过滤后的数据）
-    const totalPrompts = filteredPrompts.length;
-    const deletedPrompts = filteredPrompts.filter(p => p.isDeleted).length;
-    const favoritePrompts = filteredPrompts.filter(p => p.isFavorite && !p.isDeleted).length;
-    const promptsWithImages = filteredPrompts.filter(p => p.images && p.images.length > 0 && !p.isDeleted).length;
     const totalPromptTags = promptTagGroups.reduce((sum, group) => sum + (group.tags ? group.tags.length : 0), 0);
-
-    // 图像统计（基于过滤后的数据）
-    const totalImages = filteredImages.length;
-    const deletedImages = filteredImages.filter(i => i.isDeleted).length;
-    const favoriteImages = filteredImages.filter(i => i.isFavorite && !i.isDeleted).length;
-    const referencedImages = filteredImages.filter(i => i.promptRefs && i.promptRefs.length > 0 && !i.isDeleted).length;
     const totalImageTags = imageTagGroups.reduce((sum, group) => sum + (group.tags ? group.tags.length : 0), 0);
 
     return {
-      totalPrompts,
-      deletedPrompts,
-      favoritePrompts,
-      promptsWithImages,
+      totalPrompts: stats.totalPrompts,
+      deletedPrompts: stats.deletedPrompts,
+      favoritePrompts: stats.favoritePrompts,
+      promptsWithImages: stats.promptsWithImages,
       promptTagGroups: promptTagGroups.length,
       totalPromptTags,
-      totalImages,
-      deletedImages,
-      favoriteImages,
-      referencedImages,
+      totalImages: stats.totalImages,
+      deletedImages: stats.deletedImages,
+      favoriteImages: stats.favoriteImages,
+      referencedImages: stats.referencedImages,
       imageTagGroups: imageTagGroups.length,
       totalImageTags
     };

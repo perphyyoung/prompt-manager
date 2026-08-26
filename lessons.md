@@ -7,3 +7,4 @@
 - 优先使用 SearchReplace 进行局部修改，只有在修改量超过 50% 或需要结构重组时才考虑重写（Write）文件
 - 简化代码时，只删除未使用的代码和对应注释，不删除有价值的注释（如 JSDoc）
 - 谨慎使用 `declare global`，它会覆盖整个项目的类型声明；如果必须使用，确保与现有声明兼容，修改后需要重启 TypeScript 服务
+- 代码搜索遵守"用 rg 而不是 grep"：Agent 环境内置搜索工具底层即 ripgrep 可直接使用；shell 层搜索一律用 `rg`/`rtk grep`，不用裸 grep

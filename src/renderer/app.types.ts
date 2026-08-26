@@ -27,7 +27,6 @@ export interface IPanelManager {
   setCardSize(size: number): void;
   handleFilterAction(): void;
   refreshAfterUpdate(): Promise<void>;
-  updateToolbarUI(): void;
   exitBatchMode(): void;
   selectAllVisibleItems(): void;
   toggleTagFilterState(): Promise<void>;
@@ -221,9 +220,6 @@ export interface IApp {
   currentPanel: string;
   isFromDetailJump: boolean;
   viewMode: string;
-  searchQuery: string;
-  selectedTags: Set<string>;
-  imageSearchQuery: string;
 
   // 标签排序状态
   promptTagSortBy: string;

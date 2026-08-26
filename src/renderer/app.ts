@@ -55,9 +55,6 @@ class PromptManager implements IApp {
 
   // 状态
   viewMode: string;
-  searchQuery: string;
-  selectedTags: Set<string>;
-  imageSearchQuery: string;
 
   // 标签排序状态
   promptTagSortBy: string;
@@ -96,7 +93,6 @@ class PromptManager implements IApp {
   currentPanel: string;
 
   // UI 组件
-  hoverTooltip: unknown | null = null;
   promptHoverTooltip: IHoverTooltipManager | null = null;
 
   // 统计管理器（在 initPanelManagers 中初始化）
@@ -114,9 +110,6 @@ class PromptManager implements IApp {
 
     // 从 localStorage 加载 viewMode（在创建面板管理器之前）
     this.viewMode = localStorageManager.get<string>(Constants.LocalStorageKey.VIEW_MODE);
-    this.searchQuery = '';
-    this.selectedTags = new Set();
-    this.imageSearchQuery = '';
 
     // 标签管理排序状态
     this.promptTagSortBy = localStorageManager.get<string>(Constants.LocalStorageKey.PROMPT_TAG_SORT_BY);
@@ -133,9 +126,6 @@ class PromptManager implements IApp {
 
     // 当前面板状态 (由 NavigationManager 管理)
     this.currentPanel = 'prompt'; // 默认打开提示词面板
-
-    // UI 组件
-    this.hoverTooltip = null;
 
     // 其他状态
     this.isFromDetailJump = false;
@@ -163,9 +153,6 @@ class PromptManager implements IApp {
 
       // 绑定全局事件
     this.bindGlobalEvents();
-
-    // 加载数据（初始化，不刷新）
-    await this.loadData(false);
 
     // 恢复上次打开的面板（会触发当前面板的渲染）
     this.navigationManager?.restorePanelState();
@@ -321,25 +308,6 @@ class PromptManager implements IApp {
         }
       }
     });
-  }
-
-  /**
-   * 加载数据
-   * @param refresh - 是否强制刷新面板
-   */
-  async loadData(refresh = false) {
-    // 数据已由面板管理器加载到 CacheManager
-    // 但某些操作（如上传图像）可能需要刷新面板
-    if (refresh) {
-      if (this.promptPanelManager) {
-        await this.promptPanelManager.loadData?.();
-        await this.promptPanelManager.renderView();
-      }
-      if (this.imagePanelManager) {
-        await this.imagePanelManager.loadData?.();
-        await this.imagePanelManager.renderView();
-      }
-    }
   }
 
   /**
@@ -534,28 +502,6 @@ class PromptManager implements IApp {
     const second = String(now.getSeconds()).padStart(2, '0');
     const ms = String(now.getMilliseconds()).padStart(3, '0');
     return `${year}${month}${day}_${hour}${minute}${second}_${ms}`;
-  }
-
-  /**
-   * 加载提示词列表
-   */
-  async loadPrompts() {
-    try {
-      const prompts = await window.electronAPI.getPrompts(this.promptTagSortBy, this.promptTagSortOrder);
-      cacheManager.cachePrompts(prompts);
-      // 同步到面板管理器
-      if (this.promptPanelManager) {
-        await this.promptPanelManager.renderView();
-        await this.promptPanelManager.renderTagFilters();
-      }
-    } catch (error) {
-      window.electronAPI.logError('App', 'Failed to load prompts:', error);
-      // 失败时保留旧缓存：数据仍以数据库为准，清空只会导致后续全部重新 IPC
-      if (this.promptPanelManager) {
-        await this.promptPanelManager.renderView();
-        await this.promptPanelManager.renderTagFilters();
-      }
-    }
   }
 
   /**

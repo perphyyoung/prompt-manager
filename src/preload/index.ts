@@ -83,7 +83,6 @@ interface IElectronAPI {
   softDeletePrompt: (id: string) => Promise<void>;
   softDeletePrompts: (ids: string[]) => Promise<{ success: boolean; deleted: number }>;
   batchFavoritePrompts: (ids: string[]) => Promise<{ success: boolean; updated: number }>;
-  searchPrompts: (query: string) => Promise<IPrompt[]>;
 
   // 剪贴板
   copyToClipboard: (text: string) => Promise<void>;
@@ -116,7 +115,6 @@ interface IElectronAPI {
   countImageTags: (options: import('../main/database-types.js').CountImageTagsOptions) => Promise<Record<string, number>>;
   countImageSpecialTags: (options: import('../main/database-types.js').CountImageTagsOptions) => Promise<import('../main/database-types.js').ImageSpecialTagCounts>;
   getImagesByIds: (ids: string[]) => Promise<IImage[]>;
-  getAllImagesForStats: () => Promise<IImage[]>;
   getImageById: (imageId: string) => Promise<IImage | null>;
 
   // 提示词回收站
@@ -202,11 +200,7 @@ interface IElectronAPI {
   }>;
 
   // 统计
-  getStatistics: () => Promise<{
-    prompts: { total: number; favorite: number; trash: number };
-    images: { total: number; favorite: number; trash: number };
-    tags: { prompt: number; image: number };
-  }>;
+  getStatistics: (isSafeOnly: boolean) => Promise<import('../main/database-types.js').Statistics>;
 
   // 调试日志
   logDebug: (component: string, message: string, data?: unknown) => void;
@@ -254,7 +248,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   softDeletePrompt: (id: string) => ipcRenderer.invoke('soft-delete-prompt', id),
   softDeletePrompts: (ids: string[]) => ipcRenderer.invoke('soft-delete-prompts', ids),
   batchFavoritePrompts: (ids: string[]) => ipcRenderer.invoke('batch-favorite-prompts', ids),
-  searchPrompts: (query: string) => ipcRenderer.invoke('search-prompts', query),
 
   // ==================== 剪贴板 ====================
   copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),
@@ -283,7 +276,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   countImageTags: (options: import('../main/database-types.js').CountImageTagsOptions) => ipcRenderer.invoke('count-image-tags', options),
   countImageSpecialTags: (options: import('../main/database-types.js').CountImageTagsOptions) => ipcRenderer.invoke('count-image-special-tags', options),
   getImagesByIds: (ids: string[]) => ipcRenderer.invoke('get-images-by-ids', ids),
-  getAllImagesForStats: () => ipcRenderer.invoke('get-all-images-for-stats'),
   getImageById: (imageId: string) => ipcRenderer.invoke('get-image-by-id', imageId),
 
   // ==================== 提示词回收站 ====================
@@ -354,7 +346,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   syncTagsBidirectional: () => ipcRenderer.invoke('sync-tags-bidirectional'),
 
   // ==================== 统计 ====================
-  getStatistics: () => ipcRenderer.invoke('get-statistics'),
+  getStatistics: (isSafeOnly: boolean) => ipcRenderer.invoke('get-statistics', isSafeOnly),
 
   // ==================== 调试日志 ====================
   logDebug: (component: string, message: string, data?: unknown) => {

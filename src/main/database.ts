@@ -920,7 +920,8 @@ async function getPromptsWithImages(promptRows: PromptRow[], options: MapPromptO
 }
 
 /**
- * 获取所有提示词（不包括已删除的）
+ * 获取所有提示词（注意：包含已删除项）
+ * 仅供 e2e 测试种子/断言与备份统计使用，界面数据一律走 getPromptsPaginated
  * @param sortBy - 排序字段: 'updatedAt', 'createdAt', 'title'
  * @param sortOrder - 排序顺序: 'asc', 'desc'
  */
@@ -1194,43 +1195,6 @@ async function getPromptById(id: string): Promise<Prompt | null> {
   prompt.images = images || [];
 
   return prompt;
-}
-
-/**
- * 搜索提示词
- * 在数据库层面进行搜索，支持标题、内容、翻译、标签和备注搜索
- * 使用 JOIN 替代子查询优化性能
- * @param query - 搜索关键词
- * @returns 匹配的提示词列表
- */
-async function searchPrompts(query: string): Promise<Prompt[]> {
-  const lowerQuery = `%${query.toLowerCase()}%`;
-
-  // 搜索提示词（标题、内容、翻译、标签、备注匹配）
-  // 使用 LEFT JOIN 替代子查询，提升查询性能
-  const sql = `
-    SELECT DISTINCT p.*, GROUP_CONCAT(DISTINCT pt.name) as tags
-    FROM prompts p
-    LEFT JOIN prompt_tag_relations ptr ON p.id = ptr.prompt_id
-    LEFT JOIN prompt_tags pt ON ptr.tag_id = pt.id
-    LEFT JOIN prompt_tag_relations ptr2 ON p.id = ptr2.prompt_id
-    LEFT JOIN prompt_tags pt2 ON ptr2.tag_id = pt2.id
-    WHERE p.is_deleted = 0
-    AND (
-      LOWER(p.title) LIKE ?
-      OR LOWER(p.content) LIKE ?
-      OR LOWER(p.content_translate) LIKE ?
-      OR LOWER(p.note) LIKE ?
-      OR LOWER(pt2.name) LIKE ?
-    )
-    GROUP BY p.id
-    ORDER BY p.updated_at DESC
-  `;
-
-  const rows = await all<PromptRow>(sql, [lowerQuery, lowerQuery, lowerQuery, lowerQuery, lowerQuery]);
-
-  // 使用批量查询获取图像，避免 N+1 问题
-  return getPromptsWithImages(rows);
 }
 
 /**
@@ -1717,19 +1681,17 @@ async function renameTag(type: keyof TagConfigMap, oldTag: string, newTag: strin
       `SELECT ${itemIdColumn} FROM ${relationTable} WHERE ${tagIdColumn} = ?`,
       [oldTagRow.id]
     );
-    for (const rel of relations) {
-      try {
+    await runInTransaction(async () => {
+      for (const rel of relations) {
+        // OR IGNORE：目标项已有同款关联时跳过（合并语义）
         await run(
-          `INSERT INTO ${relationTable} (${itemIdColumn}, ${tagIdColumn}) VALUES (?, ?)`,
+          `INSERT OR IGNORE INTO ${relationTable} (${itemIdColumn}, ${tagIdColumn}) VALUES (?, ?)`,
           [rel[itemIdColumn], newTagRow.id]
         );
-      } catch (err: any) {
-        // 关联已存在，忽略
-        window.electronAPI.logError('database.ts', 'Failed to insert relation', err);
       }
-    }
-    // 删除旧标签
-    await run(`DELETE FROM ${tagTable} WHERE id = ?`, [oldTagRow.id]);
+      // 删除旧标签
+      await run(`DELETE FROM ${tagTable} WHERE id = ?`, [oldTagRow.id]);
+    });
   } else {
     // 新标签不存在，直接重命名
     await run(`UPDATE ${tagTable} SET name = ? WHERE id = ?`, [newTag, oldTagRow.id]);
@@ -3351,82 +3313,74 @@ async function getAllTags(): Promise<string[]> {
 // ==================== 统计数据 ====================
 
 /**
- * 获取数据库统计信息
- * 返回提示词、图像、标签等的数量统计
+ * 获取统计数据汇总（SQL 聚合计数，避免全量拉表经 IPC 到渲染进程）
+ * 语义与原前端计数对齐：
+ *   favorite = 已收藏且未删除；promptsWithImages = 有未删除关联图像的活跃提示词；
+ *   referencedImages = 关联到未删除提示词的活跃图像
+ * @param isSafeOnly - 是否只统计安全模式（is_safe = 1）的项目
  */
-async function getStatistics(): Promise<Statistics> {
+async function getStatistics(isSafeOnly: boolean): Promise<Statistics> {
   try {
-    // 提示词统计
+    const safeFilter = isSafeOnly ? ' AND is_safe = 1' : '';
+
+    // 提示词计数
     const promptStats = await get<{
-      total: number;
-      active: number;
-      deleted: number;
+      totalPrompts: number;
+      deletedPrompts: number;
+      favoritePrompts: number;
     }>(`
       SELECT
-        COUNT(*) as total,
-        SUM(CASE WHEN is_deleted = 0 THEN 1 ELSE 0 END) as active,
-        SUM(CASE WHEN is_deleted = 1 THEN 1 ELSE 0 END) as deleted
+        COUNT(*) AS totalPrompts,
+        COALESCE(SUM(CASE WHEN is_deleted = 1 THEN 1 ELSE 0 END), 0) AS deletedPrompts,
+        COALESCE(SUM(CASE WHEN is_favorite = 1 AND is_deleted = 0 THEN 1 ELSE 0 END), 0) AS favoritePrompts
       FROM prompts
+      WHERE 1 = 1${safeFilter}
     `);
 
-    // 图像统计
-    // 使用 LEFT JOIN 关联 prompt_image_relations 表统计引用情况，提升性能
+    // 有未删除关联图像的活跃提示词数
+    const promptWithImageStats = await get<{ promptsWithImages: number }>(`
+      SELECT COUNT(*) AS promptsWithImages
+      FROM prompts p
+      WHERE p.is_deleted = 0${isSafeOnly ? ' AND p.is_safe = 1' : ''}
+        AND EXISTS (
+          SELECT 1 FROM prompt_image_relations pir
+          JOIN images i ON i.id = pir.image_id AND i.is_deleted = 0
+          WHERE pir.prompt_id = p.id
+        )
+    `);
+
+    // 图像计数
     const imageStats = await get<{
-      total: number;
-      referenced: number;
-      unreferenced: number;
-      deleted: number;
+      totalImages: number;
+      deletedImages: number;
+      favoriteImages: number;
+      referencedImages: number;
     }>(`
       SELECT
-        COUNT(*) as total,
-        COUNT(CASE WHEN i.is_deleted = 0 AND pir.image_id IS NOT NULL THEN 1 END) as referenced,
-        COUNT(CASE WHEN i.is_deleted = 0 AND pir.image_id IS NULL THEN 1 END) as unreferenced,
-        COUNT(CASE WHEN i.is_deleted = 1 THEN 1 END) as deleted
+        COUNT(*) AS totalImages,
+        COALESCE(SUM(CASE WHEN i.is_deleted = 1 THEN 1 ELSE 0 END), 0) AS deletedImages,
+        COALESCE(SUM(CASE WHEN i.is_favorite = 1 AND i.is_deleted = 0 THEN 1 ELSE 0 END), 0) AS favoriteImages,
+        COALESCE(SUM(CASE WHEN i.is_deleted = 0 AND EXISTS (
+          SELECT 1 FROM prompt_image_relations pir
+          JOIN prompts p ON p.id = pir.prompt_id AND p.is_deleted = 0
+          WHERE pir.image_id = i.id
+        ) THEN 1 ELSE 0 END), 0) AS referencedImages
       FROM images i
-      LEFT JOIN (SELECT DISTINCT image_id FROM prompt_image_relations) pir ON i.id = pir.image_id
-    `);
-
-    // 标签统计
-    const promptTagStats = await get<{ total: number }>(`
-      SELECT COUNT(*) as total FROM prompt_tags
-    `);
-
-    const imageTagStats = await get<{ total: number }>(`
-      SELECT COUNT(*) as total FROM image_tags
-    `);
-
-    // 关联统计
-    const relationStats = await get<{
-      totalRelations: number;
-      promptsWithImages: number;
-    }>(`
-      SELECT
-        COUNT(*) as totalRelations,
-        COUNT(DISTINCT prompt_id) as promptsWithImages
-      FROM prompt_image_relations
+      WHERE 1 = 1${safeFilter}
     `);
 
     return {
-      prompts: {
-        total: promptStats?.total || 0,
-        active: promptStats?.active || 0,
-        deleted: promptStats?.deleted || 0,
-        tags: promptTagStats?.total || 0
-      },
-      images: {
-        total: imageStats?.total || 0,
-        referenced: imageStats?.referenced || 0,
-        unreferenced: imageStats?.unreferenced || 0,
-        deleted: imageStats?.deleted || 0,
-        tags: imageTagStats?.total || 0
-      },
-      relations: {
-        total: relationStats?.totalRelations || 0,
-        promptsWithImages: relationStats?.promptsWithImages || 0
-      }
+      totalPrompts: promptStats?.totalPrompts || 0,
+      deletedPrompts: promptStats?.deletedPrompts || 0,
+      favoritePrompts: promptStats?.favoritePrompts || 0,
+      promptsWithImages: promptWithImageStats?.promptsWithImages || 0,
+      totalImages: imageStats?.totalImages || 0,
+      deletedImages: imageStats?.deletedImages || 0,
+      favoriteImages: imageStats?.favoriteImages || 0,
+      referencedImages: imageStats?.referencedImages || 0
     };
   } catch (err: any) {
-    console.error('Get statistics failed:', err);
+    logError('database.ts', 'Get statistics failed:', err);
     throw err;
   }
 }
@@ -3460,11 +3414,8 @@ async function clearAllData(dataDir: string): Promise<string> {
     const timestamp = getFormattedLocalTimeToSecond();
     const newDataDir = path.join(path.dirname(oldDataDir), `${path.basename(oldDataDir)}_${timestamp}`);
 
-    // 关闭数据库
-    closeDatabase();
-
-    // 等待数据库连接完全关闭
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // 关闭数据库并等待连接完全释放（避免 Windows 下文件占用导致 rename 失败）
+    await closeDatabase();
 
     // 重命名旧数据目录
     await fs.rename(oldDataDir, newDataDir);
@@ -3545,7 +3496,6 @@ export {
   isTitleExists,
   addPrompt,
   updatePrompt,
-  searchPrompts,
   deletePrompt,
   softDeletePrompts,
   restorePrompt,
