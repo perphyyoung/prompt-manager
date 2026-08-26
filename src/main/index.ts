@@ -599,6 +599,16 @@ ipcMain.handle('get-prompts-paginated', async (event, options) => {
   return await db.getPromptsPaginated(options);
 });
 
+// 获取满足筛选条件的全部提示词 id（用于"全选"批量操作）
+ipcMain.handle('get-prompt-ids-by-filter', async (event, options) => {
+  try {
+    return await db.getPromptIdsByFilter(options);
+  } catch (error) {
+    logError('Main', 'Get prompt ids by filter error:', error);
+    throw error;
+  }
+});
+
 // 统计提示词标签数量
 ipcMain.handle('count-prompt-tags', async (event, options) => {
   return await db.countPromptTags(options);

@@ -301,6 +301,29 @@ export class PromptPanelManager extends PanelManagerBase {
   }
 
   /**
+   * 全选（重写基类）
+   * 按当前筛选条件从数据库取全量 id，可选中尚未分页加载的提示词；
+   * 失败时降级为基类行为（仅选中已加载项）
+   */
+  async selectAllVisibleItems(): Promise<void> {
+    try {
+      const { tagNames, specialTags } = this.splitSelectedTags();
+      const ids = await window.electronAPI.getPromptIdsByFilter({
+        searchQuery: this.getSearchQuery() || undefined,
+        tagNames: tagNames.length > 0 ? tagNames : undefined,
+        specialTags: specialTags.length > 0 ? specialTags : undefined,
+        isSafe: this.app.viewMode === 'safe' ? true : undefined,
+        invertedFilter: this.invertedFilter
+      });
+      batchToolbarMiddle.selectAll(this.toolbarContext, ids);
+      this.updateSelectionUI();
+    } catch (error) {
+      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to select all prompts by filter:', error);
+      super.selectAllVisibleItems();
+    }
+  }
+
+  /**
    * 构建分页查询选项
    */
   private buildPaginatedOptions(): import('../../main/database-types.js').GetPromptsPaginatedOptions {

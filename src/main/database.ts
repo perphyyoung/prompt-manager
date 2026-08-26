@@ -1103,6 +1103,23 @@ async function countPrompts(options: Omit<GetPromptsPaginatedOptions, 'limit' | 
 }
 
 /**
+ * 获取满足筛选条件的全部提示词 id（轻量查询，用于"全选"等批量操作）
+ * @param options - 筛选选项（不含 limit/offset）
+ */
+async function getPromptIdsByFilter(options: Omit<GetPromptsPaginatedOptions, 'limit' | 'offset'>): Promise<string[]> {
+  const { whereClause, params } = buildPromptFilterWhere(options);
+
+  const sql = `
+    SELECT p.id
+    FROM prompts p
+    WHERE ${whereClause}
+  `;
+
+  const rows = await all<{ id: string }>(sql, params);
+  return rows.map((r) => r.id);
+}
+
+/**
  * 统计提示词标签数量（基于当前筛选条件）
  * @param options - 筛选选项
  */
@@ -3380,6 +3397,7 @@ export {
   // Prompt 操作
   getPrompts,
   getPromptsPaginated,
+  getPromptIdsByFilter,
   countPrompts,
   countPromptTags,
   countPromptSpecialTags,

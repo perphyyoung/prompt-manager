@@ -75,6 +75,7 @@ interface IElectronAPI {
   // Prompt 管理
   getPrompts: (sortBy: string, sortOrder: string) => Promise<IPrompt[]>;
   getPromptsPaginated: (options: import('../main/database-types.js').GetPromptsPaginatedOptions) => Promise<{ items: IPrompt[]; totalCount: number }>;
+  getPromptIdsByFilter: (options: Omit<import('../main/database-types.js').GetPromptsPaginatedOptions, 'limit' | 'offset'>) => Promise<string[]>;
   countPromptTags: (options: import('../main/database-types.js').CountPromptTagsOptions) => Promise<Record<string, number>>;
   countPromptSpecialTags: (options: import('../main/database-types.js').CountPromptTagsOptions) => Promise<import('../main/database-types.js').PromptSpecialTagCounts>;
   getPromptById: (id: string) => Promise<IPrompt | null>;
@@ -223,6 +224,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ==================== Prompt 管理 ====================
   getPrompts: (sortBy: string, sortOrder: string) => ipcRenderer.invoke('get-prompts', sortBy, sortOrder),
   getPromptsPaginated: (options: import('../main/database-types.js').GetPromptsPaginatedOptions) => ipcRenderer.invoke('get-prompts-paginated', options),
+  getPromptIdsByFilter: (options: Omit<import('../main/database-types.js').GetPromptsPaginatedOptions, 'limit' | 'offset'>) => ipcRenderer.invoke('get-prompt-ids-by-filter', options),
   countPromptTags: (options: import('../main/database-types.js').CountPromptTagsOptions) => ipcRenderer.invoke('count-prompt-tags', options),
   countPromptSpecialTags: (options: import('../main/database-types.js').CountPromptTagsOptions) => ipcRenderer.invoke('count-prompt-special-tags', options),
   getPromptById: (id: string) => ipcRenderer.invoke('get-prompt-by-id', id),
