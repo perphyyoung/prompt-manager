@@ -40,59 +40,6 @@ export const DialogConfig: Record<string, IDialogTemplate> = {
     message: '确定要从此列表中移除该图像吗？（不会删除实际文件）',
     type: 'warning'
   },
-  SYNC_TAGS_BIDIRECTIONAL: {
-    title: '同步完成',
-    message: (data: IDialogContext) => {
-      let msg = '';
-
-      // 提示词 → 图像
-      if (data.promptToImage && data.promptToImage.imported > 0) {
-        msg += `提示词 → 图像：导入 ${data.promptToImage.imported} 个`;
-        if (data.promptToImage.skipped > 0) {
-          msg += `（跳过 ${data.promptToImage.skipped} 个）`;
-        }
-        msg += '\n';
-        // 显示分组标签
-        if (data.promptToImage.tagGroups && data.promptToImage.tagGroups.length > 0) {
-          for (const group of data.promptToImage.tagGroups) {
-            msg += `  [${group.groupName}] ${group.tags.join(', ')}\n`;
-          }
-        }
-        // 显示未分组标签
-        if (data.promptToImage.ungroupedTags && data.promptToImage.ungroupedTags.length > 0) {
-          msg += `  [未分组] ${data.promptToImage.ungroupedTags.join(', ')}\n`;
-        }
-        msg += '\n';
-      }
-
-      // 图像 → 提示词
-      if (data.imageToPrompt && data.imageToPrompt.imported > 0) {
-        msg += `图像 → 提示词：导入 ${data.imageToPrompt.imported} 个`;
-        if (data.imageToPrompt.skipped > 0) {
-          msg += `（跳过 ${data.imageToPrompt.skipped} 个）`;
-        }
-        msg += '\n';
-        // 显示分组标签
-        if (data.imageToPrompt.tagGroups && data.imageToPrompt.tagGroups.length > 0) {
-          for (const group of data.imageToPrompt.tagGroups) {
-            msg += `  [${group.groupName}] ${group.tags.join(', ')}\n`;
-          }
-        }
-        // 显示未分组标签
-        if (data.imageToPrompt.ungroupedTags && data.imageToPrompt.ungroupedTags.length > 0) {
-          msg += `  [未分组] ${data.imageToPrompt.ungroupedTags.join(', ')}\n`;
-        }
-      }
-
-      if ((!data.promptToImage || data.promptToImage.imported === 0) &&
-          (!data.imageToPrompt || data.imageToPrompt.imported === 0)) {
-        msg = '双方标签已同步，无需导入新标签';
-      }
-
-      return msg;
-    },
-    type: 'info'
-  },
   BATCH_DELETE_TAGS: {
     title: '确认批量删除',
     message: (data: IDialogContext) => `确定要删除选中的 ${data.count} 个标签吗？此操作不可恢复！`,

@@ -182,24 +182,6 @@ interface IElectronAPI {
   // 共享标签
   getAllTags: () => Promise<string[]>;
 
-  // 标签同步
-  syncTagsBidirectional: () => Promise<{
-    promptToImage: {
-      imported: number;
-      skipped: number;
-      tags: string[];
-      tagGroups: Array<{ groupName: string; tags: string[] }>;
-      ungroupedTags: string[];
-    };
-    imageToPrompt: {
-      imported: number;
-      skipped: number;
-      tags: string[];
-      tagGroups: Array<{ groupName: string; tags: string[] }>;
-      ungroupedTags: string[];
-    };
-  }>;
-
   // 统计
   getStatistics: (isSafeOnly: boolean) => Promise<import('../main/database-types.js').Statistics>;
 
@@ -343,9 +325,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ==================== 共享标签 ====================
   getAllTags: () => ipcRenderer.invoke('get-all-tags'),
-
-  // ==================== 标签同步 ====================
-  syncTagsBidirectional: () => ipcRenderer.invoke('sync-tags-bidirectional'),
 
   // ==================== 统计 ====================
   getStatistics: (isSafeOnly: boolean) => ipcRenderer.invoke('get-statistics', isSafeOnly),

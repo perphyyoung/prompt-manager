@@ -413,10 +413,6 @@ export class Constants {
     PROMPT_TAG_MANAGER_TOOLBAR: "promptTagManagerToolbar",
     IMAGE_TAG_MANAGER_TOOLBAR: "imageTagManagerToolbar",
 
-    // 同步标签按钮
-    SYNC_PROMPT_TAGS_BTN: "syncPromptTagsBtn",
-    SYNC_IMAGE_TAGS_BTN: "syncImageTagsBtn",
-
     // 统计模态框关闭按钮
     CLOSE_STATISTICS_MODAL: "closeStatisticsModal",
 

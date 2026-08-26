@@ -27,7 +27,7 @@ import type {
   MapPromptOptions, MapImageOptions, GetImagesOptions,
   GetImagesPaginatedOptions, PaginatedImagesResult, CountImageTagsOptions, ImageSpecialTagCounts,
   GetPromptsPaginatedOptions, PaginatedPromptsResult, CountPromptTagsOptions, PromptSpecialTagCounts,
-  RunResult, TagSyncResult, Statistics, UnreferencedImage,
+  RunResult, Statistics, UnreferencedImage,
   ImageFilePaths, ImageCleanupInfo
 } from './database-types.js';
 
@@ -1621,69 +1621,6 @@ const TagConfig: TagConfigMap = {
 };
 
 /**
- * 批量获取或创建标签组
- * 用于 syncTagsBidirectional 优化 N+1 查询问题
- * @param type - 标签类型: 'prompt' | 'image'
- * @param groupNames - 标签组名称数组
- * @param now - 当前时间字符串
- * @returns 标签组名称到 ID 的映射
- */
-async function getOrCreateTagGroups(
-  type: keyof TagConfigMap,
-  groupNames: string[],
-  now: string
-): Promise<Map<string, number>> {
-  const config = TagConfig[type];
-  if (!config) {
-    throw new Error(`Unknown tag type: ${type}`);
-  }
-
-  const groupIdMap = new Map<string, number>();
-  if (groupNames.length === 0) {
-    return groupIdMap;
-  }
-
-  const { groupTable } = config;
-
-  // 1. 查询已存在的标签组
-  const placeholders = groupNames.map(() => '?').join(',');
-  const existingRows = await all<{ id: number; name: string }>(
-    `SELECT id, name FROM ${groupTable} WHERE name IN (${placeholders})`,
-    groupNames
-  );
-
-  for (const row of existingRows) {
-    groupIdMap.set(row.name, row.id);
-  }
-
-  // 2. 找出需要创建的标签组
-  const newGroupNames = groupNames.filter(name => !groupIdMap.has(name));
-
-  // 3. 批量创建新标签组
-  for (const name of newGroupNames) {
-    try {
-      const result = await run(
-        `INSERT INTO ${groupTable} (name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?)`,
-        [name, 0, now, now]
-      );
-      groupIdMap.set(name, result.id);
-    } catch (err: any) {
-      // 可能是并发导致，尝试查询获取 ID
-      if (isConstraintError(err)) {
-        const row = await get<{ id: number }>(`SELECT id FROM ${groupTable} WHERE name = ?`, [name]);
-        if (row) {
-          groupIdMap.set(name, row.id);
-        }
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  return groupIdMap;
-}
-
-/**
  * 检查标签组名称是否重复（配置驱动）
  * @param type - 标签类型: 'prompt' | 'image'
  * @param name - 标签组名称
@@ -3246,124 +3183,6 @@ async function getImageTagsByImageId(imageId: string): Promise<string[]> {
   return rows.map(row => row.name);
 }
 
-/**
- * 双向同步标签
- * 将提示词和图像双方的标签差异同步到对方，保留组信息
- */
-async function syncTagsBidirectional(): Promise<TagSyncResult> {
-  const now = dbTime();
-
-  // 获取提示词标签和图像标签
-  const promptTagsSql = `
-    SELECT pt.name, pt.group_id, pg.name as group_name
-    FROM prompt_tags pt
-    LEFT JOIN prompt_tag_groups pg ON pt.group_id = pg.id
-  `;
-  const imageTagsSql = `
-    SELECT it.name, it.group_id, ig.name as group_name
-    FROM image_tags it
-    LEFT JOIN image_tag_groups ig ON it.group_id = ig.id
-  `;
-
-  const promptTags = await all<{ name: string; group_id: number | null; group_name: string | null }>(promptTagsSql);
-  const imageTags = await all<{ name: string; group_id: number | null; group_name: string | null }>(imageTagsSql);
-
-  const promptTagNames = new Set(promptTags.map(t => t.name));
-  const imageTagNames = new Set(imageTags.map(t => t.name));
-
-  // 找出差异：提示词有而图像没有的 → 同步到图像
-  const toImageTags = promptTags.filter(t => !imageTagNames.has(t.name));
-  // 找出差异：图像有而提示词没有的 → 同步到提示词
-  const toPromptTags = imageTags.filter(t => !promptTagNames.has(t.name));
-
-  // 准备结果
-  const result: TagSyncResult = {
-    promptToImage: { imported: 0, skipped: 0, tags: [], tagGroups: [], ungroupedTags: [] },
-    imageToPrompt: { imported: 0, skipped: 0, tags: [], tagGroups: [], ungroupedTags: [] }
-  };
-
-  if (toImageTags.length === 0 && toPromptTags.length === 0) {
-    return result;
-  }
-
-  // 使用 runInTransaction 管理事务
-  return runInTransaction(async () => {
-    // 同步到图像
-    if (toImageTags.length > 0) {
-      const tagGroupsMap = new Map<string, string[]>();
-      const existingImageTags = new Set((await all<{ name: string }>('SELECT name FROM image_tags')).map(t => t.name));
-
-      // 批量获取需要创建的图像标签组，避免 N+1 查询
-      const imageGroupNames = [...new Set(toImageTags.filter(t => t.group_name).map(t => t.group_name!))];
-      const imageGroupIdMap = await getOrCreateTagGroups('image', imageGroupNames, now);
-
-      for (const tag of toImageTags) {
-        if (existingImageTags.has(tag.name)) {
-          result.promptToImage.skipped++;
-          continue;
-        }
-
-        const targetGroupId = tag.group_name ? imageGroupIdMap.get(tag.group_name) ?? null : null;
-
-        if (tag.group_name) {
-          if (!tagGroupsMap.has(tag.group_name)) {
-            tagGroupsMap.set(tag.group_name, []);
-          }
-          tagGroupsMap.get(tag.group_name)!.push(tag.name);
-        }
-
-        await run('INSERT INTO image_tags (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)', [tag.name, targetGroupId, now, now]);
-        result.promptToImage.imported++;
-        result.promptToImage.tags.push(tag.name);
-        // 记录未分组标签
-        if (!tag.group_name) {
-          result.promptToImage.ungroupedTags.push(tag.name);
-        }
-      }
-
-      result.promptToImage.tagGroups = Array.from(tagGroupsMap.entries()).map(([groupName, tags]) => ({ groupName, tags }));
-    }
-
-    // 同步到提示词
-    if (toPromptTags.length > 0) {
-      const tagGroupsMap = new Map<string, string[]>();
-      const existingPromptTags = new Set((await all<{ name: string }>('SELECT name FROM prompt_tags')).map(t => t.name));
-
-      // 批量获取需要创建的提示词标签组，避免 N+1 查询
-      const promptGroupNames = [...new Set(toPromptTags.filter(t => t.group_name).map(t => t.group_name!))];
-      const promptGroupIdMap = await getOrCreateTagGroups('prompt', promptGroupNames, now);
-
-      for (const tag of toPromptTags) {
-        if (existingPromptTags.has(tag.name)) {
-          result.imageToPrompt.skipped++;
-          continue;
-        }
-
-        const targetGroupId = tag.group_name ? promptGroupIdMap.get(tag.group_name) ?? null : null;
-
-        if (tag.group_name) {
-          if (!tagGroupsMap.has(tag.group_name)) {
-            tagGroupsMap.set(tag.group_name, []);
-          }
-          tagGroupsMap.get(tag.group_name)!.push(tag.name);
-        }
-
-        await run('INSERT INTO prompt_tags (name, group_id, created_at, updated_at) VALUES (?, ?, ?, ?)', [tag.name, targetGroupId, now, now]);
-        result.imageToPrompt.imported++;
-        result.imageToPrompt.tags.push(tag.name);
-        // 记录未分组标签
-        if (!tag.group_name) {
-          result.imageToPrompt.ungroupedTags.push(tag.name);
-        }
-      }
-
-      result.imageToPrompt.tagGroups = Array.from(tagGroupsMap.entries()).map(([groupName, tags]) => ({ groupName, tags }));
-    }
-
-    return result;
-  });
-}
-
 // ==================== 共享标签 ====================
 
 /**
@@ -3639,8 +3458,6 @@ export {
   removeTagFromImage,
   // 共享标签
   getAllTags,
-  // 标签同步
-  syncTagsBidirectional,
   // 数据清理
   renameDataDirectory,
   clearAllData,

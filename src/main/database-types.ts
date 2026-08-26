@@ -448,26 +448,6 @@ export interface RunResult {
 }
 
 /**
- * 标签同步结果
- */
-export interface TagSyncResult {
-  promptToImage: {
-    imported: number;
-    skipped: number;
-    tags: string[];
-    tagGroups: Array<{ groupName: string; tags: string[] }>;
-    ungroupedTags: string[];
-  };
-  imageToPrompt: {
-    imported: number;
-    skipped: number;
-    tags: string[];
-    tagGroups: Array<{ groupName: string; tags: string[] }>;
-    ungroupedTags: string[];
-  };
-}
-
-/**
  * 统计数据汇总（SQL 聚合计数，isSafeOnly 时仅统计 is_safe = 1 的项目）
  */
 export interface Statistics {

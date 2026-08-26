@@ -7,7 +7,7 @@ import { Constants, Events } from '../constants.ts';
 import { DialogService, DialogConfig } from './services/index.ts';
 import {
   PromptPanelManager, ImagePanelManager,
-  TagManager, PromptTagManager, ImageTagManager, TrashManager, ImageFullscreenManager,
+  PromptTagManager, ImageTagManager, TrashManager, ImageFullscreenManager,
   PromptDetailManager, ImageDetailManager,
   ToastManager, NavigationManager,
   SearchSortManager, ToolbarManager,
@@ -325,9 +325,6 @@ class PromptManager implements IApp {
     // - 详情模态框: DetailViewManager.bindCloseEvent
     // - 全屏查看器: ImageFullscreenManager
 
-    // 同步标签按钮（需要同时访问两个注册表）
-    this.bindSyncTagButtons();
-
     // 文本全选全局事件
     this.bindTextSelectEvents();
   }
@@ -369,27 +366,6 @@ class PromptManager implements IApp {
         }
       }
     });
-  }
-
-  /**
-   * 绑定同步标签按钮事件（需要同时访问两个注册表）
-   */
-  bindSyncTagButtons() {
-    // 同步标签按钮（双向同步）- 提示词面板
-    TagManager.bindSyncButton(
-      Constants.Ids.SYNC_PROMPT_TAGS_BTN,
-      this.promptTagManager,
-      this.imageTagManager,
-      this
-    );
-
-    // 同步标签按钮（双向同步）- 图像面板
-    TagManager.bindSyncButton(
-      Constants.Ids.SYNC_IMAGE_TAGS_BTN,
-      this.promptTagManager,
-      this.imageTagManager,
-      this
-    );
   }
 
   /**

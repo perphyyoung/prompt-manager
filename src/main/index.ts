@@ -1502,19 +1502,6 @@ ipcMain.handle('assign-image-tag-to-belong-group', async (event, tagName, groupI
   }
 });
 
-// 双向同步标签
-ipcMain.handle('sync-tags-bidirectional', async () => {
-  try {
-    const result = await db.syncTagsBidirectional();
-    // 清除标签缓存，让下次获取时重新加载
-    allTagsCache = null;
-    return result;
-  } catch (error) {
-    logError('Main', 'Sync tags bidirectional error:', error);
-    throw error;
-  }
-});
-
 // 获取图像完整路径
 ipcMain.handle('get-image-path', async (event, relativePath) => {
   if (!relativePath || typeof relativePath !== 'string') {
