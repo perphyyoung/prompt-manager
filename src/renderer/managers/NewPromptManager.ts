@@ -206,7 +206,7 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
           );
           return { success: false };
         }
-      }, { errorMessage: '正在保存提示词中...' });
+      }, { errorMessage: '正在保存提示词中...' }); // 上一次保存尚未结束时再次点击
 
       // 如果防重复提交机制返回 undefined，说明操作正在进行中
       if (result === undefined) {
