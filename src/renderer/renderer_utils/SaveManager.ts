@@ -1,4 +1,5 @@
 import { Constants } from '../../constants.ts';
+import { logger } from '../../utils/Logger.ts';
 import { SaveStrategy } from './SaveStrategy.ts';
 
 interface FieldConfig {
@@ -250,7 +251,7 @@ export class SaveManager {
 
     const field = this.fields.get(fieldId);
     if (!field) {
-      console.warn(`Field ${fieldId} not registered, skipping save`);
+      logger.warn('SaveManager', `Field ${fieldId} not registered, skipping save`);
       return { success: false, fieldId, error: 'Field not registered' };
     }
 
@@ -300,7 +301,7 @@ export class SaveManager {
 
       return { success: true, fieldId, value: finalValue };
     } catch (error) {
-      console.error(`[SaveManager] Failed to save ${fieldId}:`, error);
+      logger.error('SaveManager', `Failed to save ${fieldId}:`, error);
       this.setStatus(statusEl, 'error', (error as Error).message);
       return { success: false, fieldId, error: (error as Error).message };
     } finally {

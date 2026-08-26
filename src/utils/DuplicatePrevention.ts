@@ -1,3 +1,4 @@
+import { logger } from './Logger.ts';
 /**
  * 防重复提交工具
  * 提供装饰器和辅助函数防止重复提交
@@ -58,7 +59,7 @@ export function withDuplicatePrevention<T, Args extends unknown[], R>(
       ...args: Args
     ): Promise<R | undefined> {
       if (isExecuting) {
-        console.warn(`[DuplicatePrevention] ${errorMessage}`);
+        logger.warn('DuplicatePrevention', errorMessage);
         return undefined;
       }
 
@@ -105,7 +106,7 @@ export function wrapWithDuplicatePrevention<T, Args extends unknown[], R>(
 
   return async function (this: T, ...args: Args): Promise<R | undefined> {
     if (isExecuting) {
-      console.warn(`[DuplicatePrevention] ${errorMessage}`);
+      logger.warn('DuplicatePrevention', errorMessage);
       return undefined;
     }
 
@@ -154,7 +155,7 @@ export function createDuplicatePreventionExecutor() {
       const { errorMessage = '操作正在进行中，请稍候...' } = options;
 
       if (isExecuting) {
-        console.warn(`[DuplicatePrevention] ${errorMessage}`);
+        logger.warn('DuplicatePrevention', errorMessage);
         return undefined;
       }
 

@@ -1,4 +1,5 @@
 import { Constants, ElementId } from '../../constants.ts';
+import { logger } from '../../utils/Logger.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
 import { ElectronDataClearApi } from '../services/ElectronDataClearApi.ts';
 import { DuplicatePreventionMixin } from '../../utils/index.ts';
@@ -93,7 +94,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       if (el) el.textContent = Constants.APP_NAME + ' v' + version;
     } catch (error) {
       // 版本获取失败
-      console.error(error);
+      logger.error('SettingsManager', '获取应用版本失败:', error);
     }
 
     // 获取当前数据路径
@@ -102,7 +103,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       const el = document.getElementById(Constants.Ids.CURRENT_DATA_PATH);
       if (el) el.textContent = dataPath;
     } catch (error) {
-      console.error(error);
+      logger.error('SettingsManager', '获取数据路径失败:', error);
     }
 
     const modal = document.getElementById(Constants.Ids.SETTINGS_MODAL);
@@ -145,7 +146,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    */
   private openDataDirectory(): void {
     window.electronAPI.openDataDirectory().catch((error) => {
-      console.error('Failed to open data directory:', error);
+      logger.error('Failed to open data directory:', error);
     });
   }
 

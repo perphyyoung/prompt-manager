@@ -30,13 +30,21 @@
 - [x] 2.7 VirtualScrollBar：mousemove/mouseup 仅拖拽期间挂载；destroy 兜底复位 userSelect
 - [x] 2.8 `pnpm check` 通过
 
-## 第三批（架构去重）
+## 第三批（架构去重）✅（3.2 类型化为部分完成）
 
-- [ ] 3.1 两面板 ~15 组相同私有方法上提 PanelManagerBase 模板方法（splitSelectedTags/buildPaginatedOptions/loadMore/refreshIncremental/initScrollBar/handleScroll 等，容器 ID 与 fetch API 注入）
-- [ ] 3.2 详情管理器公共化：initTagManager/syncSafetyToRelated*/updateOpen*DetailUI 抽公共基类注入 type；currentItem 用真实泛型接口替代 `as unknown as`（38 处集中地）
-- [ ] 3.3 renderer 侧统一 logger 封装，替换 38 处 console 直用（preload 转发基础设施豁免）
-- [ ] 3.4 依赖处置：eslint 三件套删除或接入 lint 流程；playwright/@vitest/ui/vite 用 knip 确认后清理；oxfmt 移 devDependencies
-- [ ] 3.5 `pnpm check`
+- [x] 3.1 两面板滚动条/滚动事件/分页追赶机制上提 PanelManagerBase：
+  initScrollBar/syncScrollBarLayout/getViewportRows/getPageSizeItems/handleScroll/
+  bindScrollEvents/unbindScrollEvents/ensureWindowData + GRID_GAP/PAGE_SIZE 常量统一；
+  差异经抽象钩子注入（容器 ID、数据量、加载能力、窗口刷新入口）
+- [x] 3.2 详情管理器：新增 DetailTagController 工厂，initTagManager 的 ~120 行×2 同构标签增删逻辑收敛为一处；
+  ⚠️ 部分完成：syncSafetyToRelated*/updateOpen*DetailUI 合并与 38 处 as unknown as 全面类型化未做，留待后续
+- [x] 3.3 renderer 统一 logger：src/utils/Logger.ts（签名遵循 py-pm-log 规范 (component, message, data?)，
+  转发主进程 electron-log 写 pm.log，无 electronAPI 环境回退 console）；替换 utils+renderer 共 21 处 console 直用；
+  database.ts 12 处改用本文件已有的结构化 logger；豁免：preload 转发基础设施、MockDataClearApi（knip 判定未使用）、debounce JSDoc 示例
+- [x] 3.4 依赖处置：删除 eslint/@typescript-eslint/*×2/vite(裸)/playwright(裸)；
+  保留 eslint-plugin-no-unsanitized（oxlint jsPlugins 引用，提供 no-unsanitized/method XSS 防护规则）；
+  oxfmt 移入 devDependencies；@img/sharp-win32-x64 为打包锁定用途保留
+- [x] 3.5 `pnpm check` 通过；e2e 冒烟：13-tag-input-methods 10/10、5-main-panel-refactor 6/6
 
 ## 暂不执行
 

@@ -13,10 +13,18 @@ import { buildTagsWithGroupInfo } from '../../pyTagGroups/utils.ts';
 import { IApp } from '../app.types.ts';
 import { localStorageManager } from '../configs/LocalStorageConfig.ts';
 import { showContextMenu } from '../renderer_utils/ContextMenuUtils.ts';
+import { VirtualScrollBar } from '../renderer_utils/VirtualScrollBar.ts';
+import type { VisibleRange } from '../renderer_utils/VirtualScroller.ts';
 
 // 卡片大小限制常量
 const MIN_CARD_SIZE = 100;
 const MAX_CARD_SIZE = 350;
+
+/** 网格行间距（px），与 styles.css 的 .grid-view gap 保持一致 */
+export const GRID_GAP = 16;
+
+/** 分页大小：两个主面板一致 */
+export const PANEL_PAGE_SIZE = 100;
 
 // 面板管理器基类选项接口
 interface PanelManagerBaseOptions {
@@ -824,6 +832,159 @@ export abstract class PanelManagerBase {
   private getTagFilterStorageKey(): string {
     return this.storageKeys.tagFilterCollapsed;
   }
+
+  // ==================== 滚动条 / 滚动事件 / 分页追赶（两主面板共通） ====================
+  // 差异点经抽象钩子注入：容器 ID、数据量、加载能力与窗口刷新入口。
+
+  protected scrollBar: VirtualScrollBar | null = null;
+  protected scrollBarResizeObserver: ResizeObserver | null = null;
+  private scrollHandler: (() => void) | null = null;
+
+  /** 网格滚动容器 ID（钩子） */
+  protected abstract getGridContainerId(): string;
+  /** 自定义滚动条挂载点 ID（钩子） */
+  protected abstract getScrollBarMountId(): string;
+  /** 当前已加载数据量（钩子） */
+  protected abstract getLoadedCount(): number;
+  /** 数据库命中的总项数（钩子） */
+  protected abstract getQueryTotalCount(): number;
+  /** 是否允许继续分页追赶（钩子：!isLoading && hasMore） */
+  protected abstract canLoadMore(): boolean;
+  /** 触发下一页加载（钩子） */
+  protected abstract requestMore(): void;
+  /** 刷新虚拟窗口（钩子，转发 windowRenderer.refresh） */
+  protected abstract refreshWindow(force?: boolean): void;
+  /** 当前窗口原始区间（钩子，未钳制） */
+  protected abstract getWindowVisibleRange(): VisibleRange | null;
+
+  /** 行高 = 卡片尺寸 + 行间距 */
+  protected getRowHeight(): number {
+    return this.cardSize + GRID_GAP;
+  }
+
+  /** 每行列数：容器可用宽度内能放下多少个 (卡片 + 间距) */
+  protected getWindowColumns(): number {
+    const container = document.getElementById(this.getGridContainerId());
+    if (!container) return 1;
+    const usableWidth = container.clientWidth - 8; // padding-right: 8px
+    return Math.max(1, Math.floor((usableWidth + GRID_GAP) / this.getRowHeight()));
+  }
+
+  /** 一屏可视行数 */
+  private getViewportRows(): number {
+    const container = document.getElementById(this.getGridContainerId());
+    if (!container) return 1;
+    return Math.max(1, Math.ceil(container.clientHeight / this.getRowHeight()));
+  }
+
+  /** 一屏项数（列数 × 可视行数） */
+  private getPageSizeItems(): number {
+    return Math.max(1, this.getWindowColumns() * this.getViewportRows());
+  }
+
+  /**
+   * 初始化右侧自定义滚动条（替代原生滚动条与跳转按钮）
+   */
+  protected initScrollBar(): void {
+    const mount = document.getElementById(this.getScrollBarMountId());
+    if (!mount) return;
+
+    this.scrollBar?.destroy();
+    this.scrollBar = new VirtualScrollBar({
+      mount,
+      getTotal: () => this.getQueryTotalCount(),
+      getPageSize: () => this.getWindowColumns() * Math.max(1, this.getViewportRows()),
+      onSeek: (startIndex) => {
+        const container = document.getElementById(this.getGridContainerId());
+        if (!container) return;
+        const maxOffset = Math.max(1, this.getQueryTotalCount() - this.getPageSizeItems());
+        const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+        container.scrollTop = (startIndex / maxOffset) * maxScrollTop;
+        // 瞬时赋值可能不触发 scroll 事件，主动同步窗口
+        this.refreshWindow();
+      }
+    });
+    this.syncScrollBarLayout();
+
+    // 网格尺寸变化（窗口缩放、标签筛选折叠）时重新对齐滚动条并刷新 thumb
+    this.scrollBarResizeObserver?.disconnect();
+    this.scrollBarResizeObserver = new ResizeObserver(() => {
+      this.syncScrollBarLayout();
+      this.scrollBar?.update();
+    });
+    const grid = document.getElementById(this.getGridContainerId());
+    if (grid) this.scrollBarResizeObserver.observe(grid);
+  }
+
+  /**
+   * 将滚动条与网格容器的可视区域实时对齐（位置与高度）
+   */
+  private syncScrollBarLayout(): void {
+    const grid = document.getElementById(this.getGridContainerId());
+    const bar = document.getElementById(this.getScrollBarMountId());
+    if (!grid || !bar) return;
+    const rect = grid.getBoundingClientRect();
+    bar.style.top = `${rect.top}px`;
+    bar.style.height = `${rect.height}px`;
+  }
+
+  /** 处理滚动事件：刷新可见窗口 + 分页追赶兜底 + 反向同步 thumb */
+  private handleScroll(): void {
+    const container = document.getElementById(this.getGridContainerId());
+    if (!container) return;
+
+    // 刷新可见窗口（rAF 合帧）；窗口落位后的数据补齐由 ensureWindowData 兜底
+    this.refreshWindow();
+    this.ensureWindowData();
+
+    // 反向同步自定义滚动条 thumb
+    if (this.scrollBar) {
+      const maxScrollTop = Math.max(1, container.scrollHeight - container.clientHeight);
+      const ratio = Math.min(1, Math.max(0, container.scrollTop / maxScrollTop));
+      const maxOffset = Math.max(1, this.getQueryTotalCount() - this.getPageSizeItems());
+      this.scrollBar.setStartIndex(Math.round(ratio * maxOffset));
+    }
+  }
+
+  /** 绑定滚动事件（rAF 合帧） */
+  protected bindScrollEvents(): void {
+    this.unbindScrollEvents();
+
+    let ticking = false;
+    this.scrollHandler = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        this.handleScroll();
+      });
+    };
+
+    document.getElementById(this.getGridContainerId())?.addEventListener('scroll', this.scrollHandler);
+  }
+
+  /** 解绑滚动事件 */
+  protected unbindScrollEvents(): void {
+    if (!this.scrollHandler) return;
+    document.getElementById(this.getGridContainerId())?.removeEventListener('scroll', this.scrollHandler);
+    this.scrollHandler = null;
+  }
+
+  /**
+   * 窗口落位后确保数据覆盖：窗口尾部接近已加载数据边界时触发分页追赶。
+   * 在窗口渲染尾部调用（而非仅 scroll 判断），保证使用真实落位后的新窗口，
+   * 避免进度条跳底等场景下因旧窗口判断失误导致底部数据永不补齐。
+   */
+  protected ensureWindowData(): void {
+    if (!this.canLoadMore()) return;
+    const range = this.getWindowVisibleRange();
+    if (!range || range.end === 0) return;
+    if (range.end >= this.getLoadedCount() - Math.floor(PANEL_PAGE_SIZE / 2)) {
+      this.requestMore();
+    }
+  }
+
+  // ==================== 抽象渲染契约 ====================
 
   /**
    * 渲染主列表（子类完整实现：数据库分页查询 + 虚拟窗口渲染）

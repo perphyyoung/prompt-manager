@@ -1,3 +1,4 @@
+import { logger } from '../../utils/Logger.ts';
 /**
  * 错误处理工具类
  * 统一处理错误消息提取、日志记录和用户提示
@@ -36,7 +37,7 @@ export class ErrorHandler {
     if (logError && window.electronAPI?.logError) {
       window.electronAPI.logError(context.module, `Failed to ${context.operation}:`, error);
     } else if (logError) {
-      console.error(`[${context.module}] Failed to ${context.operation}:`, error);
+      logger.error(context.module, `Failed to ${context.operation}:`, error);
     }
 
     if (showToast) {

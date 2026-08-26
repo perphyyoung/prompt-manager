@@ -1,4 +1,5 @@
 import { LRUCache } from './LRUCache.js';
+import { logger } from './Logger.ts';
 import type { IPrompt, IImage } from '../types/entities.js';
 
 /**
@@ -195,7 +196,7 @@ export class CacheManager {
         this.setImagePaths(valid, 'thumbnail');
       }
     } catch (error) {
-      console.error('[CacheManager] Failed to prefetch image paths:', error);
+      logger.error('CacheManager', 'Failed to prefetch image paths:', error);
     }
   }
 

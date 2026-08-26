@@ -3,6 +3,7 @@
  * 提供全局快捷键支持，包括编辑导航、保存等操作
  */
 
+import { logger } from '../../utils/Logger.ts';
 import { contextStack } from '../managers/ContextStackManager.ts';
 import { Constants } from '../../constants.ts';
 import type { IClosableElement } from '../../types/entities.ts';
@@ -289,10 +290,10 @@ export class ShortcutManager {
           break;
 
         default:
-          console.warn(`Unknown action: ${action}`);
+          logger.warn('ShortcutManager', `Unknown action: ${action}`);
       }
     } catch (error) {
-      console.error(`Shortcut action failed: ${action}`, error);
+      logger.error('ShortcutManager', `Shortcut action failed: ${action}`, error);
     }
   }
 
@@ -477,9 +478,9 @@ export class ShortcutManager {
       </div>`
     ).join('');
 
-    console.log('快捷键列表:');
+    logger.info('ShortcutManager', '快捷键列表:');
     shortcuts.forEach(s => {
-      console.log(`${s.keyCombo}: ${s.description}`);
+      logger.info('ShortcutManager', `${s.keyCombo}: ${s.description}`);
     });
 
     return helpContent;

@@ -17,6 +17,7 @@ import { showContextMenu } from "../renderer_utils/ContextMenuUtils.ts";
 import { IPrompt, IImage } from "../../types/entities.ts";
 import { TagExistsError, InvalidTagNameError, TagOperationError } from "../../pyTagGroups/index.ts";
 import { TagService } from "../services/index.ts";
+import { createDetailTagController } from "./DetailTagController.ts";
 import type { IApp } from "../app.types.ts";
 
 // 扩展 IPrompt 接口以包含更多字段
@@ -230,105 +231,18 @@ export class PromptDetailManager extends DetailViewManager {
   private initTagManager(prompt: IPromptExtended): void {
     this.currentTags = [...(prompt.tags || [])];
 
-    const detailTagManager: IDetailTagManager = {
+    // 标签增删逻辑与图像详情同构，统一由 DetailTagController 提供
+    const detailTagManager: IDetailTagManager = createDetailTagController({
+      type: 'prompt',
+      moduleLabel: 'PromptDetailManager.ts',
+      getCurrentItemId: () => (this.currentItem as IPromptExtended).id,
       getTags: () => this.currentTags,
-      setTags: (tags: string[]) => {
+      commitTags: (tags) => {
         this.currentTags = tags;
       },
-      removeTag: async (tagName: string) => {
-        try {
-          // 显示确认对话框
-          const confirmed = await DialogService.showConfirmDialogByConfig(DialogConfig.DELETE_TAG, {
-            name: tagName,
-          });
-          if (!confirmed) return false;
-
-          const tagService = TagService.getInstance();
-          const currentItem = this.currentItem as unknown as IPromptExtended;
-          // 使用 unlinkTagFromItem 解除标签与项目的关联（会更新 updated_at）
-          const success = await tagService.unlinkTagFromItem({
-            type: "prompt",
-            itemId: currentItem?.id,
-            tagName,
-          });
-          if (success) {
-            this.currentTags = this.currentTags.filter((t) => t !== tagName);
-            this.app.eventBus.emit(Events.PROMPTS_CHANGED);
-            // 触发重新渲染标签列表
-            detailTagManager.onRender?.();
-          }
-          return success;
-        } catch (error) {
-          ErrorHandler.handleError(
-            { module: "PromptDetailManager.ts", operation: "delete tag" },
-            error,
-            { userMessage: "删除标签失败", logError: false },
-          );
-          return false;
-        }
-      },
-      removeTags: async (tagNames: string[]) => {
-        try {
-          const tagService = TagService.getInstance();
-          const result = await tagService.removeTags({ tagNames, type: "prompt" });
-          if (result.errors.length === 0) {
-            for (const tagName of tagNames) {
-              this.currentTags = this.currentTags.filter((t) => t !== tagName);
-            }
-            this.app.eventBus.emit(Events.PROMPTS_CHANGED);
-          }
-          return { success: result.errors.length === 0, deleted: result.deleted };
-        } catch (error) {
-          ErrorHandler.handleError(
-            { module: "PromptDetailManager.ts", operation: "delete tags" },
-            error,
-            { userMessage: "删除标签失败", logError: false },
-          );
-          return { success: false, deleted: 0 };
-        }
-      },
-      addTags: async (tagNames: string[]) => {
-        try {
-          const currentItem = this.currentItem as unknown as IPromptExtended;
-          const tagService = TagService.getInstance();
-          const result = await tagService.linkTagsToItem({
-            tagNames,
-            type: "prompt",
-            itemId: currentItem?.id,
-          });
-
-          if (result.success) {
-            // 添加新创建的标签和已存在的标签（skipped）到本地状态
-            const allTagsToAdd = [...result.created, ...result.skipped];
-            for (const tagName of allTagsToAdd) {
-              if (!this.currentTags.includes(tagName)) {
-                this.currentTags.push(tagName);
-              }
-            }
-            // 触发重新渲染
-            detailTagManager.onRender?.();
-            this.app.eventBus.emit(Events.PROMPTS_CHANGED);
-          }
-          return { success: result.success, added: result.created?.length || 0 };
-        } catch (error) {
-          // 根据错误类型显示不同的提示
-          if (error instanceof TagExistsError) {
-            this.app.showToast("标签已存在", "warning");
-          } else if (error instanceof InvalidTagNameError) {
-            this.app.showToast("标签名无效: " + (error as Error).message, "warning");
-          } else if (error instanceof TagOperationError) {
-            this.app.showToast("操作失败: " + (error as Error).message, "error");
-          } else {
-            this.app.showToast(
-              `添加标签失败: ${error instanceof Error ? error.message : "未知错误"}`,
-              "error",
-            );
-          }
-          return { success: false, added: 0 };
-        }
-      },
-      onRender: undefined,
-    };
+      notifyChanged: () => this.app.eventBus.emit(Events.PROMPTS_CHANGED),
+      showToast: (message, type) => this.app.showToast(message, type)
+    });
 
     // 使用基类的标签管理功能
     this.initDetailTagManager(
@@ -337,7 +251,7 @@ export class PromptDetailManager extends DetailViewManager {
         containerId: Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER,
         inputAreaId: Constants.Ids.PROMPT_DETAIL_TAG_INPUT_AREA,
         batchBtnId: Constants.Ids.PROMPT_DETAIL_BATCH_TAG_BTN,
-        context: "promptDetail",
+        context: 'promptDetail',
       },
       detailTagManager,
     );

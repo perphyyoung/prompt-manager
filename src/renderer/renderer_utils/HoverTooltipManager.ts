@@ -1,4 +1,5 @@
 import { cacheManager } from '../../utils/index.ts';
+import { logger } from '../../utils/Logger.ts';
 import { IApp } from '../app.types.ts';
 
 interface HoverTooltipOptions {
@@ -32,7 +33,7 @@ export class HoverTooltipManager {
     this.imageEl = document.getElementById(imageId) as HTMLImageElement | null;
 
     if (!this.tooltip || !this.contentEl || !this.imageEl) {
-      console.error('HoverTooltipManager: Required elements not found');
+      logger.error('HoverTooltipManager', 'Required elements not found');
     }
   }
 

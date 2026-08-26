@@ -3,6 +3,7 @@
  * 负责处理面板切换和导航逻辑
  */
 
+import { logger } from '../../utils/Logger.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { Constants } from '../../constants.ts';
 import { localStorageManager } from '../configs/LocalStorageConfig.ts';
@@ -152,7 +153,7 @@ export class NavigationManager {
    */
   switchTo(panelName: string, force = false): void {
     if (!this.panels.has(panelName)) {
-      console.warn(`Unknown panel: ${panelName}`);
+      logger.warn('NavigationManager', `Unknown panel: ${panelName}`);
       return;
     }
 

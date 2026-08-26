@@ -11,6 +11,7 @@ import { TagAutocomplete, DialogService, DialogConfig, TagService } from '../ser
 import { IImage, IPrompt } from '../../types/entities.ts';
 import type { IApp } from '../app.types.ts';
 import { showContextMenu } from '../renderer_utils/ContextMenuUtils.ts';
+import { createDetailTagController } from './DetailTagController.ts';
 
 // 扩展 IImage 接口
 interface IImageExtended extends IImage {
@@ -306,101 +307,19 @@ export class ImageDetailManager extends DetailViewManager {
   private initTagManager(image: IImageExtended): void {
     this.currentTags = [...(image.tags || [])];
 
-    const detailTagManager: IDetailTagManager = {
+    // 标签增删逻辑与提示词详情同构，统一由 DetailTagController 提供
+    const detailTagManager: IDetailTagManager = createDetailTagController({
+      type: 'image',
+      moduleLabel: 'ImageDetailManager.ts',
+      getCurrentItemId: () => (this.currentItem as IImageExtended).id,
       getTags: () => this.currentTags,
-      setTags: (tags: string[]) => {
+      commitTags: (tags) => {
         this.currentTags = tags;
+        this.syncImageTagsToCache();
       },
-      removeTag: async (tagName: string) => {
-        try {
-          // 显示确认对话框
-          const confirmed = await DialogService.showConfirmDialogByConfig(
-            DialogConfig.DELETE_TAG,
-            { name: tagName }
-          );
-          if (!confirmed) return false;
-
-          const tagService = TagService.getInstance();
-          // 使用 unlinkTagFromItem 解除标签与项目的关联（会更新 updated_at）
-          const currentImage = this.currentItem as IImageExtended;
-          const success = await tagService.unlinkTagFromItem({
-            type: 'image',
-            itemId: currentImage?.id,
-            tagName
-          });
-          if (success) {
-            this.currentTags = this.currentTags.filter(t => t !== tagName);
-            this.syncImageTagsToCache();
-            this.app.eventBus.emit(Events.IMAGES_CHANGED);
-            // 触发重新渲染标签列表
-            detailTagManager.onRender?.();
-          }
-          return success;
-        } catch (error) {
-          ErrorHandler.handleError(
-            { module: 'ImageDetailManager.ts', operation: 'delete tag' },
-            error,
-            { userMessage: '删除标签失败', logError: false }
-          );
-          return false;
-        }
-      },
-      removeTags: async (tagNames: string[]) => {
-        try {
-          const tagService = TagService.getInstance();
-          const result = await tagService.removeTags({ tagNames, type: 'image' });
-          if (result.errors.length === 0) {
-            for (const tagName of tagNames) {
-              this.currentTags = this.currentTags.filter(t => t !== tagName);
-            }
-            this.syncImageTagsToCache();
-            this.app.eventBus.emit(Events.IMAGES_CHANGED);
-          }
-          return { success: result.errors.length === 0, deleted: result.deleted };
-        } catch (error) {
-          ErrorHandler.handleError(
-            { module: 'ImageDetailManager.ts', operation: 'delete tags' },
-            error,
-            { userMessage: '删除标签失败', logError: false }
-          );
-          return { success: false, deleted: 0 };
-        }
-      },
-      addTags: async (tagNames: string[]) => {
-        try {
-          const currentItem = this.currentItem as unknown as IImageExtended;
-          const tagService = TagService.getInstance();
-          const result = await tagService.linkTagsToItem({
-            tagNames,
-            type: 'image',
-            itemId: currentItem?.id
-          });
-
-          if (result.success) {
-            // 添加新创建的标签和已存在的标签（skipped）到本地状态
-            const allTagsToAdd = [...result.created, ...result.skipped];
-            for (const tagName of allTagsToAdd) {
-              if (!this.currentTags.includes(tagName)) {
-                this.currentTags.push(tagName);
-              }
-            }
-            this.syncImageTagsToCache();
-            // 触发重新渲染
-            detailTagManager.onRender?.();
-            this.app.eventBus.emit(Events.IMAGES_CHANGED);
-          }
-          return { success: result.success, added: result.created?.length || 0 };
-        } catch (error) {
-          ErrorHandler.handleError(
-            { module: 'ImageDetailManager.ts', operation: 'add tags' },
-            error,
-            { userMessage: '添加标签失败', logError: false }
-          );
-          return { success: false, added: 0 };
-        }
-      },
-      onRender: undefined
-    };
+      notifyChanged: () => this.app.eventBus.emit(Events.IMAGES_CHANGED),
+      showToast: (message, type) => this.app.showToast(message, type)
+    });
 
     // 使用基类的标签管理功能
     this.initDetailTagManager(

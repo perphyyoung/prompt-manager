@@ -321,7 +321,7 @@ async function configurePragmas(): Promise<void> {
     try {
       await run(`PRAGMA ${name} = ${value}`);
     } catch (error: any) {
-      console.warn(`Failed to set PRAGMA ${name}:`, error.message);
+      logWarn('Database', `Failed to set PRAGMA ${name}: ${error.message}`);
     }
   }
 }
@@ -384,7 +384,7 @@ async function createIndexes(): Promise<void> {
     try {
       await run(sql);
     } catch (error: any) {
-      console.error('Failed to create index:', sql, error);
+      logError('Database', `Failed to create index: ${sql}`, error);
     }
   }
 }
@@ -434,29 +434,29 @@ async function runInTransaction<T>(asyncFn: () => Promise<T>): Promise<T> {
  * 定期执行 VACUUM 和 ANALYZE
  */
 async function optimizeDatabase(): Promise<boolean> {
-  console.log('[DB] Starting optimization...');
+  logDebug('Database', 'Starting optimization...');
 
   try {
     // 回收空间
     await run('VACUUM');
-    console.log('[DB] VACUUM completed');
+    logDebug('Database', 'VACUUM completed');
 
     // 更新统计信息
     await run('ANALYZE');
-    console.log('[DB] ANALYZE completed');
+    logDebug('Database', 'ANALYZE completed');
 
     // 完整性检查
     const result = await get<{ integrity_check: string }>('PRAGMA integrity_check');
     if (result && result.integrity_check !== 'ok') {
-      console.error('[DB] Integrity check failed:', result);
+      logError('Database', `Integrity check failed: ${result.integrity_check}`);
     } else {
-      console.log('[DB] Integrity check passed');
+      logDebug('Database', 'Integrity check passed');
     }
 
-    console.log('[DB] Optimization completed');
+    logDebug('Database', 'Optimization completed');
     return true;
   } catch (error: any) {
-    console.error('[DB] Optimization failed:', error);
+    logError('Database', 'Optimization failed:', error);
     throw error;
   }
 }
@@ -2745,7 +2745,7 @@ async function deleteImageFiles(image: ImageFilePaths, dataDir: string): Promise
       await fs.unlink(thumbnailPath).catch(() => {});
     }
   } catch (error: any) {
-    console.error('Failed to delete image file:', error);
+    logError('Database', 'Failed to delete image file:', error);
   }
 }
 
@@ -3498,10 +3498,10 @@ async function clearAllData(dataDir: string): Promise<string> {
     // 重新初始化数据库
     await initDatabase(oldDataDir);
 
-    console.debug('All data cleared and database reset');
+    logDebug('Database', 'All data cleared and database reset');
     return newDataDir;
   } catch (err: any) {
-    console.error('Clear all data failed:', err);
+    logError('Database', 'Clear all data failed:', err);
     throw err;
   }
 }

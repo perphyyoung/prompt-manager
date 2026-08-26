@@ -9,3 +9,4 @@
 - 谨慎使用 `declare global`，它会覆盖整个项目的类型声明；如果必须使用，确保与现有声明兼容，修改后需要重启 TypeScript 服务
 - 代码搜索遵守"用 rg 而不是 grep"：Agent 环境内置搜索工具底层即 ripgrep 可直接使用；shell 层搜索一律用 `rg`/`rtk grep`，不用裸 grep
 - 涉及 SQL 的修改，pnpm check（tsc/oxlint）完全无法覆盖，必须在提交前实际启动应用或对真实库冒烟验证，否则语法错误会直接导致启动失败
+- 日志必须遵循 `.trae/skills/py-pm-log/SKILL.md`：签名统一为 `(component, message, data?)`，component 用真实模块名（如 'ShortcutManager'），禁止固定 'Renderer' 之类的占位组件名

@@ -1,3 +1,4 @@
+import { logger } from './Logger.ts';
 /**
  * LocalStorage 管理器
  * 提供类型安全的 LocalStorage 访问 API
@@ -60,13 +61,13 @@ export class LocalStorageManager {
 
       // 验证值
       if (config.validator && !config.validator(parsed)) {
-        console.warn(`Invalid value for ${key}, using default`);
+        logger.warn('LocalStorageManager', `Invalid value for ${key}, using default`);
         return config.defaultValue as T;
       }
 
       return parsed;
     } catch (error) {
-      console.error(`Failed to get config ${key}:`, error);
+      logger.error('LocalStorageManager', `Failed to get config ${key}:`, error);
       return config.defaultValue as T;
     }
   }
@@ -95,7 +96,7 @@ export class LocalStorageManager {
 
       localStorage.setItem(key, serialized);
     } catch (error) {
-      console.error(`Failed to set config ${key}:`, error);
+      logger.error('LocalStorageManager', `Failed to set config ${key}:`, error);
       throw error;
     }
   }
