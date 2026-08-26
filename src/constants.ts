@@ -472,6 +472,7 @@ export class Constants {
     IMAGE_FULLSCREEN_VIEWER_FILE_NAME: "imageFullscreenViewerFileName",
     IMAGE_FULLSCREEN_VIEWER_COUNTER: "imageFullscreenViewerCounter",
     IMAGE_FULLSCREEN_VIEWER_HINT: "imageFullscreenViewerHint",
+    IMAGE_FULLSCREEN_VIEWER_TAGS: "imageFullscreenViewerTags",
     IMAGE_FULLSCREEN_VIEWER_WRAPPER: "imageFullscreenViewerWrapper",
     IMAGE_FULLSCREEN_VIEWER_IMG: "imageFullscreenViewerImg",
     IMAGE_FULLSCREEN_VIEWER_CLICK_LEFT: "imageFullscreenViewerClickLeft",

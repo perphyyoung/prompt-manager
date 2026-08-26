@@ -3132,6 +3132,19 @@ body * {
   opacity: 0.8;
 }
 
+/* 全屏查看器 - 左下角标签栏（标签样式复用详情页 .tag-editable） */
+.fullscreen-viewer-tags {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1001;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 60%;
+  pointer-events: none;
+}
+
 /* 全屏查看器 - 点击区域（用于左右切换） */
 .fullscreen-viewer-click-area {
   position: absolute;

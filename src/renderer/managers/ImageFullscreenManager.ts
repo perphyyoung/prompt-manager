@@ -1,5 +1,5 @@
 import { Constants } from '../../constants.ts';
-import { ListNavigator } from '../../utils/index.ts';
+import { ListNavigator, cacheManager, HtmlUtils } from '../../utils/index.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { ErrorHandler } from '../renderer_utils/index.ts';
 import type { IClosableElement } from '../../types/entities.ts';
@@ -176,6 +176,40 @@ export class ImageFullscreenManager {
     if (counter) {
       counter.textContent = `${this.viewerCurrentIndex + 1} / ${this.viewerImages.length}`;
     }
+
+    void this.updateViewerTags(currentImage);
+  }
+
+  /**
+   * 更新左下角标签栏
+   * 优先读缓存，未命中时兜底查库并回写缓存；
+   * 完成后校验仍是当前图像，避免快速切换时旧结果覆盖新标签
+   */
+  private async updateViewerTags(image: ViewerImage): Promise<void> {
+    const tagsEl = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_TAGS);
+    if (!tagsEl) return;
+
+    let tags: string[] = [];
+    try {
+      const cached = image.id ? cacheManager.getCachedImage(image.id) : undefined;
+      if (cached) {
+        tags = cached.tags || [];
+      } else if (image.id) {
+        const fetched = await window.electronAPI.getImageById(image.id);
+        if (fetched) {
+          cacheManager.cacheImage(fetched);
+          tags = fetched.tags || [];
+        }
+      }
+    } catch (error) {
+      window.electronAPI?.logError?.('ImageFullscreenManager.ts', 'Failed to load image tags:', error);
+    }
+
+    if (this.viewerImages[this.viewerCurrentIndex] !== image) return;
+
+    tagsEl.innerHTML = tags.map(tag =>
+      `<span class="tag-editable">${HtmlUtils.escapeHtml(tag)}</span>`
+    ).join('');
   }
 
   /**
