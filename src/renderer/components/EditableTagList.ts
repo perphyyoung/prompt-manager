@@ -27,10 +27,6 @@ export class EditableTagList {
   private _initialized: boolean;
   private _clickHandler?: (e: MouseEvent) => void;
 
-  // 静态变量：全局点击防抖
-  private static _lastClickTime: number = 0;
-  private static _lastClickedTag: string = '';
-
   /**
    * @param options - 配置选项
    */
@@ -44,10 +40,8 @@ export class EditableTagList {
 
   /**
    * 渲染标签列表
-   * @param selectedTags - 当前选中的标签（由 BatchToolbarMiddle 提供）
-   * @param isBatchMode - 是否批量模式（由 BatchToolbarMiddle 提供）
    */
-  render(selectedTags: Set<string> = new Set(), isBatchMode: boolean = false): void {
+  render(): void {
     const container = document.getElementById(this.containerId);
     if (!container) return;
 
@@ -58,21 +52,10 @@ export class EditableTagList {
     if (tags.length > 0) {
       container.innerHTML = tags.map(tag => {
         const escapedTag = HtmlUtils.escapeHtml(tag);
-        const isSelected = selectedTags.has(tag);
-
-        if (isBatchMode) {
-          // 批量模式：显示复选框样式
-          return `<span class="tag-editable tag-batch-selectable ${isSelected ? 'tag-selected' : ''}" data-tag="${escapedTag}">
-            <span class="tag-checkbox">${isSelected ? '✓' : ''}</span>
-            ${escapedTag}
-          </span>`;
-        } else {
-          // 普通模式：显示删除按钮
-          return `<span class="tag-editable tag-removable" data-tag="${escapedTag}">
-            ${escapedTag}
-            <span class="tag-remove-btn" title="删除标签">×</span>
-          </span>`;
-        }
+        return `<span class="tag-editable tag-removable" data-tag="${escapedTag}">
+          ${escapedTag}
+          <span class="tag-remove-btn" title="删除标签">×</span>
+        </span>`;
       }).join('');
     } else {
       container.innerHTML = '<span class="no-tags">无标签</span>';
@@ -81,9 +64,8 @@ export class EditableTagList {
 
   /**
    * 初始化事件委托
-   * @param onTagClick - 标签点击回调（批量模式下使用）
    */
-  init(onTagClick?: (tagName: string) => void): void {
+  init(): void {
     if (this._initialized) return;
 
     const container = document.getElementById(this.containerId);
@@ -97,24 +79,7 @@ export class EditableTagList {
     this._clickHandler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
 
-      // 批量模式下处理标签点击
-      const tagElement = target.closest('.tag-batch-selectable') as HTMLElement | null;
-      if (tagElement && onTagClick) {
-        const tagName = tagElement.dataset.tag;
-        if (tagName) {
-          // 全局防抖：防止同一标签在短时间内被重复点击
-          const now = Date.now();
-          if (tagName === EditableTagList._lastClickedTag && now - EditableTagList._lastClickTime < 200) {
-            return;
-          }
-          EditableTagList._lastClickTime = now;
-          EditableTagList._lastClickedTag = tagName;
-          onTagClick(tagName);
-        }
-        return;
-      }
-
-      // 普通模式下处理删除按钮
+      // 处理删除按钮
       const removeBtn = target.closest('.tag-remove-btn');
       if (!removeBtn) return;
 
@@ -134,33 +99,6 @@ export class EditableTagList {
       newContainerForEvent.addEventListener('click', this._clickHandler);
     }
     this._initialized = true;
-  }
-
-  /**
-   * 更新单个标签的选中状态（不重新渲染整个列表）
-   * @param tagName - 标签名称
-   * @param isSelected - 是否选中
-   */
-  public updateTagSelection(tagName: string, isSelected: boolean): void {
-    const container = document.getElementById(this.containerId);
-    if (!container) return;
-    
-    const tagElement = container.querySelector(`.tag-editable[data-tag="${tagName}"]`);
-    if (tagElement) {
-      if (isSelected) {
-        tagElement.classList.add('tag-selected');
-        const checkbox = tagElement.querySelector('.tag-checkbox');
-        if (checkbox) {
-          checkbox.textContent = '✓';
-        }
-      } else {
-        tagElement.classList.remove('tag-selected');
-        const checkbox = tagElement.querySelector('.tag-checkbox');
-        if (checkbox) {
-          checkbox.textContent = '';
-        }
-      }
-    }
   }
 
   /**

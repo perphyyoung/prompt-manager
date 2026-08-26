@@ -8,9 +8,7 @@
 /** 工具栏上下文 */
 export type ToolbarContext =
   | 'promptMain'
-  | 'imageMain'
-  | 'promptDetail'
-  | 'imageDetail';
+  | 'imageMain';
 
 /** 数据类型 */
 export type DataType = 'prompt' | 'image';

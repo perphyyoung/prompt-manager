@@ -63,9 +63,7 @@ export function generateToolbarId(context: string): string {
 export function isValidContext(context: string): boolean {
   const validContexts = [
     'promptMain',
-    'imageMain',
-    'promptDetail',
-    'imageDetail'
+    'imageMain'
   ];
   return validContexts.includes(context);
 }

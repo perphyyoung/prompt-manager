@@ -1,6 +1,6 @@
 /**
  * pyBatchToolbar 预设配置
- * 4 个入口的默认工具栏配置
+ * 2 个入口的默认工具栏配置
  */
 
 import type { BatchToolbarConfig, ToolbarContext } from './types.ts';
@@ -38,40 +38,10 @@ export const IMAGE_MAIN_BATCH_TOOLBAR: BatchToolbarConfig = {
   ]
 };
 
-/** 提示词详情页标签批量工具栏配置 */
-export const PROMPT_DETAIL_BATCH_TOOLBAR: BatchToolbarConfig = {
-  id: Constants.Ids.PROMPT_DETAIL_BATCH_TAG_TOOLBAR,
-  context: 'promptDetail',
-  dataType: 'prompt',
-  label: '标签',
-  buttons: [
-    { action: 'SelectAll', text: '全选', className: 'batch-action-select-all' },
-    { action: 'Invert', text: '反选', className: 'batch-action-invert' },
-    { action: 'Delete', text: '删除', className: 'batch-action-delete' },
-    { action: 'Cancel', text: '取消', className: 'batch-action-cancel' },
-  ]
-};
-
-/** 图像详情页标签批量工具栏配置 */
-export const IMAGE_DETAIL_BATCH_TOOLBAR: BatchToolbarConfig = {
-  id: Constants.Ids.IMAGE_DETAIL_BATCH_TAG_TOOLBAR,
-  context: 'imageDetail',
-  dataType: 'image',
-  label: '标签',
-  buttons: [
-    { action: 'SelectAll', text: '全选', className: 'batch-action-select-all' },
-    { action: 'Invert', text: '反选', className: 'batch-action-invert' },
-    { action: 'Delete', text: '删除', className: 'batch-action-delete' },
-    { action: 'Cancel', text: '取消', className: 'batch-action-cancel' },
-  ]
-};
-
 /** 预设配置映射 */
 export const PRESET_CONFIGS: Record<ToolbarContext, BatchToolbarConfig> = {
   promptMain: PROMPT_MAIN_BATCH_TOOLBAR,
   imageMain: IMAGE_MAIN_BATCH_TOOLBAR,
-  promptDetail: PROMPT_DETAIL_BATCH_TOOLBAR,
-  imageDetail: IMAGE_DETAIL_BATCH_TOOLBAR,
 };
 
 /**

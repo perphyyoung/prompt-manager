@@ -84,9 +84,7 @@ describe('BatchToolbarMiddle', () => {
 
       const contexts = [
         'promptMain',
-        'imageMain',
-        'promptDetail',
-        'imageDetail'
+        'imageMain'
       ] as const;
 
       contexts.forEach(context => {

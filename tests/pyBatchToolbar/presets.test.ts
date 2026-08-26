@@ -6,8 +6,6 @@ import { describe, it, expect } from 'vitest';
 import {
   PROMPT_MAIN_BATCH_TOOLBAR,
   IMAGE_MAIN_BATCH_TOOLBAR,
-  PROMPT_DETAIL_BATCH_TOOLBAR,
-  IMAGE_DETAIL_BATCH_TOOLBAR,
   PRESET_CONFIGS,
   getPresetConfig,
   getAllPresetConfigs,
@@ -66,37 +64,9 @@ describe('pyBatchToolbar presets', () => {
     });
   });
 
-  describe('PROMPT_DETAIL_BATCH_TOOLBAR', () => {
-    it('应该有正确的 ID', () => {
-      expect(PROMPT_DETAIL_BATCH_TOOLBAR.id).toBe(Constants.Ids.PROMPT_DETAIL_BATCH_TAG_TOOLBAR);
-    });
-
-    it('应该有正确的上下文', () => {
-      expect(PROMPT_DETAIL_BATCH_TOOLBAR.context).toBe('promptDetail');
-    });
-
-    it('应该有 4 个按钮', () => {
-      expect(PROMPT_DETAIL_BATCH_TOOLBAR.buttons).toHaveLength(4);
-    });
-  });
-
-  describe('IMAGE_DETAIL_BATCH_TOOLBAR', () => {
-    it('应该有正确的 ID', () => {
-      expect(IMAGE_DETAIL_BATCH_TOOLBAR.id).toBe(Constants.Ids.IMAGE_DETAIL_BATCH_TAG_TOOLBAR);
-    });
-
-    it('应该有正确的上下文', () => {
-      expect(IMAGE_DETAIL_BATCH_TOOLBAR.context).toBe('imageDetail');
-    });
-
-    it('应该有 4 个按钮', () => {
-      expect(IMAGE_DETAIL_BATCH_TOOLBAR.buttons).toHaveLength(4);
-    });
-  });
-
   describe('PRESET_CONFIGS', () => {
-    it('应该包含所有 4 个上下文', () => {
-      expect(Object.keys(PRESET_CONFIGS)).toHaveLength(4);
+    it('应该包含所有 2 个上下文', () => {
+      expect(Object.keys(PRESET_CONFIGS)).toHaveLength(2);
     });
 
     it('每个上下文都应该有有效的配置', () => {
@@ -117,9 +87,7 @@ describe('pyBatchToolbar presets', () => {
     it('应该为所有上下文返回正确的配置', () => {
       const contexts: Array<keyof typeof PRESET_CONFIGS> = [
         'promptMain',
-        'imageMain',
-        'promptDetail',
-        'imageDetail'
+        'imageMain'
       ];
 
       contexts.forEach(context => {
@@ -132,15 +100,13 @@ describe('pyBatchToolbar presets', () => {
   describe('getAllPresetConfigs', () => {
     it('应该返回所有预设配置的数组', () => {
       const configs = getAllPresetConfigs();
-      expect(configs).toHaveLength(4);
+      expect(configs).toHaveLength(2);
     });
 
     it('返回的数组应该包含所有预设', () => {
       const configs = getAllPresetConfigs();
       expect(configs).toContain(PROMPT_MAIN_BATCH_TOOLBAR);
       expect(configs).toContain(IMAGE_MAIN_BATCH_TOOLBAR);
-      expect(configs).toContain(PROMPT_DETAIL_BATCH_TOOLBAR);
-      expect(configs).toContain(IMAGE_DETAIL_BATCH_TOOLBAR);
     });
   });
 });

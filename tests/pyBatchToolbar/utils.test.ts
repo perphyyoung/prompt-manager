@@ -215,8 +215,6 @@ describe('pyBatchToolbar utils', () => {
     it('应该验证有效的上下文', () => {
       expect(isValidContext('promptMain')).toBe(true);
       expect(isValidContext('imageMain')).toBe(true);
-      expect(isValidContext('promptDetail')).toBe(true);
-      expect(isValidContext('imageDetail')).toBe(true);
     });
 
     it('应该拒绝无效的上下文', () => {

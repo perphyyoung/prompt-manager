@@ -311,13 +311,7 @@ export class ImageDetailManager extends DetailViewManager<IImage> {
 
     // 使用基类的标签管理功能
     this.initDetailTagManager(
-      {
-        toolbarId: Constants.Ids.IMAGE_DETAIL_BATCH_TAG_TOOLBAR,
-        containerId: Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER,
-        inputAreaId: Constants.Ids.IMAGE_DETAIL_TAG_INPUT_AREA,
-        batchBtnId: Constants.Ids.IMAGE_DETAIL_BATCH_TAG_BTN,
-        context: 'imageDetail'
-      },
+      Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER,
       detailTagManager
     );
 
@@ -1051,14 +1045,6 @@ export class ImageDetailManager extends DetailViewManager<IImage> {
     }
     // 恢复禁止二级跳转状态
     this.app.isFromDetailJump = true;
-  }
-
-  /**
-   * 切换批量模式（覆盖基类方法，添加调试日志）
-   * @protected
-   */
-  protected toggleBatchMode(): void {
-    super.toggleBatchMode();
   }
 
   async close(): Promise<void> {

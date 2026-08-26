@@ -232,11 +232,9 @@ export class Constants {
 
     // 提示词详情
     PROMPT_DETAIL_MODAL: "promptDetailModal",
-    PROMPT_DETAIL_BATCH_TOOLBAR: "promptDetailBatchToolbar",
 
     // 图像详情
     IMAGE_DETAIL_MODAL: "imageDetailModal",
-    IMAGE_DETAIL_BATCH_TOOLBAR: "imageDetailBatchToolbar",
 
     // 标签管理器
     PROMPT_TAG_MANAGER_MODAL: "promptTagManagerModal",
@@ -509,11 +507,6 @@ export class Constants {
     IMAGE_DETAIL_CLOSE_BTN: "imageDetailCloseBtn",
     IMAGE_DETAIL_FILE_NAME: "imageDetailFileName",
     IMAGE_DETAIL_FILE_NAME_STATUS: "imageDetailFileNameStatus",
-    IMAGE_DETAIL_BATCH_TAG_TOOLBAR: "imageDetailBatchTagToolbar",
-    IMAGE_DETAIL_BATCH_TAG_COUNT: "imageDetailBatchTagCount",
-    IMAGE_DETAIL_BATCH_TAG_DELETE_BTN: "imageDetailBatchTagDeleteBtn",
-    IMAGE_DETAIL_BATCH_TAG_CANCEL_BTN: "imageDetailBatchTagCancelBtn",
-    IMAGE_DETAIL_BATCH_TAG_BTN: "imageDetailBatchTagBtn",
     IMAGE_DETAIL_TAG_INPUT_AREA: "imageDetailTagInputArea",
     IMAGE_DETAIL_NOTE: "imageDetailNote",
     IMAGE_DETAIL_NOTE_STATUS: "imageDetailNoteStatus",
@@ -547,11 +540,6 @@ export class Constants {
     PROMPT_DETAIL_TRANSLATE: "promptDetailTranslate",
     PROMPT_DETAIL_TRANSLATE_STATUS: "promptDetailTranslateStatus",
     PROMPT_DETAIL_TRANSLATE_COPY_BTN: "promptDetailTranslateCopyBtn",
-    PROMPT_DETAIL_BATCH_TAG_TOOLBAR: "promptDetailBatchTagToolbar",
-    PROMPT_DETAIL_BATCH_TAG_COUNT: "promptDetailBatchTagCount",
-    PROMPT_DETAIL_BATCH_TAG_DELETE_BTN: "promptDetailBatchTagDeleteBtn",
-    PROMPT_DETAIL_BATCH_TAG_CANCEL_BTN: "promptDetailBatchTagCancelBtn",
-    PROMPT_DETAIL_BATCH_TAG_BTN: "promptDetailBatchTagBtn",
     PROMPT_DETAIL_TAG_INPUT_AREA: "promptDetailTagInputArea",
     PROMPT_DETAIL_NOTE: "promptDetailNote",
     PROMPT_DETAIL_NOTE_STATUS: "promptDetailNoteStatus",

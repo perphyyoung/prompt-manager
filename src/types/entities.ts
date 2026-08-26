@@ -146,16 +146,6 @@ export interface IDetailTagManager {
   getTags: () => string[];
   setTags: (tags: string[]) => void;
   removeTag: (tagName: string) => Promise<boolean>;
-  removeTags: (tagNames: string[]) => Promise<{ success: boolean; deleted: number }>;
   addTags: (tagNames: string[]) => Promise<{ success: boolean; added: number }>;
   onRender?: (tags?: string[]) => void;
-}
-
-/** 批量标签管理配置 */
-export interface IBatchTagManagerConfig {
-  toolbarId: string;
-  containerId: string;
-  inputAreaId: string;
-  batchBtnId: string;
-  context: 'promptDetail' | 'imageDetail';
 }

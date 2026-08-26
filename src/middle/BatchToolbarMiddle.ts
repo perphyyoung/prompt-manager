@@ -109,8 +109,6 @@ export class BatchToolbarMiddle {
     const contexts: ToolbarContext[] = [
       "promptMain",
       "imageMain",
-      "promptDetail",
-      "imageDetail",
     ];
 
     contexts.forEach((context) => this.init(context, businessConfig));

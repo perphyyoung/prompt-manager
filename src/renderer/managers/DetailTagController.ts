@@ -70,25 +70,6 @@ export function createDetailTagController(options: DetailTagControllerOptions): 
       }
     },
 
-    removeTags: async (tagNames: string[]) => {
-      try {
-        const result = await TagService.getInstance().removeTags({ tagNames, type });
-        if (result.errors.length === 0) {
-          const removed = new Set(tagNames);
-          options.commitTags(options.getTags().filter(t => !removed.has(t)));
-          options.notifyChanged();
-        }
-        return { success: result.errors.length === 0, deleted: result.deleted };
-      } catch (error) {
-        ErrorHandler.handleError(
-          { module: moduleLabel, operation: 'delete tags' },
-          error,
-          { userMessage: '删除标签失败', logError: false }
-        );
-        return { success: false, deleted: 0 };
-      }
-    },
-
     addTags: async (tagNames: string[]) => {
       try {
         const result = await TagService.getInstance().linkTagsToItem({

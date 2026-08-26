@@ -240,13 +240,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
 
     // 使用基类的标签管理功能
     this.initDetailTagManager(
-      {
-        toolbarId: Constants.Ids.PROMPT_DETAIL_BATCH_TAG_TOOLBAR,
-        containerId: Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER,
-        inputAreaId: Constants.Ids.PROMPT_DETAIL_TAG_INPUT_AREA,
-        batchBtnId: Constants.Ids.PROMPT_DETAIL_BATCH_TAG_BTN,
-        context: 'promptDetail',
-      },
+      Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER,
       detailTagManager,
     );
 
