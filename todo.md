@@ -37,7 +37,12 @@
   bindScrollEvents/unbindScrollEvents/ensureWindowData + GRID_GAP/PAGE_SIZE 常量统一；
   差异经抽象钩子注入（容器 ID、数据量、加载能力、窗口刷新入口）
 - [x] 3.2 详情管理器：新增 DetailTagController 工厂，initTagManager 的 ~120 行×2 同构标签增删逻辑收敛为一处；
-  ⚠️ 部分完成：syncSafetyToRelated*/updateOpen*DetailUI 合并与 38 处 as unknown as 全面类型化未做，留待后续
+  ✅ 类型化收尾：DetailViewManager 泛型化为 DetailViewManager<TItem extends DetailViewItem>，
+  子类以 IImage/IPrompt 实例化；实体层补全 IImage.promptRefs 真实形状（promptTitle/promptContentTranslate/promptNote）；
+  删除冗余的本地 IImageExtended/IPromptExtended 接口。
+  两详情管理器内 `as unknown as` 由 38 处降至 5 处（全项目 41→7）；
+  ⚠️ syncSafetyToRelated*/updateOpen*DetailUI 镜像对经评估保留各自实现（泛型化后各仅 ~20 行且类型安全，
+  合并需引入多参数间接层，收益为负）
 - [x] 3.3 renderer 统一 logger：src/utils/Logger.ts（签名遵循 py-pm-log 规范 (component, message, data?)，
   转发主进程 electron-log 写 pm.log，无 electronAPI 环境回退 console）；替换 utils+renderer 共 21 处 console 直用；
   database.ts 12 处改用本文件已有的结构化 logger；豁免：preload 转发基础设施、MockDataClearApi（knip 判定未使用）、debounce JSDoc 示例

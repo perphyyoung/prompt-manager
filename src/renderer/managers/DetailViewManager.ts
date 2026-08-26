@@ -27,27 +27,28 @@ interface NavButtons {
   last?: HTMLElement;
 }
 
-interface Item {
-  id: string | number;
+/** 详情项最小约束：子类以具体实体类型实例化（IImage / IPrompt） */
+export interface DetailViewItem {
+  id: string;
   [key: string]: unknown;
 }
 
 /**
  * 详情视图管理器基类
- * 提供详情模态框的通用功能
+ * 提供详情模态框的通用功能；泛型参数为当前详情实体类型
  */
-export abstract class DetailViewManager {
+export abstract class DetailViewManager<TItem extends DetailViewItem = DetailViewItem> {
   protected app: IApp;
   protected modalId: string;
   protected closeBtnId: string;
 
   // 状态
-  protected currentItem: Item | null = null;
-  protected itemsSnapshot: Item[] = [];
+  protected currentItem: TItem | null = null;
+  protected itemsSnapshot: TItem[] = [];
   protected currentIndex = -1;
 
   // 导航器
-  protected navigator: ListNavigator<Item> | null = null;
+  protected navigator: ListNavigator<TItem> | null = null;
 
   // 保存管理
   protected saveManager: unknown = null;
@@ -165,7 +166,7 @@ export abstract class DetailViewManager {
    * @param options - 选项
    * @abstract
    */
-  abstract open(item: Item, options?: { filteredList?: Item[] }): Promise<void>;
+  abstract open(item: TItem, options?: { filteredList?: TItem[] }): Promise<void>;
 
   /**
    * 显示详情模态框
@@ -349,10 +350,10 @@ export abstract class DetailViewManager {
    * @protected
    */
   initNavigator(
-    item: Item,
-    items: Item[],
+    item: TItem,
+    items: TItem[],
     navButtons: NavButtons,
-    onNavigate: (item: Item) => void | Promise<void>,
+    onNavigate: (item: TItem) => void | Promise<void>,
   ): void {
     // 记录快照
     this.itemsSnapshot = [...items];
@@ -477,7 +478,7 @@ export abstract class DetailViewManager {
    * 获取当前项目快照
    * @returns 项目快照数组
    */
-  getItemsSnapshot(): Item[] {
+  getItemsSnapshot(): TItem[] {
     return this.itemsSnapshot;
   }
 
@@ -497,7 +498,7 @@ export abstract class DetailViewManager {
    * @abstract
    * @protected
    */
-  abstract updateView(item: Item): Promise<void>;
+  abstract updateView(item: TItem): Promise<void>;
 
   // ==================== 标签管理通用方法 ====================
 

@@ -13,22 +13,10 @@ import type { IApp } from '../app.types.ts';
 import { showContextMenu } from '../renderer_utils/ContextMenuUtils.ts';
 import { createDetailTagController } from './DetailTagController.ts';
 
-// 扩展 IImage 接口
-interface IImageExtended extends IImage {
-  promptRefs?: Array<{
-    promptId: string;
-    promptTitle?: string;
-    promptContent?: string;
-    promptContentTranslate?: string;
-    promptNote?: string;
-  }>;
-  [key: string]: unknown;
-}
-
 // 选项接口
 interface IOpenOptions {
-  filteredList?: { id: string; fileName: string; relativePath: string; [key: string]: unknown }[];
-  returnToManager?: DetailViewManager | null;
+  filteredList?: IImage[];
+  returnToManager?: DetailViewManager<IImage> | null;
   returnToItem?: unknown;
 }
 
@@ -36,11 +24,11 @@ interface IImageDetailManagerOptions {
   app: IApp;
 }
 
-export class ImageDetailManager extends DetailViewManager {
+export class ImageDetailManager extends DetailViewManager<IImage> {
   private tagAutocomplete: TagAutocomplete | null = null;
   private imageSaveManager: SaveManager | null = null;
   private favoriteBtnHandler: (() => void) | null = null;
-  private returnToManager: DetailViewManager | null = null;
+  private returnToManager: DetailViewManager<IImage> | null = null;
   private returnToItem: unknown = null;
   private returnToOptions: IOpenOptions = {};
   private currentDetailPromptId: string | null = null;
@@ -60,8 +48,8 @@ export class ImageDetailManager extends DetailViewManager {
    * @param item - 图像对象
    * @param options - 选项
    */
-  async open(item: { id: string; fileName: string; relativePath: string; [key: string]: unknown }, options: IOpenOptions = {}): Promise<void> {
-    const image = item as IImageExtended;
+  async open(item: IImage, options: IOpenOptions = {}): Promise<void> {
+    const image = item;
     const modal = document.getElementById(this.modalId);
     if (!modal) {
       window.electronAPI.logError('ImageDetailManager.ts', 'Image detail modal not found');
@@ -77,7 +65,7 @@ export class ImageDetailManager extends DetailViewManager {
       // 从缓存获取最新的图像数据，确保 isSafe 是最新的
       const latestImage = cacheManager.getCachedImage(image.id) || image;
 
-      this.currentItem = latestImage as unknown as { id: string | number; [key: string]: unknown };
+      this.currentItem = latestImage;
 
       this.fillFormData(latestImage);
 
@@ -126,7 +114,7 @@ export class ImageDetailManager extends DetailViewManager {
    * @param image - 图像对象
    * @private
    */
-  private fillFormData(image: IImageExtended): void {
+  private fillFormData(image : IImage): void {
     const fileNameInput = document.getElementById(Constants.Ids.IMAGE_DETAIL_FILE_NAME) as HTMLInputElement | null;
     if (fileNameInput) {
       fileNameInput.value = image.fileName || '';
@@ -167,7 +155,7 @@ export class ImageDetailManager extends DetailViewManager {
    * @param image - 图像对象
    * @private
    */
-  private async renderImageInfo(image: IImageExtended): Promise<void> {
+  private async renderImageInfo(image : IImage): Promise<void> {
     // 更新时间
     const updatedAtEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_UPDATED_AT);
     if (updatedAtEl) {
@@ -205,7 +193,7 @@ export class ImageDetailManager extends DetailViewManager {
           imgEl.ondblclick = () => {
             if (this.itemsSnapshot && this.itemsSnapshot.length > 0) {
               const currentIndex = this.itemsSnapshot.findIndex(i => this.app.isSameId(i.id, image.id));
-              this.app.imageFullscreenManager?.open(this.itemsSnapshot as unknown as IImage[], currentIndex >= 0 ? currentIndex : 0);
+              this.app.imageFullscreenManager?.open(this.itemsSnapshot, currentIndex >= 0 ? currentIndex : 0);
             } else {
               this.app.imageFullscreenManager?.open([image], 0);
             }
@@ -232,7 +220,7 @@ export class ImageDetailManager extends DetailViewManager {
     if (imgEl) {
       imgEl.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        const currentImage = this.currentItem as unknown as IImageExtended;
+        const currentImage = this.currentItem;
         if (!currentImage?.relativePath) return;
 
         showContextMenu({
@@ -304,14 +292,14 @@ export class ImageDetailManager extends DetailViewManager {
    * @param image - 图像对象
    * @private
    */
-  private initTagManager(image: IImageExtended): void {
+  private initTagManager(image : IImage): void {
     this.currentTags = [...(image.tags || [])];
 
     // 标签增删逻辑与提示词详情同构，统一由 DetailTagController 提供
     const detailTagManager: IDetailTagManager = createDetailTagController({
       type: 'image',
       moduleLabel: 'ImageDetailManager.ts',
-      getCurrentItemId: () => (this.currentItem as IImageExtended).id,
+      getCurrentItemId: () => this.currentItem?.id,
       getTags: () => this.currentTags,
       commitTags: (tags) => {
         this.currentTags = tags;
@@ -356,7 +344,7 @@ export class ImageDetailManager extends DetailViewManager {
       dropdownId: Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE,
       onSelect: async (tagName: string) => {
         try {
-          const currentItem = this.currentItem as unknown as IImageExtended;
+          const currentItem = this.currentItem;
           const tagService = TagService.getInstance();
           const result = await tagService.linkTagsToItem({
             tagNames: [tagName],
@@ -389,7 +377,7 @@ export class ImageDetailManager extends DetailViewManager {
       },
       onBatchAdd: async (tagNames: string[]) => {
         try {
-          const currentItem = this.currentItem as unknown as IImageExtended;
+          const currentItem = this.currentItem;
           const tagService = TagService.getInstance();
           const result = await tagService.linkTagsToItem({
             tagNames,
@@ -434,7 +422,7 @@ export class ImageDetailManager extends DetailViewManager {
    * @private
    */
   private syncImageTagsToCache(): void {
-    const currentImage = this.currentItem as unknown as IImageExtended;
+    const currentImage = this.currentItem;
     if (!currentImage?.id) return;
 
     const tags = [...this.currentTags];
@@ -457,7 +445,7 @@ export class ImageDetailManager extends DetailViewManager {
   /**
    * 收集并缓存提示词引用
    */
-  private collectPromptRefs(image: IImageExtended): IPrompt[] {
+  private collectPromptRefs(image : IImage): IPrompt[] {
     if (!image.promptRefs?.length) return [];
 
     return image.promptRefs.map(ref => {
@@ -487,7 +475,7 @@ export class ImageDetailManager extends DetailViewManager {
   private renderPromptTitles(
     promptTitleContainer: HTMLElement | null,
     allPromptRefs: IPrompt[],
-    image: IImageExtended
+    image : IImage
   ): void {
     if (!promptTitleContainer) return;
 
@@ -627,7 +615,7 @@ export class ImageDetailManager extends DetailViewManager {
    * @param image - 图像对象
    * @private
    */
-  private async renderPromptInfo(image: IImageExtended): Promise<void> {
+  private async renderPromptInfo(image : IImage): Promise<void> {
     const promptTitleContainer = document.getElementById(Constants.Ids.IMAGE_DETAIL_PROMPT_TITLE);
     const editPromptBtn = document.getElementById(Constants.Ids.EDIT_PROMPT_FROM_IMAGE_BTN) as HTMLButtonElement | null;
     const editPromptBtnText = document.getElementById(Constants.Ids.EDIT_PROMPT_BTN_TEXT);
@@ -720,7 +708,7 @@ export class ImageDetailManager extends DetailViewManager {
     if (!confirmed) return;
 
     try {
-      const currentItem = this.currentItem as unknown as IImageExtended;
+      const currentItem = this.currentItem;
       const currentPrompts = currentItem?.promptRefs || [];
       const newPrompts = currentPrompts.filter(p => !this.app.isSameId(p.promptId, promptId));
       // 转换为数据库需要的格式（只保留 id）
@@ -728,12 +716,12 @@ export class ImageDetailManager extends DetailViewManager {
       await window.electronAPI.updateImage(imageId, { prompts: promptsForUpdate });
 
       if (this.currentItem) {
-        (this.currentItem as unknown as IImageExtended).promptRefs = newPrompts;
+        (this.currentItem).promptRefs = newPrompts;
         const cachedImage = cacheManager.getCachedImage(imageId);
         if (cachedImage) {
-          (cachedImage as unknown as IImageExtended).promptRefs = newPrompts;
+          (cachedImage).promptRefs = newPrompts;
         }
-        await this.renderPromptInfo(this.currentItem as unknown as IImageExtended);
+        await this.renderPromptInfo(this.currentItem);
       }
 
       // 通过事件通知刷新，避免直接调用导致的重复刷新
@@ -751,7 +739,7 @@ export class ImageDetailManager extends DetailViewManager {
    * @param image - 图像对象
    * @private
    */
-  private initSaveManager(image: IImageExtended): void {
+  private initSaveManager(image : IImage): void {
     // 清理旧的
     if (this.imageSaveManager) {
       this.imageSaveManager.destroy();
@@ -831,7 +819,7 @@ export class ImageDetailManager extends DetailViewManager {
         const boolValue = Boolean(value);
         // 更新 currentItem 的收藏状态
         if (this.currentItem) {
-          (this.currentItem as unknown as IImageExtended).isFavorite = boolValue ? 1 : 0;
+          (this.currentItem).isFavorite = boolValue ? 1 : 0;
         }
         this.updateFavoriteBtnUI(boolValue);
         this.app.showToast(boolValue ? '已收藏' : '已取消收藏', 'success');
@@ -842,7 +830,7 @@ export class ImageDetailManager extends DetailViewManager {
     const favoriteBtn = document.getElementById(Constants.Ids.IMAGE_DETAIL_FAVORITE_BTN);
     if (favoriteBtn) {
       this.favoriteBtnHandler = async () => {
-        const currentItem = this.currentItem as unknown as IImageExtended;
+        const currentItem = this.currentItem;
         const newState = !currentItem?.isFavorite;
         await this.imageSaveManager?.triggerSave('isFavorite', newState, currentItem?.id);
       };
@@ -856,7 +844,8 @@ export class ImageDetailManager extends DetailViewManager {
    * @private
    */
   private async syncSafetyToRelatedPrompts(isSafe: number): Promise<void> {
-    const image = this.currentItem as unknown as IImageExtended;
+    const image = this.currentItem;
+    if (!image) return;
     if (!image.promptRefs || image.promptRefs.length === 0) return;
 
     const syncedIds: string[] = [];
@@ -911,20 +900,20 @@ export class ImageDetailManager extends DetailViewManager {
    * @param options - 选项
    * @private
    */
-  private async initNavigatorForImage(image: IImageExtended, options: IOpenOptions = {}): Promise<void> {
+  private async initNavigatorForImage(image : IImage, options: IOpenOptions = {}): Promise<void> {
     // 记录当前图像列表的快照
     const items = options.filteredList && options.filteredList.length > 0
       ? [...options.filteredList]
       : [];
 
-    const onNavigate = async (targetImage: { id: string | number; [key: string]: unknown }) => {
+    const onNavigate = async (targetImage: IImage) => {
       // 直接使用 targetImage，不要重新查找，避免数据不一致
       await this.updateView(targetImage);
     };
 
     this.initNavigator(
-      image as unknown as { id: string | number; [key: string]: unknown },
-      items as unknown as { id: string | number; [key: string]: unknown }[],
+      image,
+      items,
       {
         first: document.getElementById(Constants.Ids.IMAGE_DETAIL_FIRST_NAV_BTN) ?? undefined,
         prev: document.getElementById(Constants.Ids.IMAGE_DETAIL_PREV_NAV_BTN) ?? undefined,
@@ -939,8 +928,8 @@ export class ImageDetailManager extends DetailViewManager {
    * 更新视图
    * @param item - 数据项
    */
-  async updateView(item: { id: string | number; [key: string]: unknown }): Promise<void> {
-    const image = item as unknown as IImageExtended;
+  async updateView(item: IImage): Promise<void> {
+    const image = item;
     // 更新当前图像
     this.currentItem = item;
 
@@ -983,7 +972,7 @@ export class ImageDetailManager extends DetailViewManager {
    * @param image - 图像对象
    * @private
    */
-  private async createPromptForImage(image: IImageExtended): Promise<void> {
+  private async createPromptForImage(image : IImage): Promise<void> {
     try {
       // 保存当前图像和返回信息，以便新建提示词页面关闭后返回
       const currentImage = image;
@@ -998,13 +987,13 @@ export class ImageDetailManager extends DetailViewManager {
             const cachedImage = cacheManager.getCachedImage(currentImage.id);
             if (cachedImage) {
               // 更新当前图像的提示词关联信息
-              (currentImage as unknown as IImageExtended).promptRefs = (cachedImage as unknown as IImageExtended).promptRefs || [];
+              (currentImage).promptRefs = (cachedImage).promptRefs || [];
               // 刷新图像详情中的提示词关联信息
               await this.renderPromptInfo(currentImage);
             }
           }
           // 重新打开图像详情界面
-          await this.open(currentImage as unknown as { id: string; fileName: string; relativePath: string; [key: string]: unknown }, {
+          await this.open(currentImage, {
             returnToManager: returnToManager,
             returnToItem: returnToItem
           });
@@ -1093,7 +1082,7 @@ export class ImageDetailManager extends DetailViewManager {
 
     if (returnToManager && returnToItem) {
       // 使用保存的选项恢复状态，包括 filteredList
-      await returnToManager.open(returnToItem as { id: string | number; [key: string]: unknown }, returnToOptions);
+      await returnToManager.open(returnToItem as IImage, returnToOptions);
     }
   }
 }

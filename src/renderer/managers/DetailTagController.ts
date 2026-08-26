@@ -18,8 +18,8 @@ export interface DetailTagControllerOptions {
   type: 'prompt' | 'image';
   /** 日志模块名（错误上报定位用） */
   moduleLabel: string;
-  /** 当前详情项 ID（详情生命周期内必存在） */
-  getCurrentItemId(): string;
+  /** 当前详情项 ID（详情生命周期内必存在；模态框关闭后可能为 undefined） */
+  getCurrentItemId(): string | undefined;
   /** 读取当前标签快照 */
   getTags(): string[];
   /** 提交新的标签快照（宿主可在此同步缓存等派生状态） */
@@ -47,9 +47,10 @@ export function createDetailTagController(options: DetailTagControllerOptions): 
         if (!confirmed) return false;
 
         // unlinkTagFromItem 解除标签与项目的关联（会更新 updated_at）
+        // 详情生命周期内 currentItem 必存在，此处收窄为 string
         const success = await TagService.getInstance().unlinkTagFromItem({
           type,
-          itemId: options.getCurrentItemId(),
+          itemId: options.getCurrentItemId() as string,
           tagName
         });
         if (success) {

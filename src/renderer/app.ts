@@ -528,7 +528,7 @@ class PromptManager implements IApp {
    * @param image - 图像对象
    */
   async openImageDetailModal(image: IImage, options = {}) {
-    await this.imageDetailManager?.open(image as { id: string; fileName: string; relativePath: string; [key: string]: unknown }, options);
+    await this.imageDetailManager?.open(image, options);
   }
 
   /**

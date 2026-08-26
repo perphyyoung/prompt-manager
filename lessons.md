@@ -10,3 +10,4 @@
 - 代码搜索遵守"用 rg 而不是 grep"：Agent 环境内置搜索工具底层即 ripgrep 可直接使用；shell 层搜索一律用 `rg`/`rtk grep`，不用裸 grep
 - 涉及 SQL 的修改，pnpm check（tsc/oxlint）完全无法覆盖，必须在提交前实际启动应用或对真实库冒烟验证，否则语法错误会直接导致启动失败
 - 日志必须遵循 `.trae/skills/py-pm-log/SKILL.md`：签名统一为 `(component, message, data?)`，component 用真实模块名（如 'ShortcutManager'），禁止固定 'Renderer' 之类的占位组件名
+- 批量文本替换一律走 Node/TS 脚本（精确 old→new 对），即少量几处也不要用 PowerShell 的 -Replace/[IO.File].Replace 直改文件

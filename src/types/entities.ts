@@ -34,7 +34,13 @@ export interface IImage {
   width?: number;
   height?: number;
   note?: string;
-  promptRefs?: Array<{ promptId: string; title?: string; promptContent?: string }>;
+  promptRefs?: Array<{
+    promptId: string;
+    promptTitle?: string;
+    promptContent?: string;
+    promptContentTranslate?: string;
+    promptNote?: string;
+  }>;
   prompts?: Array<{ id: string }>;
   tags?: string[];
   createdAt?: string;

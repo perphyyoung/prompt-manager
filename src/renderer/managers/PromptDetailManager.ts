@@ -20,12 +20,6 @@ import { TagService } from "../services/index.ts";
 import { createDetailTagController } from "./DetailTagController.ts";
 import type { IApp } from "../app.types.ts";
 
-// 扩展 IPrompt 接口以包含更多字段
-interface IPromptExtended extends IPrompt {
-  contentTranslate?: string;
-  note?: string;
-}
-
 // 图像选择结果
 interface IImageSelectionResult {
   success: boolean;
@@ -35,8 +29,8 @@ interface IImageSelectionResult {
 
 // 选项接口
 interface IOpenOptions {
-  filteredList?: IPromptExtended[];
-  returnToManager?: DetailViewManager | null;
+  filteredList?: IPrompt[];
+  returnToManager?: DetailViewManager<IPrompt> | null;
   returnToItem?: unknown;
 }
 
@@ -45,7 +39,7 @@ interface IPromptDetailManagerOptions {
   app: IApp;
 }
 
-export class PromptDetailManager extends DetailViewManager {
+export class PromptDetailManager extends DetailViewManager<IPrompt> {
   private uploadStrategy: DirectSaveStrategy;
   private isOpeningDialog: boolean;
   private tagAutocomplete: TagAutocomplete | null = null;
@@ -53,7 +47,7 @@ export class PromptDetailManager extends DetailViewManager {
   private favoriteBtnHandler: (() => void) | null = null;
   private contentCopyBtnHandler: (() => void) | null = null;
   private translateCopyBtnHandler: (() => void) | null = null;
-  private returnToManager: DetailViewManager | null = null;
+  private returnToManager: DetailViewManager<IPrompt> | null = null;
   private returnToItem: unknown = null;
   private currentTags: string[] = [];
   private imagesChangedHandler: (() => void) | null = null;
@@ -81,7 +75,7 @@ export class PromptDetailManager extends DetailViewManager {
    * @param prompt - 提示词对象
    * @param options - 选项
    */
-  async open(prompt: IPromptExtended, options: IOpenOptions = {}): Promise<void> {
+  async open(prompt : IPrompt, options: IOpenOptions = {}): Promise<void> {
     const modal = document.getElementById(this.modalId);
     if (!modal) {
       window.electronAPI.logError("PromptDetailManager.ts", "Prompt detail modal not found");
@@ -107,7 +101,7 @@ export class PromptDetailManager extends DetailViewManager {
         }
       }
 
-      this.currentItem = latestPrompt as unknown as { id: string | number; [key: string]: unknown };
+      this.currentItem = latestPrompt;
 
       this.fillFormData(latestPrompt);
 
@@ -148,7 +142,7 @@ export class PromptDetailManager extends DetailViewManager {
    * @param prompt - 提示词对象
    * @private
    */
-  private fillFormData(prompt: IPromptExtended): void {
+  private fillFormData(prompt : IPrompt): void {
     const idInput = document.getElementById(
       Constants.Ids.PROMPT_DETAIL_ID,
     ) as HTMLInputElement | null;
@@ -201,7 +195,7 @@ export class PromptDetailManager extends DetailViewManager {
    * @param prompt - 提示词对象
    * @private
    */
-  private async loadImages(prompt: IPromptExtended): Promise<void> {
+  private async loadImages(prompt : IPrompt): Promise<void> {
     // 清空 currentImages 缓存
     this.app.promptRefImagesCache.clear();
 
@@ -228,14 +222,14 @@ export class PromptDetailManager extends DetailViewManager {
    * @param prompt - 提示词对象
    * @private
    */
-  private initTagManager(prompt: IPromptExtended): void {
+  private initTagManager(prompt : IPrompt): void {
     this.currentTags = [...(prompt.tags || [])];
 
     // 标签增删逻辑与图像详情同构，统一由 DetailTagController 提供
     const detailTagManager: IDetailTagManager = createDetailTagController({
       type: 'prompt',
       moduleLabel: 'PromptDetailManager.ts',
-      getCurrentItemId: () => (this.currentItem as IPromptExtended).id,
+      getCurrentItemId: () => this.currentItem?.id,
       getTags: () => this.currentTags,
       commitTags: (tags) => {
         this.currentTags = tags;
@@ -279,7 +273,7 @@ export class PromptDetailManager extends DetailViewManager {
       dropdownId: Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE,
       onSelect: async (tagName: string) => {
         try {
-          const currentItem = this.currentItem as unknown as IPromptExtended;
+          const currentItem = this.currentItem;
           const tagService = TagService.getInstance();
           const result = await tagService.linkTagsToItem({
             tagNames: [tagName],
@@ -318,7 +312,7 @@ export class PromptDetailManager extends DetailViewManager {
       },
       onBatchAdd: async (tagNames: string[]) => {
         try {
-          const currentItem = this.currentItem as unknown as IPromptExtended;
+          const currentItem = this.currentItem;
           const tagService = TagService.getInstance();
           const result = await tagService.linkTagsToItem({
             tagNames,
@@ -367,7 +361,7 @@ export class PromptDetailManager extends DetailViewManager {
    * @param prompt - 提示词对象
    * @private
    */
-  private initSaveManager(prompt: IPromptExtended): void {
+  private initSaveManager(prompt : IPrompt): void {
     // 清理旧的
     if (this.promptSaveManager) {
       this.promptSaveManager.destroy();
@@ -486,7 +480,7 @@ export class PromptDetailManager extends DetailViewManager {
         const boolValue = Boolean(value);
         // 更新 currentItem 的收藏状态
         if (this.currentItem) {
-          (this.currentItem as unknown as IPromptExtended).isFavorite = boolValue ? 1 : 0;
+          (this.currentItem).isFavorite = boolValue ? 1 : 0;
         }
         this.updateFavoriteBtnUI(boolValue);
         this.app.showToast(boolValue ? "已收藏" : "已取消收藏", "success");
@@ -497,7 +491,7 @@ export class PromptDetailManager extends DetailViewManager {
     const favoriteBtn = document.getElementById(Constants.Ids.PROMPT_DETAIL_FAVORITE_BTN);
     if (favoriteBtn) {
       this.favoriteBtnHandler = async () => {
-        const currentItem = this.currentItem as unknown as IPromptExtended;
+        const currentItem = this.currentItem;
         const newState = !currentItem?.isFavorite;
         await this.promptSaveManager?.triggerSave("isFavorite", newState, currentItem?.id);
       };
@@ -567,7 +561,8 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private async syncSafetyToRelatedImages(isSafe: number): Promise<void> {
-    const prompt = this.currentItem as unknown as IPromptExtended;
+    const prompt = this.currentItem;
+    if (!prompt) return;
     if (!prompt.images || prompt.images.length === 0) return;
 
     const syncedIds: string[] = [];
@@ -627,7 +622,7 @@ export class PromptDetailManager extends DetailViewManager {
    * @private
    */
   private async initNavigatorForPrompt(
-    prompt: IPromptExtended,
+    prompt : IPrompt,
     options: IOpenOptions = {},
   ): Promise<void> {
     // 如果导航器已存在，先销毁旧的事件监听器
@@ -639,7 +634,7 @@ export class PromptDetailManager extends DetailViewManager {
     const items =
       options.filteredList && options.filteredList.length > 0 ? [...options.filteredList] : [];
 
-    const onNavigate = async (targetPrompt: IPromptExtended) => {
+    const onNavigate = async (targetPrompt : IPrompt) => {
       // 使用 targetPrompt，因为它来自快照，已经包含所需的图像信息
       // 但需要确保图像数据是最新的，从缓存中同步
       const latestPrompt = cacheManager.getCachedPrompt(targetPrompt.id);
@@ -656,18 +651,15 @@ export class PromptDetailManager extends DetailViewManager {
     };
 
     this.initNavigator(
-      prompt as unknown as { id: string | number; [key: string]: unknown },
-      items as unknown as { id: string | number; [key: string]: unknown }[],
+      prompt,
+      items,
       {
         first: document.getElementById(Constants.Ids.PROMPT_DETAIL_FIRST_NAV_BTN) || undefined,
         prev: document.getElementById(Constants.Ids.PROMPT_DETAIL_PREV_NAV_BTN) || undefined,
         next: document.getElementById(Constants.Ids.PROMPT_DETAIL_NEXT_NAV_BTN) || undefined,
         last: document.getElementById(Constants.Ids.PROMPT_DETAIL_LAST_NAV_BTN) || undefined,
       },
-      onNavigate as unknown as (item: {
-        id: string | number;
-        [key: string]: unknown;
-      }) => void | Promise<void>,
+      onNavigate,
     );
   }
 
@@ -707,9 +699,9 @@ export class PromptDetailManager extends DetailViewManager {
    * 填充表单数据
    * @param prompt - 提示词对象
    */
-  async updateView(prompt: IPromptExtended): Promise<void> {
+  async updateView(prompt: IPrompt): Promise<void> {
     // 更新当前提示词
-    this.currentItem = prompt as unknown as { id: string | number; [key: string]: unknown };
+    this.currentItem = prompt;
 
     // 更新当前标签
     this.currentTags = [...(prompt.tags || [])];
@@ -841,7 +833,7 @@ export class PromptDetailManager extends DetailViewManager {
                   if (result.success) {
                     this.app.showToast('图像已替换', 'success');
                     // 重新加载当前提示词，更新图像关联缓存
-                    const currentPrompt = this.currentItem as unknown as IPromptExtended;
+                    const currentPrompt = this.currentItem;
                     // 刷新新图像缓存（包含最新的更新时间），确保图像主界面按最近更新排序正确
                     if (result.image) {
                       cacheManager.cacheImage(result.image);
@@ -868,8 +860,8 @@ export class PromptDetailManager extends DetailViewManager {
                       ? cacheManager.getCachedPrompt(String(currentPrompt.id))
                       : undefined;
                     if (latestPrompt) {
-                      this.currentItem = latestPrompt as unknown as { id: string | number; [key: string]: unknown };
-                      await this.loadImages(latestPrompt as IPromptExtended);
+                      this.currentItem = latestPrompt;
+                      await this.loadImages(latestPrompt);
                     }
                   }
                 } catch (error) {
@@ -1314,7 +1306,7 @@ export class PromptDetailManager extends DetailViewManager {
       if ("hide" in returnToManager && "show" in returnToManager) {
         (returnToManager as { show: () => void }).show();
       } else {
-        await returnToManager.open(returnToItem as { id: string | number; [key: string]: unknown });
+        await returnToManager.open(returnToItem as IPrompt);
       }
     }
   }
