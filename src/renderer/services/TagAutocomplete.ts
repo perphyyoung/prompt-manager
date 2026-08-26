@@ -41,6 +41,8 @@ export class TagAutocomplete {
   private inputHandler: (() => void) | null = null;
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private blurHandler: (() => void) | null = null;
+  private focusHandler: (() => void) | null = null;
+  private blurHideTimer: ReturnType<typeof setTimeout> | null = null;
   private clickOutsideHandler: ((e: MouseEvent) => void) | null = null;
 
   /**
@@ -98,6 +100,14 @@ export class TagAutocomplete {
       this.input.removeEventListener('blur', this.blurHandler);
       this.blurHandler = null;
     }
+    if (this.focusHandler && this.input) {
+      this.input.removeEventListener('focus', this.focusHandler);
+      this.focusHandler = null;
+    }
+    if (this.blurHideTimer !== null) {
+      clearTimeout(this.blurHideTimer);
+      this.blurHideTimer = null;
+    }
     if (this.clickOutsideHandler) {
       document.removeEventListener('click', this.clickOutsideHandler);
       this.clickOutsideHandler = null;
@@ -120,10 +130,30 @@ export class TagAutocomplete {
     this.input.addEventListener('keydown', this.keydownHandler);
 
     // 失去焦点时隐藏下拉框
+    // 延迟 200ms 是为了给"点击下拉建议项"留出mousedown→click的时间窗口；
+    // 定时器到期时必须复核焦点：若输入框已重新聚焦（快速切回继续输入），
+    // 过期的定时器会把正在使用的下拉框隐藏掉，抹掉键盘导航的选中状态
     this.blurHandler = () => {
-      setTimeout(() => this.hideDropdown(), 200);
+      if (this.blurHideTimer !== null) {
+        clearTimeout(this.blurHideTimer);
+      }
+      this.blurHideTimer = setTimeout(() => {
+        this.blurHideTimer = null;
+        if (document.activeElement !== this.input) {
+          this.hideDropdown();
+        }
+      }, 200);
     };
     this.input.addEventListener('blur', this.blurHandler);
+
+    // 重新聚焦/继续输入时撤销未到期的失焦隐藏
+    this.focusHandler = () => {
+      if (this.blurHideTimer !== null) {
+        clearTimeout(this.blurHideTimer);
+        this.blurHideTimer = null;
+      }
+    };
+    this.input.addEventListener('focus', this.focusHandler);
 
     // 点击外部关闭
     if (this.containerSelector) {
@@ -149,8 +179,19 @@ export class TagAutocomplete {
       return;
     }
 
+    // 继续输入时撤销未到期的失焦隐藏，避免下拉框在交互中途被过期定时器关闭
+    if (this.blurHideTimer !== null) {
+      clearTimeout(this.blurHideTimer);
+      this.blurHideTimer = null;
+    }
+
     try {
       const suggestions = await this.tagService.searchTags(this.type, value, this.excludeTags);
+
+      // 异步竞态守卫：等待期间输入框的值已变化时丢弃本次陈旧响应。
+      // 否则迟到的旧结果会整体重渲染下拉框，抹掉键盘导航设置的选中高亮，
+      // 导致随后的回车提交不到预期标签
+      if (this.input.value.trim() !== value) return;
 
       if (suggestions.length === 0) {
         this.hideDropdown();
