@@ -12,20 +12,18 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 function emit(level: LogLevel, component: string, message: string, data?: unknown): void {
   const api = typeof window !== 'undefined' ? window.electronAPI : undefined;
 
-  if (api) {
-    if (level === 'debug') {
-      api.logDebug(component, message, data);
-    } else if (level === 'info') {
-      api.logInfo(component, message, data);
-    } else if (level === 'warn') {
-      api.logWarn(component, message, data);
-    } else {
-      api.logError(component, message, data);
-    }
+  const methodName = level === 'debug' ? 'logDebug'
+    : level === 'info' ? 'logInfo'
+    : level === 'warn' ? 'logWarn'
+    : 'logError';
+  const method = api?.[methodName];
+
+  if (typeof method === 'function') {
+    method(component, message, data);
     return;
   }
 
-  // 回退：无 electronAPI 的环境（vitest 等）
+  // 回退：electronAPI 缺失或缺少对应日志方法的环境（vitest 等）
   const fn = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
   fn(`[${component}] ${message}`, data !== undefined ? data : '');
 }
