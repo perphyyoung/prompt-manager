@@ -29,12 +29,6 @@ interface IApp {
     ensureRendered: () => Promise<void>;
     exitBatchMode?: () => void;
   } | null;
-  promptTagManager?: {
-    hideBatchToolbar: () => void;
-  } | null;
-  imageTagManager?: {
-    hideBatchToolbar: () => void;
-  } | null;
   eventBus: {
     emit: (event: string, data?: unknown) => void;
   };

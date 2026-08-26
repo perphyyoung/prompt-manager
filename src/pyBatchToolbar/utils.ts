@@ -65,9 +65,7 @@ export function isValidContext(context: string): boolean {
     'promptMain',
     'imageMain',
     'promptDetail',
-    'imageDetail',
-    'promptTagManager',
-    'imageTagManager'
+    'imageDetail'
   ];
   return validContexts.includes(context);
 }

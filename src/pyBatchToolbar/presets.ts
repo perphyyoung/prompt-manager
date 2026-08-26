@@ -1,6 +1,6 @@
 /**
  * pyBatchToolbar 预设配置
- * 6 个入口的默认工具栏配置
+ * 4 个入口的默认工具栏配置
  */
 
 import type { BatchToolbarConfig, ToolbarContext } from './types.ts';
@@ -66,44 +66,12 @@ export const IMAGE_DETAIL_BATCH_TOOLBAR: BatchToolbarConfig = {
   ]
 };
 
-/** 提示词标签管理批量工具栏配置（新增） */
-export const PROMPT_TAG_MANAGER_BATCH_TOOLBAR: BatchToolbarConfig = {
-  id: Constants.Ids.PROMPT_TAG_BATCH_TOOLBAR,
-  context: 'promptTagManager',
-  dataType: 'prompt',
-  label: '标签',
-  buttons: [
-    { action: 'SelectAll', text: '全选', className: 'batch-action-select-all', order: 1 },
-    { action: 'Invert', text: '反选', className: 'batch-action-invert', order: 2 },
-    { action: 'Move', text: '移动到组', className: 'batch-action-move', order: 3 },
-    { action: 'Delete', text: '删除', className: 'batch-action-delete', order: 4 },
-    { action: 'Cancel', text: '取消', className: 'batch-action-cancel', order: 5 },
-  ]
-};
-
-/** 图像标签管理批量工具栏配置（新增） */
-export const IMAGE_TAG_MANAGER_BATCH_TOOLBAR: BatchToolbarConfig = {
-  id: Constants.Ids.IMAGE_TAG_BATCH_TOOLBAR,
-  context: 'imageTagManager',
-  dataType: 'image',
-  label: '标签',
-  buttons: [
-    { action: 'SelectAll', text: '全选', className: 'batch-action-select-all', order: 1 },
-    { action: 'Invert', text: '反选', className: 'batch-action-invert', order: 2 },
-    { action: 'Move', text: '移动到组', className: 'batch-action-move', order: 3 },
-    { action: 'Delete', text: '删除', className: 'batch-action-delete', order: 4 },
-    { action: 'Cancel', text: '取消', className: 'batch-action-cancel', order: 5 },
-  ]
-};
-
 /** 预设配置映射 */
 export const PRESET_CONFIGS: Record<ToolbarContext, BatchToolbarConfig> = {
   promptMain: PROMPT_MAIN_BATCH_TOOLBAR,
   imageMain: IMAGE_MAIN_BATCH_TOOLBAR,
   promptDetail: PROMPT_DETAIL_BATCH_TOOLBAR,
   imageDetail: IMAGE_DETAIL_BATCH_TOOLBAR,
-  promptTagManager: PROMPT_TAG_MANAGER_BATCH_TOOLBAR,
-  imageTagManager: IMAGE_TAG_MANAGER_BATCH_TOOLBAR,
 };
 
 /**

@@ -57,9 +57,6 @@ test.describe("标签管理功能", () => {
       await expect(
         page.locator(`#${Constants.Ids.ADD_IMAGE_TAG_GROUP_BTN}`),
       ).toBeVisible();
-      await expect(
-        page.locator(`#${Constants.Ids.BATCH_MANAGE_IMAGE_TAGS_BTN}`),
-      ).toBeVisible();
 
       await closeImageTagManager(page);
 
@@ -337,7 +334,7 @@ test.describe("标签管理功能", () => {
       await closeImageTagManager(page);
     });
 
-    test("搜索并批量删除 e2e 标签", async ({ electronTest, page }) => {
+    test("搜索并删除 e2e 标签", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterImageTagManager(page);
 
@@ -381,62 +378,22 @@ test.describe("标签管理功能", () => {
         { timeout: 1000 },
       );
 
-      // Click on container to ensure search input loses focus before Ctrl+A
-      await page.click(`#${Constants.Ids.IMAGE_TAG_GROUP_CARDS}`);
-
-      // Press Ctrl+A to select all visible tags and enter batch mode
-      await page.keyboard.press("Control+a");
-
-      // Verify checkboxes appear (batch mode is active)
-      const checkboxes = page.locator(
-        `#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-batch-checkbox`,
-      );
-      const checkboxCount = await checkboxes.count();
-      expect(checkboxCount).toBeGreaterThanOrEqual(2);
-
-      // Verify batch toolbar is visible
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.IMAGE_TAG_BATCH_TOOLBAR}`,
-      );
-      await expect(batchToolbar).toBeVisible({ timeout: 1000 });
-
-      // CRITICAL: Verify all selected tags contain search keyword before delete
-      const selectedTags = await page.evaluate(() => {
-        return Array.from(
-          document.querySelectorAll(".tag-batch-checkbox:checked"),
-        ).map((cb) => cb.getAttribute("data-tag"));
-      });
-      const unsafeTags = selectedTags.filter(
-        (tag) => !tag?.includes(searchKeyword),
-      );
-      if (unsafeTags.length > 0) {
-        throw new Error(
-          `安全错误：试图删除非目标标签: ${unsafeTags.join(", ")}`,
+      // 逐个删除匹配的标签（非批量路径），验证不影响非匹配标签
+      for (const name of [testTagName1, testTagName2]) {
+        const deleteBtn = page.locator(
+          `#${Constants.Ids.IMAGE_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${name}"] .tag-delete-btn`,
         );
+        await deleteBtn.click();
+
+        // Wait for confirm dialog
+        await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, {
+          state: "visible",
+          timeout: 1000,
+        });
+
+        // Confirm deletion
+        await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
       }
-
-      const checkedCount = await page.evaluate((containerId: string) => {
-        const checkboxes = document.querySelectorAll(
-          `#${containerId} .tag-batch-checkbox`,
-        );
-        return Array.from(checkboxes).filter(
-          (cb) => (cb as HTMLInputElement).checked,
-        ).length;
-      }, Constants.Ids.IMAGE_TAG_GROUP_CARDS);
-      expect(checkedCount).toBeGreaterThanOrEqual(2);
-
-      // Click delete button
-      const deleteBtn = batchToolbar.locator(".batch-action-delete");
-      await deleteBtn.click();
-
-      // Wait for confirm dialog
-      await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, {
-        state: "visible",
-        timeout: 1000,
-      });
-
-      // Confirm deletion
-      await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
       // Wait for deletion via API
       await page.waitForFunction(
@@ -513,9 +470,6 @@ test.describe("标签管理功能", () => {
       ).toBeVisible();
       await expect(
         page.locator(`#${Constants.Ids.ADD_PROMPT_TAG_GROUP_BTN}`),
-      ).toBeVisible();
-      await expect(
-        page.locator(`#${Constants.Ids.BATCH_MANAGE_PROMPT_TAGS_BTN}`),
       ).toBeVisible();
 
       await closePromptTagManager(page);
@@ -798,7 +752,7 @@ test.describe("标签管理功能", () => {
       await closePromptTagManager(page);
     });
 
-    test("搜索并批量删除 e2e 标签", async ({ electronTest, page }) => {
+    test("搜索并删除 e2e 标签", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
@@ -842,48 +796,22 @@ test.describe("标签管理功能", () => {
         { timeout: 1000 },
       );
 
-      // Click on container to ensure search input loses focus before Ctrl+A
-      await page.click(`#${Constants.Ids.PROMPT_TAG_GROUP_CARDS}`);
-
-      // Press Ctrl+A to select all visible tags and enter batch mode
-      await page.keyboard.press("Control+a");
-
-      // Verify checkboxes appear (batch mode is active)
-      const checkboxes = page.locator(
-        `#${Constants.Ids.PROMPT_TAG_GROUP_CARDS} .tag-batch-checkbox`,
-      );
-      const checkboxCount = await checkboxes.count();
-      expect(checkboxCount).toBeGreaterThanOrEqual(2);
-
-      // Verify batch toolbar is visible
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.PROMPT_TAG_BATCH_TOOLBAR}`,
-      );
-      await expect(batchToolbar).toBeVisible({ timeout: 1000 });
-
-      // Verify all checkboxes are checked
-      const checkedCount = await page.evaluate((containerId: string) => {
-        const checkboxes = document.querySelectorAll(
-          `#${containerId} .tag-batch-checkbox`,
+      // 逐个删除匹配的标签（非批量路径），验证不影响非匹配标签
+      for (const name of [testTagName1, testTagName2]) {
+        const deleteBtn = page.locator(
+          `#${Constants.Ids.PROMPT_TAG_GROUP_CARDS} .tag-manager-item[data-tag="${name}"] .tag-delete-btn`,
         );
-        return Array.from(checkboxes).filter(
-          (cb) => (cb as HTMLInputElement).checked,
-        ).length;
-      }, Constants.Ids.PROMPT_TAG_GROUP_CARDS);
-      expect(checkedCount).toBeGreaterThanOrEqual(2);
+        await deleteBtn.click();
 
-      // Click delete button
-      const deleteBtn = batchToolbar.locator(".batch-action-delete");
-      await deleteBtn.click();
+        // Wait for confirm dialog
+        await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, {
+          state: "visible",
+          timeout: 1000,
+        });
 
-      // Wait for confirm dialog
-      await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, {
-        state: "visible",
-        timeout: 1000,
-      });
-
-      // Confirm deletion
-      await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
+        // Confirm deletion
+        await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
+      }
 
       // Wait for deletion via API
       await page.waitForFunction(

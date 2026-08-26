@@ -6,13 +6,11 @@
 // ========== 基础类型 ==========
 
 /** 工具栏上下文 */
-export type ToolbarContext = 
-  | 'promptMain' 
-  | 'imageMain' 
-  | 'promptDetail' 
-  | 'imageDetail' 
-  | 'promptTagManager' 
-  | 'imageTagManager';
+export type ToolbarContext =
+  | 'promptMain'
+  | 'imageMain'
+  | 'promptDetail'
+  | 'imageDetail';
 
 /** 数据类型 */
 export type DataType = 'prompt' | 'image';

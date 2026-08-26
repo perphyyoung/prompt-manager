@@ -52,17 +52,14 @@ export class TagUI {
     groups: ITagGroup[],
     groupedTags: Record<number, string[]>,
     ungroupedTags: string[],
-    tagCounts: Record<string, number>,
-    searchTerm: string,
-    isBatchMode = false,
-    selectedTags: Set<string> = new Set()
+    tagCounts: Record<string, number>
   ): string {
     let html = '';
     let globalIndex = 0;
 
     // 未分组标签卡片
     if (ungroupedTags.length > 0) {
-      html += this.generateUngroupedTagCard(ungroupedTags, tagCounts, isBatchMode, selectedTags, globalIndex);
+      html += this.generateUngroupedTagCard(ungroupedTags, tagCounts, globalIndex);
       globalIndex += ungroupedTags.length;
     }
 
@@ -76,7 +73,7 @@ export class TagUI {
       const tags = groupedTags[group.id] || [];
       // 使用 TopGroupManager 判断是否为首位组，确保与筛选区逻辑一致
       const isFirst = group.id === topGroupId;
-      html += this.generateTagGroupCard(group, tags, tagCounts, isFirst, isBatchMode, selectedTags, globalIndex);
+      html += this.generateTagGroupCard(group, tags, tagCounts, isFirst, globalIndex);
       globalIndex += tags.length;
     });
 
@@ -90,37 +87,26 @@ export class TagUI {
     tag: string,
     count: number,
     groupId: number | null = null,
-    isBatchMode = false,
-    isSelected = false,
     index: number = 0
   ): string {
-    const selectedClass = isSelected ? 'tag-selected' : '';
-    const batchClass = isBatchMode ? 'batch-mode' : '';
     const escapedTag = HtmlUtils.escapeHtml(tag);
 
-    const draggableAttr = isBatchMode ? '' : 'draggable="true"';
-
-    const editBtn = isBatchMode ? '' : `<button class="tag-edit-btn" data-tag="${escapedTag}" title="编辑">
+    const editBtn = `<button class="tag-edit-btn" data-tag="${escapedTag}" title="编辑">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
       </svg>
     </button>`;
 
-    const deleteBtn = isBatchMode ? '' : `<button class="tag-delete-btn" data-tag="${escapedTag}" title="删除">
+    const deleteBtn = `<button class="tag-delete-btn" data-tag="${escapedTag}" title="删除">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <polyline points="3 6 5 6 21 6"></polyline>
         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
       </svg>
     </button>`;
 
-    const checkbox = isBatchMode
-      ? `<div class="tag-checkbox-wrapper"><input type="checkbox" class="tag-batch-checkbox" data-tag="${escapedTag}" data-index="${index}" ${isSelected ? 'checked' : ''}></div>`
-      : '';
-
     return `
-      <div class="tag-manager-item ${batchClass} ${selectedClass}" data-id="${escapedTag}" data-tag="${escapedTag}" data-index="${index}" data-group-id="${groupId ?? ''}" ${draggableAttr}>
-        ${checkbox}
+      <div class="tag-manager-item" data-id="${escapedTag}" data-tag="${escapedTag}" data-index="${index}" data-group-id="${groupId ?? ''}" draggable="true">
         <div class="tag-manager-item-count">${count}</div>
         <div class="tag-manager-item-name" title="${escapedTag}">${escapedTag}</div>
         ${editBtn}
@@ -138,14 +124,12 @@ export class TagUI {
     tags: string[],
     tagCounts: Record<string, number>,
     isFirst = false,
-    isBatchMode = false,
-    selectedTags: Set<string> = new Set(),
     isUngrouped = false,
     sortOrder = 0,
     startIndex: number = 0
   ): string {
     const tagsHtml = tags.map((tag, index) =>
-      this.generateTagItemHtml(tag, tagCounts[tag] ?? 0, groupId, isBatchMode, selectedTags.has(tag), startIndex + index)
+      this.generateTagItemHtml(tag, tagCounts[tag] ?? 0, groupId, startIndex + index)
     ).join('');
 
     const firstBadge = isFirst ? '<span class="tag-group-card-first">首位组</span>' : '';
@@ -211,11 +195,9 @@ export class TagUI {
   generateUngroupedTagCard(
     tags: string[],
     tagCounts: Record<string, number>,
-    isBatchMode = false,
-    selectedTags: Set<string> = new Set(),
     startIndex: number = 0
   ): string {
-    return this.generateTagGroupCardHtml(null, '未分组', tags, tagCounts, false, isBatchMode, selectedTags, true, 0, startIndex);
+    return this.generateTagGroupCardHtml(null, '未分组', tags, tagCounts, false, true, 0, startIndex);
   }
 
   /**
@@ -226,11 +208,9 @@ export class TagUI {
     tags: string[],
     tagCounts: Record<string, number>,
     isFirst = false,
-    isBatchMode = false,
-    selectedTags: Set<string> = new Set(),
     startIndex: number = 0
   ): string {
-    return this.generateTagGroupCardHtml(group.id, group.name, tags, tagCounts, isFirst, isBatchMode, selectedTags, false, group.sortOrder ?? 0, startIndex);
+    return this.generateTagGroupCardHtml(group.id, group.name, tags, tagCounts, isFirst, false, group.sortOrder ?? 0, startIndex);
   }
 
   /**

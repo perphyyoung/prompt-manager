@@ -1,48 +1,13 @@
 import { TagUI } from './TagUI.ts';
 import { ElementId, Constants } from '../../constants.ts';
 import { DialogService, DialogConfig } from '../services/index.ts';
-import { IDialogTemplate, IDialogContext } from '../../types/entities.ts';
 import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
 import { focusInput, ErrorHandler } from '../renderer_utils/index.ts';
-import { batchToolbarMiddle, type ToolbarContext, type BatchBusinessConfig } from '../../middle/index.ts';
 import { immediateDebounce } from '../../utils/debounce.ts';
-import { TagGroup, TagExistsError, InvalidTagNameError, TagOperationError, clearTagsCache, DataType, deleteTags } from '../../pyTagGroups/index.ts';
+import { TagGroup, TagExistsError, InvalidTagNameError, TagOperationError, DataType } from '../../pyTagGroups/index.ts';
 import { groupTagsByGroup } from '../../pyTagGroups/utils.ts';
 import { TagService } from '../services/index.ts';
 
-
-/**
- * 批量操作配置接口
- * 用于定义批量操作的具体行为和参数
- */
-interface IBatchOperationConfig<TInput = any, TResult = any> {
-  // 操作名称（用于日志和提示）
-  operationName: string;
-
-  // 是否需要确认对话框
-  requiresConfirmation?: boolean;
-  confirmConfig?: IDialogTemplate;
-  confirmData?: (selectedIds: string[]) => IDialogContext;
-
-  // 是否需要输入对话框
-  requiresInput?: boolean;
-  inputConfig?: {
-    title: string;
-    placeholder?: string;
-    options?: Array<{ value: string; label: string }>;
-    defaultValue?: string;
-  };
-
-  // 执行操作的核心逻辑
-  execute: (selectedIds: string[], input?: TInput) => Promise<TResult>;
-
-  // 成功提示消息
-  successMessage: (result: TResult, selectedCount: number) => string;
-
-  // 错误提示消息
-  errorMessage: string;
-
-}
 
 /**
  * 标签管理器元素 ID 配置
@@ -58,8 +23,6 @@ export interface ITagManagerElements {
   orderBtnId: string;
   addTagGroupBtnId: string;
   addTagInManagerBtnId: string;
-  batchManageBtnId: string;
-  batchToolbarId: ElementId;
   groupEditModalId: string;
   groupEditCloseBtnId: string;
   groupEditCancelBtnId: string;
@@ -92,9 +55,7 @@ export abstract class TagManager {
   protected _managerEventsBound: boolean = false;
   protected _groupEditEventsBound: boolean = false;
   protected _isOperationInProgress: boolean = false;
-  protected toolbarContext: ToolbarContext;
   protected lastSearchTerm: string = '';
-  protected isBatchModeActive: boolean = false;
 
   constructor(type: 'prompt' | 'image', app: any) {
     this.type = type;
@@ -114,49 +75,6 @@ export abstract class TagManager {
     this.emptyStateId = this.elements.emptyStateId;
     this.searchInputId = this.elements.searchInputId;
 
-    // 设置工具栏上下文
-    this.toolbarContext = this.type === 'prompt' ? 'promptTagManager' : 'imageTagManager';
-
-    // 业务配置 (标签管理界面需要删除和移动功能)
-    const businessConfig: BatchBusinessConfig = {
-      delete: {
-        batchApi: async (ids: string[]) => {
-          // 使用 pyTagGroups 的 deleteTags
-          const type = this.type as 'prompt' | 'image';
-          try {
-            await deleteTags(type, ids);
-            clearTagsCache(type);
-            return { success: true, deleted: ids.length };
-          } catch (error) {
-            ErrorHandler.handleError(
-              { module: 'TagManager', operation: 'delete tags' },
-              error,
-              { showToast: false }
-            );
-            return { success: false, deleted: 0 };
-          }
-        }
-      },
-      addTag: {
-        processItems: async () => {
-          // 标签管理界面不支持批量添加标签
-          throw new Error('标签管理界面不支持批量添加标签');
-        }
-      },
-      favorite: {
-        batchApi: async () => {
-          // 标签管理界面不支持批量收藏
-          throw new Error('标签管理界面不支持批量收藏');
-        }
-      }
-    };
-
-    // 统一使用 presets.ts 中的配置
-    batchToolbarMiddle.init(this.toolbarContext, businessConfig);
-
-    // 注册按钮处理器
-    this.registerBatchToolbarHandlers();
-
     // 绑定标签管理器事件
     this.bindManagerEvents();
 
@@ -165,36 +83,6 @@ export abstract class TagManager {
 
     // 初始化标签组编辑模态框事件
     this.initGroupEditModals();
-  }
-
-  /**
-   * 注册批量工具栏按钮处理器
-   */
-  private registerBatchToolbarHandlers(): void {
-    // 全选
-    batchToolbarMiddle.registerActionHandler(this.toolbarContext, 'SelectAll', () => {
-      this.batchSelectAll();
-    });
-
-    // 反选
-    batchToolbarMiddle.registerActionHandler(this.toolbarContext, 'Invert', () => {
-      this.batchInvert();
-    });
-
-    // 移动到组
-    batchToolbarMiddle.registerActionHandler(this.toolbarContext, 'Move', () => {
-      this.batchMoveToGroup();
-    });
-
-    // 删除
-    batchToolbarMiddle.registerActionHandler(this.toolbarContext, 'Delete', () => {
-      this.batchDeleteTags();
-    });
-
-    // 取消
-    batchToolbarMiddle.registerActionHandler(this.toolbarContext, 'Cancel', () => {
-      this.exitBatchMode();
-    });
   }
 
   /**
@@ -222,23 +110,12 @@ export abstract class TagManager {
   protected abstract getPanelManager(): any;
 
   /**
-   * 销毁资源
-   */
-  destroy(): void {
-    batchToolbarMiddle.destroy();
-  }
-
-  /**
    * 渲染标签列表
    * 核心渲染方法，根据搜索词过滤并渲染标签列表
    */
   async renderTagList(searchTerm: string = ''): Promise<void> {
     try {
-      // 批量模式下不清除选择，避免搜索时丢失批量选择
-      if (this.lastSearchTerm !== searchTerm && !this.isBatchModeActive) {
-        batchToolbarMiddle.clearSelection(this.toolbarContext);
-        this.lastSearchTerm = searchTerm;
-      }
+      this.lastSearchTerm = searchTerm;
 
       const tags = await this.tagService.getTags(this.getDataType());
       const groups = await this.tagService.getTagGroups(this.getDataType());
@@ -265,10 +142,6 @@ export abstract class TagManager {
             emptyText.textContent = searchTerm ? '没有找到匹配的标签' : `暂无${this.getTypeLabel()}标签`;
           }
         }
-        // 批量模式下清空选择并更新工具栏（标签已被删除，选择应该清空）
-        if (this.isBatchModeActive) {
-          batchToolbarMiddle.clearSelection(this.toolbarContext);
-        }
         return;
       }
 
@@ -278,14 +151,11 @@ export abstract class TagManager {
       const sortedTags = this.sortTags(filteredTags, tagCounts);
       const { grouped: groupedTags, ungrouped: ungroupedTags } = groupTagsByGroup(sortedTags, groups);
 
-      const html = this.ui.renderTagGroupCards(groups, groupedTags, ungroupedTags, tagCounts, searchTerm, this.isBatchModeActive, batchToolbarMiddle.getSelectedIds(this.toolbarContext));
+      const html = this.ui.renderTagGroupCards(groups, groupedTags, ungroupedTags, tagCounts);
       container.innerHTML = html;
 
       // 绑定容器特定的拖拽和右键菜单事件
       this.bindContainerEvents(container);
-
-      // 更新选择模式类
-      this.updateSelectionModeClass();
     } catch (error) {
       ErrorHandler.handleError(
         { module: 'TagManager.ts', operation: `render ${this.type} tag manager` },
@@ -385,25 +255,7 @@ export abstract class TagManager {
       // 检查点击是否在标签管理器容器内
       const container = document.getElementById(this.elements.containerId);
       if (!container?.contains(target)) return;
-      
-      // 批量模式下的标签项选择（单击选择）
-      if (this.isBatchModeActive) {
-        // 如果点击的是复选框，不处理（由 change 事件处理）
-        if (target.classList.contains('tag-batch-checkbox')) {
-          return;
-        }
-        const tagItem = target.closest('.tag-manager-item[data-tag]');
-        if (tagItem) {
-          const tag = (tagItem as HTMLElement).dataset.tag;
-          if (!tag) return;
-          const index = parseInt((tagItem as HTMLElement).dataset.index || '0', 10);
-          batchToolbarMiddle.singleSelect(this.toolbarContext, tag, index);
-          this.renderTagList(this.lastSearchTerm);
-        }
-        return;
-      }
 
-      // 非批量模式下的编辑/删除按钮处理
       // 处理编辑按钮点击
       const editBtn = target.closest('.tag-edit-btn');
       if (editBtn && !this._isOperationInProgress) {
@@ -451,38 +303,14 @@ export abstract class TagManager {
         return;
       }
     });
-
-    // 使用事件委托处理复选框变化（批量模式）
-    document.addEventListener('change', (e) => {
-      const target = e.target as HTMLElement;
-      
-      // 检查是否在容器内
-      const container = document.getElementById(this.elements.containerId);
-      if (!container?.contains(target)) return;
-      
-      if (target.classList.contains('tag-batch-checkbox')) {
-        const checkbox = target as HTMLInputElement;
-        const tag = checkbox.dataset.tag;
-        const index = parseInt(checkbox.dataset.index || '0', 10);
-        if (tag) {
-          if (checkbox.checked) {
-            batchToolbarMiddle.addSelectionWithIndex(this.toolbarContext, tag, index);
-          } else {
-            batchToolbarMiddle.removeSelection(this.toolbarContext, tag);
-          }
-        }
-      }
-    });
   }
 
   /**
    * 绑定拖拽和右键菜单事件（需要在 render 后调用）
    */
   bindContainerEvents(container: HTMLElement): void {
-    if (!this.isBatchModeActive) {
-      this.bindDragEvents(container);
-      this.bindGroupContextMenu(container);
-    }
+    this.bindDragEvents(container);
+    this.bindGroupContextMenu(container);
   }
 
   /**
@@ -909,258 +737,6 @@ export abstract class TagManager {
     return this.selectedTagGroup;
   }
 
-  // ========== 批量管理功能 ==========
-
-  /**
-   * 执行批量操作的通用方法
-   * 封装批量操作的通用流程：验证、确认、执行、刷新
-   * @param config - 批量操作配置
-   */
-  private async executeBatchOperation<TInput, TResult>(
-    config: IBatchOperationConfig<TInput, TResult>
-  ): Promise<void> {
-    const selectedIds = Array.from(batchToolbarMiddle.getSelectedIds(this.toolbarContext));
-
-    // 检查是否有选中项
-    if (selectedIds.length === 0) {
-      this.app.showToast(`请先选择要${config.operationName}的标签`, 'warning');
-      return;
-    }
-
-    // 显示确认对话框
-    if (config.requiresConfirmation && config.confirmConfig) {
-      const confirmData = config.confirmData ? config.confirmData(selectedIds) : undefined;
-      const confirmed = await DialogService.showConfirmDialogByConfig(
-        config.confirmConfig,
-        confirmData
-      );
-      if (!confirmed) return;
-    }
-
-    // 显示输入/选择对话框
-    let input: TInput | undefined;
-    if (config.requiresInput && config.inputConfig) {
-      if (config.inputConfig.options) {
-        // 选择对话框
-        const result = await DialogService.showSelectDialog({
-          title: config.inputConfig.title,
-          options: config.inputConfig.options,
-          defaultValue: config.inputConfig.defaultValue
-        });
-        if (result === null) return;
-        input = result as TInput;
-      } else {
-        // 输入对话框
-        const result = await DialogService.showInputDialog({
-          title: config.inputConfig.title,
-          placeholder: config.inputConfig.placeholder,
-          defaultValue: config.inputConfig.defaultValue
-        });
-        if (!result) return;
-        input = result.value as TInput;
-      }
-    }
-
-    // 执行操作
-    try {
-      const result = await config.execute(selectedIds, input);
-      this.app.showToast(
-        config.successMessage(result, selectedIds.length),
-        'success'
-      );
-
-      // 刷新数据
-      await this.refreshAfterTagChange();
-    } catch (error) {
-      window.electronAPI.logError(
-        'TagManager.ts',
-        `Failed to batch ${config.operationName} tags:`,
-        error
-      );
-      this.app.showToast(config.errorMessage, 'error');
-    }
-  }
-
-  /**
-   * 切换批量管理模式
-   */
-  toggleBatchMode(): void {
-    if (this.isBatchModeActive) {
-      this.exitBatchMode();
-    } else {
-      this.isBatchModeActive = true;
-      batchToolbarMiddle.show(this.toolbarContext, batchToolbarMiddle.getSelectionCount(this.toolbarContext), () => {
-        this.exitBatchMode();
-      });
-      this.renderTagList(this.lastSearchTerm);
-    }
-  }
-
-  /**
-   * 退出批量管理模式
-   */
-  exitBatchMode(): void {
-    if (!this.isBatchModeActive) return;
-
-    this.isBatchModeActive = false;
-
-    batchToolbarMiddle.hide(this.toolbarContext);
-    batchToolbarMiddle.clearSelection(this.toolbarContext);
-    this.updateSelectionModeClass();
-    this.renderTagList(this.lastSearchTerm);
-  }
-
-  /**
-   * 隐藏批量工具栏
-   */
-  hideBatchToolbar(): void {
-    batchToolbarMiddle.hide(this.toolbarContext);
-    if (this.isBatchModeActive) {
-      this.isBatchModeActive = false;
-    }
-  }
-
-  /**
-   * 更新选择模式类
-   */
-  private updateSelectionModeClass(): void {
-    const container = document.getElementById(this.containerId);
-    if (container) {
-      container.classList.toggle('selection-mode', this.isBatchModeActive);
-    }
-  }
-
-  /**
-   * 同步复选框状态与选择状态
-   * 在批量模式下，当选择状态改变时手动更新复选框
-   */
-  private syncCheckboxStates(): void {
-    const container = document.getElementById(this.containerId);
-    if (!container) return;
-
-    const selectedIds = batchToolbarMiddle.getSelectedIds(this.toolbarContext);
-    const checkboxes = container.querySelectorAll('.tag-batch-checkbox') as NodeListOf<HTMLInputElement>;
-
-    checkboxes.forEach((checkbox) => {
-      const tag = checkbox.dataset.tag;
-      if (tag) {
-        checkbox.checked = selectedIds.has(tag);
-      }
-    });
-  }
-
-  /**
-   * 批量删除标签
-   */
-  private async batchDeleteTags(): Promise<void> {
-    await batchToolbarMiddle.executeDeleteTags(this.toolbarContext, {
-      getSelectedTags: () => batchToolbarMiddle.getSelectedIds(this.toolbarContext),
-      confirmConfig: DialogConfig.BATCH_DELETE_TAGS,
-      execute: async (tagNames) => {
-        const result = await this.tagService.removeTags({ tagNames, type: this.getDataType() });
-
-        // 记录错误详情
-        if (result.errors.length > 0) {
-          window.electronAPI.logError('TagManager.ts', 'Some tags failed to delete:', result.errors);
-        }
-
-        return { success: result.errors.length === 0, deleted: result.deleted };
-      },
-      onRefresh: async () => {
-        await this.refreshAfterTagChange();
-      },
-      showToast: (msg, type) => this.app.showToast(msg, type),
-      successMessage: (deleted, total) => {
-        const failed = total - deleted;
-        return failed > 0
-          ? `已删除 ${deleted} 个标签，${failed} 个失败`
-          : `已删除 ${deleted} 个标签`;
-      },
-    });
-  }
-
-  /**
-   * 批量移动标签到组
-   * 使用通用批量操作模板方法
-   */
-  private async batchMoveToGroup(): Promise<void> {
-    const groups = await this.tagService.getTagGroups(this.getDataType());
-    const options = [
-      { value: '', label: '未分组' },
-      ...groups.map(g => ({ value: String(g.id), label: g.name }))
-    ];
-
-    await this.executeBatchOperation<string, { successCount: number; errorCount: number; errors: Array<{ tag: string; error: string }> }>({
-      operationName: '移动',
-      requiresInput: true,
-      inputConfig: {
-        title: '将标签移动到',
-        options,
-        defaultValue: ''
-      },
-      execute: async (selectedIds, groupId) => {
-        const targetGroupId = !groupId || groupId === '' ? null : parseInt(groupId, 10);
-        let successCount = 0;
-        const errors: Array<{ tag: string; error: string }> = [];
-
-        for (const tag of selectedIds) {
-          try {
-            await this.tagService.assignTagToGroup({ type: this.getDataType(), tagName: tag, groupId: targetGroupId });
-            successCount++;
-          } catch (error) {
-            ErrorHandler.handleError(
-              { module: 'TagManager.ts', operation: `move tag ${tag}` },
-              error,
-              { showToast: false }
-            );
-            errors.push({ tag, error: ErrorHandler.extractErrorMessage(error) });
-          }
-        }
-
-        return { successCount, errorCount: errors.length, errors };
-      },
-      successMessage: (result) => {
-        if (result.errorCount > 0) {
-          return `已移动 ${result.successCount} 个标签，${result.errorCount} 个失败`;
-        }
-        return `已移动 ${result.successCount} 个标签`;
-      },
-      errorMessage: '批量移动失败'
-    });
-  }
-
-  /**
-   * 全选所有可见标签
-   */
-  private batchSelectAll(): void {
-    const container = document.getElementById(this.containerId);
-    if (!container) return;
-
-    const tagItems = container.querySelectorAll('.tag-manager-item[data-tag]');
-    const ids = Array.from(tagItems).map((item) => {
-      return (item as HTMLElement).dataset.tag || '';
-    }).filter(id => id);
-
-    batchToolbarMiddle.selectAll(this.toolbarContext, ids);
-    this.renderTagList(this.lastSearchTerm);
-  }
-
-  /**
-   * 反选所有可见标签
-   */
-  private batchInvert(): void {
-    const container = document.getElementById(this.containerId);
-    if (!container) return;
-
-    const tagItems = container.querySelectorAll('.tag-manager-item[data-tag]');
-    const allIds = Array.from(tagItems).map((item) => {
-      return (item as HTMLElement).dataset.tag || '';
-    }).filter(id => id);
-
-    batchToolbarMiddle.invertSelection(this.toolbarContext, allIds);
-    this.renderTagList(this.lastSearchTerm);
-  }
-
   // ========== 标签管理器模态框控制 ==========
 
   /**
@@ -1171,19 +747,6 @@ export abstract class TagManager {
     if (modal) {
       modal.classList.add('active');
       (modal as any).close = () => this.closeManager();
-      (modal as any).ctrla = () => {
-        if (!this.isBatchModeActive) {
-          // 非批量模式：进入批量模式并重新渲染以显示复选框
-          this.isBatchModeActive = true;
-          batchToolbarMiddle.show(this.toolbarContext, batchToolbarMiddle.getSelectionCount(this.toolbarContext), () => {
-            this.exitBatchMode();
-          });
-          this.renderTagList(this.lastSearchTerm);
-        }
-        // 批量模式下执行全选
-        this.batchSelectAll();
-        return true;
-      };
 
       // 清空搜索框并重置搜索状态
       const searchInput = document.getElementById(this.searchInputId) as HTMLInputElement | null;
@@ -1199,18 +762,11 @@ export abstract class TagManager {
       // 渲染完整标签列表
       this.renderTagList('');
 
-      // 压栈：进入标签管理器上下文，包含批量模式状态
+      // 压栈：进入标签管理器上下文（用于 ESC 关闭）
       const stackEntry: IContextStackEntry = {
         id: this.elements.modalId,
-        state: {
-          isBatchToolbarVisible: this.isBatchModeActive
-        },
-        close: () => {
-          // 如果被其他视图覆盖，隐藏批量工具栏
-          if (this.isBatchModeActive) {
-            this.hideBatchToolbar();
-          }
-        }
+        state: { isBatchToolbarVisible: false },
+        close: () => {}
       };
       contextStack.push(stackEntry);
     }
@@ -1220,9 +776,6 @@ export abstract class TagManager {
    * 关闭标签管理器模态框
    */
   closeManager(): void {
-    // 先退出批量模式，确保工具栏先出栈
-    this.exitBatchMode();
-
     const modal = document.getElementById(this.elements.modalId);
     if (modal) {
       modal.classList.remove('active');
@@ -1363,14 +916,12 @@ export abstract class TagManager {
     document.getElementById(this.elements.closeButtonId)?.addEventListener('click', () => this.closeManager());
     document.getElementById(this.elements.addTagGroupBtnId)?.addEventListener('click', () => this.openGroupEdit());
     document.getElementById(this.elements.addTagInManagerBtnId)?.addEventListener('click', () => this.addTagInManager());
-    document.getElementById(this.elements.batchManageBtnId)?.addEventListener('click', () => this.toggleBatchMode());
 
     const searchInput = document.getElementById(this.elements.searchInputId) as HTMLInputElement | null;
     const clearBtn = document.getElementById(this.elements.clearSearchBtnId);
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
         const target = e.target as HTMLInputElement;
-        this.exitBatchMode();
         this.renderTagList(target.value);
         if (clearBtn) clearBtn.style.display = target.value ? 'flex' : 'none';
       });
@@ -1378,7 +929,6 @@ export abstract class TagManager {
     if (clearBtn && searchInput) {
       clearBtn.addEventListener('click', () => {
         searchInput.value = '';
-        this.exitBatchMode();
         this.renderTagList('');
         clearBtn.style.display = 'none';
         searchInput.focus();

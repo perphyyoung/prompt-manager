@@ -111,8 +111,6 @@ export class BatchToolbarMiddle {
       "imageMain",
       "promptDetail",
       "imageDetail",
-      "promptTagManager",
-      "imageTagManager",
     ];
 
     contexts.forEach((context) => this.init(context, businessConfig));

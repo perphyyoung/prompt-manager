@@ -22,8 +22,6 @@ export class ImageTagManager extends TagManager {
       orderBtnId: Constants.Ids.IMAGE_TAG_MANAGER_ORDER_BTN,
       addTagGroupBtnId: Constants.Ids.ADD_IMAGE_TAG_GROUP_BTN,
       addTagInManagerBtnId: Constants.Ids.ADD_IMAGE_TAG_IN_MANAGER_BTN,
-      batchManageBtnId: Constants.Ids.BATCH_MANAGE_IMAGE_TAGS_BTN,
-      batchToolbarId: Constants.Ids.IMAGE_TAG_BATCH_TOOLBAR,
       groupEditModalId: Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL,
       groupEditCloseBtnId: Constants.Ids.CLOSE_IMAGE_TAG_GROUP_EDIT_MODAL,
       groupEditCancelBtnId: Constants.Ids.CANCEL_IMAGE_TAG_GROUP_EDIT_BTN,

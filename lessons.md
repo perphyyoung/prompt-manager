@@ -11,3 +11,4 @@
 - 涉及 SQL 的修改，pnpm check（tsc/oxlint）完全无法覆盖，必须在提交前实际启动应用或对真实库冒烟验证，否则语法错误会直接导致启动失败
 - 日志必须遵循 `.trae/skills/py-pm-log/SKILL.md`：签名统一为 `(component, message, data?)`，component 用真实模块名（如 'ShortcutManager'），禁止固定 'Renderer' 之类的占位组件名
 - 批量文本替换一律走 Node/TS 脚本（精确 old→new 对），即少量几处也不要用 PowerShell 的 -Replace/[IO.File].Replace 直改文件
+- 用 edit 删除大块代码/用例前，先 read 当前目标区域：前面的编辑会移动行号并改变相邻文本，凭旧行号或记忆拼接 long old_string 必然失败

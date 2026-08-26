@@ -271,10 +271,6 @@ export class Constants {
     IMAGE_BATCH_DELETE_BTN: "imageBatchDeleteBtn",
     IMAGE_BATCH_CANCEL_BTN: "imageBatchCancelBtn",
 
-    // 标签管理器批量工具栏
-    PROMPT_TAG_BATCH_TOOLBAR: "promptTagBatchToolbar",
-    IMAGE_TAG_BATCH_TOOLBAR: "imageTagBatchToolbar",
-
     // 下拉菜单和对话框（用于 ESC 处理）
     DROPDOWN: "dropdown",
     CONFIRM_MODAL: "confirmModal",
@@ -330,8 +326,6 @@ export class Constants {
     ADD_PROMPT_TAG_IN_MANAGER_BTN: "addPromptTagInManagerBtn",
     ADD_IMAGE_TAG_GROUP_BTN: "addImageTagGroupBtn",
     ADD_PROMPT_TAG_GROUP_BTN: "addPromptTagGroupBtn",
-    BATCH_MANAGE_IMAGE_TAGS_BTN: "batchManageImageTagsBtn",
-    BATCH_MANAGE_PROMPT_TAGS_BTN: "batchManagePromptTagsBtn",
 
     // 标签管理器搜索和排序
     IMAGE_TAG_MANAGER_SEARCH_INPUT: "imageTagManagerSearchInput",
