@@ -18,16 +18,16 @@
 - [x] 1.5 `pnpm check` 通过
   - 备注：getPrompts IPC 链路保留——e2e 测试与备份统计在用（审计误判为死代码），已在 JSDoc 标注"含已删除项"；searchPrompts 链路确认全仓零引用，已删除
 
-## 第二批（数据库性能）
+## 第二批（数据库性能）✅
 
-- [ ] 2.1 删除图像标签改集合级 SQL 单事务（替换 index.ts:1407/1431 全表加载+逐张 updateImage）
-- [ ] 2.2 updatePrompt 图像关联差集短路（database.ts:1350 全删重插 → 增量）
-- [ ] 2.3 循环单条 IPC 改批量：新增 getPromptsByIds；三处调用点改造（ImageDetailManager:261 / PromptDetailManager:941 / NewPromptManager:186 图像侧用 getImagesByIds）
-- [ ] 2.4 索引调整：补 prompts(title, is_deleted)、prompt_image_relations(prompt_id, sort_order)；删 3 个主键左前缀冗余索引（database.ts:350/352/354）
-- [ ] 2.5 标签序列化防逗号拆分：GROUP_CONCAT 结果解析改为安全分隔符或 JSON（database.ts:866/2019/3013 及对应写入侧）
-- [ ] 2.6 事务补齐：启动迁移循环、permanentDeletePrompt/Image、emptyImageTrash 多步写；ensure-image-thumbnails 循环内 updateImagesBatch 合并为一次
-- [ ] 2.7 VirtualScrollBar：mousemove/mouseup 改为 mousedown 时挂载；destroy 兜底复位 userSelect
-- [ ] 2.8 `pnpm check`
+- [x] 2.1 删除图像标签改集合级 SQL 单事务（deleteImageTag/deleteImageTags 级联删除关联+标签；handler 内 N+1 循环移除）
+- [x] 2.2 updatePrompt 图像关联差集短路（集合与顺序均一致时跳过重写；顺序变化仍重建以支持"设为首张"）
+- [x] 2.3 新增 getPromptsByIds 批量 IPC（保持传入顺序）；ImageDetailManager/PromptDetailManager replaceImage 缓存刷新改批量；NewPromptManager 改用 getImagesByIds
+- [x] 2.4 索引调整：新增 idx_prompts_title_deleted、idx_prompt_image_relations_prompt_sort(prompt_id, sort_order)；DROP 3 个主键左前缀冗余索引
+- [x] 2.5 标签序列化改用 U+001F 分隔符：9 处 GROUP_CONCAT(..., char(31)) + 4 处 split(TAG_SEPARATOR)（一次性脚本见 bak/tmp-tag-separator.mjs）
+- [x] 2.6 事务补齐：日期迁移逐行 UPDATE 批内事务化；permanentDeletePrompt/emptyPromptTrash/permanentDeleteImage/emptyImageTrash 多步写事务化（物理文件删除移到事务提交后）；ensure-image-thumbnails 循环合并为单次 updateImagesBatch
+- [x] 2.7 VirtualScrollBar：mousemove/mouseup 仅拖拽期间挂载；destroy 兜底复位 userSelect
+- [x] 2.8 `pnpm check` 通过
 
 ## 第三批（架构去重）
 

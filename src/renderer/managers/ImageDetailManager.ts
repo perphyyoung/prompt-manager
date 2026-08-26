@@ -258,11 +258,10 @@ export class ImageDetailManager extends DetailViewManager {
                     this.app.eventBus.emit(Events.IMAGES_CHANGED);
                     // 刷新相关提示词缓存，并通知提示词面板刷新，确保提示词主界面按最近更新排序正确
                     if (result.relatedPromptIds && result.relatedPromptIds.length > 0) {
-                      for (const promptId of result.relatedPromptIds) {
-                        const updatedPrompt = await window.electronAPI.getPromptById(promptId);
-                        if (updatedPrompt) {
-                          cacheManager.cachePrompt(updatedPrompt);
-                        }
+                      // 批量获取，避免循环内逐条 IPC
+                      const updatedPrompts = await window.electronAPI.getPromptsByIds(result.relatedPromptIds);
+                      for (const updatedPrompt of updatedPrompts) {
+                        cacheManager.cachePrompt(updatedPrompt);
                       }
                       this.app.eventBus.emit(Events.PROMPTS_CHANGED);
                     }

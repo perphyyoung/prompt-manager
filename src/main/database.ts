@@ -273,13 +273,18 @@ async function migrateDateFormats(): Promise<void> {
         `SELECT ${idColumn} as id, ${column} as value FROM ${table} WHERE ${column} IS NOT NULL AND ${column} LIKE '%/%'`
       );
 
-      for (const row of rows) {
-        const localValue = row.value as string;
-        const isoValue = localTimeToIso(localValue);
-        if (isoValue !== localValue) {
-          await run(`UPDATE ${table} SET ${column} = ? WHERE ${idColumn} = ?`, [isoValue, row.id]);
+      if (rows.length === 0) continue;
+
+      // 单事务包裹整批 UPDATE，避免 WAL 模式下逐行 fsync 的写放大
+      await runInTransaction(async () => {
+        for (const row of rows) {
+          const localValue = row.value as string;
+          const isoValue = localTimeToIso(localValue);
+          if (isoValue !== localValue) {
+            await run(`UPDATE ${table} SET ${column} = ? WHERE ${idColumn} = ?`, [isoValue, row.id]);
+          }
         }
-      }
+      });
     }
   }
 
@@ -326,6 +331,14 @@ async function configurePragmas(): Promise<void> {
  * 优化常用查询的性能
  */
 async function createIndexes(): Promise<void> {
+  // 冗余索引清理：三张关系表的主键即为 (prompt_id|image_id, xxx) 复合主键，
+  // 其左前缀自动索引已覆盖单列 prompt_id/image_id 查询，这些历史遗留单列索引是纯写放大
+  const droppedIndexes = [
+    'DROP INDEX IF EXISTS idx_prompt_image_relations_prompt_id',
+    'DROP INDEX IF EXISTS idx_prompt_tag_relations_prompt_id',
+    'DROP INDEX IF EXISTS idx_image_tag_relations_image_id'
+  ];
+
   const indexes = [
     // 提示词表索引
     'CREATE INDEX IF NOT EXISTS idx_prompts_updated_at ON prompts(updated_at DESC)',
@@ -335,6 +348,8 @@ async function createIndexes(): Promise<void> {
     'CREATE INDEX IF NOT EXISTS idx_prompts_is_safe ON prompts(is_safe)',
     // 复合索引：常用查询模式
     'CREATE INDEX IF NOT EXISTS idx_prompts_deleted_updated ON prompts(is_deleted, updated_at DESC)',
+    // 标题唯一性检查（isTitleExists: WHERE title = ? AND is_deleted = 0）
+    'CREATE INDEX IF NOT EXISTS idx_prompts_title_deleted ON prompts(title, is_deleted)',
 
     // 图像表索引
     'CREATE INDEX IF NOT EXISTS idx_images_updated_at ON images(updated_at DESC)',
@@ -347,9 +362,9 @@ async function createIndexes(): Promise<void> {
     'CREATE INDEX IF NOT EXISTS idx_images_deleted_updated ON images(is_deleted, updated_at DESC)',
 
     // 关联表索引 - 优化 JOIN 查询
-    'CREATE INDEX IF NOT EXISTS idx_prompt_image_relations_prompt_id ON prompt_image_relations(prompt_id)',
+    // 复合索引同时满足按提示词查关联与 sort_order 排序（加载关联图像的高频路径）
+    'CREATE INDEX IF NOT EXISTS idx_prompt_image_relations_prompt_sort ON prompt_image_relations(prompt_id, sort_order ASC)',
     'CREATE INDEX IF NOT EXISTS idx_prompt_image_relations_image_id ON prompt_image_relations(image_id)',
-    'CREATE INDEX IF NOT EXISTS idx_prompt_tag_relations_prompt_id ON prompt_tag_relations(prompt_id)',
     'CREATE INDEX IF NOT EXISTS idx_prompt_tag_relations_tag_id ON prompt_tag_relations(tag_id)',
     'CREATE INDEX IF NOT EXISTS idx_image_tag_relations_image_id ON image_tag_relations(image_id)',
     'CREATE INDEX IF NOT EXISTS idx_image_tag_relations_tag_id ON image_tag_relations(tag_id)',
@@ -365,7 +380,7 @@ async function createIndexes(): Promise<void> {
     'CREATE INDEX IF NOT EXISTS idx_images_active_favorite ON images(updated_at DESC) WHERE is_deleted = 0 AND is_favorite = 1'
   ];
 
-  for (const sql of indexes) {
+  for (const sql of [...droppedIndexes, ...indexes]) {
     try {
       await run(sql);
     } catch (error: any) {
@@ -376,6 +391,12 @@ async function createIndexes(): Promise<void> {
 
 // 事务状态跟踪
 let transactionDepth = 0;
+
+/**
+ * 标签名聚合分隔符：U+001F（单元分隔符，控制字符，正常输入不会出现）
+ * 避免标签名本身包含逗号时 GROUP_CONCAT 结果被错误拆分
+ */
+const TAG_SEPARATOR = '\u001F';
 
 /**
  * 在事务中执行异步操作
@@ -863,7 +884,7 @@ function mapRowToPrompt(row: PromptRow, options: MapPromptOptions = {}): Prompt 
     isSafe: row.is_safe === 1 ? 1 : 0,  // 严格限制为 0 或 1，其他值视为 0
     isDeleted: row.is_deleted === 1,
     note: row.note,
-    tags: row.tags ? row.tags.split(',').filter(t => t) : []
+    tags: row.tags ? row.tags.split(TAG_SEPARATOR).filter(t => t) : []
   };
 
   if (includeImages) {
@@ -938,7 +959,7 @@ async function getPrompts(sortBy = 'updatedAt', sortOrder = 'desc'): Promise<Pro
 
   // 获取所有提示词基本信息（包括已删除的）
   const sql = `
-    SELECT p.*, GROUP_CONCAT(pt.name) as tags
+    SELECT p.*, GROUP_CONCAT(pt.name, char(31)) as tags
     FROM prompts p
     LEFT JOIN prompt_tag_relations ptr ON p.id = ptr.prompt_id
     LEFT JOIN prompt_tags pt ON ptr.tag_id = pt.id
@@ -1040,7 +1061,7 @@ async function getPromptsPaginated(options: GetPromptsPaginatedOptions): Promise
 
   const promptSql = `
     SELECT p.*,
-           (SELECT GROUP_CONCAT(DISTINCT pt.name)
+           (SELECT GROUP_CONCAT(DISTINCT pt.name, char(31))
             FROM prompt_tag_relations ptr
             JOIN prompt_tags pt ON ptr.tag_id = pt.id
             WHERE ptr.prompt_id = p.id) as tags
@@ -1170,7 +1191,7 @@ async function isTitleExists(title: string, excludeId: string | null = null): Pr
  */
 async function getPromptById(id: string): Promise<Prompt | null> {
   const sql = `
-    SELECT p.*, GROUP_CONCAT(pt.name) as tags
+    SELECT p.*, GROUP_CONCAT(pt.name, char(31)) as tags
     FROM prompts p
     LEFT JOIN prompt_tag_relations ptr ON p.id = ptr.prompt_id
     LEFT JOIN prompt_tags pt ON ptr.tag_id = pt.id
@@ -1195,6 +1216,34 @@ async function getPromptById(id: string): Promise<Prompt | null> {
   prompt.images = images || [];
 
   return prompt;
+}
+
+/**
+ * 批量获取提示词（按 ID，含关联图像）
+ * 用于替代循环内逐条 getPromptById 的 N+1 IPC 模式
+ * @param ids - 提示词 ID 数组
+ * @returns 提示词列表（按传入顺序排列，不存在的 ID 跳过）
+ */
+async function getPromptsByIds(ids: string[]): Promise<Prompt[]> {
+  if (ids.length === 0) return [];
+
+  const placeholders = ids.map(() => '?').join(',');
+  const sql = `
+    SELECT p.*, GROUP_CONCAT(pt.name, char(31)) as tags
+    FROM prompts p
+    LEFT JOIN prompt_tag_relations ptr ON p.id = ptr.prompt_id
+    LEFT JOIN prompt_tags pt ON ptr.tag_id = pt.id
+    WHERE p.id IN (${placeholders})
+    GROUP BY p.id
+  `;
+  const rows = await all<PromptRow>(sql, ids);
+  const prompts = await getPromptsWithImages(rows);
+
+  // 保持与传入 ids 一致的顺序
+  const byId = new Map(prompts.map(p => [String(p.id), p]));
+  return ids
+    .map(id => byId.get(String(id)))
+    .filter((p): p is Prompt => !!p);
 }
 
 /**
@@ -1276,10 +1325,10 @@ async function updatePrompt(id: string, updates: UpdatePromptParams): Promise<Pr
     // 更新标签 - 增量更新方式
     if (tags !== undefined) {
       const currentTagsRow = await get<{ tags: string | null }>(
-        'SELECT GROUP_CONCAT(pt.name) as tags FROM prompt_tag_relations ptr JOIN prompt_tags pt ON ptr.tag_id = pt.id WHERE ptr.prompt_id = ?',
+        'SELECT GROUP_CONCAT(pt.name, char(31)) as tags FROM prompt_tag_relations ptr JOIN prompt_tags pt ON ptr.tag_id = pt.id WHERE ptr.prompt_id = ?',
         [id]
       );
-      const currentTagNames = currentTagsRow && currentTagsRow.tags ? currentTagsRow.tags.split(',') : [];
+      const currentTagNames = currentTagsRow && currentTagsRow.tags ? currentTagsRow.tags.split(TAG_SEPARATOR) : [];
 
       const tagsToAdd = tags.filter(t => !currentTagNames.includes(t));
       const tagsToRemove = currentTagNames.filter(t => !tags.includes(t));
@@ -1313,23 +1362,25 @@ async function updatePrompt(id: string, updates: UpdatePromptParams): Promise<Pr
 
       const imagesToAdd = newImageIds.filter(imgId => !currentImageIds.includes(imgId));
       const imagesToRemove = currentImageIds.filter(imgId => !newImageIds.includes(imgId));
+      // 集合一致且序列一致才可跳过；仅顺序变化也需重建以同步 sort_order（"设为首张"）
+      const sameSequence =
+        imagesToAdd.length === 0 && imagesToRemove.length === 0 &&
+        currentImageIds.every((imgId, idx) => String(imgId) === String(newImageIds[idx]));
 
-      await run('DELETE FROM prompt_image_relations WHERE prompt_id = ?', [id]);
-      if (images.length > 0) {
-        await addPromptImages(id, newImageIds);
-      }
+      if (!sameSequence) {
+        await run('DELETE FROM prompt_image_relations WHERE prompt_id = ?', [id]);
+        if (images.length > 0) {
+          await addPromptImages(id, newImageIds);
+        }
 
-      if (imagesToAdd.length > 0) {
-        await run(
-          `UPDATE images SET updated_at = ? WHERE id IN (${imagesToAdd.map(() => '?').join(',')})`,
-          [now, ...imagesToAdd]
-        );
-      }
-      if (imagesToRemove.length > 0) {
-        await run(
-          `UPDATE images SET updated_at = ? WHERE id IN (${imagesToRemove.map(() => '?').join(',')})`,
-          [now, ...imagesToRemove]
-        );
+        // 仅对发生增删的图像刷新更新时间，保证主界面按最近更新排序正确
+        const touched = [...imagesToAdd, ...imagesToRemove];
+        if (touched.length > 0) {
+          await run(
+            `UPDATE images SET updated_at = ? WHERE id IN (${touched.map(() => '?').join(',')})`,
+            [now, ...touched]
+          );
+        }
       }
 
       if (!hasBasicFieldUpdate) {
@@ -1394,11 +1445,14 @@ async function restorePrompt(id: string): Promise<Prompt | null> {
  * 永久删除提示词
  */
 async function permanentDeletePrompt(id: string): Promise<boolean> {
-  // 1. 删除关联关系
-  await run('DELETE FROM prompt_image_relations WHERE prompt_id = ?', [id]);
+  // 删除关联关系与记录（单事务，保证原子性）
+  await runInTransaction(async () => {
+    // 1. 删除关联关系
+    await run('DELETE FROM prompt_image_relations WHERE prompt_id = ?', [id]);
 
-  // 2. 删除数据库记录
-  await run('DELETE FROM prompts WHERE id = ?', [id]);
+    // 2. 删除数据库记录
+    await run('DELETE FROM prompts WHERE id = ?', [id]);
+  });
   return true;
 }
 
@@ -1407,13 +1461,16 @@ async function permanentDeletePrompt(id: string): Promise<boolean> {
  * 删除所有软删除的提示词记录及其关联关系
  */
 async function emptyPromptTrash(): Promise<boolean> {
-  // 1. 删除关联关系（使用 IN 子句批量删除）
-  await run(
-    'DELETE FROM prompt_image_relations WHERE prompt_id IN (SELECT id FROM prompts WHERE is_deleted = 1)'
-  );
+  // 两步删除包进单事务，避免中途失败残留半删状态
+  await runInTransaction(async () => {
+    // 1. 删除关联关系（使用 IN 子句批量删除）
+    await run(
+      'DELETE FROM prompt_image_relations WHERE prompt_id IN (SELECT id FROM prompts WHERE is_deleted = 1)'
+    );
 
-  // 2. 删除数据库记录
-  await run('DELETE FROM prompts WHERE is_deleted = 1');
+    // 2. 删除数据库记录
+    await run('DELETE FROM prompts WHERE is_deleted = 1');
+  });
   return true;
 }
 
@@ -1434,7 +1491,7 @@ async function restoreAllPrompts(): Promise<boolean> {
  */
 async function getDeletedPrompts(): Promise<Prompt[]> {
   const sql = `
-    SELECT p.*, GROUP_CONCAT(pt.name) as tags
+    SELECT p.*, GROUP_CONCAT(pt.name, char(31)) as tags
     FROM prompts p
     LEFT JOIN prompt_tag_relations ptr ON p.id = ptr.prompt_id
     LEFT JOIN prompt_tags pt ON ptr.tag_id = pt.id
@@ -1978,7 +2035,7 @@ function mapRowToImage(row: ImageRow, promptRows: Array<{ id: string; title: str
     note: row.note,
     createdAt: formatDbTimeToLocal(row.created_at),
     updatedAt: formatDbTimeToLocal(row.updated_at),
-    tags: row.image_tags ? row.image_tags.split(',').filter(t => t) : [],
+    tags: row.image_tags ? row.image_tags.split(TAG_SEPARATOR).filter(t => t) : [],
     promptRefs: promptRows.map(p => ({
       promptId: p.id,
       promptTitle: p.title,
@@ -2060,7 +2117,7 @@ async function getImages(sortBy = 'createdAt', sortOrder = 'desc'): Promise<Imag
 
   const imageSql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name)
+           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
@@ -2163,7 +2220,7 @@ async function getImagesPaginated(options: GetImagesPaginatedOptions): Promise<P
 
   const imageSql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name)
+           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
@@ -2292,7 +2349,7 @@ async function getImagesByIds(ids: string[]): Promise<Image[]> {
   const placeholders = ids.map(() => '?').join(',');
   const sql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name)
+           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
@@ -2331,7 +2388,7 @@ async function getAllImages(options: GetImagesOptions = {}): Promise<Image[] | I
   // 默认：统计或其他场景，使用完整查询
   const imageSql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name)
+           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
@@ -2348,7 +2405,7 @@ async function getImageById(id: string): Promise<Image | null> {
   // 先获取图像基本信息和标签（使用子查询避免重复）
   const imageSql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name)
+           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
@@ -2698,21 +2755,23 @@ async function deleteImageFiles(image: ImageFilePaths, dataDir: string): Promise
  * @param dataDir - 数据目录路径
  */
 async function permanentDeleteImage(id: string, dataDir: string): Promise<boolean> {
-  // 1. 删除关联关系
-  await run('DELETE FROM prompt_image_relations WHERE image_id = ?', [id]);
-
-  // 2. 先获取图像信息以删除物理文件（只选择需要的字段）
+  // 1. 先获取图像信息以删除物理文件（只选择需要的字段）
   const image = await get<ImageFilePaths>(
     'SELECT relative_path, thumbnail_path FROM images WHERE id = ?',
     [id]
   );
 
+  // 2. 删除关联关系与数据库记录（单事务，保证原子性）
+  await runInTransaction(async () => {
+    await run('DELETE FROM prompt_image_relations WHERE image_id = ?', [id]);
+    await run('DELETE FROM images WHERE id = ?', [id]);
+  });
+
+  // 3. 事务提交后再删除物理文件（文件删除失败不影响已一致的数据库状态）
   if (image) {
     await deleteImageFiles(image, dataDir);
   }
 
-  // 3. 删除数据库记录
-  await run('DELETE FROM images WHERE id = ?', [id]);
   return true;
 }
 
@@ -2735,7 +2794,7 @@ async function getDeletedImages(): Promise<Image[]> {
   // 先获取所有已删除的图像基本信息
   const imageSql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name)
+           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
@@ -2777,23 +2836,25 @@ async function getDeletedImages(): Promise<Image[]> {
  * @param dataDir - 数据目录路径
  */
 async function emptyImageTrash(dataDir: string): Promise<boolean> {
-  // 1. 删除关联关系（使用 IN 子句批量删除）
-  await run(
-    'DELETE FROM prompt_image_relations WHERE image_id IN (SELECT id FROM images WHERE is_deleted = 1)'
-  );
-
-  // 2. 获取所有软删除的图像（只选择文件路径相关字段）
+  // 1. 先收集待删除图像的文件路径（只选择文件路径相关字段）
   const deletedImages = await all<ImageFilePaths>(
     'SELECT relative_path, thumbnail_path FROM images WHERE is_deleted = 1'
   );
 
-  // 3. 删除物理文件
+  if (deletedImages.length === 0) return true;
+
+  // 2. 删除关联关系与数据库记录（单事务，保证原子性）
+  await runInTransaction(async () => {
+    await run(
+      'DELETE FROM prompt_image_relations WHERE image_id IN (SELECT id FROM images WHERE is_deleted = 1)'
+    );
+    await run('DELETE FROM images WHERE is_deleted = 1');
+  });
+
+  // 3. 事务提交后再删除物理文件
   for (const image of deletedImages) {
     await deleteImageFiles(image, dataDir);
   }
-
-  // 4. 删除数据库记录
-  await run('DELETE FROM images WHERE is_deleted = 1');
   return true;
 }
 
@@ -2949,7 +3010,7 @@ async function addImagePrompts(imageId: string, promptIds: string[], preserveOrd
 async function getPromptImages(promptId: string): Promise<PromptImage[]> {
   const sql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name)
+           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
@@ -2972,7 +3033,7 @@ async function getPromptImages(promptId: string): Promise<PromptImage[]> {
     isDeleted: row.is_deleted === 1,
     deletedAt: row.deleted_at,
     createdAt: row.created_at,
-    tags: row.image_tags ? row.image_tags.split(',').filter(t => t) : [],
+    tags: row.image_tags ? row.image_tags.split(TAG_SEPARATOR).filter(t => t) : [],
     promptRefs: [{ promptId: promptId }]
   }));
 }
@@ -3123,25 +3184,36 @@ async function addImageTagsBatch(imageIds: string[], tagNames: string[]): Promis
 }
 
 /**
- * 删除图像标签
- * 从 image_tags 表中删除标签
+ * 删除图像标签及其全部关联（集合级 SQL，单事务）
+ * 替代早期"全量加载图像 + 逐张 updateImage 移除标签"的 N+1 写放大实现
  * @param name - 标签名称
  */
 async function deleteImageTag(name: string): Promise<void> {
-  await run('DELETE FROM image_tags WHERE name = ?', [name]);
+  await runInTransaction(async () => {
+    await run(
+      'DELETE FROM image_tag_relations WHERE tag_id IN (SELECT id FROM image_tags WHERE name = ?)',
+      [name]
+    );
+    await run('DELETE FROM image_tags WHERE name = ?', [name]);
+  });
 }
 
 /**
- * 批量删除图像标签
+ * 批量删除图像标签及其全部关联（集合级 SQL，单事务）
  * @param names - 标签名称数组
- * @returns 删除结果
+ * @returns 删除结果（deleted 为删除的标签数）
  */
 async function deleteImageTags(names: string[]): Promise<{ success: boolean; deleted: number }> {
   if (names.length === 0) return { success: true, deleted: 0 };
 
   const placeholders = names.map(() => '?').join(',');
-  const sql = `DELETE FROM image_tags WHERE name IN (${placeholders})`;
-  const result = await run(sql, names);
+  const result = await runInTransaction(async () => {
+    await run(
+      `DELETE FROM image_tag_relations WHERE tag_id IN (SELECT id FROM image_tags WHERE name IN (${placeholders}))`,
+      names
+    );
+    return await run(`DELETE FROM image_tags WHERE name IN (${placeholders})`, names);
+  });
 
   return { success: true, deleted: result.changes || 0 };
 }
@@ -3493,6 +3565,7 @@ export {
   countPromptTags,
   countPromptSpecialTags,
   getPromptById,
+  getPromptsByIds,
   isTitleExists,
   addPrompt,
   updatePrompt,

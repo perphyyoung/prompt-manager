@@ -183,10 +183,12 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
           this.app.showToast('提示词创建成功');
 
           // 更新关联图像的缓存（因为数据库已更新 updated_at 和关联关系）
-          for (const image of allImages) {
-            const updatedImage = await window.electronAPI.getImageById(image.id);
-            if (updatedImage) {
-              cacheManager.cacheImages([updatedImage]);
+          // 批量获取，避免循环内逐条 IPC
+          const ids = allImages.map(image => image.id).filter((id): id is string => !!id);
+          if (ids.length > 0) {
+            const updatedImages = await window.electronAPI.getImagesByIds(ids);
+            if (updatedImages.length > 0) {
+              cacheManager.cacheImagesAppend(updatedImages);
             }
           }
 

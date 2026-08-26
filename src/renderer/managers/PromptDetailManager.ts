@@ -938,9 +938,10 @@ export class PromptDetailManager extends DetailViewManager {
                     if (currentPrompt?.id && !relatedPromptIds.includes(String(currentPrompt.id))) {
                       relatedPromptIds.push(String(currentPrompt.id));
                     }
-                    for (const promptId of relatedPromptIds) {
-                      const updatedPrompt = await window.electronAPI.getPromptById(promptId);
-                      if (updatedPrompt) {
+                    if (relatedPromptIds.length > 0) {
+                      // 批量获取，避免循环内逐条 IPC
+                      const updatedPrompts = await window.electronAPI.getPromptsByIds(relatedPromptIds);
+                      for (const updatedPrompt of updatedPrompts) {
                         cacheManager.cachePrompt(updatedPrompt);
                       }
                     }

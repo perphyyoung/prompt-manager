@@ -41,8 +41,6 @@ export class VirtualScrollBar {
     this.getPageSize = options.getPageSize;
     this.onSeek = options.onSeek;
     this.render();
-    window.addEventListener('mousemove', this.handleMouseMove);
-    window.addEventListener('mouseup', this.handleMouseUp);
   }
 
   /** 容器滚动后反向同步 thumb 位置（不触发 onSeek） */
@@ -63,8 +61,9 @@ export class VirtualScrollBar {
   }
 
   destroy(): void {
-    window.removeEventListener('mousemove', this.handleMouseMove);
-    window.removeEventListener('mouseup', this.handleMouseUp);
+    // 拖拽中销毁时兜底：复位文本选中状态并卸载全局监听
+    this.detachGlobalDragListeners();
+    document.body.style.userSelect = '';
     this.mount.innerHTML = '';
     this.track = null;
     this.thumb = null;
@@ -91,6 +90,9 @@ export class VirtualScrollBar {
       this.dragStartY = e.clientY;
       this.dragStartThumbTop = this.currentThumbTop();
       document.body.style.userSelect = 'none';
+      // 仅拖拽期间挂载全局监听，避免实例全生命周期的常驻开销
+      window.addEventListener('mousemove', this.handleMouseMove);
+      window.addEventListener('mouseup', this.handleMouseUp);
     });
     this.track?.addEventListener('click', (e) => {
       if (!this.track) return;
@@ -121,7 +123,14 @@ export class VirtualScrollBar {
     if (!this.isDragging) return;
     this.isDragging = false;
     document.body.style.userSelect = '';
+    this.detachGlobalDragListeners();
   };
+
+  /** 卸载拖拽期间挂载的全局监听（幂等） */
+  private detachGlobalDragListeners(): void {
+    window.removeEventListener('mousemove', this.handleMouseMove);
+    window.removeEventListener('mouseup', this.handleMouseUp);
+  }
 
   private seek(index: number): void {
     const clamped = Math.max(0, Math.min(Math.round(index), this.maxOffset()));

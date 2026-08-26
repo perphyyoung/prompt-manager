@@ -78,6 +78,7 @@ interface IElectronAPI {
   countPromptTags: (options: import('../main/database-types.js').CountPromptTagsOptions) => Promise<Record<string, number>>;
   countPromptSpecialTags: (options: import('../main/database-types.js').CountPromptTagsOptions) => Promise<import('../main/database-types.js').PromptSpecialTagCounts>;
   getPromptById: (id: string) => Promise<IPrompt | null>;
+  getPromptsByIds: (ids: string[]) => Promise<IPrompt[]>;
   addPrompt: (prompt: Omit<IPrompt, 'id'>) => Promise<IPrompt>;
   updatePrompt: (id: string, updates: Partial<IPrompt>) => Promise<void>;
   softDeletePrompt: (id: string) => Promise<void>;
@@ -243,6 +244,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   countPromptTags: (options: import('../main/database-types.js').CountPromptTagsOptions) => ipcRenderer.invoke('count-prompt-tags', options),
   countPromptSpecialTags: (options: import('../main/database-types.js').CountPromptTagsOptions) => ipcRenderer.invoke('count-prompt-special-tags', options),
   getPromptById: (id: string) => ipcRenderer.invoke('get-prompt-by-id', id),
+  getPromptsByIds: (ids: string[]) => ipcRenderer.invoke('get-prompts-by-ids', ids),
   addPrompt: (prompt: Omit<IPrompt, 'id'>) => ipcRenderer.invoke('add-prompt', prompt),
   updatePrompt: (id: string, updates: Partial<IPrompt>) => ipcRenderer.invoke('update-prompt', id, updates),
   softDeletePrompt: (id: string) => ipcRenderer.invoke('soft-delete-prompt', id),

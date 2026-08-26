@@ -1176,6 +1176,8 @@ ipcMain.handle('ensure-image-thumbnails', async (event, ids: string[]) => {
   try {
     const fixed: Array<{ id: string; relativePath: string; fullPath: string }> = [];
     const missing: string[] = [];
+    // 收集修复项，循环结束后单次批量写库（原先每张图单独一个事务）
+    const pendingUpdates: Array<{ id: string; thumbnailPath: string }> = [];
 
     for (const id of ids || []) {
       const image = await db.getImageById(id);
@@ -1211,8 +1213,12 @@ ipcMain.handle('ensure-image-thumbnails', async (event, ids: string[]) => {
         missing.push(id);
         continue;
       }
-      await db.updateImagesBatch([{ id, thumbnailPath: info.relativePath }]);
+      pendingUpdates.push({ id, thumbnailPath: info.relativePath });
       fixed.push({ id, relativePath: info.relativePath, fullPath: info.thumbnailPath });
+    }
+
+    if (pendingUpdates.length > 0) {
+      await db.updateImagesBatch(pendingUpdates);
     }
 
     return { fixed, missing };
@@ -1286,9 +1292,18 @@ ipcMain.handle('get-images-by-ids', async (event, ids) => {
   }
 });
 
-// 根据 ID 获取提示词信息
-ipcMain.handle('get-prompt-by-id', async (event, promptId) => {
+// 批量获取提示词（按 ID 列表，保持传入顺序）
+ipcMain.handle('get-prompts-by-ids', async (event, ids: string[]) => {
   try {
+    return await db.getPromptsByIds(ids);
+  } catch (error) {
+    logError('Main', 'Get prompts by ids error:', error);
+    throw error;
+  }
+});
+
+// 根据 ID 获取提示词信息
+ipcMain.handle('get-prompt-by-id', async (event, promptId) => {  try {
     return await db.getPromptById(promptId);
   } catch (error) {
     logError('Main', 'Get prompt by id error:', error);
@@ -1384,23 +1399,10 @@ ipcMain.handle('rename-image-tag', async (event, oldTag, newTag) => {
   }
 });
 
-// 删除图像标签
+// 删除图像标签（集合级级联删除，单事务）
 ipcMain.handle('delete-image-tag', async (event, tag) => {
   try {
-    // 获取所有图像
-    const images = await db.getImages();
-
-    // 从每个包含该标签的图像中移除
-    for (const image of images) {
-      if (image.tags && image.tags.includes(tag)) {
-        const newTags = image.tags.filter(t => t !== tag);
-        await db.updateImage(image.id, { tags: newTags });
-      }
-    }
-
-    // 从全局标签列表中删除
     await db.deleteImageTag(tag);
-
     return true;
   } catch (error) {
     logError('Main', 'Delete image tag error:', error);
@@ -1408,24 +1410,10 @@ ipcMain.handle('delete-image-tag', async (event, tag) => {
   }
 });
 
-// 批量删除图像标签
+// 批量删除图像标签（集合级级联删除，单事务）
 ipcMain.handle('delete-image-tags', async (event, tags) => {
   try {
-    // 获取所有图像
-    const images = await db.getImages();
-
-    // 从每个图像中移除这些标签
-    for (const image of images) {
-      if (image.tags && image.tags.some(tag => tags.includes(tag))) {
-        const newTags = image.tags.filter(t => !tags.includes(t));
-        await db.updateImage(image.id, { tags: newTags });
-      }
-    }
-
-    // 从全局标签列表中批量删除
-    const result = await db.deleteImageTags(tags);
-
-    return result;
+    return await db.deleteImageTags(tags);
   } catch (error) {
     logError('Main', 'Batch delete image tags error:', error);
     throw error;
