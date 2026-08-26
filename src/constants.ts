@@ -46,6 +46,14 @@ export class Constants {
     DEFAULT: 1,
   });
 
+  // 卡片尺寸设置（提示词/图像主面板网格卡片，单位 px）
+  static CardSize = Object.freeze({
+    MIN: 160,
+    MAX: 400,
+    STEP: 20,
+    DEFAULT: 200,
+  });
+
   // 字体设置
   static FontFamily = Object.freeze({
     DEFAULT: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',

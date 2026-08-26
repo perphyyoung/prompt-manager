@@ -255,13 +255,26 @@ export class SearchSortManager {
 
     // 卡片大小
     if (promptCardSizeSlider) {
-      promptCardSizeSlider.value = String(this.app.promptPanelManager.cardSize);
-      this.app.promptPanelManager.setCardSize(this.app.promptPanelManager.cardSize);
-      promptCardSizeSlider.addEventListener('input', (e) => {
-        this.app.promptPanelManager?.setCardSize(parseInt((e.target as HTMLInputElement).value, 10));
-      });
-      // 注意：不需要 change 事件监听器，因为 setCardSize 内部已经处理了 localStorage 写入
+      this.setupCardSizeSlider(promptCardSizeSlider, this.app.promptPanelManager);
     }
+  }
+
+  /**
+   * 配置卡片大小滑块：范围/步长单点来源 Constants.CardSize，当前值与面板同步
+   */
+  private setupCardSizeSlider(
+    slider: HTMLInputElement,
+    manager: { cardSize: number; setCardSize: (size: number) => void }
+  ): void {
+    slider.min = String(Constants.CardSize.MIN);
+    slider.max = String(Constants.CardSize.MAX);
+    slider.step = String(Constants.CardSize.STEP);
+    slider.value = String(manager.cardSize);
+    manager.setCardSize(manager.cardSize);
+    slider.addEventListener('input', (e) => {
+      manager.setCardSize(parseInt((e.target as HTMLInputElement).value, 10));
+    });
+    // 注意：不需要 change 事件监听器，因为 setCardSize 内部已经处理了 localStorage 写入
   }
 
   /**
@@ -326,12 +339,7 @@ export class SearchSortManager {
 
     // 卡片大小
     if (imageCardSizeSlider) {
-      imageCardSizeSlider.value = String(this.app.imagePanelManager.cardSize);
-      this.app.imagePanelManager.setCardSize(this.app.imagePanelManager.cardSize);
-      imageCardSizeSlider.addEventListener('input', (e) => {
-        this.app.imagePanelManager?.setCardSize(parseInt((e.target as HTMLInputElement).value, 10));
-      });
-      // 注意：不需要 change 事件监听器，因为 setCardSize 内部已经处理了 localStorage 写入
+      this.setupCardSizeSlider(imageCardSizeSlider, this.app.imagePanelManager);
     }
   }
 

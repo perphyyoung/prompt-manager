@@ -16,10 +16,6 @@ import { showContextMenu } from '../renderer_utils/ContextMenuUtils.ts';
 import { VirtualScrollBar } from '../renderer_utils/VirtualScrollBar.ts';
 import type { VisibleRange } from '../renderer_utils/VirtualScroller.ts';
 
-// 卡片大小限制常量
-const MIN_CARD_SIZE = 100;
-const MAX_CARD_SIZE = 350;
-
 /** 网格行间距（px），与 styles.css 的 .grid-view gap 保持一致 */
 export const GRID_GAP = 16;
 
@@ -244,6 +240,10 @@ export abstract class PanelManagerBase {
 
     // 注册按钮处理器
     this.registerBatchToolbarHandlers();
+
+    // 卡片尺寸启动收口：子类构造中直接读 localStorage，未经 clamp，
+    // 越界持久值（旧版本遗留/手动修改）在此统一校正并写回
+    this.setCardSize(this.cardSize);
 
     // 绑定事件
     this.subscribeToEvents();
@@ -1407,7 +1407,7 @@ export abstract class PanelManagerBase {
    */
   setCardSize(size: number): void {
     // 校验范围
-    const clampedSize = Math.max(MIN_CARD_SIZE, Math.min(MAX_CARD_SIZE, size));
+    const clampedSize = Math.max(Constants.CardSize.MIN, Math.min(Constants.CardSize.MAX, size));
     this.cardSize = clampedSize;
     localStorageManager.set(this.storageKeys.cardSize, clampedSize);
 

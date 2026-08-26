@@ -99,22 +99,22 @@ localStorageManager.registerConfig({
 });
 
 /**
- * 卡片大小配置
+ * 卡片大小配置（范围/默认值单点来源 Constants.CardSize）
  */
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.PROMPT_CARD_SIZE,
-  defaultValue: 200,
+  defaultValue: Constants.CardSize.DEFAULT,
   parser: (value) => parseInt(value, 10),
   serializer: (value) => String(value),
-  validator: (value) => value >= 100 && value <= 350
+  validator: (value) => value >= Constants.CardSize.MIN && value <= Constants.CardSize.MAX
 });
 
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.IMAGE_CARD_SIZE,
-  defaultValue: 200,
+  defaultValue: Constants.CardSize.DEFAULT,
   parser: (value) => parseInt(value, 10),
   serializer: (value) => String(value),
-  validator: (value) => value >= 100 && value <= 350
+  validator: (value) => value >= Constants.CardSize.MIN && value <= Constants.CardSize.MAX
 });
 
 /**
