@@ -92,7 +92,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
 
       // 完整性守卫：缓存条目缺少 images 字段时（如从图像详情跳转，
       // ImageDetailManager.collectPromptRefs 会构造无 images 的最小 IPrompt 并写入缓存），
-      // 拉取全量数据并回写缓存，避免提示词详情参考图像丢失
+      // 拉取全量数据并回写缓存，避免提示词详情关联图像丢失
       if (!Array.isArray(latestPrompt.images)) {
         const fullPrompt = await window.electronAPI.getPromptById(latestPrompt.id);
         if (fullPrompt) {
@@ -1053,6 +1053,10 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
 
     // 提取有效图像 ID
     const validImageIds = validImages.map((img: { id: string }) => img.id);
+
+    // 更新左上角关联图像计数
+    const labelEl = document.getElementById(Constants.Ids.PROMPT_DETAIL_REF_IMAGES_LABEL);
+    if (labelEl) labelEl.textContent = `关联图像（${validImages.length}）`;
 
     // 检查缓存是否已填充：所有图像都在缓存中才跳过批量查询，
     // 否则用 getImagesByIds 补齐 tags 等完整信息（prompt.images 仅含基础路径字段）

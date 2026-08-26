@@ -551,6 +551,7 @@ export class Constants {
 
     // 图像详情相关
     IMAGE_PREVIEW_LIST: "imagePreviewList",
+    PROMPT_DETAIL_REF_IMAGES_LABEL: "promptDetailRefImagesLabel",
     IMAGE_UPLOAD_AREA: "imageUploadArea",
     IMAGE_INPUT: "imageInput",
     IMAGE_DETAIL_INFO_LIST: "imageDetailInfoList",

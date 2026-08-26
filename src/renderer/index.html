@@ -646,7 +646,7 @@
             <!-- 左侧：图像上传区域 -->
             <div class="edit-form-left">
               <div class="form-group">
-                <label>参考图像</label>
+                <label id="promptDetailRefImagesLabel">关联图像（0）</label>
                 <div class="image-preview-list" id="imagePreviewList"></div>
                 <div class="image-upload-row">
                   <div class="image-upload-area" id="imageUploadArea">
@@ -951,9 +951,9 @@
               ></textarea>
             </div>
 
-            <!-- 参考图像 - 可选 -->
+            <!-- 关联图像 - 可选 -->
             <div class="form-group">
-              <label>参考图像 <span class="hint">（可选）</span></label>
+              <label>关联图像 <span class="hint">（可选）</span></label>
               <div class="image-preview-list" id="newPromptImagePreviewList"></div>
               <div class="image-upload-area" id="newPromptImageUploadArea">
                 <input
