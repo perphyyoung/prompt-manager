@@ -1061,7 +1061,7 @@ async function getPromptsPaginated(options: GetPromptsPaginatedOptions): Promise
 
   const promptSql = `
     SELECT p.*,
-           (SELECT GROUP_CONCAT(DISTINCT pt.name, char(31))
+           (SELECT GROUP_CONCAT(pt.name, char(31))
             FROM prompt_tag_relations ptr
             JOIN prompt_tags pt ON ptr.tag_id = pt.id
             WHERE ptr.prompt_id = p.id) as tags
@@ -2117,7 +2117,7 @@ async function getImages(sortBy = 'createdAt', sortOrder = 'desc'): Promise<Imag
 
   const imageSql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
+           (SELECT GROUP_CONCAT(it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
@@ -2220,7 +2220,7 @@ async function getImagesPaginated(options: GetImagesPaginatedOptions): Promise<P
 
   const imageSql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
+           (SELECT GROUP_CONCAT(it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
@@ -2349,7 +2349,7 @@ async function getImagesByIds(ids: string[]): Promise<Image[]> {
   const placeholders = ids.map(() => '?').join(',');
   const sql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
+           (SELECT GROUP_CONCAT(it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
@@ -2388,7 +2388,7 @@ async function getAllImages(options: GetImagesOptions = {}): Promise<Image[] | I
   // 默认：统计或其他场景，使用完整查询
   const imageSql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
+           (SELECT GROUP_CONCAT(it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
@@ -2405,7 +2405,7 @@ async function getImageById(id: string): Promise<Image | null> {
   // 先获取图像基本信息和标签（使用子查询避免重复）
   const imageSql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
+           (SELECT GROUP_CONCAT(it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
@@ -2794,7 +2794,7 @@ async function getDeletedImages(): Promise<Image[]> {
   // 先获取所有已删除的图像基本信息
   const imageSql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
+           (SELECT GROUP_CONCAT(it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags
@@ -3010,7 +3010,7 @@ async function addImagePrompts(imageId: string, promptIds: string[], preserveOrd
 async function getPromptImages(promptId: string): Promise<PromptImage[]> {
   const sql = `
     SELECT i.*,
-           (SELECT GROUP_CONCAT(DISTINCT it.name, char(31))
+           (SELECT GROUP_CONCAT(it.name, char(31))
             FROM image_tag_relations itr
             JOIN image_tags it ON itr.tag_id = it.id
             WHERE itr.image_id = i.id) as image_tags

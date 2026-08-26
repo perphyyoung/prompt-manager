@@ -25,6 +25,7 @@
 - [x] 2.3 新增 getPromptsByIds 批量 IPC（保持传入顺序）；ImageDetailManager/PromptDetailManager replaceImage 缓存刷新改批量；NewPromptManager 改用 getImagesByIds
 - [x] 2.4 索引调整：新增 idx_prompts_title_deleted、idx_prompt_image_relations_prompt_sort(prompt_id, sort_order)；DROP 3 个主键左前缀冗余索引
 - [x] 2.5 标签序列化改用 U+001F 分隔符：9 处 GROUP_CONCAT(..., char(31)) + 4 处 split(TAG_SEPARATOR)（一次性脚本见 bak/tmp-tag-separator.mjs）
+  - ⚠️ 热修：初版误写 `GROUP_CONCAT(DISTINCT x, char(31))`——SQLite 禁止 DISTINCT 聚合带第二参数，导致启动失败；已去除 DISTINCT（关系表复合主键保证无重名，DISTINCT 本就冗余）。详见 docs/易错点.md「SQLite」节
 - [x] 2.6 事务补齐：日期迁移逐行 UPDATE 批内事务化；permanentDeletePrompt/emptyPromptTrash/permanentDeleteImage/emptyImageTrash 多步写事务化（物理文件删除移到事务提交后）；ensure-image-thumbnails 循环合并为单次 updateImagesBatch
 - [x] 2.7 VirtualScrollBar：mousemove/mouseup 仅拖拽期间挂载；destroy 兜底复位 userSelect
 - [x] 2.8 `pnpm check` 通过
