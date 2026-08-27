@@ -3,26 +3,35 @@
  * 作为协调器，整合各个面板管理器
  */
 
-import { Constants, Events } from '../constants.ts';
-import { DialogService, DialogConfig } from './services/index.ts';
+import { Constants, Events } from "../constants.ts";
+import { DialogService, DialogConfig } from "./services/index.ts";
 import {
-  PromptPanelManager, ImagePanelManager,
-  PromptTagManager, ImageTagManager, TrashManager, ImageFullscreenManager,
-  PromptDetailManager, ImageDetailManager,
-  ToastManager, NavigationManager,
-  SearchSortManager, ToolbarManager,
-  ImportExportManager, SettingsManager,
-  ImageSelectorManager, NewPromptManager,
+  PromptPanelManager,
+  ImagePanelManager,
+  PromptTagManager,
+  ImageTagManager,
+  TrashManager,
+  ImageFullscreenManager,
+  PromptDetailManager,
+  ImageDetailManager,
+  ToastManager,
+  NavigationManager,
+  SearchSortManager,
+  ToolbarManager,
+  ImportExportManager,
+  SettingsManager,
+  ImageSelectorManager,
+  NewPromptManager,
   ImageUploadManager,
-  StatisticsManager
-} from './managers/index.ts';
+  StatisticsManager,
+} from "./managers/index.ts";
 
-import eventBus from '../utils/EventBus.ts';
-import { HtmlUtils, cacheManager } from '../utils/index.ts';
-import { clearTagsCache } from '../pyTagGroups/operations.ts';
-import { HoverTooltipManager, ShortcutManager } from './renderer_utils/index.ts';
-import { localStorageManager } from './configs/LocalStorageConfig.ts';
-import type { IPrompt, IImage } from '../types/entities.ts';
+import eventBus from "../utils/EventBus.ts";
+import { HtmlUtils, cacheManager } from "../utils/index.ts";
+import { clearTagsCache } from "../pyTagGroups/operations.ts";
+import { HoverTooltipManager, ShortcutManager } from "./renderer_utils/index.ts";
+import { localStorageManager } from "./configs/LocalStorageConfig.ts";
+import type { IPrompt, IImage } from "../types/entities.ts";
 import type {
   IApp,
   IPanelManager,
@@ -39,8 +48,8 @@ import type {
   IHoverTooltipManager,
   IShortcutManager,
   IEventBus,
-  ICacheManager
-} from './app.types.ts';
+  ICacheManager,
+} from "./app.types.ts";
 
 // ==================== 主应用类 ====================
 
@@ -106,26 +115,38 @@ class PromptManager implements IApp {
   constructor() {
     // 使用 CacheManager 管理缓存
     this.cacheManager = cacheManager;
-    this.promptRefImagesCache = cacheManager.createCache('promptRefImages', 100);
+    this.promptRefImagesCache = cacheManager.createCache("promptRefImages", 100);
 
     // 从 localStorage 加载 viewMode（在创建面板管理器之前）
     this.viewMode = localStorageManager.get<string>(Constants.LocalStorageKey.VIEW_MODE);
 
     // 标签管理排序状态
-    this.promptTagSortBy = localStorageManager.get<string>(Constants.LocalStorageKey.PROMPT_TAG_SORT_BY);
-    this.promptTagSortOrder = localStorageManager.get<string>(Constants.LocalStorageKey.PROMPT_TAG_SORT_ORDER);
-    this.imageTagSortBy = localStorageManager.get<string>(Constants.LocalStorageKey.IMAGE_TAG_SORT_BY);
-    this.imageTagSortOrder = localStorageManager.get<string>(Constants.LocalStorageKey.IMAGE_TAG_SORT_ORDER);
+    this.promptTagSortBy = localStorageManager.get<string>(
+      Constants.LocalStorageKey.PROMPT_TAG_SORT_BY,
+    );
+    this.promptTagSortOrder = localStorageManager.get<string>(
+      Constants.LocalStorageKey.PROMPT_TAG_SORT_ORDER,
+    );
+    this.imageTagSortBy = localStorageManager.get<string>(
+      Constants.LocalStorageKey.IMAGE_TAG_SORT_BY,
+    );
+    this.imageTagSortOrder = localStorageManager.get<string>(
+      Constants.LocalStorageKey.IMAGE_TAG_SORT_ORDER,
+    );
 
     // 图像选择器排序状态（独立设置）
-    this.imageSelectorSortBy = localStorageManager.get<string>(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_BY);
-    this.imageSelectorSortOrder = localStorageManager.get<string>(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_ORDER);
+    this.imageSelectorSortBy = localStorageManager.get<string>(
+      Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_BY,
+    );
+    this.imageSelectorSortOrder = localStorageManager.get<string>(
+      Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_ORDER,
+    );
 
     // 事件总线（单例）
     this.eventBus = eventBus;
 
     // 当前面板状态 (由 NavigationManager 管理)
-    this.currentPanel = 'prompt'; // 默认打开提示词面板
+    this.currentPanel = "prompt"; // 默认打开提示词面板
 
     // 其他状态
     this.isFromDetailJump = false;
@@ -152,15 +173,15 @@ class PromptManager implements IApp {
       await this.initPanelManagers();
 
       // 绑定全局事件
-    this.bindGlobalEvents();
+      this.bindGlobalEvents();
 
-    // 恢复上次打开的面板（会触发当前面板的渲染）
-    this.navigationManager?.restorePanelState();
-  } catch (error) {
-    window.electronAPI.logError('App', 'Failed to initialize application:', error);
-    this.showToast('应用初始化失败', 'error');
+      // 恢复上次打开的面板（会触发当前面板的渲染）
+      this.navigationManager?.restorePanelState();
+    } catch (error) {
+      window.electronAPI.logError("App", "Failed to initialize application:", error);
+      this.showToast("应用初始化失败", "error");
+    }
   }
-}
 
   /**
    * 恢复主题
@@ -168,14 +189,13 @@ class PromptManager implements IApp {
   restoreTheme() {
     const savedTheme = localStorageManager.get<string>(Constants.LocalStorageKey.THEME);
     const html = document.documentElement;
-    html.setAttribute('data-theme', savedTheme);
+    html.setAttribute("data-theme", savedTheme);
 
     // 更新主题按钮文本
     const themeToggle = document.getElementById(Constants.Ids.SETTINGS_THEME_TOGGLE);
     if (themeToggle) {
-      themeToggle.innerHTML = savedTheme === 'dark'
-        ? '<span>☀️</span> 明亮'
-        : '<span>🌙</span> 暗黑';
+      themeToggle.innerHTML =
+        savedTheme === "dark" ? "<span>☀️</span> 明亮" : "<span>🌙</span> 暗黑";
     }
   }
 
@@ -188,7 +208,7 @@ class PromptManager implements IApp {
       this,
       Constants.Ids.PROMPT_PREVIEW_TOOLTIP,
       Constants.Ids.PROMPT_PREVIEW_CONTENT,
-      Constants.Ids.PROMPT_PREVIEW_IMAGE
+      Constants.Ids.PROMPT_PREVIEW_IMAGE,
     );
   }
 
@@ -203,7 +223,7 @@ class PromptManager implements IApp {
     this.toastManager = new ToastManager({
       duration: 3000,
       containerId: Constants.Ids.TOAST_CONTAINER,
-      messageId: Constants.Ids.TOAST_MESSAGE
+      messageId: Constants.Ids.TOAST_MESSAGE,
     });
     this.toastManager.init();
 
@@ -230,7 +250,7 @@ class PromptManager implements IApp {
     // 初始化回收站管理器
     this.trashManager = new TrashManager({
       app: this as IApp,
-      eventBus: this.eventBus
+      eventBus: this.eventBus,
     });
     await this.trashManager.init();
 
@@ -249,8 +269,8 @@ class PromptManager implements IApp {
     // 初始化导航管理器
     this.navigationManager = new NavigationManager({
       app: this as IApp,
-      storageKey: 'currentPanel',
-      defaultPanel: 'prompt'
+      storageKey: "currentPanel",
+      defaultPanel: "prompt",
     });
     this.navigationManager.init?.();
 
@@ -272,7 +292,7 @@ class PromptManager implements IApp {
     // 初始化设置管理器
     this.settingsManager = new SettingsManager({
       app: this as IApp,
-      dataClearApi: window.electronAPI
+      dataClearApi: window.electronAPI,
     });
     this.settingsManager.init?.();
 
@@ -289,10 +309,7 @@ class PromptManager implements IApp {
     this.statisticsManager = new StatisticsManager(this as IApp);
 
     // ========== 5. 并行初始化面板数据 ==========
-    await Promise.all([
-      this.promptPanelManager?.init?.(),
-      this.imagePanelManager?.init?.()
-    ]);
+    await Promise.all([this.promptPanelManager?.init?.(), this.imagePanelManager?.init?.()]);
   }
 
   /**
@@ -300,13 +317,13 @@ class PromptManager implements IApp {
    * 保持与 NavigationManager 的同步
    */
   syncCurrentPanel() {
-    Object.defineProperty(this, 'currentPanel', {
-      get: () => this.navigationManager?.getCurrentPanel() || 'prompt',
+    Object.defineProperty(this, "currentPanel", {
+      get: () => this.navigationManager?.getCurrentPanel() || "prompt",
       set: (value) => {
         if (this.navigationManager) {
           this.navigationManager.switchTo(value);
         }
-      }
+      },
     });
   }
 
@@ -334,17 +351,20 @@ class PromptManager implements IApp {
    * 使用事件委托处理所有文本编辑框和查看框
    */
   bindTextSelectEvents() {
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener("keydown", (e) => {
       // 检查是否按下了 Ctrl+A (或 Cmd+A on Mac)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      if ((e.ctrlKey || e.metaKey) && e.key === "a") {
         const target = e.target as HTMLElement;
 
         // 检查目标是否是文本输入框或文本查看框
-        const isTextInput = target.tagName === 'INPUT' &&
-          ['text', 'search', 'url', 'email', 'password', 'number'].includes((target as HTMLInputElement).type);
-        const isTextArea = target.tagName === 'TEXTAREA';
+        const isTextInput =
+          target.tagName === "INPUT" &&
+          ["text", "search", "url", "email", "password", "number"].includes(
+            (target as HTMLInputElement).type,
+          );
+        const isTextArea = target.tagName === "TEXTAREA";
         const isContentEditable = target.isContentEditable;
-        const isTextViewer = target.classList.contains('prompt-content');
+        const isTextViewer = target.classList.contains("prompt-content");
 
         // 如果是文本编辑/查看框，执行全选
         if (isTextInput || isTextArea || isContentEditable || isTextViewer) {
@@ -372,7 +392,7 @@ class PromptManager implements IApp {
    * 切换视图模式（safe/nsfw）
    */
   async toggleViewMode() {
-    this.viewMode = this.viewMode === 'safe' ? 'nsfw' : 'safe';
+    this.viewMode = this.viewMode === "safe" ? "nsfw" : "safe";
 
     // 重新渲染
     await this.promptPanelManager?.renderView();
@@ -383,7 +403,7 @@ class PromptManager implements IApp {
     // 刷新统计
     await this.renderStatistics();
 
-    this.showToast(`已切换到${this.viewMode === 'safe' ? '安全' : 'NSFW'}模式`, 'success');
+    this.showToast(`已切换到${this.viewMode === "safe" ? "安全" : "NSFW"}模式`, "success");
   }
 
   /**
@@ -404,16 +424,16 @@ class PromptManager implements IApp {
       await this.imagePanelManager?.renderTagFilters();
 
       // 清除 PyTagGroups 缓存，确保下次打开标签管理器时加载最新数据
-      clearTagsCache('prompt');
-      clearTagsCache('image');
+      clearTagsCache("prompt");
+      clearTagsCache("image");
 
       // 刷新统计
       await this.renderStatistics();
 
-      this.showToast('数据已刷新', 'success');
+      this.showToast("数据已刷新", "success");
     } catch (error) {
-      window.electronAPI.logError('App', 'Failed to refresh data:', error);
-      this.showToast('刷新失败', 'error');
+      window.electronAPI.logError("App", "Failed to refresh data:", error);
+      this.showToast("刷新失败", "error");
     }
   }
 
@@ -431,17 +451,17 @@ class PromptManager implements IApp {
         await window.electronAPI.relaunchApp();
       }
     } catch (error) {
-      window.electronAPI.logError('App', 'Failed to relaunch app:', error);
-      this.showToast('重启失败', 'error');
+      window.electronAPI.logError("App", "Failed to relaunch app:", error);
+      this.showToast("重启失败", "error");
     }
   }
 
   /**
- * 比较两个 ID 是否相等（统一转换为字符串比较）
- * @param id1 - 第一个 ID
- * @param id2 - 第二个 ID
- * @returns 是否相等
- */
+   * 比较两个 ID 是否相等（统一转换为字符串比较）
+   * @param id1 - 第一个 ID
+   * @param id2 - 第二个 ID
+   * @returns 是否相等
+   */
   isSameId(id1: string | number, id2: string | number): boolean {
     return String(id1) === String(id2);
   }
@@ -451,7 +471,7 @@ class PromptManager implements IApp {
    * @param message - 消息内容
    * @param type - 类型 (success, error, info, warning)
    */
-  showToast(message: string, type = 'info') {
+  showToast(message: string, type = "info") {
     this.toastManager?.show(message, type);
   }
 
@@ -471,12 +491,12 @@ class PromptManager implements IApp {
   generateUniqueTimestamp() {
     const now = new Date();
     const year = now.getFullYear().toString().slice(-2);
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hour = String(now.getHours()).padStart(2, '0');
-    const minute = String(now.getMinutes()).padStart(2, '0');
-    const second = String(now.getSeconds()).padStart(2, '0');
-    const ms = String(now.getMilliseconds()).padStart(3, '0');
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hour = String(now.getHours()).padStart(2, "0");
+    const minute = String(now.getMinutes()).padStart(2, "0");
+    const second = String(now.getSeconds()).padStart(2, "0");
+    const ms = String(now.getMilliseconds()).padStart(3, "0");
     return `${year}${month}${day}_${hour}${minute}${second}_${ms}`;
   }
 
@@ -489,12 +509,12 @@ class PromptManager implements IApp {
     if (!btn) return;
 
     if (isFavorite) {
-      btn.classList.add('active');
-      btn.title = '取消收藏';
+      btn.classList.add("active");
+      btn.title = "取消收藏";
       btn.innerHTML = Constants.ICONS.favorite.filled;
     } else {
-      btn.classList.remove('active');
-      btn.title = '收藏';
+      btn.classList.remove("active");
+      btn.title = "收藏";
       btn.innerHTML = Constants.ICONS.favorite.outline;
     }
   }
@@ -512,7 +532,10 @@ class PromptManager implements IApp {
    * @param images - 图像数组
    * @param index - 当前索引
    */
-  async openFullscreen(images: Array<{ id?: string; relativePath?: string; fileName?: string }>, index: number) {
+  async openFullscreen(
+    images: Array<{ id?: string; relativePath?: string; fileName?: string }>,
+    index: number,
+  ) {
     this.imageFullscreenManager?.open(images, index);
   }
 
@@ -525,12 +548,12 @@ class PromptManager implements IApp {
     if (!btn) return;
 
     if (isFavorite) {
-      btn.classList.add('active');
-      btn.title = '取消收藏';
+      btn.classList.add("active");
+      btn.title = "取消收藏";
       btn.innerHTML = Constants.ICONS.favorite.filled;
     } else {
-      btn.classList.remove('active');
-      btn.title = '收藏';
+      btn.classList.remove("active");
+      btn.title = "收藏";
       btn.innerHTML = Constants.ICONS.favorite.outline;
     }
   }
@@ -539,40 +562,52 @@ class PromptManager implements IApp {
    * 渲染图像详情信息
    * @param image - 图像对象
    */
-  async renderImageDetailInfo(image: { id: string; updatedAt?: string; createdAt?: string; width?: number; height?: number; fileSize?: number; relativePath?: string; fileName?: string }) {
+  async renderImageDetailInfo(image: {
+    id: string;
+    updatedAt?: string;
+    createdAt?: string;
+    width?: number;
+    height?: number;
+    fileSize?: number;
+    relativePath?: string;
+    fileName?: string;
+  }) {
     // 更新时间
     const updatedAtEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_UPDATED_AT);
     if (updatedAtEl) {
-      updatedAtEl.textContent = image.updatedAt || '-';
+      updatedAtEl.textContent = image.updatedAt || "-";
     }
 
     // 上传时间
     const createdAtEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_CREATED_AT);
     if (createdAtEl) {
-      createdAtEl.textContent = image.createdAt || '-';
+      createdAtEl.textContent = image.createdAt || "-";
     }
 
     // 图像尺寸
     const dimensionsEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_DIMENSIONS);
     if (dimensionsEl) {
-      dimensionsEl.textContent = image.width && image.height ? `${image.width} × ${image.height}` : '-';
+      dimensionsEl.textContent =
+        image.width && image.height ? `${image.width} × ${image.height}` : "-";
     }
 
     // 文件大小
     const fileSizeEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_FILE_SIZE);
     if (fileSizeEl) {
-      fileSizeEl.textContent = image.fileSize ? HtmlUtils.formatFileSize(image.fileSize) : '-';
+      fileSizeEl.textContent = image.fileSize ? HtmlUtils.formatFileSize(image.fileSize) : "-";
     }
 
     // 设置图像 - 异步获取完整路径
     // 使用 relativePath（原图路径），与重构前一致
-    const imgEl = document.getElementById(Constants.Ids.IMAGE_DETAIL_IMG) as HTMLImageElement | null;
+    const imgEl = document.getElementById(
+      Constants.Ids.IMAGE_DETAIL_IMG,
+    ) as HTMLImageElement | null;
     const imagePath = image.relativePath;
     if (imgEl && imagePath) {
       try {
         const fullPath = await window.electronAPI.getImagePath(imagePath);
-        imgEl.src = `file://${fullPath.replace(/"/g, '&quot;')}`;
-        imgEl.alt = image.fileName || '图像';
+        imgEl.src = `file://${fullPath.replace(/"/g, "&quot;")}`;
+        imgEl.alt = image.fileName || "图像";
 
         // 绑定双击事件 - 打开全屏查看器
         imgEl.ondblclick = () => {
@@ -580,21 +615,25 @@ class PromptManager implements IApp {
           const itemsSnapshot = this.imageDetailManager?.getItemsSnapshot();
           if (itemsSnapshot && itemsSnapshot.length > 0) {
             // 找到当前图像在列表中的索引
-            const currentIndex = itemsSnapshot.findIndex(i => this.isSameId((i as { id: string }).id, image.id));
+            const currentIndex = itemsSnapshot.findIndex((i) =>
+              this.isSameId((i as { id: string }).id, image.id),
+            );
             this.imageFullscreenManager?.open(itemsSnapshot, currentIndex >= 0 ? currentIndex : 0);
           } else {
             // 如果没有快照，只显示当前图像
-            const singleImage = [{
-              id: image.id,
-              relativePath: image.relativePath,
-              fileName: image.fileName
-            }];
+            const singleImage = [
+              {
+                id: image.id,
+                relativePath: image.relativePath,
+                fileName: image.fileName,
+              },
+            ];
             this.imageFullscreenManager?.open(singleImage, 0);
           }
         };
       } catch (error) {
-        window.electronAPI.logError('App', 'Failed to load image:', error);
-        imgEl.alt = '加载图像失败';
+        window.electronAPI.logError("App", "Failed to load image:", error);
+        imgEl.alt = "加载图像失败";
       }
     }
   }
@@ -610,7 +649,7 @@ class PromptManager implements IApp {
     const cached = cacheManager.getCachedImage(id);
     if (cached) return cached;
     if (allImages) {
-      return allImages.find(img => this.isSameId(img.id, id)) || null;
+      return allImages.find((img) => this.isSameId(img.id, id)) || null;
     }
     return null;
   }
@@ -649,8 +688,8 @@ class PromptManager implements IApp {
   autoResizeTextarea(element: HTMLElement | null) {
     if (!element) return;
     const textarea = element as HTMLTextAreaElement;
-    textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
+    textarea.style.height = "auto";
+    textarea.style.height = textarea.scrollHeight + "px";
   }
 
   /**
@@ -690,11 +729,13 @@ class PromptManager implements IApp {
    * @param value - 字段值
    */
   async savePromptField(field: string, value: unknown) {
-    const promptIdEl = document.getElementById(Constants.Ids.PROMPT_DETAIL_ID) as HTMLInputElement | null;
+    const promptIdEl = document.getElementById(
+      Constants.Ids.PROMPT_DETAIL_ID,
+    ) as HTMLInputElement | null;
     const promptId = promptIdEl ? promptIdEl.value : null;
 
     if (!promptId) {
-      window.electronAPI.logError('App', '[savePromptField] Prompt ID not found');
+      window.electronAPI.logError("App", "[savePromptField] Prompt ID not found");
       return;
     }
 
@@ -707,8 +748,10 @@ class PromptManager implements IApp {
 
     try {
       const updateData: Record<string, unknown> = {};
-      if (field === 'images') {
-        updateData[field] = value ? (value as Array<Record<string, unknown>>).map(img => ({ ...img })) : [];
+      if (field === "images") {
+        updateData[field] = value
+          ? (value as Array<Record<string, unknown>>).map((img) => ({ ...img }))
+          : [];
       } else {
         updateData[field] = value;
       }
@@ -720,14 +763,15 @@ class PromptManager implements IApp {
         Object.assign(cachedPrompt, updateData);
       }
 
-      if (field === 'images' && value) {
-        (value as Array<{ id?: string }>).forEach(img => {
+      if (field === "images" && value) {
+        (value as Array<{ id?: string }>).forEach((img) => {
           if (img.id) {
             const cachedImage = cacheManager.getCachedImage(img.id);
             if (cachedImage) {
-              (cachedImage as { promptRefs?: unknown[] }).promptRefs = (cachedPrompt as { images?: Array<{ id: string }> })?.images?.filter(
-                i => i.id === (cachedImage as { id: string }).id
-              ) || [];
+              (cachedImage as { promptRefs?: unknown[] }).promptRefs =
+                (cachedPrompt as { images?: Array<{ id: string }> })?.images?.filter(
+                  (i) => i.id === (cachedImage as { id: string }).id,
+                ) || [];
             }
           }
         });
@@ -766,16 +810,16 @@ window.app = app;
 window.dialogService = DialogService;
 
 // 全局错误处理 - 未捕获的 Promise 错误
-window.addEventListener('unhandledrejection', (event) => {
+window.addEventListener("unhandledrejection", (event) => {
   const error = event.reason;
-  const message = error?.message || error?.toString() || 'Unknown unhandled rejection';
-  window.electronAPI?.logError('Renderer', `Unhandled Promise Rejection: ${message}`, error);
+  const message = error?.message || error?.toString() || "Unknown unhandled rejection";
+  window.electronAPI?.logError("Renderer", `Unhandled Promise Rejection: ${message}`, error);
 });
 
 // 全局错误处理 - 未捕获的同步错误
 window.onerror = (message, source, lineno, colno, error) => {
   const errorMsg = error?.message || message;
-  window.electronAPI?.logError('Renderer', `Uncaught Error: ${errorMsg}`, error);
+  window.electronAPI?.logError("Renderer", `Uncaught Error: ${errorMsg}`, error);
   return false;
 };
 
@@ -784,8 +828,8 @@ async function initApp() {
   await app.init();
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => initApp());
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => initApp());
 } else {
   initApp();
 }

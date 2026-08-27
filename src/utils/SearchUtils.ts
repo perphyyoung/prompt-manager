@@ -26,7 +26,7 @@ export function searchMatches(item: ISearchableItem, query: string): boolean {
   return (
     item.fileName?.toLowerCase().includes(query) ||
     item.note?.toLowerCase().includes(query) ||
-    (item.tags && item.tags.some(tag => tag.toLowerCase().includes(query))) ||
+    (item.tags && item.tags.some((tag) => tag.toLowerCase().includes(query))) ||
     false
   );
 }
@@ -35,7 +35,7 @@ export function searchMatches(item: ISearchableItem, query: string): boolean {
  * 搜索工具默认导出
  */
 const SearchUtils = {
-  searchMatches
+  searchMatches,
 };
 
 export default SearchUtils;

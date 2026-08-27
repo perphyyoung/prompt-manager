@@ -23,11 +23,11 @@ export class ButtonFactory {
    * @param action - 动作名称
    * @returns 按钮配置
    */
-  static createFavoriteButton(action = 'toggleFavorite'): ButtonConfig {
+  static createFavoriteButton(action = "toggleFavorite"): ButtonConfig {
     return {
-      type: 'favorite',
+      type: "favorite",
       action,
-      title: '收藏/取消'
+      title: "收藏/取消",
     };
   }
 
@@ -37,9 +37,9 @@ export class ButtonFactory {
    */
   static createCopyButton(): ButtonConfig {
     return {
-      type: 'copy',
-      action: 'copy',
-      title: '复制'
+      type: "copy",
+      action: "copy",
+      title: "复制",
     };
   }
 
@@ -49,9 +49,9 @@ export class ButtonFactory {
    */
   static createDeleteButton(): ButtonConfig {
     return {
-      type: 'delete',
-      action: 'delete',
-      title: '删除'
+      type: "delete",
+      action: "delete",
+      title: "删除",
     };
   }
 
@@ -61,10 +61,10 @@ export class ButtonFactory {
    */
   static createRestoreButton(): ButtonConfig {
     return {
-      type: 'restore',
-      action: 'restore',
-      title: '恢复',
-      className: 'btn-restore'
+      type: "restore",
+      action: "restore",
+      title: "恢复",
+      className: "btn-restore",
     };
   }
 
@@ -74,10 +74,10 @@ export class ButtonFactory {
    */
   static createPermanentDeleteButton(): ButtonConfig {
     return {
-      type: 'delete',
-      action: 'permanentDelete',
-      title: '彻底删除',
-      className: 'btn-danger'
+      type: "delete",
+      action: "permanentDelete",
+      title: "彻底删除",
+      className: "btn-danger",
     };
   }
 
@@ -87,10 +87,10 @@ export class ButtonFactory {
    */
   static createCheckboxButton(): ButtonConfig {
     return {
-      type: 'checkbox',
-      action: 'toggleSelect',
-      title: '选择',
-      className: 'checkbox-btn'
+      type: "checkbox",
+      action: "toggleSelect",
+      title: "选择",
+      className: "checkbox-btn",
     };
   }
 }
@@ -108,10 +108,10 @@ export interface Icons {
  * 用于根据按钮类型获取对应的图标
  */
 export const BUTTON_ICON_MAP: Record<string, (icons: Icons, isActive?: boolean) => string> = {
-  favorite: (icons, isActive) => isActive ? icons.favorite.filled : icons.favorite.outline,
+  favorite: (icons, isActive) => (isActive ? icons.favorite.filled : icons.favorite.outline),
   copy: (icons) => icons.copy,
   delete: (icons) => icons.delete,
-  restore: (icons) => icons.restore || icons.undo || ''
+  restore: (icons) => icons.restore || icons.undo || "",
 };
 
 interface ListButtonConfig {
@@ -126,18 +126,18 @@ interface ListButtonConfig {
  */
 const LIST_BUTTON_CONFIG: Record<string, ListButtonConfig> = {
   favorite: {
-    title: '收藏',
-    activeTitle: '取消收藏',
-    className: 'favorite-btn'
+    title: "收藏",
+    activeTitle: "取消收藏",
+    className: "favorite-btn",
   },
   copy: {
-    title: '复制内容',
-    className: 'copy-btn'
+    title: "复制内容",
+    className: "copy-btn",
   },
   delete: {
-    title: '删除',
-    className: 'delete-btn'
-  }
+    title: "删除",
+    className: "delete-btn",
+  },
 };
 
 /**
@@ -149,9 +149,9 @@ const LIST_BUTTON_CONFIG: Record<string, ListButtonConfig> = {
 export function createListButtonHtml(type: string, options: ListButtonOptions): string {
   const { id, isActive, icon } = options;
   const config = LIST_BUTTON_CONFIG[type];
-  if (!config) return '';
+  if (!config) return "";
 
-  const activeClass = isActive ? 'active' : '';
+  const activeClass = isActive ? "active" : "";
   const title = isActive && config.activeTitle ? config.activeTitle : config.title;
 
   return `<button type="button" class="${config.className} ${activeClass}" title="${title}" data-id="${id}">${icon}</button>`;

@@ -1,7 +1,7 @@
-import { DelaySaveStrategy } from '../services/index.ts';
-import { ImagePreviewManager } from './ImagePreviewManager.ts';
-import { DuplicatePreventionMixin } from '../../utils/index.ts';
-import { Constants, Events } from '../../constants.ts';
+import { DelaySaveStrategy } from "../services/index.ts";
+import { ImagePreviewManager } from "./ImagePreviewManager.ts";
+import { DuplicatePreventionMixin } from "../../utils/index.ts";
+import { Constants, Events } from "../../constants.ts";
 
 /**
  * App 类型定义
@@ -54,10 +54,15 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
   constructor(options: IImageUploadManagerOptions) {
     super();
     this.app = options.app;
-    this.strategy = new DelaySaveStrategy(this.app as unknown as { eventBus: { emit: (event: string) => void }; [key: string]: unknown });
+    this.strategy = new DelaySaveStrategy(
+      this.app as unknown as {
+        eventBus: { emit: (event: string) => void };
+        [key: string]: unknown;
+      },
+    );
     this.previewManager = new ImagePreviewManager({
       containerId: Constants.Ids.MODAL_IMAGE_PREVIEW_LIST,
-      onRemove: (index: number) => this.handleRemoveImage(index)
+      onRemove: (index: number) => this.handleRemoveImage(index),
     });
     // 绑定事件委托（只需执行一次）
     this.previewManager.bindEvents();
@@ -75,7 +80,7 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
   open(): void {
     const modal = document.getElementById(Constants.Ids.IMAGE_UPLOAD_MODAL);
     if (modal) {
-      modal.classList.add('active');
+      modal.classList.add("active");
     }
   }
 
@@ -85,7 +90,7 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
   async close(): Promise<void> {
     const modal = document.getElementById(Constants.Ids.IMAGE_UPLOAD_MODAL);
     if (modal) {
-      modal.classList.remove('active');
+      modal.classList.remove("active");
     }
   }
 
@@ -105,19 +110,19 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
     if (!modalUploadArea) return;
 
     // 点击上传区域 - 选择多图
-    modalUploadArea.addEventListener('click', async (e) => {
-      if ((e.target as HTMLElement).closest('.remove-image')) return;
+    modalUploadArea.addEventListener("click", async (e) => {
+      if ((e.target as HTMLElement).closest(".remove-image")) return;
       await this.handleSelectImages();
     });
 
     // 禁止拖拽上传
-    modalUploadArea.addEventListener('dragover', (e) => {
+    modalUploadArea.addEventListener("dragover", (e) => {
       e.preventDefault();
       if (e.dataTransfer) {
-        e.dataTransfer.dropEffect = 'none';
+        e.dataTransfer.dropEffect = "none";
       }
     });
-    modalUploadArea.addEventListener('drop', (e) => {
+    modalUploadArea.addEventListener("drop", (e) => {
       e.preventDefault();
     });
   }
@@ -131,15 +136,15 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
     const closeBtn = document.getElementById(Constants.Ids.CLOSE_IMAGE_UPLOAD_MODAL);
 
     if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => this.handleCancel());
+      cancelBtn.addEventListener("click", () => this.handleCancel());
     }
 
     if (closeBtn) {
-      closeBtn.addEventListener('click', () => this.handleCancel());
+      closeBtn.addEventListener("click", () => this.handleCancel());
     }
 
     if (confirmBtn) {
-      confirmBtn.addEventListener('click', () => this.handleConfirm());
+      confirmBtn.addEventListener("click", () => this.handleConfirm());
     }
   }
 
@@ -189,20 +194,23 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
     // 检查是否有已上传的图像
     const filePaths = this.strategy.getFilePaths();
     if (!filePaths || filePaths.length === 0) {
-      this.app.showToast('必须上传图像才能保存', 'warning');
+      this.app.showToast("必须上传图像才能保存", "warning");
       return;
     }
 
     // 显示进度提示
-    this.app.showToast('正在保存图像...', 'info');
+    this.app.showToast("正在保存图像...", "info");
 
-    const result = await this.strategy.confirm('image-manager', (current: number, total: number) => {
-      // 更新进度
-      this.app.showToast(`正在保存图像... (${current}/${total})`, 'info');
-    }) as IImageSelectionResult;
+    const result = (await this.strategy.confirm(
+      "image-manager",
+      (current: number, total: number) => {
+        // 更新进度
+        this.app.showToast(`正在保存图像... (${current}/${total})`, "info");
+      },
+    )) as IImageSelectionResult;
 
     if (!result.success) {
-      this.app.showToast(result.message || '保存失败', 'error');
+      this.app.showToast(result.message || "保存失败", "error");
       return;
     }
 
@@ -210,14 +218,14 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
     interface ImageWithDuplicateInfo {
       id: string;
       isDuplicate?: boolean;
-      duplicateType?: 'restored_from_trash' | 'existing';
+      duplicateType?: "restored_from_trash" | "existing";
     }
     const images = (result.images || []) as ImageWithDuplicateInfo[];
     let restoredFromTrash = 0;
     let existing = 0;
     for (const image of images) {
       if (image.isDuplicate) {
-        if (image.duplicateType === 'restored_from_trash') {
+        if (image.duplicateType === "restored_from_trash") {
           restoredFromTrash++;
         } else {
           existing++;
@@ -231,10 +239,13 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
     if (newUploads > 0) parts.push(`${newUploads}张新图像`);
     if (restoredFromTrash > 0) parts.push(`${restoredFromTrash}张从回收站恢复`);
     if (existing > 0) parts.push(`${existing}张已存在`);
-    const saveMessage = parts.length > 0 ? `成功保存：${parts.join('，')}` : `成功保存 ${result.count} 张图像`;
+    const saveMessage =
+      parts.length > 0 ? `成功保存：${parts.join("，")}` : `成功保存 ${result.count} 张图像`;
 
     // 获取提示词内容
-    const promptTextarea = document.getElementById(Constants.Ids.UPLOAD_IMAGE_PROMPT) as HTMLTextAreaElement | null;
+    const promptTextarea = document.getElementById(
+      Constants.Ids.UPLOAD_IMAGE_PROMPT,
+    ) as HTMLTextAreaElement | null;
     const promptContent = promptTextarea?.value?.trim();
 
     // 标记是否需要刷新提示词列表
@@ -243,16 +254,19 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
     // 如果有提示词内容，创建提示词并关联图像
     if (promptContent) {
       try {
-        const imageIds = images.map(img => img.id);
+        const imageIds = images.map((img) => img.id);
         await this.createPromptWithImages(promptContent, imageIds);
-        this.app.showToast(`${saveMessage}并创建提示词`, 'success');
+        this.app.showToast(`${saveMessage}并创建提示词`, "success");
         shouldRefreshPrompts = true;
       } catch (error) {
-        window.electronAPI.logError('ImageUploadManager.ts', 'Failed to create prompt:', error);
-        this.app.showToast(`${saveMessage}，但提示词创建失败: ${error instanceof Error ? error.message : String(error)}`, 'warning');
+        window.electronAPI.logError("ImageUploadManager.ts", "Failed to create prompt:", error);
+        this.app.showToast(
+          `${saveMessage}，但提示词创建失败: ${error instanceof Error ? error.message : String(error)}`,
+          "warning",
+        );
       }
     } else {
-      this.app.showToast(saveMessage, 'success');
+      this.app.showToast(saveMessage, "success");
     }
 
     // 清理
@@ -261,7 +275,7 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
 
     // 清空提示词内容
     if (promptTextarea) {
-      promptTextarea.value = '';
+      promptTextarea.value = "";
     }
 
     // 按需刷新：始终刷新图像列表，有提示词时刷新提示词列表
@@ -279,19 +293,23 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
    * @returns Promise<void>
    */
   async createPromptWithImages(content: string, imageIds: string[]): Promise<void> {
-    return this.executeWithPrevention('createPromptWithImages', async () => {
-      const prompt = {
-        title: '',  // 留空，让 main.js 使用 ID 作为标题
-        content,
-        tags: [],
-        images: imageIds.map(id => ({ id })),
-        note: '',
-        isSafe: 1
-      };
+    return this.executeWithPrevention(
+      "createPromptWithImages",
+      async () => {
+        const prompt = {
+          title: "", // 留空，让 main.js 使用 ID 作为标题
+          content,
+          tags: [],
+          images: imageIds.map((id) => ({ id })),
+          note: "",
+          isSafe: 1,
+        };
 
-      await window.electronAPI.addPrompt(prompt);
-      // 注意：不在这里触发事件，由调用方统一处理刷新
-    }, { errorMessage: '正在创建提示词中...' }) as Promise<void>;
+        await window.electronAPI.addPrompt(prompt);
+        // 注意：不在这里触发事件，由调用方统一处理刷新
+      },
+      { errorMessage: "正在创建提示词中..." },
+    ) as Promise<void>;
   }
 
   /**

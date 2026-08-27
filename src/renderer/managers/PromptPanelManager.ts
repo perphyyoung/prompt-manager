@@ -1,16 +1,16 @@
-import { cacheManager, cyrb53 } from '../../utils/index.ts';
-import { PanelManagerBase, IPanelItem, PANEL_PAGE_SIZE } from './PanelManagerBase.ts';
-import { localStorageManager } from '../configs/LocalStorageConfig.ts';
-import type { IApp } from '../app.types.ts';
-import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig } from './SharedComponents/index.ts';
-import { Constants, Events } from '../../constants.ts';
-import { DialogConfig } from '../services/index.ts';
-import { batchToolbarMiddle } from '../../middle/index.ts';
+import { cacheManager, cyrb53 } from "../../utils/index.ts";
+import { PanelManagerBase, IPanelItem, PANEL_PAGE_SIZE } from "./PanelManagerBase.ts";
+import { localStorageManager } from "../configs/LocalStorageConfig.ts";
+import type { IApp } from "../app.types.ts";
+import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig } from "./SharedComponents/index.ts";
+import { Constants, Events } from "../../constants.ts";
+import { DialogConfig } from "../services/index.ts";
+import { batchToolbarMiddle } from "../../middle/index.ts";
 
-import { IPrompt } from '../../types/entities.ts';
-import { VirtualWindowRenderer } from '../renderer_utils/index.ts';
-import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
-import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
+import { IPrompt } from "../../types/entities.ts";
+import { VirtualWindowRenderer } from "../renderer_utils/index.ts";
+import { BaseEventStrategy, IEventStrategySelectors } from "./Strategies/BaseEventStrategy.ts";
+import { IEventStrategy, IEventStrategyItem } from "./Strategies/IEventStrategy.ts";
 
 interface ImageInfo {
   id?: string;
@@ -39,7 +39,7 @@ export class PromptPanelManager extends PanelManagerBase {
   private windowRenderer: VirtualWindowRenderer<IPrompt> | null = null;
 
   // 面板类型
-  protected readonly panelType = 'prompt' as const;
+  protected readonly panelType = "prompt" as const;
 
   // —— 基类滚动/分页追赶钩子实现 ——
 
@@ -84,7 +84,7 @@ export class PromptPanelManager extends PanelManagerBase {
       cardSize: Constants.LocalStorageKey.PROMPT_CARD_SIZE,
       tagFilterSortBy: Constants.LocalStorageKey.PROMPT_TAG_FILTER_SORT_BY,
       tagFilterSortOrder: Constants.LocalStorageKey.PROMPT_TAG_FILTER_SORT_ORDER,
-      tagFilterCollapsed: Constants.LocalStorageKey.PROMPT_TAG_FILTER_COLLAPSED
+      tagFilterCollapsed: Constants.LocalStorageKey.PROMPT_TAG_FILTER_COLLAPSED,
     };
   }
 
@@ -96,18 +96,18 @@ export class PromptPanelManager extends PanelManagerBase {
     [Constants.MULTI_IMAGE_TAG, (p) => !!p.images && p.images.length >= 2],
     [Constants.NO_IMAGE_TAG, (p) => !p.images || p.images.length === 0],
     [Constants.NO_TAG_TAG, (p) => !p.tags || p.tags.length === 0],
-    [Constants.SINGLE_LANG_TAG, (p) => !p.contentTranslate || p.contentTranslate.trim() === '']
+    [Constants.SINGLE_LANG_TAG, (p) => !p.contentTranslate || p.contentTranslate.trim() === ""],
   ]);
 
   constructor(app: IApp) {
     super({
       app: app,
-      defaultCardSize: 260
+      defaultCardSize: 260,
     });
 
     // 从 localStorage 加载设置（在 super 之后，init 之前）
     // 提示词主页仅保留网格视图
-    this.viewModeType = 'grid';
+    this.viewModeType = "grid";
     this.sortBy = localStorageManager.get<string>(this.storageKeys.sortBy);
     this.sortOrder = localStorageManager.get<string>(this.storageKeys.sortOrder);
     this.cardSize = localStorageManager.get<number>(this.storageKeys.cardSize);
@@ -129,7 +129,9 @@ export class PromptPanelManager extends PanelManagerBase {
    * @private
    */
   private bindPromptToolbarEvents(): void {
-    document.getElementById(Constants.Ids.PROMPT_ADD_BTN)?.addEventListener('click', () => this.app.newPromptManager?.open());
+    document
+      .getElementById(Constants.Ids.PROMPT_ADD_BTN)
+      ?.addEventListener("click", () => this.app.newPromptManager?.open());
   }
 
   /**
@@ -137,7 +139,9 @@ export class PromptPanelManager extends PanelManagerBase {
    * @private
    */
   private bindTagFilterActionEvent(): void {
-    document.getElementById(Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN)?.addEventListener('click', () => this.handleFilterAction());
+    document
+      .getElementById(Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN)
+      ?.addEventListener("click", () => this.handleFilterAction());
   }
 
   /**
@@ -145,13 +149,13 @@ export class PromptPanelManager extends PanelManagerBase {
    */
   protected getUIConfig() {
     return {
-      cardSelector: '.prompt-card',
-      listItemSelector: '.list-item--prompt',
-      cardBgSelector: '.prompt-card-bg, .card__bg',
+      cardSelector: ".prompt-card",
+      listItemSelector: ".list-item--prompt",
+      cardBgSelector: ".prompt-card-bg, .card__bg",
       gridContainerId: Constants.Ids.PROMPT_GRID,
       listContainerId: Constants.Ids.PROMPT_LIST,
-      dragSource: 'prompt-tag',
-      getCardDropSelector: () => '.prompt-card, .list-item--prompt',
+      dragSource: "prompt-tag",
+      getCardDropSelector: () => ".prompt-card, .list-item--prompt",
 
       getElementId: (element: HTMLElement): string | undefined => {
         return element.dataset.id || element.dataset.promptId || undefined;
@@ -160,8 +164,8 @@ export class PromptPanelManager extends PanelManagerBase {
       getCopyContent: (item: IPanelItem) => {
         const prompt = item as IPrompt;
         return {
-          content: prompt.content || '',
-          hasContent: !!prompt.content
+          content: prompt.content || "",
+          hasContent: !!prompt.content,
         };
       },
 
@@ -169,7 +173,7 @@ export class PromptPanelManager extends PanelManagerBase {
         const prompt = item as IPrompt;
         return {
           config: DialogConfig.DELETE_PROMPT,
-          name: prompt.title || '未命名'
+          name: prompt.title || "未命名",
         };
       },
 
@@ -196,13 +200,13 @@ export class PromptPanelManager extends PanelManagerBase {
 
       getListTitle: (item: IPanelItem): string => {
         const prompt = item as IPrompt;
-        return prompt.title || '无标题';
+        return prompt.title || "无标题";
       },
 
       getListContent: (item: IPanelItem): string => {
         const prompt = item as IPrompt;
-        return prompt.content || '';
-      }
+        return prompt.content || "";
+      },
     };
   }
 
@@ -229,21 +233,24 @@ export class PromptPanelManager extends PanelManagerBase {
    * 获取搜索查询（实现基类抽象方法）
    */
   getSearchQuery(): string {
-    return this.app.searchSortManager?.getPromptSearchQuery() || '';
+    return this.app.searchSortManager?.getPromptSearchQuery() || "";
   }
 
   /**
    * 获取特殊标签检查函数 Map（实现基类抽象方法）
    */
   getSpecialTagChecks(): Map<string, (item: Record<string, unknown>) => boolean> {
-    return PromptPanelManager.PROMPT_SPECIAL_TAG_PREDICATES as Map<string, (item: Record<string, unknown>) => boolean>;
+    return PromptPanelManager.PROMPT_SPECIAL_TAG_PREDICATES as Map<
+      string,
+      (item: Record<string, unknown>) => boolean
+    >;
   }
 
   /**
    * 获取项目类型标识（实现基类抽象方法）
    */
-  getItemType(): 'prompt' | 'image' {
-    return 'prompt';
+  getItemType(): "prompt" | "image" {
+    return "prompt";
   }
 
   /**
@@ -275,7 +282,7 @@ export class PromptPanelManager extends PanelManagerBase {
     await this.ensureThumbnailsForPage(firstImageIds);
     // 重建指纹基准（全量渲染后所有项视为"已同步"）
     this.itemFingerprints = new Map(
-      page.items.map(p => [String(p.id), this.getItemFingerprint(p)])
+      page.items.map((p) => [String(p.id), this.getItemFingerprint(p)]),
     );
     // 失败时保留旧缓存：数据仍以数据库为准，清空只会导致后续全部重新 IPC
     return page.items;
@@ -312,13 +319,17 @@ export class PromptPanelManager extends PanelManagerBase {
         searchQuery: this.getSearchQuery() || undefined,
         tagNames: tagNames.length > 0 ? tagNames : undefined,
         specialTags: specialTags.length > 0 ? specialTags : undefined,
-        isSafe: this.app.viewMode === 'safe' ? true : undefined,
-        invertedFilter: this.invertedFilter
+        isSafe: this.app.viewMode === "safe" ? true : undefined,
+        invertedFilter: this.invertedFilter,
       });
       batchToolbarMiddle.selectAll(this.toolbarContext, ids);
       this.updateSelectionUI();
     } catch (error) {
-      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to select all prompts by filter:', error);
+      window.electronAPI.logError(
+        "PromptPanelManager.ts",
+        "Failed to select all prompts by filter:",
+        error,
+      );
       super.selectAllVisibleItems();
     }
   }
@@ -326,18 +337,18 @@ export class PromptPanelManager extends PanelManagerBase {
   /**
    * 构建分页查询选项
    */
-  private buildPaginatedOptions(): import('../../main/database-types.js').GetPromptsPaginatedOptions {
+  private buildPaginatedOptions(): import("../../main/database-types.js").GetPromptsPaginatedOptions {
     const { tagNames, specialTags } = this.splitSelectedTags();
     return {
-      sortBy: this.sortBy || 'updatedAt',
-      sortOrder: this.sortOrder === 'asc' ? 'asc' : 'desc',
+      sortBy: this.sortBy || "updatedAt",
+      sortOrder: this.sortOrder === "asc" ? "asc" : "desc",
       searchQuery: this.getSearchQuery() || undefined,
       tagNames: tagNames.length > 0 ? tagNames : undefined,
       specialTags: specialTags.length > 0 ? specialTags : undefined,
-      isSafe: this.app.viewMode === 'safe' ? true : undefined,
+      isSafe: this.app.viewMode === "safe" ? true : undefined,
       invertedFilter: this.invertedFilter,
       limit: PANEL_PAGE_SIZE,
-      offset: this.currentOffset
+      offset: this.currentOffset,
     };
   }
 
@@ -362,7 +373,7 @@ export class PromptPanelManager extends PanelManagerBase {
       this.currentOffset += PANEL_PAGE_SIZE;
       const page = await this.fetchPage();
 
-      const newItems = page.items.filter(prompt => !this.loadedPromptIds.has(String(prompt.id)));
+      const newItems = page.items.filter((prompt) => !this.loadedPromptIds.has(String(prompt.id)));
       for (const prompt of newItems) {
         this.loadedPromptIds.add(String(prompt.id));
         cacheManager.cachePrompt(prompt);
@@ -386,8 +397,8 @@ export class PromptPanelManager extends PanelManagerBase {
         this.windowRenderer?.refresh(true);
       }
     } catch (error) {
-      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load more prompts:', error);
-      this.app.showToast?.('加载更多提示词失败', 'error');
+      window.electronAPI.logError("PromptPanelManager.ts", "Failed to load more prompts:", error);
+      this.app.showToast?.("加载更多提示词失败", "error");
     } finally {
       this.isLoading = false;
     }
@@ -418,10 +429,13 @@ export class PromptPanelManager extends PanelManagerBase {
 
     // 仅获取未在路径缓存中的图元数据
     const needFetchIds: string[] = [];
-    const needFetchImages: Array<{ id: string; relativePath?: string; thumbnailPath?: string }> = [];
+    const needFetchImages: Array<{ id: string; relativePath?: string; thumbnailPath?: string }> =
+      [];
     for (const imageId of firstImageIds) {
-      if (cacheManager.getImagePath(imageId, 'thumbnail')) continue;
-      const cached = cacheManager.getImageCache().peek(imageId) as { id: string; relativePath?: string; thumbnailPath?: string } | undefined;
+      if (cacheManager.getImagePath(imageId, "thumbnail")) continue;
+      const cached = cacheManager.getImageCache().peek(imageId) as
+        | { id: string; relativePath?: string; thumbnailPath?: string }
+        | undefined;
       if (cached) {
         needFetchImages.push(cached);
       } else {
@@ -436,11 +450,17 @@ export class PromptPanelManager extends PanelManagerBase {
         for (const img of imgs) {
           if (img && img.id) {
             cacheManager.cacheImage(img);
-            fetchedImages.push(img as { id: string; relativePath?: string; thumbnailPath?: string });
+            fetchedImages.push(
+              img as { id: string; relativePath?: string; thumbnailPath?: string },
+            );
           }
         }
       } catch (error) {
-        window.electronAPI.logError('PromptPanelManager.ts', 'Failed to fetch first images by ids:', error);
+        window.electronAPI.logError(
+          "PromptPanelManager.ts",
+          "Failed to fetch first images by ids:",
+          error,
+        );
       }
     }
 
@@ -489,8 +509,8 @@ export class PromptPanelManager extends PanelManagerBase {
       await this.refreshTagCounts();
       await this.renderTagFilters();
     } catch (error) {
-      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to render prompt list:', error);
-      this.app.showToast?.('加载提示词失败', 'error');
+      window.electronAPI.logError("PromptPanelManager.ts", "Failed to render prompt list:", error);
+      this.app.showToast?.("加载提示词失败", "error");
     }
   }
 
@@ -514,14 +534,14 @@ export class PromptPanelManager extends PanelManagerBase {
       if (result.fixed.length === 0) return;
 
       cacheManager.setImagePaths(
-        result.fixed.map(f => ({ imageId: f.id, fullPath: f.fullPath })),
-        'thumbnail'
+        result.fixed.map((f) => ({ imageId: f.id, fullPath: f.fullPath })),
+        "thumbnail",
       );
       // 提示词卡片背景经路径缓存读取，无需更新 prompt 对象；
       // 既有窗口节点的背景图指向已失效路径，强制全量重建
       this.windowRenderer?.requestFullRerender();
     } catch (error) {
-      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to ensure thumbnails:', error);
+      window.electronAPI.logError("PromptPanelManager.ts", "Failed to ensure thumbnails:", error);
     }
   }
 
@@ -534,15 +554,15 @@ export class PromptPanelManager extends PanelManagerBase {
     const container = document.getElementById(Constants.Ids.PROMPT_GRID);
     if (!container) return;
 
-    const itemIds = new Set(items.map(p => String(p.id)));
-    const cards = container.querySelectorAll('.prompt-card');
+    const itemIds = new Set(items.map((p) => String(p.id)));
+    const cards = container.querySelectorAll(".prompt-card");
     const uncached: Array<{ imageId: string; relativePath: string; card: HTMLElement }> = [];
 
     for (const card of cards) {
       const promptId = (card as HTMLElement).dataset.id;
       if (!promptId || !itemIds.has(promptId)) continue;
 
-      const prompt = items.find(p => String(p.id) === String(promptId));
+      const prompt = items.find((p) => String(p.id) === String(promptId));
       if (!prompt || !prompt.images || prompt.images.length === 0) continue;
       const firstImage = prompt.images[0] as ImageInfo;
       const imageId = firstImage.id ? String(firstImage.id) : null;
@@ -550,11 +570,12 @@ export class PromptPanelManager extends PanelManagerBase {
       if (!imageId || !imagePath) continue;
 
       // 路径缓存的"纯读"：仅当缓存命中时直接使用
-      const cachedPath = cacheManager.getImagePath(imageId, 'thumbnail');
+      const cachedPath = cacheManager.getImagePath(imageId, "thumbnail");
       if (cachedPath) {
-        const bgElement = card.querySelector('.prompt-card-bg, .card__bg');
+        const bgElement = card.querySelector(".prompt-card-bg, .card__bg");
         if (bgElement) {
-          (bgElement as HTMLElement).style.backgroundImage = `url('file://${cachedPath.replace(/\\/g, '/')}')`;
+          (bgElement as HTMLElement).style.backgroundImage =
+            `url('file://${cachedPath.replace(/\\/g, "/")}')`;
         }
         continue;
       }
@@ -566,22 +587,27 @@ export class PromptPanelManager extends PanelManagerBase {
     if (uncached.length === 0) return;
 
     try {
-      const relativePaths = uncached.map(u => u.relativePath);
+      const relativePaths = uncached.map((u) => u.relativePath);
       const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
       const entries: Array<{ imageId: string; fullPath: string }> = [];
       uncached.forEach((u, i) => {
         const fullPath = fullPaths[i];
         if (fullPath) {
           entries.push({ imageId: u.imageId, fullPath });
-          const bgElement = u.card.querySelector('.prompt-card-bg, .card__bg');
+          const bgElement = u.card.querySelector(".prompt-card-bg, .card__bg");
           if (bgElement) {
-            (bgElement as HTMLElement).style.backgroundImage = `url('file://${fullPath.replace(/\\/g, '/')}')`;
+            (bgElement as HTMLElement).style.backgroundImage =
+              `url('file://${fullPath.replace(/\\/g, "/")}')`;
           }
         }
       });
-      cacheManager.setImagePaths(entries, 'thumbnail');
+      cacheManager.setImagePaths(entries, "thumbnail");
     } catch (error) {
-      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to load card backgrounds (fallback):', error);
+      window.electronAPI.logError(
+        "PromptPanelManager.ts",
+        "Failed to load card backgrounds (fallback):",
+        error,
+      );
     }
   }
 
@@ -604,12 +630,26 @@ export class PromptPanelManager extends PanelManagerBase {
       // 空态下列表未渲染，复位标志以保证"从无到有"时能正常渲染
       this.listViewRendered = false;
       if (currentSearchQuery) {
-        PanelRenderer.showEmptyState(Constants.Ids.PROMPT_GRID, Constants.Ids.PROMPT_EMPTY_STATE, `未找到匹配"${currentSearchQuery}"的提示词`, '搜索无结果');
+        PanelRenderer.showEmptyState(
+          Constants.Ids.PROMPT_GRID,
+          Constants.Ids.PROMPT_EMPTY_STATE,
+          `未找到匹配"${currentSearchQuery}"的提示词`,
+          "搜索无结果",
+        );
       } else if (this.selectedTags.size > 0) {
-        const selectedTagNames = Array.from(this.selectedTags).join(', ');
-        PanelRenderer.showEmptyState(Constants.Ids.PROMPT_GRID, Constants.Ids.PROMPT_EMPTY_STATE, `没有符合标签"${selectedTagNames}"的提示词`, '筛选无结果');
+        const selectedTagNames = Array.from(this.selectedTags).join(", ");
+        PanelRenderer.showEmptyState(
+          Constants.Ids.PROMPT_GRID,
+          Constants.Ids.PROMPT_EMPTY_STATE,
+          `没有符合标签"${selectedTagNames}"的提示词`,
+          "筛选无结果",
+        );
       } else {
-        PanelRenderer.showEmptyState(Constants.Ids.PROMPT_GRID, Constants.Ids.PROMPT_EMPTY_STATE, '暂无提示词');
+        PanelRenderer.showEmptyState(
+          Constants.Ids.PROMPT_GRID,
+          Constants.Ids.PROMPT_EMPTY_STATE,
+          "暂无提示词",
+        );
       }
       return;
     }
@@ -617,12 +657,12 @@ export class PromptPanelManager extends PanelManagerBase {
     PanelRenderer.hideEmptyState(Constants.Ids.PROMPT_GRID, Constants.Ids.PROMPT_EMPTY_STATE);
 
     // wrapper 模式下不再使用 CSS grid 排布（卡片由 absolute 定位），覆盖为块级滚动容器
-    container!.style.display = 'block';
-    container!.innerHTML = '';
+    container!.style.display = "block";
+    container!.innerHTML = "";
 
     // lap 模式：固定高度 wrapper 撑起 scrollHeight，可见卡片 absolute 定位其上
-    const wrapper = document.createElement('div');
-    wrapper.className = 'virtual-wrapper';
+    const wrapper = document.createElement("div");
+    wrapper.className = "virtual-wrapper";
     container!.appendChild(wrapper);
     this.setupVirtualScroller(container!, wrapper);
     this.bindCardDropEvents(container!);
@@ -646,9 +686,11 @@ export class PromptPanelManager extends PanelManagerBase {
       renderCardHtml: (prompt, index) => this.createCard(prompt, index),
       onBindContainerEvents: (data) => this.bindItemEvents(data),
       onBindItemButtons: (items) => this.bindCardButtonEvents(items),
-      onLoadItemImages: async (items) => { await this.loadCardBackgroundsForItems(items); },
-      onBindHoverPreview: () => this.bindHoverPreview('.prompt-card'),
-      onWindowSettled: () => this.ensureWindowData()
+      onLoadItemImages: async (items) => {
+        await this.loadCardBackgroundsForItems(items);
+      },
+      onBindHoverPreview: () => this.bindHoverPreview(".prompt-card"),
+      onWindowSettled: () => this.ensureWindowData(),
     });
     this.windowRenderer.attach(container, wrapper);
   }
@@ -667,7 +709,7 @@ export class PromptPanelManager extends PanelManagerBase {
       sortBy: this.sortBy,
       app: this.app,
       selectedIds: batchToolbarMiddle.getSelectedIds(this.toolbarContext),
-      index
+      index,
     });
   }
 
@@ -680,15 +722,16 @@ export class PromptPanelManager extends PanelManagerBase {
 
     tooltip.bind(selector, {
       getContent: (element: Element) => {
-        const promptId = (element as HTMLElement).dataset.id || (element as HTMLElement).dataset.promptId;
-        const prompt = this.prompts.find(p => String(p.id) === String(promptId));
-        return prompt ? prompt.content : '';
+        const promptId =
+          (element as HTMLElement).dataset.id || (element as HTMLElement).dataset.promptId;
+        const prompt = this.prompts.find((p) => String(p.id) === String(promptId));
+        return prompt ? prompt.content : "";
       },
       getImageId: (element: Element) => {
         const firstImage = (element as HTMLElement).dataset.firstImage;
         return firstImage || null;
       },
-      delay: 500
+      delay: 500,
     });
   }
 
@@ -766,7 +809,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 获取标签拖拽类型（实现基类抽象方法）
    */
   getTagDragType(): string {
-    return 'prompt-tag';
+    return "prompt-tag";
   }
 
   /**
@@ -778,14 +821,14 @@ export class PromptPanelManager extends PanelManagerBase {
 
   private lastTagCounts: Record<string, number> = {};
 
-  private lastSpecialTagCounts: import('../../main/database-types.js').PromptSpecialTagCounts = {
+  private lastSpecialTagCounts: import("../../main/database-types.js").PromptSpecialTagCounts = {
     favorite: 0,
     safe: 0,
     unsafe: 0,
     multiImage: 0,
     noImage: 0,
     noTag: 0,
-    singleLang: 0
+    singleLang: 0,
   };
 
   /**
@@ -804,26 +847,26 @@ export class PromptPanelManager extends PanelManagerBase {
       const options = this.buildCountOptions();
       const [tagCounts, specialTagCounts] = await Promise.all([
         window.electronAPI.countPromptTags(options),
-        window.electronAPI.countPromptSpecialTags(options)
+        window.electronAPI.countPromptSpecialTags(options),
       ]);
       this.lastTagCounts = tagCounts;
       this.lastSpecialTagCounts = specialTagCounts;
     } catch (error) {
-      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to refresh tag counts:', error);
+      window.electronAPI.logError("PromptPanelManager.ts", "Failed to refresh tag counts:", error);
     }
   }
 
   /**
    * 构建计数查询选项
    */
-  private buildCountOptions(): import('../../main/database-types.js').CountPromptTagsOptions {
+  private buildCountOptions(): import("../../main/database-types.js").CountPromptTagsOptions {
     const { tagNames, specialTags } = this.splitSelectedTags();
     return {
       searchQuery: this.getSearchQuery() || undefined,
       tagNames: tagNames.length > 0 ? tagNames : undefined,
       specialTags: specialTags.length > 0 ? specialTags : undefined,
-      isSafe: this.app.viewMode === 'safe' ? true : undefined,
-      invertedFilter: this.invertedFilter
+      isSafe: this.app.viewMode === "safe" ? true : undefined,
+      invertedFilter: this.invertedFilter,
     };
   }
 
@@ -852,7 +895,7 @@ export class PromptPanelManager extends PanelManagerBase {
     }
 
     // NSFW 模式下显示安全评级标签
-    if (this.app.viewMode === 'nsfw') {
+    if (this.app.viewMode === "nsfw") {
       if (counts.safe > 0) {
         specialTags.push({ tag: Constants.SAFE_TAG, count: counts.safe });
       }
@@ -870,8 +913,8 @@ export class PromptPanelManager extends PanelManagerBase {
   async deleteItem(id: string): Promise<void> {
     try {
       await window.electronAPI.softDeletePrompt(id);
-      cacheManager.removeCachedItem(id, 'prompt');
-      const prompt = this.prompts.find(p => String(p.id) === String(id));
+      cacheManager.removeCachedItem(id, "prompt");
+      const prompt = this.prompts.find((p) => String(p.id) === String(id));
       if (prompt) {
         prompt.isDeleted = true;
       }
@@ -888,14 +931,14 @@ export class PromptPanelManager extends PanelManagerBase {
       }
 
       // 刷新统计界面
-      if (this.app.currentPanel === 'statistics') {
+      if (this.app.currentPanel === "statistics") {
         await this.app.renderStatistics?.();
       }
 
-      this.app.showToast('提示词已删除', 'success');
+      this.app.showToast("提示词已删除", "success");
     } catch (error) {
-      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to delete prompt:', error);
-      this.app.showToast('删除失败：' + (error as Error).message, 'error');
+      window.electronAPI.logError("PromptPanelManager.ts", "Failed to delete prompt:", error);
+      this.app.showToast("删除失败：" + (error as Error).message, "error");
     }
   }
 
@@ -907,17 +950,17 @@ export class PromptPanelManager extends PanelManagerBase {
       await window.electronAPI.updatePrompt(id, { isFavorite: isFavorite ? 1 : 0 });
 
       // 更新本地数据
-      const prompt = this.prompts.find(p => String(p.id) === String(id));
+      const prompt = this.prompts.find((p) => String(p.id) === String(id));
       if (prompt) {
         prompt.isFavorite = isFavorite ? 1 : 0;
       }
 
-      this.app.showToast(isFavorite ? '已收藏' : '已取消收藏', 'success');
+      this.app.showToast(isFavorite ? "已收藏" : "已取消收藏", "success");
       this.updateFavoriteUI(id, isFavorite);
       this.renderTagFilters();
     } catch (error) {
-      window.electronAPI.logError('PromptPanelManager.ts', 'toggleFavorite error:', error);
-      this.app.showToast('操作失败：' + (error as Error).message, 'error');
+      window.electronAPI.logError("PromptPanelManager.ts", "toggleFavorite error:", error);
+      this.app.showToast("操作失败：" + (error as Error).message, "error");
     }
   }
 
@@ -952,7 +995,7 @@ export class PromptPanelManager extends PanelManagerBase {
         s: prompt.isSafe,
         n: (prompt as Record<string, unknown>).note,
         im: (prompt.images || []).map((img: ImageInfo | string) =>
-          typeof img === 'object' ? img.id ?? '' : img
+          typeof img === "object" ? (img.id ?? "") : img,
         ),
       }),
     );
@@ -1007,8 +1050,8 @@ export class PromptPanelManager extends PanelManagerBase {
       await this.refreshTagCounts();
       await this.renderTagFilters();
     } catch (error) {
-      window.electronAPI.logError('PromptPanelManager.ts', 'Failed to refresh incremental:', error);
-      this.app.showToast?.('刷新失败', 'error');
+      window.electronAPI.logError("PromptPanelManager.ts", "Failed to refresh incremental:", error);
+      this.app.showToast?.("刷新失败", "error");
     }
   }
 
@@ -1083,9 +1126,9 @@ class PromptEventStrategy extends BaseEventStrategy {
 
   protected getSelectors(): IEventStrategySelectors {
     return {
-      checkbox: '.card-checkbox',
-      item: '.prompt-card',
-      exclude: ['.action-btn', '.card-checkbox'],
+      checkbox: ".card-checkbox",
+      item: ".prompt-card",
+      exclude: [".action-btn", ".card-checkbox"],
     };
   }
 

@@ -1,7 +1,7 @@
-import { Constants } from '../../constants.ts';
-import { HtmlUtils } from '../../utils/index.ts';
-import { TopGroupManager } from '../../pyTagGroups/TopGroupManager.ts';
-import { ITagWithGroup, ITagGroup } from '../../types/entities.ts';
+import { Constants } from "../../constants.ts";
+import { HtmlUtils } from "../../utils/index.ts";
+import { TopGroupManager } from "../../pyTagGroups/TopGroupManager.ts";
+import { ITagWithGroup, ITagGroup } from "../../types/entities.ts";
 
 interface TagCountInfo {
   tag: string;
@@ -42,7 +42,7 @@ export class TagUI {
 
   constructor(type: string) {
     this.type = type;
-    this.isPrompt = type === 'prompt';
+    this.isPrompt = type === "prompt";
   }
 
   /**
@@ -52,9 +52,9 @@ export class TagUI {
     groups: ITagGroup[],
     groupedTags: Record<number, string[]>,
     ungroupedTags: string[],
-    tagCounts: Record<string, number>
+    tagCounts: Record<string, number>,
   ): string {
-    let html = '';
+    let html = "";
     let globalIndex = 0;
 
     // 未分组标签卡片
@@ -87,7 +87,7 @@ export class TagUI {
     tag: string,
     count: number,
     groupId: number | null = null,
-    index: number = 0
+    index: number = 0,
   ): string {
     const escapedTag = HtmlUtils.escapeHtml(tag);
 
@@ -106,7 +106,7 @@ export class TagUI {
     </button>`;
 
     return `
-      <div class="tag-manager-item" data-id="${escapedTag}" data-tag="${escapedTag}" data-index="${index}" data-group-id="${groupId ?? ''}" draggable="true">
+      <div class="tag-manager-item" data-id="${escapedTag}" data-tag="${escapedTag}" data-index="${index}" data-group-id="${groupId ?? ""}" draggable="true">
         <div class="tag-manager-item-count">${count}</div>
         <div class="tag-manager-item-name" title="${escapedTag}">${escapedTag}</div>
         ${editBtn}
@@ -126,13 +126,15 @@ export class TagUI {
     isFirst = false,
     isUngrouped = false,
     sortOrder = 0,
-    startIndex: number = 0
+    startIndex: number = 0,
   ): string {
-    const tagsHtml = tags.map((tag, index) =>
-      this.generateTagItemHtml(tag, tagCounts[tag] ?? 0, groupId, startIndex + index)
-    ).join('');
+    const tagsHtml = tags
+      .map((tag, index) =>
+        this.generateTagItemHtml(tag, tagCounts[tag] ?? 0, groupId, startIndex + index),
+      )
+      .join("");
 
-    const firstBadge = isFirst ? '<span class="tag-group-card-first">首位组</span>' : '';
+    const firstBadge = isFirst ? '<span class="tag-group-card-first">首位组</span>' : "";
     const sortBadge = `<span class="tag-group-card-sort">${sortOrder}</span>`;
 
     if (isUngrouped) {
@@ -153,7 +155,7 @@ export class TagUI {
     }
 
     // 确保 groupId 是有效的字符串，避免 undefined 或 null 导致 data-group-id 为空
-    const safeGroupId = groupId?.toString() ?? '';
+    const safeGroupId = groupId?.toString() ?? "";
 
     return `
       <div class="tag-group-card" data-group-id="${safeGroupId}" data-drop-target="true">
@@ -195,9 +197,18 @@ export class TagUI {
   generateUngroupedTagCard(
     tags: string[],
     tagCounts: Record<string, number>,
-    startIndex: number = 0
+    startIndex: number = 0,
   ): string {
-    return this.generateTagGroupCardHtml(null, '未分组', tags, tagCounts, false, true, 0, startIndex);
+    return this.generateTagGroupCardHtml(
+      null,
+      "未分组",
+      tags,
+      tagCounts,
+      false,
+      true,
+      0,
+      startIndex,
+    );
   }
 
   /**
@@ -208,9 +219,18 @@ export class TagUI {
     tags: string[],
     tagCounts: Record<string, number>,
     isFirst = false,
-    startIndex: number = 0
+    startIndex: number = 0,
   ): string {
-    return this.generateTagGroupCardHtml(group.id, group.name, tags, tagCounts, isFirst, false, group.sortOrder ?? 0, startIndex);
+    return this.generateTagGroupCardHtml(
+      group.id,
+      group.name,
+      tags,
+      tagCounts,
+      isFirst,
+      false,
+      group.sortOrder ?? 0,
+      startIndex,
+    );
   }
 
   /**
@@ -219,32 +239,37 @@ export class TagUI {
   static renderExpandedFilter(
     tags: ITagWithGroup[],
     counts: Record<string, number>,
-    options: TagFilterOptions
+    options: TagFilterOptions,
   ): string {
     const { specialTags, selectedTags, groups, isImage = false } = options;
     const selectedSet = selectedTags instanceof Set ? selectedTags : new Set(selectedTags);
-    let html = '';
+    let html = "";
 
     // 渲染特殊标签（特殊标签不允许拖拽）
     if (specialTags && specialTags.length > 0) {
-      html += specialTags.map(({ tag, count }) => {
-        const isActive = selectedSet.has(tag);
-        return `
-          <button class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="true">
+      html += specialTags
+        .map(({ tag, count }) => {
+          const isActive = selectedSet.has(tag);
+          return `
+          <button class="tag-filter-item ${isActive ? "active" : ""}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="true">
             <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
             <span class="tag-badge">${count}</span>
           </button>
         `;
-      }).join('');
+        })
+        .join("");
     }
 
     // 渲染普通标签（分组）
-    const groupedTags: Record<string, { group: ITagGroup; tags: { tag: string; count: number }[] }> = {};
+    const groupedTags: Record<
+      string,
+      { group: ITagGroup; tags: { tag: string; count: number }[] }
+    > = {};
     const ungroupedTags: { tag: string; count: number }[] = [];
 
     // 初始化分组
     if (groups && groups.length > 0) {
-      groups.forEach(group => {
+      groups.forEach((group) => {
         groupedTags[group.name] = { group, tags: [] };
       });
     }
@@ -252,7 +277,7 @@ export class TagUI {
     // 将标签分配到分组或未分组
     tags.forEach(({ name: tag }) => {
       if (Constants.ALL_SPECIAL_TAGS.includes(tag)) return;
-      const tagInfo = tags.find(t => t.name === tag);
+      const tagInfo = tags.find((t) => t.name === tag);
       if (tagInfo && tagInfo.groupName && groupedTags[tagInfo.groupName]) {
         groupedTags[tagInfo.groupName].tags.push({ tag, count: counts[tag] || 0 });
       } else {
@@ -269,7 +294,7 @@ export class TagUI {
       // 按 sortOrder 排序组
       const sortedGroups = groups.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
-      sortedGroups.forEach(group => {
+      sortedGroups.forEach((group) => {
         const groupData = groupedTags[group.name];
         if (!groupData || groupData.tags.length === 0) return;
 
@@ -278,25 +303,27 @@ export class TagUI {
         const visibleTags = isTopGroup
           ? groupData.tags
           : groupData.tags.filter(({ count }) => count > 0);
-        
+
         if (visibleTags.length === 0) return;
 
         html += `<div class="tag-filter-group" data-group-id="${group.id}">`;
         html += `<div class="tag-filter-group-title">${HtmlUtils.escapeHtml(group.name)}</div>`;
         html += '<div class="tag-filter-group-content">';
 
-        html += visibleTags.map(({ tag, count }) => {
-          const isActive = selectedSet.has(tag);
-          const dragType = isImage ? 'image-tag' : 'prompt-tag';
-          return `
-            <div class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-group-id="${group.id}" draggable="true" data-drag-type="${dragType}">
+        html += visibleTags
+          .map(({ tag, count }) => {
+            const isActive = selectedSet.has(tag);
+            const dragType = isImage ? "image-tag" : "prompt-tag";
+            return `
+            <div class="tag-filter-item ${isActive ? "active" : ""}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-group-id="${group.id}" draggable="true" data-drag-type="${dragType}">
               <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
               <span class="tag-badge">${count}</span>
             </div>
           `;
-        }).join('');
+          })
+          .join("");
 
-        html += '</div></div>';
+        html += "</div></div>";
       });
     }
 
@@ -306,17 +333,19 @@ export class TagUI {
       html += '<div class="tag-filter-group">';
       html += '<div class="tag-filter-group-title">未分组</div>';
       html += '<div class="tag-filter-group-content">';
-      html += visibleUngroupedTags.map(({ tag, count }) => {
-        const isActive = selectedSet.has(tag);
-        const dragType = isImage ? 'image-tag' : 'prompt-tag';
-        return `
-          <div class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" draggable="true" data-drag-type="${dragType}">
+      html += visibleUngroupedTags
+        .map(({ tag, count }) => {
+          const isActive = selectedSet.has(tag);
+          const dragType = isImage ? "image-tag" : "prompt-tag";
+          return `
+          <div class="tag-filter-item ${isActive ? "active" : ""}" data-tag="${HtmlUtils.escapeHtml(tag)}" draggable="true" data-drag-type="${dragType}">
             <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
             <span class="tag-badge">${count}</span>
           </div>
         `;
-      }).join('');
-      html += '</div></div>';
+        })
+        .join("");
+      html += "</div></div>";
     }
 
     return html;
@@ -334,7 +363,7 @@ export class TagUI {
       tagCounts = {},
       selectedTags,
       onTagClick,
-      dragType = null
+      dragType = null,
     } = options;
 
     const headerTagsEl = document.getElementById(containerId);
@@ -349,25 +378,27 @@ export class TagUI {
       sortedTagsWithGroup,
       tagCounts,
       selectedSet,
-      Constants.ALL_SPECIAL_TAGS
+      Constants.ALL_SPECIAL_TAGS,
     );
 
     // 渲染 HTML
     if (tagsToShow.length === 0) {
       headerTagsEl.innerHTML = '<span class="tag-filter-empty">暂无标签</span>';
     } else {
-      headerTagsEl.innerHTML = tagsToShow.map(({ tag, count, className, isSpecial, isTopGroup }) => {
-        // 特殊标签不允许拖拽，普通标签允许拖拽
-        const draggableAttr = (!isSpecial && dragType) ? 'draggable="true"' : '';
-        const dragTypeAttr = (!isSpecial && dragType) ? `data-drag-type="${dragType}"` : '';
+      headerTagsEl.innerHTML = tagsToShow
+        .map(({ tag, count, className, isSpecial, isTopGroup }) => {
+          // 特殊标签不允许拖拽，普通标签允许拖拽
+          const draggableAttr = !isSpecial && dragType ? 'draggable="true"' : "";
+          const dragTypeAttr = !isSpecial && dragType ? `data-drag-type="${dragType}"` : "";
 
-        return `
-          <button class="tag-filter-item ${className || ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="${isSpecial}" data-is-top-group="${isTopGroup || false}" ${draggableAttr} ${dragTypeAttr}>
+          return `
+          <button class="tag-filter-item ${className || ""}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="${isSpecial}" data-is-top-group="${isTopGroup || false}" ${draggableAttr} ${dragTypeAttr}>
             <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
             <span class="tag-badge">${count || 0}</span>
           </button>
         `;
-      }).join('');
+        })
+        .join("");
     }
 
     // 使用 WeakSet 来跟踪正在拖拽的元素
@@ -375,8 +406,8 @@ export class TagUI {
 
     // 绑定点击事件
     if (onTagClick) {
-      headerTagsEl.querySelectorAll('.tag-filter-item').forEach(el => {
-        el.addEventListener('click', (e) => {
+      headerTagsEl.querySelectorAll(".tag-filter-item").forEach((el) => {
+        el.addEventListener("click", (e) => {
           // 如果正在拖拽，不触发点击
           if (draggingItems.has(el as HTMLElement)) {
             draggingItems.delete(el as HTMLElement);
@@ -392,21 +423,21 @@ export class TagUI {
 
     // 绑定拖拽事件（只绑定非特殊标签）
     if (dragType) {
-      headerTagsEl.querySelectorAll('.tag-filter-item[draggable="true"]').forEach(el => {
-        el.addEventListener('dragstart', (e) => {
+      headerTagsEl.querySelectorAll('.tag-filter-item[draggable="true"]').forEach((el) => {
+        el.addEventListener("dragstart", (e) => {
           // 标记为正在拖拽
           draggingItems.add(el as HTMLElement);
           const tag = (el as HTMLElement).dataset.tag;
           if (tag) {
-            (e as DragEvent).dataTransfer!.setData('text/plain', tag);
-            (e as DragEvent).dataTransfer!.setData('drag-source', dragType);
+            (e as DragEvent).dataTransfer!.setData("text/plain", tag);
+            (e as DragEvent).dataTransfer!.setData("drag-source", dragType);
           }
-          (e as DragEvent).dataTransfer!.effectAllowed = 'copy';
-          el.classList.add('dragging');
+          (e as DragEvent).dataTransfer!.effectAllowed = "copy";
+          el.classList.add("dragging");
         });
 
-        el.addEventListener('dragend', () => {
-          el.classList.remove('dragging');
+        el.addEventListener("dragend", () => {
+          el.classList.remove("dragging");
           // 注意：不在 dragend 中删除 draggingItems，因为 click 事件会在 dragend 之后触发
         });
       });
@@ -419,15 +450,17 @@ export class TagUI {
    * 生成标签列表 HTML
    */
   static generateTagsHtml(tags: string[], tagClass: string, emptyClass: string): string {
-    const normalTags = tags ? tags.filter(tag => !Constants.ALL_SPECIAL_TAGS.includes(tag)) : [];
+    const normalTags = tags ? tags.filter((tag) => !Constants.ALL_SPECIAL_TAGS.includes(tag)) : [];
 
     if (normalTags.length === 0) {
       return `<span class="${tagClass} ${emptyClass}">无标签</span>`;
     }
 
-    return normalTags.map(tag => {
-      return `<span class="${tagClass}">${HtmlUtils.escapeHtml(tag)}</span>`;
-    }).join('');
+    return normalTags
+      .map((tag) => {
+        return `<span class="${tagClass}">${HtmlUtils.escapeHtml(tag)}</span>`;
+      })
+      .join("");
   }
 
   /**
@@ -435,23 +468,27 @@ export class TagUI {
    */
   static generateEditableTagsHtml(tags: string[], options: EditableTagsOptions = {}): string {
     const { readonly = false } = options;
-    const normalTags = tags ? tags.filter(tag => !Constants.ALL_SPECIAL_TAGS.includes(tag)) : [];
+    const normalTags = tags ? tags.filter((tag) => !Constants.ALL_SPECIAL_TAGS.includes(tag)) : [];
 
     if (normalTags.length === 0) {
       return '<span class="tag-empty">无标签</span>';
     }
 
-    return normalTags.map(tag => {
-      const removeBtn = readonly ? '' : `<button class="tag-remove" data-tag="${HtmlUtils.escapeAttr(tag)}" title="移除">×</button>`;
-      return `<span class="tag-badge editable">${HtmlUtils.escapeHtml(tag)}${removeBtn}</span>`;
-    }).join('');
+    return normalTags
+      .map((tag) => {
+        const removeBtn = readonly
+          ? ""
+          : `<button class="tag-remove" data-tag="${HtmlUtils.escapeAttr(tag)}" title="移除">×</button>`;
+        return `<span class="tag-badge editable">${HtmlUtils.escapeHtml(tag)}${removeBtn}</span>`;
+      })
+      .join("");
   }
 
   /**
    * 生成备注 HTML
    */
   static generateNoteHtml(note: string, noteClass: string): string {
-    if (!note || !note.trim()) return '';
+    if (!note || !note.trim()) return "";
     return `<div class="${noteClass}" title="${HtmlUtils.escapeAttr(note)}">${HtmlUtils.escapeHtml(note)}</div>`;
   }
 }

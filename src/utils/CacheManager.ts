@@ -1,6 +1,6 @@
-import { LRUCache } from './LRUCache.js';
-import { logger } from './Logger.ts';
-import type { IPrompt, IImage } from '../types/entities.js';
+import { LRUCache } from "./LRUCache.js";
+import { logger } from "./Logger.ts";
+import type { IPrompt, IImage } from "../types/entities.js";
 
 /**
  * 全局缓存管理器
@@ -57,7 +57,7 @@ export class CacheManager {
    * 清空所有缓存
    */
   clearAll(): void {
-    this.caches.forEach(cache => cache.clear());
+    this.caches.forEach((cache) => cache.clear());
   }
 
   /**
@@ -82,16 +82,16 @@ export class CacheManager {
 
   /** 缩略图路径缓存（高频） */
   private getThumbnailPathCache(): LRUCache {
-    return this.createCache('thumbnailPaths', 5000);
+    return this.createCache("thumbnailPaths", 5000);
   }
 
   /** 原图路径缓存（低频，仅 hover 预览） */
   private getOriginalPathCache(): LRUCache {
-    return this.createCache('originalPaths', 1000);
+    return this.createCache("originalPaths", 1000);
   }
 
-  private getPathCache(type: 'original' | 'thumbnail'): LRUCache {
-    return type === 'thumbnail' ? this.getThumbnailPathCache() : this.getOriginalPathCache();
+  private getPathCache(type: "original" | "thumbnail"): LRUCache {
+    return type === "thumbnail" ? this.getThumbnailPathCache() : this.getOriginalPathCache();
   }
 
   /**
@@ -100,7 +100,7 @@ export class CacheManager {
    * @param type - 路径类型: 'original' | 'thumbnail'
    * @returns 完整路径或 undefined
    */
-  getImagePath(imageId: string, type: 'original' | 'thumbnail' = 'original'): string | undefined {
+  getImagePath(imageId: string, type: "original" | "thumbnail" = "original"): string | undefined {
     return this.getPathCache(type).peek(imageId) as string | undefined;
   }
 
@@ -110,7 +110,7 @@ export class CacheManager {
    * @param type - 路径类型: 'original' | 'thumbnail'
    * @param path - 完整路径
    */
-  setImagePath(imageId: string, type: 'original' | 'thumbnail', path: string): void {
+  setImagePath(imageId: string, type: "original" | "thumbnail", path: string): void {
     this.getPathCache(type).set(imageId, path);
   }
 
@@ -135,7 +135,7 @@ export class CacheManager {
    */
   setImagePaths(
     entries: Array<{ imageId: string; fullPath: string }>,
-    type: 'original' | 'thumbnail'
+    type: "original" | "thumbnail",
   ): void {
     if (entries.length === 0) return;
     const cache = this.getPathCache(type);
@@ -156,7 +156,7 @@ export class CacheManager {
    */
   async prefetchImagePaths(
     images: Array<{ id: string | number; relativePath?: string; thumbnailPath?: string }>,
-    electronAPI: { getImagesPaths: (relativePaths: string[]) => Promise<string[]> }
+    electronAPI: { getImagesPaths: (relativePaths: string[]) => Promise<string[]> },
   ): Promise<void> {
     if (images.length === 0) return;
 
@@ -167,14 +167,14 @@ export class CacheManager {
 
     for (const img of images) {
       const id = String(img.id);
-      if (img.relativePath && !this.getImagePath(id, 'original')) {
+      if (img.relativePath && !this.getImagePath(id, "original")) {
         needOriginalRelative.push(img.relativePath);
-        originalEntries.push({ imageId: id, fullPath: '' });
+        originalEntries.push({ imageId: id, fullPath: "" });
       }
       const thumbPath = img.thumbnailPath || img.relativePath;
-      if (thumbPath && !this.getImagePath(id, 'thumbnail')) {
+      if (thumbPath && !this.getImagePath(id, "thumbnail")) {
         needThumbnailRelative.push(thumbPath);
-        thumbnailEntries.push({ imageId: id, fullPath: '' });
+        thumbnailEntries.push({ imageId: id, fullPath: "" });
       }
     }
 
@@ -182,21 +182,21 @@ export class CacheManager {
       if (needOriginalRelative.length > 0) {
         const fullPaths = await electronAPI.getImagesPaths(needOriginalRelative);
         needOriginalRelative.forEach((_, i) => {
-          originalEntries[i].fullPath = fullPaths[i] || '';
+          originalEntries[i].fullPath = fullPaths[i] || "";
         });
-        const valid = originalEntries.filter(e => e.fullPath);
-        this.setImagePaths(valid, 'original');
+        const valid = originalEntries.filter((e) => e.fullPath);
+        this.setImagePaths(valid, "original");
       }
       if (needThumbnailRelative.length > 0) {
         const fullPaths = await electronAPI.getImagesPaths(needThumbnailRelative);
         needThumbnailRelative.forEach((_, i) => {
-          thumbnailEntries[i].fullPath = fullPaths[i] || '';
+          thumbnailEntries[i].fullPath = fullPaths[i] || "";
         });
-        const valid = thumbnailEntries.filter(e => e.fullPath);
-        this.setImagePaths(valid, 'thumbnail');
+        const valid = thumbnailEntries.filter((e) => e.fullPath);
+        this.setImagePaths(valid, "thumbnail");
       }
     } catch (error) {
-      logger.error('CacheManager', 'Failed to prefetch image paths:', error);
+      logger.error("CacheManager", "Failed to prefetch image paths:", error);
     }
   }
 
@@ -207,7 +207,7 @@ export class CacheManager {
    * @returns LRU 缓存实例
    */
   getPromptCache(): LRUCache {
-    return this.createCache('prompts', 500);
+    return this.createCache("prompts", 500);
   }
 
   /**
@@ -215,7 +215,7 @@ export class CacheManager {
    * @returns LRU 缓存实例
    */
   getImageCache(): LRUCache {
-    return this.createCache('images', 500);
+    return this.createCache("images", 500);
   }
 
   /**
@@ -245,7 +245,7 @@ export class CacheManager {
   cachePrompts(prompts: IPrompt[]): void {
     const cache = this.getPromptCache();
     cache.clear();
-    prompts.forEach(prompt => {
+    prompts.forEach((prompt) => {
       if (prompt && prompt.id) {
         cache.set(String(prompt.id), prompt);
       }
@@ -260,7 +260,7 @@ export class CacheManager {
   cacheImages(images: IImage[]): void {
     const cache = this.getImageCache();
     cache.clear();
-    images.forEach(image => {
+    images.forEach((image) => {
       if (image && image.id) {
         cache.set(String(image.id), image);
       }
@@ -309,10 +309,10 @@ export class CacheManager {
    */
   updateCachedItem<T extends IPrompt | IImage>(
     id: string,
-    type: 'prompt' | 'image',
-    updates: Partial<T>
+    type: "prompt" | "image",
+    updates: Partial<T>,
   ): T | undefined {
-    const cache = type === 'prompt' ? this.getPromptCache() : this.getImageCache();
+    const cache = type === "prompt" ? this.getPromptCache() : this.getImageCache();
     const item = cache.get(String(id)) as T | undefined;
     if (item) {
       Object.assign(item, updates);
@@ -332,10 +332,10 @@ export class CacheManager {
    */
   updateCachedItemInPlace<T extends IPrompt | IImage>(
     id: string,
-    type: 'prompt' | 'image',
-    updater: (item: T) => void
+    type: "prompt" | "image",
+    updater: (item: T) => void,
   ): boolean {
-    const cache = type === 'prompt' ? this.getPromptCache() : this.getImageCache();
+    const cache = type === "prompt" ? this.getPromptCache() : this.getImageCache();
     return cache.updateValue(String(id), updater as (value: IPrompt | IImage) => void);
   }
 
@@ -345,8 +345,8 @@ export class CacheManager {
    * @param type - 项目类型 ('prompt' | 'image')
    * @returns 是否成功删除
    */
-  removeCachedItem(id: string, type: 'prompt' | 'image'): boolean {
-    const cache = type === 'prompt' ? this.getPromptCache() : this.getImageCache();
+  removeCachedItem(id: string, type: "prompt" | "image"): boolean {
+    const cache = type === "prompt" ? this.getPromptCache() : this.getImageCache();
     return cache.delete(String(id));
   }
 
@@ -356,8 +356,8 @@ export class CacheManager {
    * @param type - 项目类型 ('prompt' | 'image')
    * @returns 是否在缓存中
    */
-  hasCachedItem(id: string, type: 'prompt' | 'image'): boolean {
-    const cache = type === 'prompt' ? this.getPromptCache() : this.getImageCache();
+  hasCachedItem(id: string, type: "prompt" | "image"): boolean {
+    const cache = type === "prompt" ? this.getPromptCache() : this.getImageCache();
     return cache.has(String(id));
   }
 }

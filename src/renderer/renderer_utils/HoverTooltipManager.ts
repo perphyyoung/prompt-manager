@@ -1,6 +1,6 @@
-import { cacheManager } from '../../utils/index.ts';
-import { logger } from '../../utils/Logger.ts';
-import { IApp } from '../app.types.ts';
+import { cacheManager } from "../../utils/index.ts";
+import { logger } from "../../utils/Logger.ts";
+import { IApp } from "../app.types.ts";
 
 interface HoverTooltipOptions {
   getContent?: (element: Element) => string | null;
@@ -33,7 +33,7 @@ export class HoverTooltipManager {
     this.imageEl = document.getElementById(imageId) as HTMLImageElement | null;
 
     if (!this.tooltip || !this.contentEl || !this.imageEl) {
-      logger.error('HoverTooltipManager', 'Required elements not found');
+      logger.error("HoverTooltipManager", "Required elements not found");
     }
   }
 
@@ -44,15 +44,17 @@ export class HoverTooltipManager {
    */
   async loadImagePaths(imageId: string): Promise<ImagePathInfo> {
     // 优先从缓存读取
-    let originalPath = cacheManager.getImagePath(imageId, 'original');
+    let originalPath = cacheManager.getImagePath(imageId, "original");
 
     if (!originalPath) {
       // 兜底 1：尝试从元数据缓存拿 relativePath
-      const cachedImg = cacheManager.getImageCache().peek(imageId) as { relativePath?: string } | undefined;
+      const cachedImg = cacheManager.getImageCache().peek(imageId) as
+        | { relativePath?: string }
+        | undefined;
       if (cachedImg?.relativePath) {
         originalPath = await window.electronAPI.getImagePath(cachedImg.relativePath);
         if (originalPath) {
-          cacheManager.setImagePath(imageId, 'original', originalPath);
+          cacheManager.setImagePath(imageId, "original", originalPath);
         }
       } else {
         // 兜底 2：单次按 ID 查元数据（仅在路径缓存完全缺失时使用）
@@ -60,7 +62,7 @@ export class HoverTooltipManager {
         if (img && img.relativePath) {
           originalPath = await window.electronAPI.getImagePath(img.relativePath);
           if (originalPath) {
-            cacheManager.setImagePath(imageId, 'original', originalPath);
+            cacheManager.setImagePath(imageId, "original", originalPath);
           }
         }
       }
@@ -77,11 +79,11 @@ export class HoverTooltipManager {
 
     const { getContent, getImageId, delay = 500 } = options;
 
-    document.querySelectorAll(selector).forEach(element => {
+    document.querySelectorAll(selector).forEach((element) => {
       if (this.boundElements.has(element)) return;
       this.boundElements.add(element);
-      element.addEventListener('mouseenter', async (e) => {
-        const content = getContent ? getContent(element) : '';
+      element.addEventListener("mouseenter", async (e) => {
+        const content = getContent ? getContent(element) : "";
         if (content === null) return;
 
         this.currentElement = element;
@@ -90,21 +92,21 @@ export class HoverTooltipManager {
         }
 
         // 显示内容
-        this.contentEl!.textContent = content || '';
-        this.tooltip!.classList.remove('no-image');
+        this.contentEl!.textContent = content || "";
+        this.tooltip!.classList.remove("no-image");
 
         // 设置初始位置
         const mouseEvent = e as MouseEvent;
         let left = mouseEvent.clientX + 16;
         let top = mouseEvent.clientY + 16;
-        this.tooltip!.style.left = left + 'px';
-        this.tooltip!.style.top = top + 'px';
+        this.tooltip!.style.left = left + "px";
+        this.tooltip!.style.top = top + "px";
 
         const imageId = getImageId ? getImageId(element) : null;
         if (!imageId) {
-          this.tooltip!.classList.add('no-image');
-          this.imageEl!.src = '';
-          this.tooltip!.classList.add('show');
+          this.tooltip!.classList.add("no-image");
+          this.imageEl!.src = "";
+          this.tooltip!.classList.add("show");
           return;
         }
 
@@ -121,11 +123,11 @@ export class HoverTooltipManager {
           }
         }, delay);
 
-        this.tooltip!.classList.add('show');
+        this.tooltip!.classList.add("show");
       });
 
-      element.addEventListener('mousemove', (e) => {
-        if (this.tooltip!.classList.contains('show')) {
+      element.addEventListener("mousemove", (e) => {
+        if (this.tooltip!.classList.contains("show")) {
           const mouseEvent = e as MouseEvent;
           let left = mouseEvent.clientX + 16;
           let top = mouseEvent.clientY + 16;
@@ -138,17 +140,17 @@ export class HoverTooltipManager {
             top = mouseEvent.clientY - tooltipRect.height - 16;
           }
 
-          this.tooltip!.style.left = left + 'px';
-          this.tooltip!.style.top = top + 'px';
+          this.tooltip!.style.left = left + "px";
+          this.tooltip!.style.top = top + "px";
         }
       });
 
-      element.addEventListener('mouseleave', () => {
+      element.addEventListener("mouseleave", () => {
         if (this.hoverTimer) {
           clearTimeout(this.hoverTimer);
         }
-        this.tooltip!.classList.remove('show');
-        this.imageEl!.src = '';
+        this.tooltip!.classList.remove("show");
+        this.imageEl!.src = "";
         this.currentElement = null;
       });
     });

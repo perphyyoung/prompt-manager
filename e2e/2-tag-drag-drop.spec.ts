@@ -40,10 +40,18 @@ test.describe("标签拖拽功能", () => {
     await promptFactory.createBatch(2, "drag");
 
     // 创建共享的图像标签组和标签（所有图像拖拽测试复用）
-    ({ tagName: sharedImageTagName } = await imageFactory.createTagInGroup("drag_shared", "drag_shared", true));
+    ({ tagName: sharedImageTagName } = await imageFactory.createTagInGroup(
+      "drag_shared",
+      "drag_shared",
+      true,
+    ));
 
     // 创建共享的提示词标签组和标签（所有提示词拖拽测试复用）
-    ({ tagName: sharedPromptTagName } = await promptFactory.createTagInGroup("drag_shared", "drag_shared", true));
+    ({ tagName: sharedPromptTagName } = await promptFactory.createTagInGroup(
+      "drag_shared",
+      "drag_shared",
+      true,
+    ));
 
     // 刷新界面以显示新数据
     await electronTest.refreshData();
@@ -125,10 +133,9 @@ test.describe("标签拖拽功能", () => {
       expect(newTags).toContain(sharedImageTagName);
 
       // 验证成功提示
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已添加")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已添加")`, {
+        timeout: 1000,
+      });
       const toastContainer = page.locator(`#${Constants.Ids.TOAST_CONTAINER}`);
 
       // 第二次拖拽相同标签，应该提示"标签已存在"
@@ -140,10 +147,9 @@ test.describe("标签拖拽功能", () => {
       await page.mouse.up();
 
       // 等待提示消息更新
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`, {
+        timeout: 1000,
+      });
       const toastMessageAfterSecondDrop = await toastContainer.textContent();
       expect(toastMessageAfterSecondDrop).toContain("该标签已存在");
     });
@@ -217,10 +223,9 @@ test.describe("标签拖拽功能", () => {
       );
 
       // 验证成功提示
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已添加")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已添加")`, {
+        timeout: 1000,
+      });
 
       // 第二次拖拽相同标签 - 应该提示已存在
       await newTagElement.hover();
@@ -231,12 +236,10 @@ test.describe("标签拖拽功能", () => {
       await page.mouse.up();
 
       // 验证提示"该标签已存在"
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`, {
+        timeout: 1000,
+      });
     });
-
   });
 
   test.describe("提示词标签拖拽", () => {
@@ -252,9 +255,7 @@ test.describe("标签拖拽功能", () => {
 
       await enterPromptGridView(page);
 
-      const targetCard = page.locator(
-        `.prompt-card[data-id="${testPromptId}"]`,
-      );
+      const targetCard = page.locator(`.prompt-card[data-id="${testPromptId}"]`);
       await expect(targetCard).toBeVisible({ timeout: 1000 });
 
       const originalTags = await page.evaluate(async (id) => {
@@ -323,10 +324,9 @@ test.describe("标签拖拽功能", () => {
       expect(newTags).toContain(sharedPromptTagName);
 
       // 验证成功提示
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已添加")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已添加")`, {
+        timeout: 1000,
+      });
       const toastContainer = page.locator(`#${Constants.Ids.TOAST_CONTAINER}`);
 
       // 第二次拖拽相同标签，应该提示"标签已存在"
@@ -338,10 +338,9 @@ test.describe("标签拖拽功能", () => {
       await page.mouse.up();
 
       // 等待提示消息更新
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`, {
+        timeout: 1000,
+      });
       const toastMessageAfterSecondDrop = await toastContainer.textContent();
       expect(toastMessageAfterSecondDrop).toContain("该标签已存在");
     });
@@ -358,9 +357,7 @@ test.describe("标签拖拽功能", () => {
 
       await enterPromptGridView(page);
 
-      const targetCard = page.locator(
-        `.prompt-card[data-id="${testPromptId}"]`,
-      );
+      const targetCard = page.locator(`.prompt-card[data-id="${testPromptId}"]`);
       await expect(targetCard).toBeVisible({ timeout: 1000 });
 
       // 确保标签筛选区域收起
@@ -417,10 +414,9 @@ test.describe("标签拖拽功能", () => {
       );
 
       // 验证成功提示
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已添加")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已添加")`, {
+        timeout: 1000,
+      });
 
       // 第二次拖拽相同标签 - 应该提示已存在
       await newTagElement.hover();
@@ -431,10 +427,9 @@ test.describe("标签拖拽功能", () => {
       await page.mouse.up();
 
       // 验证提示"该标签已存在"
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("该标签已存在")`, {
+        timeout: 1000,
+      });
     });
   });
 });

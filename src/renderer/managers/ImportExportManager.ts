@@ -3,10 +3,10 @@
  * 负责处理数据导出功能
  */
 
-import type { IApp } from '../app.types.ts';
-import type { IScanOrphanFilesResult, IExportOrphanFilesResult } from '../../types/entities.ts';
-import { progressDialog } from '../components/ProgressDialog.ts';
-import { ErrorHandler } from '../renderer_utils/index.ts';
+import type { IApp } from "../app.types.ts";
+import type { IScanOrphanFilesResult, IExportOrphanFilesResult } from "../../types/entities.ts";
+import { progressDialog } from "../components/ProgressDialog.ts";
+import { ErrorHandler } from "../renderer_utils/index.ts";
 
 interface ImportExportManagerOptions {
   app: IApp;
@@ -38,7 +38,7 @@ export class ImportExportManager {
    */
   async exportOrphanFiles(): Promise<boolean> {
     if (this.isExporting) {
-      this.app.showToast?.('导出正在进行中，请稍候', 'warning');
+      this.app.showToast?.("导出正在进行中，请稍候", "warning");
       return false;
     }
 
@@ -46,11 +46,11 @@ export class ImportExportManager {
 
     try {
       // 先扫描孤儿文件
-      this.app.showToast?.('正在扫描孤儿文件...', 'info');
+      this.app.showToast?.("正在扫描孤儿文件...", "info");
       const scanResult: IScanOrphanFilesResult = await window.electronAPI.scanOrphanFiles();
 
       if (scanResult.totalCount === 0) {
-        this.app.showToast?.('没有发现孤儿文件', 'info');
+        this.app.showToast?.("没有发现孤儿文件", "info");
         return false;
       }
 
@@ -60,23 +60,27 @@ export class ImportExportManager {
         return false;
       }
 
-      this.app.showToast?.(`发现 ${scanResult.totalCount} 个孤儿文件，正在导出并删除...`, 'info');
+      this.app.showToast?.(`发现 ${scanResult.totalCount} 个孤儿文件，正在导出并删除...`, "info");
 
-      const result: IExportOrphanFilesResult = await window.electronAPI.exportOrphanFiles(exportDir);
+      const result: IExportOrphanFilesResult =
+        await window.electronAPI.exportOrphanFiles(exportDir);
 
       if (result.successCount > 0) {
-        this.app.showToast?.(`已导出 ${result.exportCount} 个原图像并删除 ${result.deletedCount} 个孤儿文件`, 'success');
+        this.app.showToast?.(
+          `已导出 ${result.exportCount} 个原图像并删除 ${result.deletedCount} 个孤儿文件`,
+          "success",
+        );
         return true;
       } else if (result.failedCount > 0) {
         throw new Error(`${result.failedCount} 个文件处理失败`);
       } else {
-        throw new Error('导出并删除失败');
+        throw new Error("导出并删除失败");
       }
     } catch (error) {
       ErrorHandler.handleError(
-        { module: 'ImportExportManager.ts', operation: 'export orphan files' },
+        { module: "ImportExportManager.ts", operation: "export orphan files" },
         error,
-        { userMessage: '导出失败' }
+        { userMessage: "导出失败" },
       );
       return false;
     } finally {
@@ -97,26 +101,31 @@ export class ImportExportManager {
    */
   async exportFullBackup(): Promise<boolean> {
     if (this.isExporting) {
-      this.app.showToast?.('备份正在进行中，请稍候', 'warning');
+      this.app.showToast?.("备份正在进行中，请稍候", "warning");
       return false;
     }
 
     this.isExporting = true;
 
     // 设置进度回调
-    const handleProgress = (progress: { stage: string; percent: number; status: string; detail?: string }) => {
+    const handleProgress = (progress: {
+      stage: string;
+      percent: number;
+      status: string;
+      detail?: string;
+    }) => {
       progressDialog.updateProgress(progress.percent, progress.status, progress.detail);
     };
 
     try {
       // 显示进度对话框
       progressDialog.show({
-        title: '正在创建备份...',
-        status: '准备中...',
+        title: "正在创建备份...",
+        status: "准备中...",
         onCancel: () => {
           // 取消操作（当前版本不支持中断，仅关闭对话框）
           progressDialog.hide();
-        }
+        },
       });
 
       // 监听进度更新
@@ -127,31 +136,33 @@ export class ImportExportManager {
       // 移除进度监听
       window.electronAPI.offBackupProgress(handleProgress);
 
-      if ('cancelled' in result && result.cancelled) {
+      if ("cancelled" in result && result.cancelled) {
         progressDialog.hide();
         return false;
       }
 
-      if ('success' in result && result.success) {
+      if ("success" in result && result.success) {
         const stats = result.stats;
         const promptsCount = stats.prompts.count;
         const imageCount = stats.images.count;
 
-        progressDialog.complete(`备份成功！包含 ${promptsCount} 个提示词，${imageCount} 个图像\n保存位置：${result.filePath}`);
+        progressDialog.complete(
+          `备份成功！包含 ${promptsCount} 个提示词，${imageCount} 个图像\n保存位置：${result.filePath}`,
+        );
 
         // 等待用户点击关闭按钮，不自动关闭
         return true;
       }
 
-      throw new Error('备份失败');
+      throw new Error("备份失败");
     } catch (error) {
       // 移除进度监听
       window.electronAPI.offBackupProgress(handleProgress);
 
       const errorMessage = error instanceof Error ? error.message : String(error);
-      window.electronAPI.logError('ImportExportManager.ts', 'Failed to export full backup:', error);
+      window.electronAPI.logError("ImportExportManager.ts", "Failed to export full backup:", error);
 
-      progressDialog.error('备份失败：' + errorMessage);
+      progressDialog.error("备份失败：" + errorMessage);
 
       return false;
     } finally {
@@ -165,31 +176,36 @@ export class ImportExportManager {
    */
   async importFullBackup(): Promise<boolean> {
     if (this.isExporting) {
-      this.app.showToast?.('操作正在进行中，请稍候', 'warning');
+      this.app.showToast?.("操作正在进行中，请稍候", "warning");
       return false;
     }
 
     this.isExporting = true;
 
     // 设置进度回调
-    const handleProgress = (progress: { stage: string; percent: number; status: string; detail?: string }) => {
+    const handleProgress = (progress: {
+      stage: string;
+      percent: number;
+      status: string;
+      detail?: string;
+    }) => {
       progressDialog.updateProgress(progress.percent, progress.status, progress.detail);
     };
 
     try {
       // 显示进度对话框
       progressDialog.show({
-        title: '正在导入备份...',
-        status: '准备中...',
+        title: "正在导入备份...",
+        status: "准备中...",
         onCancel: () => {
           // 取消操作（当前版本不支持中断，仅关闭对话框）
           progressDialog.hide();
         },
         onComplete: () => {
           // 用户点击关闭按钮后显示重启提示并重启应用
-          this.app.showToast?.('正在重启应用...', 'info');
+          this.app.showToast?.("正在重启应用...", "info");
           window.electronAPI.relaunchApp();
-        }
+        },
       });
 
       // 监听进度更新
@@ -200,12 +216,12 @@ export class ImportExportManager {
       // 移除进度监听
       window.electronAPI.offBackupProgress(handleProgress);
 
-      if ('cancelled' in result && result.cancelled) {
+      if ("cancelled" in result && result.cancelled) {
         progressDialog.hide();
         return false;
       }
 
-      if ('success' in result && result.success) {
+      if ("success" in result && result.success) {
         const manifest = result.manifest;
         const exportedAt = manifest.exportedAt;
 
@@ -216,15 +232,15 @@ export class ImportExportManager {
         return true;
       }
 
-      throw new Error('导入失败');
+      throw new Error("导入失败");
     } catch (error) {
       // 移除进度监听
       window.electronAPI.offBackupProgress(handleProgress);
 
       const errorMessage = error instanceof Error ? error.message : String(error);
-      window.electronAPI.logError('ImportExportManager.ts', 'Failed to import full backup:', error);
+      window.electronAPI.logError("ImportExportManager.ts", "Failed to import full backup:", error);
 
-      progressDialog.error('导入失败：' + errorMessage);
+      progressDialog.error("导入失败：" + errorMessage);
 
       return false;
     } finally {

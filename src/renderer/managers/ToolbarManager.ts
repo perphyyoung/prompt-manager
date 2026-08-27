@@ -2,9 +2,9 @@
  * 工具栏管理器
  * 负责处理工具栏按钮事件和操作
  */
-import { Constants } from '../../constants.ts';
-import { DialogService, DialogConfig } from '../services/index.ts';
-import { localStorageManager } from '../configs/LocalStorageConfig.ts';
+import { Constants } from "../../constants.ts";
+import { DialogService, DialogConfig } from "../services/index.ts";
+import { localStorageManager } from "../configs/LocalStorageConfig.ts";
 
 /**
  * App 类型定义
@@ -75,20 +75,22 @@ export class ToolbarManager {
     if (!cardInfoToggleBtn) return;
 
     // 从 localStorage 加载状态
-    const isInfoVisible = localStorageManager.get<boolean>(Constants.LocalStorageKey.CARDS_INFO_VISIBLE);
+    const isInfoVisible = localStorageManager.get<boolean>(
+      Constants.LocalStorageKey.CARDS_INFO_VISIBLE,
+    );
     if (!isInfoVisible) {
-      document.body.classList.add('cards-info-hidden');
-      cardInfoToggleBtn.classList.remove('active');
+      document.body.classList.add("cards-info-hidden");
+      cardInfoToggleBtn.classList.remove("active");
     }
 
-    cardInfoToggleBtn.addEventListener('click', () => {
-      const isHidden = document.body.classList.toggle('cards-info-hidden');
-      cardInfoToggleBtn.classList.toggle('active');
+    cardInfoToggleBtn.addEventListener("click", () => {
+      const isHidden = document.body.classList.toggle("cards-info-hidden");
+      cardInfoToggleBtn.classList.toggle("active");
       localStorageManager.set(Constants.LocalStorageKey.CARDS_INFO_VISIBLE, !isHidden);
 
       // 更新提示
-      const action = isHidden ? '已隐藏' : '已显示';
-      this.app.showToast?.(`${action}卡片信息`, 'info');
+      const action = isHidden ? "已隐藏" : "已显示";
+      this.app.showToast?.(`${action}卡片信息`, "info");
     });
   }
 
@@ -97,8 +99,12 @@ export class ToolbarManager {
    * @private
    */
   private bindRefreshEvents(): void {
-    document.getElementById(Constants.Ids.REFRESH_DATA_BTN)?.addEventListener('click', () => this.refreshData());
-    document.getElementById(Constants.Ids.RELAUNCH_BTN)?.addEventListener('click', () => this.relaunchApp());
+    document
+      .getElementById(Constants.Ids.REFRESH_DATA_BTN)
+      ?.addEventListener("click", () => this.refreshData());
+    document
+      .getElementById(Constants.Ids.RELAUNCH_BTN)
+      ?.addEventListener("click", () => this.relaunchApp());
   }
 
   /**
@@ -117,10 +123,12 @@ export class ToolbarManager {
         await this.app.imagePanelManager.renderTagFilters();
       }
 
-      this.app.showToast?.('数据已刷新', 'success');
+      this.app.showToast?.("数据已刷新", "success");
     } catch (error) {
-      window.electronAPI.logError('ToolbarManager', 'Failed to refresh data', { error: error instanceof Error ? error.message : String(error) });
-      this.app.showToast?.('刷新失败', 'error');
+      window.electronAPI.logError("ToolbarManager", "Failed to refresh data", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      this.app.showToast?.("刷新失败", "error");
     }
   }
 
@@ -132,11 +140,11 @@ export class ToolbarManager {
     if (!confirmed) return;
 
     try {
-      this.app.showToast?.('正在重启应用...', 'info');
+      this.app.showToast?.("正在重启应用...", "info");
       await window.electronAPI.relaunchApp();
     } catch (error) {
-      window.electronAPI.logError('ToolbarManager.ts', 'Failed to relaunch app:', error);
-      this.app.showToast?.('重启失败', 'error');
+      window.electronAPI.logError("ToolbarManager.ts", "Failed to relaunch app:", error);
+      this.app.showToast?.("重启失败", "error");
     }
   }
 }

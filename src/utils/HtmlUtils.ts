@@ -9,8 +9,8 @@ export class HtmlUtils {
    * @returns 转义后的 HTML
    */
   static escapeHtml(text: string | null | undefined): string {
-    if (!text) return '';
-    const div = document.createElement('div');
+    if (!text) return "";
+    const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
   }
@@ -21,15 +21,15 @@ export class HtmlUtils {
    * @returns 转义后的属性值
    */
   static escapeAttr(text: string | null | undefined): string {
-    if (!text) return '';
+    if (!text) return "";
     return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;')
-      .replace(/\n/g, '&#10;')
-      .replace(/\r/g, '&#13;');
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;")
+      .replace(/\n/g, "&#10;")
+      .replace(/\r/g, "&#13;");
   }
 
   /**
@@ -38,10 +38,10 @@ export class HtmlUtils {
    * @returns 格式化后的文件大小
    */
   static formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) return "0 B";
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   }
 }

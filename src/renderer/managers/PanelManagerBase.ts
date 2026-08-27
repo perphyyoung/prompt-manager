@@ -1,20 +1,20 @@
-import { HtmlUtils } from '../../utils/index.ts';
-import { cacheManager } from '../../utils/CacheManager.ts';
-import { TagUI } from './TagUI.ts';
-import { TopGroupManager } from '../../pyTagGroups/TopGroupManager.ts';
-import { ITagWithGroup, ITagGroup } from '../../types/entities.ts';
-import { IEventStrategy, EventContext } from './Strategies/IEventStrategy.ts';
-import { batchToolbarMiddle, type BatchBusinessConfig } from '../../middle/index.ts';
-import { DialogService, DialogConfig } from '../services/index.ts';
-import type { IDialogTemplate } from '../../types/entities.ts';
-import { Constants, Events } from '../../constants.ts';
-import { TagService } from '../services/index.ts';
-import { buildTagsWithGroupInfo } from '../../pyTagGroups/utils.ts';
-import { IApp } from '../app.types.ts';
-import { localStorageManager } from '../configs/LocalStorageConfig.ts';
-import { showContextMenu } from '../renderer_utils/ContextMenuUtils.ts';
-import { VirtualScrollBar } from '../renderer_utils/VirtualScrollBar.ts';
-import type { VisibleRange } from '../renderer_utils/VirtualScroller.ts';
+import { HtmlUtils } from "../../utils/index.ts";
+import { cacheManager } from "../../utils/CacheManager.ts";
+import { TagUI } from "./TagUI.ts";
+import { TopGroupManager } from "../../pyTagGroups/TopGroupManager.ts";
+import { ITagWithGroup, ITagGroup } from "../../types/entities.ts";
+import { IEventStrategy, EventContext } from "./Strategies/IEventStrategy.ts";
+import { batchToolbarMiddle, type BatchBusinessConfig } from "../../middle/index.ts";
+import { DialogService, DialogConfig } from "../services/index.ts";
+import type { IDialogTemplate } from "../../types/entities.ts";
+import { Constants, Events } from "../../constants.ts";
+import { TagService } from "../services/index.ts";
+import { buildTagsWithGroupInfo } from "../../pyTagGroups/utils.ts";
+import { IApp } from "../app.types.ts";
+import { localStorageManager } from "../configs/LocalStorageConfig.ts";
+import { showContextMenu } from "../renderer_utils/ContextMenuUtils.ts";
+import { VirtualScrollBar } from "../renderer_utils/VirtualScrollBar.ts";
+import type { VisibleRange } from "../renderer_utils/VirtualScroller.ts";
 
 /** 网格行间距（px），与 styles.css 的 .grid-view gap 保持一致 */
 export const GRID_GAP = 16;
@@ -126,10 +126,10 @@ export abstract class PanelManagerBase {
   tagFilterSortOrder!: string;
 
   // 工具栏上下文（在 init 方法中设置）
-  protected toolbarContext!: 'promptMain' | 'imageMain';
+  protected toolbarContext!: "promptMain" | "imageMain";
 
   // 面板类型（子类实现）
-  protected abstract readonly panelType: 'prompt' | 'image';
+  protected abstract readonly panelType: "prompt" | "image";
 
   // UI 配置（子类实现）
   protected abstract getUIConfig(): IUIConfig;
@@ -151,7 +151,9 @@ export abstract class PanelManagerBase {
    * 绑定标签管理器事件
    */
   protected bindTagManagerEvents(): void {
-    document.getElementById(this.getTagManagerBtnId())?.addEventListener('click', async () => await this.openTagManagerModal());
+    document
+      .getElementById(this.getTagManagerBtnId())
+      ?.addEventListener("click", async () => await this.openTagManagerModal());
   }
 
   /**
@@ -163,7 +165,9 @@ export abstract class PanelManagerBase {
    * 绑定标签筛选收起/展开按钮事件
    */
   protected bindTagFilterToggleEvents(): void {
-    document.getElementById(this.getTagFilterToggleBtnId())?.addEventListener('click', () => this.toggleTagFilterState());
+    document
+      .getElementById(this.getTagFilterToggleBtnId())
+      ?.addEventListener("click", () => this.toggleTagFilterState());
   }
 
   /**
@@ -171,7 +175,7 @@ export abstract class PanelManagerBase {
    */
   constructor(options: PanelManagerBaseOptions) {
     if (!options.app) {
-      throw new Error('PanelManagerBase requires app instance');
+      throw new Error("PanelManagerBase requires app instance");
     }
     this.app = options.app;
     // eventBus 通过 app 访问
@@ -188,20 +192,21 @@ export abstract class PanelManagerBase {
    */
   protected initPanelManager(): void {
     // 设置工具栏上下文
-    this.toolbarContext = this.panelType === 'prompt' ? 'promptMain' : 'imageMain';
+    this.toolbarContext = this.panelType === "prompt" ? "promptMain" : "imageMain";
 
     // 业务配置
     const businessConfig: BatchBusinessConfig = {
       delete: {
-        batchApi: this.panelType === 'prompt'
-          ? async (ids) => {
-              const result = await window.electronAPI.softDeletePrompts(ids);
-              return { success: result.success, deleted: result.deleted };
-            }
-          : async (ids) => {
-              const result = await window.electronAPI.softDeleteImages(ids);
-              return { success: result.success, deleted: result.deleted };
-            }
+        batchApi:
+          this.panelType === "prompt"
+            ? async (ids) => {
+                const result = await window.electronAPI.softDeletePrompts(ids);
+                return { success: result.success, deleted: result.deleted };
+              }
+            : async (ids) => {
+                const result = await window.electronAPI.softDeleteImages(ids);
+                return { success: result.success, deleted: result.deleted };
+              },
         // 不再全量 clear 元数据缓存：软删除残留由 LRU 自然淘汰，
         // 面板刷新后以 filtered 数组为权威，残留条目无读取路径
       },
@@ -211,18 +216,19 @@ export abstract class PanelManagerBase {
           const result = await tagService.batchLinkTags({
             tagNames,
             type: this.panelType,
-            itemIds: ids
+            itemIds: ids,
           });
           if (result.errors.length > 0) {
-            throw new Error(result.errors.map((e: { error: string }) => e.error).join(', '));
+            throw new Error(result.errors.map((e: { error: string }) => e.error).join(", "));
           }
-        }
+        },
       },
       favorite: {
-        batchApi: this.panelType === 'prompt'
-          ? (ids) => window.electronAPI.batchFavoritePrompts(ids).then(() => {})
-          : (ids) => window.electronAPI.batchFavoriteImages(ids).then(() => {})
-      }
+        batchApi:
+          this.panelType === "prompt"
+            ? (ids) => window.electronAPI.batchFavoritePrompts(ids).then(() => {})
+            : (ids) => window.electronAPI.batchFavoriteImages(ids).then(() => {}),
+      },
     };
 
     // 统一使用 presets.ts 中的配置
@@ -233,7 +239,10 @@ export abstract class PanelManagerBase {
       this.updateSelectionModeClass();
       this.updateItemSelectionState();
       // 如果有选中项但工具栏未显示，显式进入批量模式
-      if (batchToolbarMiddle.getSelectionCount(this.toolbarContext) > 0 && !batchToolbarMiddle.isVisible(this.toolbarContext)) {
+      if (
+        batchToolbarMiddle.getSelectionCount(this.toolbarContext) > 0 &&
+        !batchToolbarMiddle.isVisible(this.toolbarContext)
+      ) {
         this.enterBatchMode();
       }
     });
@@ -254,32 +263,32 @@ export abstract class PanelManagerBase {
    */
   private registerBatchToolbarHandlers(): void {
     // 全选
-    batchToolbarMiddle.registerActionHandler(this.toolbarContext, 'SelectAll', () => {
+    batchToolbarMiddle.registerActionHandler(this.toolbarContext, "SelectAll", () => {
       this.selectAllVisibleItems();
     });
 
     // 反选
-    batchToolbarMiddle.registerActionHandler(this.toolbarContext, 'Invert', () => {
+    batchToolbarMiddle.registerActionHandler(this.toolbarContext, "Invert", () => {
       this.handleBatchInvert();
     });
 
     // 添加标签
-    batchToolbarMiddle.registerActionHandler(this.toolbarContext, 'AddTag', () => {
+    batchToolbarMiddle.registerActionHandler(this.toolbarContext, "AddTag", () => {
       this.handleBatchAddTag();
     });
 
     // 收藏
-    batchToolbarMiddle.registerActionHandler(this.toolbarContext, 'Favorite', () => {
+    batchToolbarMiddle.registerActionHandler(this.toolbarContext, "Favorite", () => {
       this.handleBatchFavorite();
     });
 
     // 删除
-    batchToolbarMiddle.registerActionHandler(this.toolbarContext, 'Delete', () => {
+    batchToolbarMiddle.registerActionHandler(this.toolbarContext, "Delete", () => {
       this.handleBatchDelete();
     });
 
     // 取消
-    batchToolbarMiddle.registerActionHandler(this.toolbarContext, 'Cancel', () => {
+    batchToolbarMiddle.registerActionHandler(this.toolbarContext, "Cancel", () => {
       this.handleBatchCancel();
     });
   }
@@ -329,7 +338,7 @@ export abstract class PanelManagerBase {
    * @returns 搜索查询字符串
    */
   getSearchQuery(): string {
-    return ''; // 默认返回空字符串，表示不搜索
+    return ""; // 默认返回空字符串，表示不搜索
   }
 
   /**
@@ -344,7 +353,7 @@ export abstract class PanelManagerBase {
    * @abstract
    * @returns 项目类型
    */
-  abstract getItemType(): 'prompt' | 'image';
+  abstract getItemType(): "prompt" | "image";
 
   /**
    * 加载数据（抽象方法, 必须子类实现）
@@ -378,7 +387,11 @@ export abstract class PanelManagerBase {
    * @param isSelected - 是否处于选中状态
    * @returns HTML 字符串
    */
-  protected abstract renderSingleItemHtml(item: IPanelItem, index: number, isSelected: boolean): string;
+  protected abstract renderSingleItemHtml(
+    item: IPanelItem,
+    index: number,
+    isSelected: boolean,
+  ): string;
 
   /**
    * 加载变化项的缩略图/背景图（子类实现）
@@ -411,12 +424,12 @@ export abstract class PanelManagerBase {
       if (!oldEl) continue;
 
       // 从旧元素获取索引，保证重建后 data-index 一致
-      const index = parseInt(oldEl.dataset.index || '0', 10);
+      const index = parseInt(oldEl.dataset.index || "0", 10);
       const isSelected = batchToolbarMiddle.isSelected(this.toolbarContext, id);
 
       // 生成新 HTML 并替换
       const newHtml = this.renderSingleItemHtml(item, index, isSelected);
-      const template = document.createElement('template');
+      const template = document.createElement("template");
       template.innerHTML = newHtml.trim();
       const newEl = template.content.firstChild as HTMLElement | null;
       if (!newEl) continue;
@@ -433,7 +446,7 @@ export abstract class PanelManagerBase {
 
     // 重绑按钮事件与 hover 预览（逐元素绑定，重建后需重新绑定）
     const config = this.getUIConfig();
-    if (this.viewModeType === 'grid') {
+    if (this.viewModeType === "grid") {
       this.bindCardButtonEvents(changed);
       this.bindHoverPreview(config.cardSelector);
     } else {
@@ -451,17 +464,20 @@ export abstract class PanelManagerBase {
     const container = document.getElementById(config.gridContainerId);
     if (!container) return;
 
-    filtered.forEach(item => {
+    filtered.forEach((item) => {
       const card = container.querySelector(`[data-id="${item.id}"]`);
       if (!card) return;
 
       // 删除按钮
-      const deleteBtn = card.querySelector('.delete-btn');
+      const deleteBtn = card.querySelector(".delete-btn");
       if (deleteBtn) {
-        deleteBtn.addEventListener('click', async (e) => {
+        deleteBtn.addEventListener("click", async (e) => {
           e.stopPropagation();
           const { config: dialogConfig, name } = config.getDeleteConfirmConfig(item);
-          const confirmed = await DialogService.showConfirmDialogByConfig(dialogConfig as IDialogTemplate, name ? { name } : undefined);
+          const confirmed = await DialogService.showConfirmDialogByConfig(
+            dialogConfig as IDialogTemplate,
+            name ? { name } : undefined,
+          );
           if (confirmed) {
             await this.deleteItem(String(item.id));
           }
@@ -469,30 +485,34 @@ export abstract class PanelManagerBase {
       }
 
       // 收藏按钮
-      const favoriteBtn = card.querySelector('.favorite-btn');
+      const favoriteBtn = card.querySelector(".favorite-btn");
       if (favoriteBtn) {
-        favoriteBtn.addEventListener('click', async (e) => {
+        favoriteBtn.addEventListener("click", async (e) => {
           e.stopPropagation();
           await this.toggleFavorite(String(item.id), !item.isFavorite);
         });
       }
 
       // 复制按钮
-      const copyBtn = card.querySelector('.copy-btn');
+      const copyBtn = card.querySelector(".copy-btn");
       if (copyBtn) {
-        copyBtn.addEventListener('click', async (e) => {
+        copyBtn.addEventListener("click", async (e) => {
           e.stopPropagation();
           const { content, hasContent } = config.getCopyContent(item);
           if (!hasContent) {
-            this.app.showToast?.('没有可复制的内容', 'warning');
+            this.app.showToast?.("没有可复制的内容", "warning");
             return;
           }
           try {
             await window.electronAPI.copyToClipboard(content);
-            this.app.showToast?.('已复制到剪贴板', 'success');
+            this.app.showToast?.("已复制到剪贴板", "success");
           } catch (error) {
-            window.electronAPI.logError('PanelManagerBase.ts', 'Failed to copy to clipboard', error);
-            this.app.showToast?.('复制失败', 'error');
+            window.electronAPI.logError(
+              "PanelManagerBase.ts",
+              "Failed to copy to clipboard",
+              error,
+            );
+            this.app.showToast?.("复制失败", "error");
           }
         });
       }
@@ -508,27 +528,30 @@ export abstract class PanelManagerBase {
     const listContainer = document.getElementById(config.listContainerId);
     if (!listContainer) return;
 
-    listContainer.querySelectorAll(config.listItemSelector).forEach(item => {
+    listContainer.querySelectorAll(config.listItemSelector).forEach((item) => {
       const id = (item as HTMLElement).dataset.id;
-      const itemData = filtered.find(i => String(i.id) === String(id));
+      const itemData = filtered.find((i) => String(i.id) === String(id));
       if (!itemData) return;
 
       // 收藏按钮
-      const favoriteBtn = item.querySelector('.favorite-btn');
+      const favoriteBtn = item.querySelector(".favorite-btn");
       if (favoriteBtn) {
-        favoriteBtn.addEventListener('click', async (e) => {
+        favoriteBtn.addEventListener("click", async (e) => {
           e.stopPropagation();
           await this.toggleFavorite(String(id), !itemData.isFavorite);
         });
       }
 
       // 删除按钮
-      const deleteBtn = item.querySelector('.delete-btn');
+      const deleteBtn = item.querySelector(".delete-btn");
       if (deleteBtn) {
-        deleteBtn.addEventListener('click', async (e) => {
+        deleteBtn.addEventListener("click", async (e) => {
           e.stopPropagation();
           const { config: dialogConfig, name } = config.getDeleteConfirmConfig(itemData);
-          const confirmed = await DialogService.showConfirmDialogByConfig(dialogConfig as IDialogTemplate, name ? { name } : undefined);
+          const confirmed = await DialogService.showConfirmDialogByConfig(
+            dialogConfig as IDialogTemplate,
+            name ? { name } : undefined,
+          );
           if (confirmed) {
             await this.deleteItem(String(id));
           }
@@ -536,21 +559,25 @@ export abstract class PanelManagerBase {
       }
 
       // 复制按钮
-      const copyBtn = item.querySelector('.copy-btn');
+      const copyBtn = item.querySelector(".copy-btn");
       if (copyBtn) {
-        copyBtn.addEventListener('click', async (e) => {
+        copyBtn.addEventListener("click", async (e) => {
           e.stopPropagation();
           const { content, hasContent } = config.getCopyContent(itemData);
           if (!hasContent) {
-            this.app.showToast?.('没有可复制的内容', 'warning');
+            this.app.showToast?.("没有可复制的内容", "warning");
             return;
           }
           try {
             await window.electronAPI.copyToClipboard(content);
-            this.app.showToast?.('已复制到剪贴板', 'success');
+            this.app.showToast?.("已复制到剪贴板", "success");
           } catch (error) {
-            window.electronAPI.logError('PanelManagerBase.ts', 'Failed to copy to clipboard', error);
-            this.app.showToast?.('复制失败', 'error');
+            window.electronAPI.logError(
+              "PanelManagerBase.ts",
+              "Failed to copy to clipboard",
+              error,
+            );
+            this.app.showToast?.("复制失败", "error");
           }
         });
       }
@@ -564,14 +591,14 @@ export abstract class PanelManagerBase {
    */
   protected bindContextMenuEvents(): void {
     const config = this.getUIConfig();
-    const itemSelectors = [config.cardSelector, config.listItemSelector].join(', ');
+    const itemSelectors = [config.cardSelector, config.listItemSelector].join(", ");
 
     [config.gridContainerId, config.listContainerId].forEach((containerId) => {
       const container = document.getElementById(containerId);
-      if (!container || container.dataset.contextMenuBound === 'true') return;
+      if (!container || container.dataset.contextMenuBound === "true") return;
 
-      container.dataset.contextMenuBound = 'true';
-      container.addEventListener('contextmenu', (e) => {
+      container.dataset.contextMenuBound = "true";
+      container.addEventListener("contextmenu", (e) => {
         const itemEl = (e.target as HTMLElement).closest(itemSelectors) as HTMLElement | null;
         if (!itemEl) return;
 
@@ -583,7 +610,7 @@ export abstract class PanelManagerBase {
 
         const path = config.getOpenLocationPath(item);
         if (!path) {
-          this.app.showToast?.('没有可打开的本地保存位置', 'warning');
+          this.app.showToast?.("没有可打开的本地保存位置", "warning");
           return;
         }
 
@@ -593,15 +620,19 @@ export abstract class PanelManagerBase {
           y: e.clientY,
           items: [
             {
-              id: 'openLocation',
+              id: "openLocation",
               label: Constants.CONTEXT_MENU_OPEN_LOCATION,
               onClick: () => {
                 window.electronAPI.openImageLocation(path).catch((error: unknown) => {
-                  window.electronAPI.logError('PanelManagerBase.ts', 'Failed to open image location', error);
+                  window.electronAPI.logError(
+                    "PanelManagerBase.ts",
+                    "Failed to open image location",
+                    error,
+                  );
                 });
-              }
-            }
-          ]
+              },
+            },
+          ],
         });
       });
     });
@@ -622,20 +653,20 @@ export abstract class PanelManagerBase {
     const config = this.getUIConfig();
 
     // 避免重复绑定
-    if (container.dataset.dropEventsBound === 'true') {
+    if (container.dataset.dropEventsBound === "true") {
       return;
     }
-    container.dataset.dropEventsBound = 'true';
+    container.dataset.dropEventsBound = "true";
 
-    container.addEventListener('dragover', (e) => {
+    container.addEventListener("dragover", (e) => {
       e.preventDefault();
-      (e as DragEvent).dataTransfer!.dropEffect = 'copy';
+      (e as DragEvent).dataTransfer!.dropEffect = "copy";
     });
 
-    container.addEventListener('drop', async (e) => {
+    container.addEventListener("drop", async (e) => {
       e.preventDefault();
-      const dragSource = (e as DragEvent).dataTransfer!.getData('drag-source');
-      const tagName = (e as DragEvent).dataTransfer!.getData('text/plain');
+      const dragSource = (e as DragEvent).dataTransfer!.getData("drag-source");
+      const tagName = (e as DragEvent).dataTransfer!.getData("text/plain");
 
       if (dragSource === config.dragSource && tagName) {
         const card = (e.target as Element).closest(config.getCardDropSelector());
@@ -644,9 +675,9 @@ export abstract class PanelManagerBase {
           if (id) {
             try {
               await this.handleTagDrop(id, tagName);
-              this.app.showToast?.('标签已添加', 'success');
+              this.app.showToast?.("标签已添加", "success");
             } catch (error) {
-              this.app.showToast?.((error as Error).message, 'error');
+              this.app.showToast?.((error as Error).message, "error");
             }
           }
         }
@@ -743,12 +774,12 @@ export abstract class PanelManagerBase {
     const updateBtn = (btn: Element | null) => {
       if (!btn) return;
       if (isFavorite) {
-        btn.classList.add('active');
-        (btn as HTMLElement).title = '取消收藏';
+        btn.classList.add("active");
+        (btn as HTMLElement).title = "取消收藏";
         btn.innerHTML = Constants.ICONS.favorite.filled;
       } else {
-        btn.classList.remove('active');
-        (btn as HTMLElement).title = '收藏';
+        btn.classList.remove("active");
+        (btn as HTMLElement).title = "收藏";
         btn.innerHTML = Constants.ICONS.favorite.outline;
       }
     };
@@ -756,17 +787,17 @@ export abstract class PanelManagerBase {
     // 更新卡片视图
     const card = document.querySelector(`${config.cardSelector}[data-id="${id}"]`);
     if (card) {
-      const btn = card.querySelector('.favorite-btn');
+      const btn = card.querySelector(".favorite-btn");
       updateBtn(btn);
-      card.classList.toggle('is-favorite', isFavorite);
+      card.classList.toggle("is-favorite", isFavorite);
     }
 
     // 更新列表视图
     const listItem = document.querySelector(`${config.listItemSelector}[data-id="${id}"]`);
     if (listItem) {
-      const btn = listItem.querySelector('.favorite-btn');
+      const btn = listItem.querySelector(".favorite-btn");
       updateBtn(btn);
-      listItem.classList.toggle('list-item--favorite', isFavorite);
+      listItem.classList.toggle("list-item--favorite", isFavorite);
     }
   }
 
@@ -799,7 +830,7 @@ export abstract class PanelManagerBase {
     const collapsed = localStorageManager.get<boolean>(this.getTagFilterStorageKey());
     if (collapsed) {
       const section = document.getElementById(this.getTagFilterSectionId());
-      section?.classList.add('collapsed');
+      section?.classList.add("collapsed");
     }
   }
 
@@ -809,8 +840,8 @@ export abstract class PanelManagerBase {
   async toggleTagFilterState(): Promise<void> {
     const section = document.getElementById(this.getTagFilterSectionId());
     if (section) {
-      section.classList.toggle('collapsed');
-      const collapsed = section.classList.contains('collapsed');
+      section.classList.toggle("collapsed");
+      const collapsed = section.classList.contains("collapsed");
       localStorageManager.set(this.getTagFilterStorageKey(), collapsed);
     }
     await this.renderTagFilters();
@@ -820,7 +851,7 @@ export abstract class PanelManagerBase {
    * 获取标签筛选区 section ID
    */
   private getTagFilterSectionId(): string {
-    return this.panelType === 'prompt'
+    return this.panelType === "prompt"
       ? Constants.Ids.PROMPT_TAG_FILTER_SECTION
       : Constants.Ids.IMAGE_TAG_FILTER_SECTION;
   }
@@ -902,7 +933,7 @@ export abstract class PanelManagerBase {
         container.scrollTop = (startIndex / maxOffset) * maxScrollTop;
         // 瞬时赋值可能不触发 scroll 事件，主动同步窗口
         this.refreshWindow();
-      }
+      },
     });
     this.syncScrollBarLayout();
 
@@ -960,13 +991,17 @@ export abstract class PanelManagerBase {
       });
     };
 
-    document.getElementById(this.getGridContainerId())?.addEventListener('scroll', this.scrollHandler);
+    document
+      .getElementById(this.getGridContainerId())
+      ?.addEventListener("scroll", this.scrollHandler);
   }
 
   /** 解绑滚动事件 */
   protected unbindScrollEvents(): void {
     if (!this.scrollHandler) return;
-    document.getElementById(this.getGridContainerId())?.removeEventListener('scroll', this.scrollHandler);
+    document
+      .getElementById(this.getGridContainerId())
+      ?.removeEventListener("scroll", this.scrollHandler);
     this.scrollHandler = null;
   }
 
@@ -1029,8 +1064,8 @@ export abstract class PanelManagerBase {
       // 更新筛选动作按钮状态
       if (actionBtn) {
         const hasFilters = this.selectedTags.size > 0;
-        actionBtn.textContent = hasFilters ? '清除筛选' : '标签筛选';
-        actionBtn.classList.toggle('has-filters', hasFilters);
+        actionBtn.textContent = hasFilters ? "清除筛选" : "标签筛选";
+        actionBtn.classList.toggle("has-filters", hasFilters);
       }
 
       // 更新反选按钮状态
@@ -1041,13 +1076,14 @@ export abstract class PanelManagerBase {
       const tagService = TagService.getInstance();
       const groups = await tagService.getTagGroups(this.getItemType());
 
-
-
       // 计算标签计数
       const tagCounts = this.calculateTagCounts(tags);
 
       // 获取可见项目
-      const visibleItems = this.getItems().filter((item: IPanelItem) => !item.isDeleted && (this.app.viewMode !== 'safe' || item.isSafe !== 0));
+      const visibleItems = this.getItems().filter(
+        (item: IPanelItem) =>
+          !item.isDeleted && (this.app.viewMode !== "safe" || item.isSafe !== 0),
+      );
 
       // 计算特殊标签计数
       const specialTags = this.calculateSpecialTagCounts(visibleItems);
@@ -1072,7 +1108,15 @@ export abstract class PanelManagerBase {
       // 绑定事件
       this.bindTagFilterEvents();
     } catch (error) {
-      (window as { electronAPI?: { logError?: (context: string, message: string, data?: unknown) => void } }).electronAPI?.logError?.('PanelManagerBase.ts', `Failed to render ${this.getItemType()} tag filters:`, error);
+      (
+        window as {
+          electronAPI?: { logError?: (context: string, message: string, data?: unknown) => void };
+        }
+      ).electronAPI?.logError?.(
+        "PanelManagerBase.ts",
+        `Failed to render ${this.getItemType()} tag filters:`,
+        error,
+      );
     }
   }
 
@@ -1084,7 +1128,7 @@ export abstract class PanelManagerBase {
    */
   calculateTagCounts(_tags: string[]): Record<string, number> {
     const visibleItems = this.getItems().filter(
-      (item: IPanelItem) => !item.isDeleted && (this.app.viewMode !== 'safe' || item.isSafe !== 0)
+      (item: IPanelItem) => !item.isDeleted && (this.app.viewMode !== "safe" || item.isSafe !== 0),
     );
     return TagService.countTagsInItems(visibleItems);
   }
@@ -1095,15 +1139,17 @@ export abstract class PanelManagerBase {
    * @param specialTags - 特殊标签列表
    */
   async renderSpecialTags(container: HTMLElement, specialTags: SpecialTagCount[]): Promise<void> {
-    const specialTagsHtml = specialTags.map(({ tag, count }) => {
-      const isActive = this.selectedTags.has(tag);
-      return `
-        <button class="tag-filter-item ${isActive ? 'active' : ''}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="true">
+    const specialTagsHtml = specialTags
+      .map(({ tag, count }) => {
+        const isActive = this.selectedTags.has(tag);
+        return `
+        <button class="tag-filter-item ${isActive ? "active" : ""}" data-tag="${HtmlUtils.escapeHtml(tag)}" data-is-special="true">
           <span class="tag-name">${HtmlUtils.escapeHtml(tag)}</span>
           <span class="tag-badge">${count}</span>
         </button>
       `;
-    }).join('');
+      })
+      .join("");
 
     container.innerHTML = specialTagsHtml || '<span class="tag-filter-empty">暂无特殊标签</span>';
   }
@@ -1115,12 +1161,17 @@ export abstract class PanelManagerBase {
    * @param tagCounts - 标签计数
    * @param groups - 标签组
    */
-  async renderNormalTags(container: HTMLElement | null, sortedTagsWithGroup: ITagWithGroup[], tagCounts: Record<string, number>, groups: ITagGroup[]): Promise<void> {
+  async renderNormalTags(
+    container: HTMLElement | null,
+    sortedTagsWithGroup: ITagWithGroup[],
+    tagCounts: Record<string, number>,
+    groups: ITagGroup[],
+  ): Promise<void> {
     const html = TagUI.renderExpandedFilter(sortedTagsWithGroup, tagCounts, {
       specialTags: [],
       selectedTags: this.selectedTags,
       groups: groups,
-      isImage: this.getItemType() === 'image'
+      isImage: this.getItemType() === "image",
     });
 
     if (container) {
@@ -1136,8 +1187,8 @@ export abstract class PanelManagerBase {
    */
   sortTagsForFilter(tags: ITagWithGroup[], tagCounts: Record<string, number>): ITagWithGroup[] {
     return TopGroupManager.sortTagsWithGroupPriority(tags, tagCounts, {
-      sortBy: this.tagFilterSortBy as 'name' | 'count',
-      sortOrder: this.tagFilterSortOrder as 'asc' | 'desc'
+      sortBy: this.tagFilterSortBy as "name" | "count",
+      sortOrder: this.tagFilterSortOrder as "asc" | "desc",
     });
   }
 
@@ -1151,16 +1202,18 @@ export abstract class PanelManagerBase {
 
     // 特殊标签点击
     if (specialTagsContainer) {
-      specialTagsContainer.querySelectorAll('.tag-filter-item[data-is-special="true"]').forEach((item: Element) => {
-        item.addEventListener('click', (e: Event) => {
-          // 重新点击标签：退出反选模式，恢复一致
-          this.exitInvertedFilter();
-          const tag = (item as HTMLElement).dataset.tag ?? '';
-          const isCtrlPressed = (e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey;
-          this.handleTagToggle(tag, isCtrlPressed);
-          this.afterTagFilterChange();
+      specialTagsContainer
+        .querySelectorAll('.tag-filter-item[data-is-special="true"]')
+        .forEach((item: Element) => {
+          item.addEventListener("click", (e: Event) => {
+            // 重新点击标签：退出反选模式，恢复一致
+            this.exitInvertedFilter();
+            const tag = (item as HTMLElement).dataset.tag ?? "";
+            const isCtrlPressed = (e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey;
+            this.handleTagToggle(tag, isCtrlPressed);
+            this.afterTagFilterChange();
+          });
         });
-      });
     }
 
     // 普通标签点击和拖拽
@@ -1169,62 +1222,66 @@ export abstract class PanelManagerBase {
       const draggingItems = new WeakSet<HTMLElement>();
 
       // 先绑定点击事件
-      container.querySelectorAll('.tag-filter-item:not([data-is-special="true"])').forEach((item: Element) => {
-        item.addEventListener('click', async (e: Event) => {
-          // 如果正在拖拽，不触发点击
-          if (draggingItems.has(item as HTMLElement)) {
-            draggingItems.delete(item as HTMLElement);
-            return;
-          }
-          e.stopPropagation();
-          const tag = (item as HTMLElement).dataset.tag ?? '';
-          
-          // 重新点击标签：退出反选模式，恢复一致
-          this.exitInvertedFilter();
-          const isCtrlPressed = (e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey;
-          this.handleTagToggle(tag, isCtrlPressed);
-          this.afterTagFilterChange();
+      container
+        .querySelectorAll('.tag-filter-item:not([data-is-special="true"])')
+        .forEach((item: Element) => {
+          item.addEventListener("click", async (e: Event) => {
+            // 如果正在拖拽，不触发点击
+            if (draggingItems.has(item as HTMLElement)) {
+              draggingItems.delete(item as HTMLElement);
+              return;
+            }
+            e.stopPropagation();
+            const tag = (item as HTMLElement).dataset.tag ?? "";
+
+            // 重新点击标签：退出反选模式，恢复一致
+            this.exitInvertedFilter();
+            const isCtrlPressed = (e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey;
+            this.handleTagToggle(tag, isCtrlPressed);
+            this.afterTagFilterChange();
+          });
         });
-      });
 
       // 绑定标签拖拽事件
       const draggableItems = container.querySelectorAll('.tag-filter-item[draggable="true"]');
       draggableItems.forEach((item: Element) => {
-        item.addEventListener('dragstart', (e: Event) => {
+        item.addEventListener("dragstart", (e: Event) => {
           // 标记为正在拖拽
           draggingItems.add(item as HTMLElement);
           const dragEvent = e as DragEvent;
           const tag = (item as HTMLElement).dataset.tag;
           if (tag) {
-            dragEvent.dataTransfer?.setData('text/plain', tag);
-            dragEvent.dataTransfer?.setData('drag-source', this.getTagDragType());
+            dragEvent.dataTransfer?.setData("text/plain", tag);
+            dragEvent.dataTransfer?.setData("drag-source", this.getTagDragType());
           }
           if (dragEvent.dataTransfer) {
-            dragEvent.dataTransfer.effectAllowed = 'copy';
+            dragEvent.dataTransfer.effectAllowed = "copy";
           }
-          item.classList.add('dragging');
+          item.classList.add("dragging");
         });
 
-        item.addEventListener('dragend', () => {
-          item.classList.remove('dragging');
+        item.addEventListener("dragend", () => {
+          item.classList.remove("dragging");
           // 注意：不在 dragend 中删除 draggingItems，因为 click 事件会在 dragend 之后触发
         });
       });
     }
 
     // 绑定标签筛选排序选择器事件（防止重复绑定）
-    const sortSelect = document.getElementById(this.getTagFilterSortSelectId()) as HTMLSelectElement | null;
+    const sortSelect = document.getElementById(
+      this.getTagFilterSortSelectId(),
+    ) as HTMLSelectElement | null;
     if (sortSelect) {
       // 同步 localStorage 中保存的排序状态到 UI
       sortSelect.value = `${this.tagFilterSortBy}-${this.tagFilterSortOrder}`;
     }
-    if (sortSelect && !sortSelect.hasAttribute('data-event-bound')) {
-      sortSelect.setAttribute('data-event-bound', 'true');
-      sortSelect.addEventListener('change', (e: Event) => {
+    if (sortSelect && !sortSelect.hasAttribute("data-event-bound")) {
+      sortSelect.setAttribute("data-event-bound", "true");
+      sortSelect.addEventListener("change", (e: Event) => {
         const target = e.target as HTMLSelectElement;
-        const [sortBy, sortOrder] = target.value.split('-');
+        const [sortBy, sortOrder] = target.value.split("-");
         this.tagFilterSortBy = sortBy;
-        this.tagFilterSortOrder = sortOrder as 'asc' | 'desc';
+        this.tagFilterSortOrder = sortOrder as "asc" | "desc";
         localStorageManager.set(this.storageKeys.tagFilterSortBy, sortBy);
         localStorageManager.set(this.storageKeys.tagFilterSortOrder, sortOrder);
         this.renderTagFilters();
@@ -1233,10 +1290,10 @@ export abstract class PanelManagerBase {
 
     // 绑定标签筛选排序顺序按钮事件（防止重复绑定）
     const orderBtn = document.getElementById(this.getTagFilterOrderBtnId());
-    if (orderBtn && !orderBtn.hasAttribute('data-event-bound')) {
-      orderBtn.setAttribute('data-event-bound', 'true');
-      orderBtn.addEventListener('click', () => {
-        const newOrder = this.tagFilterSortOrder === 'asc' ? 'desc' : 'asc';
+    if (orderBtn && !orderBtn.hasAttribute("data-event-bound")) {
+      orderBtn.setAttribute("data-event-bound", "true");
+      orderBtn.addEventListener("click", () => {
+        const newOrder = this.tagFilterSortOrder === "asc" ? "desc" : "asc";
         this.tagFilterSortOrder = newOrder;
         localStorageManager.set(this.storageKeys.tagFilterSortOrder, newOrder);
         if (sortSelect) {
@@ -1248,9 +1305,9 @@ export abstract class PanelManagerBase {
 
     // 绑定反选按钮事件
     const invertBtn = document.getElementById(this.getInvertedFilterBtnId());
-    if (invertBtn && !invertBtn.hasAttribute('data-event-bound')) {
-      invertBtn.setAttribute('data-event-bound', 'true');
-      invertBtn.addEventListener('click', () => this.toggleInvertedFilter());
+    if (invertBtn && !invertBtn.hasAttribute("data-event-bound")) {
+      invertBtn.setAttribute("data-event-bound", "true");
+      invertBtn.addEventListener("click", () => this.toggleInvertedFilter());
     }
   }
 
@@ -1261,10 +1318,15 @@ export abstract class PanelManagerBase {
    * @param sortedTagsWithGroup - 排序后的标签列表
    * @param tagCounts - 标签计数对象
    */
-  async updateTagFilterHeader(specialTags: SpecialTagCount[], groups: ITagGroup[], sortedTagsWithGroup: ITagWithGroup[], tagCounts: Record<string, number>): Promise<void> {
+  async updateTagFilterHeader(
+    specialTags: SpecialTagCount[],
+    groups: ITagGroup[],
+    sortedTagsWithGroup: ITagWithGroup[],
+    tagCounts: Record<string, number>,
+  ): Promise<void> {
     // 使用 CacheManager 缓存 tagsWithGroup 供 renderCollapsedFilter 使用
     const cacheKey = `${this.panelType}TagsWithGroup`;
-    cacheManager.createCache(cacheKey, 10).set('current', sortedTagsWithGroup);
+    cacheManager.createCache(cacheKey, 10).set("current", sortedTagsWithGroup);
 
     TagUI.renderCollapsedFilter({
       containerId: this.getTagFilterHeaderContainerId(),
@@ -1280,7 +1342,7 @@ export abstract class PanelManagerBase {
         const isCtrlPressed = event && (event.ctrlKey || event.metaKey);
         this.handleTagToggle(tag, isCtrlPressed);
         this.afterTagFilterChange();
-      }
+      },
     });
   }
 
@@ -1358,8 +1420,8 @@ export abstract class PanelManagerBase {
   updateInvertedFilterUI(): void {
     const invertBtn = document.getElementById(this.getInvertedFilterBtnId());
     if (invertBtn) {
-      invertBtn.classList.toggle('active', this.invertedFilter);
-      invertBtn.textContent = this.invertedFilter ? '正选' : '反选';
+      invertBtn.classList.toggle("active", this.invertedFilter);
+      invertBtn.textContent = this.invertedFilter ? "正选" : "反选";
     }
   }
 
@@ -1422,7 +1484,7 @@ export abstract class PanelManagerBase {
     const config = this.getUIConfig();
     const container = document.getElementById(config.gridContainerId);
     if (container) {
-      container.style.setProperty('--card-size', `${this.cardSize}px`);
+      container.style.setProperty("--card-size", `${this.cardSize}px`);
     }
   }
 
@@ -1433,7 +1495,7 @@ export abstract class PanelManagerBase {
     batchToolbarMiddle.show(
       this.toolbarContext,
       batchToolbarMiddle.getSelectionCount(this.toolbarContext),
-      () => this.exitBatchMode()
+      () => this.exitBatchMode(),
     );
   }
 
@@ -1453,15 +1515,17 @@ export abstract class PanelManagerBase {
    */
   protected clearAllItemSelectionState(): void {
     // 根据当前面板类型获取选择器
-    const isImagePanel = this.panelType === 'image';
-    const cardSelector = isImagePanel ? '.image-card' : '.prompt-card';
-    const listItemSelector = isImagePanel ? '.list-item--image' : '.list-item--prompt';
-    const compactItemSelector = isImagePanel ? '.list-item--image.list-item--compact' : '.list-item--prompt.list-item--compact';
+    const isImagePanel = this.panelType === "image";
+    const cardSelector = isImagePanel ? ".image-card" : ".prompt-card";
+    const listItemSelector = isImagePanel ? ".list-item--image" : ".list-item--prompt";
+    const compactItemSelector = isImagePanel
+      ? ".list-item--image.list-item--compact"
+      : ".list-item--prompt.list-item--compact";
 
     // 清除网格视图中的卡片选中状态
     document.querySelectorAll(cardSelector).forEach((card) => {
-      card.classList.remove('is-selected');
-      const checkbox = card.querySelector('.card-checkbox') as HTMLInputElement;
+      card.classList.remove("is-selected");
+      const checkbox = card.querySelector(".card-checkbox") as HTMLInputElement;
       if (checkbox) {
         checkbox.checked = false;
       }
@@ -1469,8 +1533,8 @@ export abstract class PanelManagerBase {
 
     // 清除列表视图中的项选中状态
     document.querySelectorAll(listItemSelector).forEach((item) => {
-      item.classList.remove('is-selected');
-      const checkbox = item.querySelector('.list-item__checkbox') as HTMLInputElement;
+      item.classList.remove("is-selected");
+      const checkbox = item.querySelector(".list-item__checkbox") as HTMLInputElement;
       if (checkbox) {
         checkbox.checked = false;
       }
@@ -1478,7 +1542,7 @@ export abstract class PanelManagerBase {
 
     // 清除紧凑视图中的项选中状态
     document.querySelectorAll(compactItemSelector).forEach((item) => {
-      item.classList.remove('is-selected');
+      item.classList.remove("is-selected");
     });
   }
 
@@ -1506,12 +1570,20 @@ export abstract class PanelManagerBase {
    * 根据是否有选中项在容器上添加/移除 selection-mode 类
    */
   protected updateSelectionModeClass(): void {
-    const containerIds = [Constants.Ids.IMAGE_GRID, Constants.Ids.PROMPT_GRID, Constants.Ids.IMAGE_LIST, Constants.Ids.PROMPT_LIST];
+    const containerIds = [
+      Constants.Ids.IMAGE_GRID,
+      Constants.Ids.PROMPT_GRID,
+      Constants.Ids.IMAGE_LIST,
+      Constants.Ids.PROMPT_LIST,
+    ];
 
-    containerIds.forEach(id => {
+    containerIds.forEach((id) => {
       const container = document.getElementById(id);
       if (container) {
-        container.classList.toggle('selection-mode', batchToolbarMiddle.getSelectionCount(this.toolbarContext) > 0);
+        container.classList.toggle(
+          "selection-mode",
+          batchToolbarMiddle.getSelectionCount(this.toolbarContext) > 0,
+        );
       }
     });
   }
@@ -1524,18 +1596,20 @@ export abstract class PanelManagerBase {
     const selectedIds = batchToolbarMiddle.getSelectedIds(this.toolbarContext);
 
     // 根据当前面板类型获取选择器
-    const isImagePanel = this.panelType === 'image';
-    const cardSelector = isImagePanel ? '.image-card' : '.prompt-card';
-    const listItemSelector = isImagePanel ? '.list-item--image' : '.list-item--prompt';
-    const compactItemSelector = isImagePanel ? '.list-item--image.list-item--compact' : '.list-item--prompt.list-item--compact';
+    const isImagePanel = this.panelType === "image";
+    const cardSelector = isImagePanel ? ".image-card" : ".prompt-card";
+    const listItemSelector = isImagePanel ? ".list-item--image" : ".list-item--prompt";
+    const compactItemSelector = isImagePanel
+      ? ".list-item--image.list-item--compact"
+      : ".list-item--prompt.list-item--compact";
 
     // 更新网格视图中的卡片
     document.querySelectorAll(cardSelector).forEach((card) => {
-      const id = card.getAttribute('data-id');
+      const id = card.getAttribute("data-id");
       if (id) {
         const isSelected = selectedIds.has(id);
-        card.classList.toggle('is-selected', isSelected);
-        const checkbox = card.querySelector('.card-checkbox') as HTMLInputElement;
+        card.classList.toggle("is-selected", isSelected);
+        const checkbox = card.querySelector(".card-checkbox") as HTMLInputElement;
         if (checkbox) {
           checkbox.checked = isSelected;
         }
@@ -1544,11 +1618,11 @@ export abstract class PanelManagerBase {
 
     // 更新列表视图中的项
     document.querySelectorAll(listItemSelector).forEach((item) => {
-      const id = item.getAttribute('data-id');
+      const id = item.getAttribute("data-id");
       if (id) {
         const isSelected = selectedIds.has(id);
-        item.classList.toggle('is-selected', isSelected);
-        const checkbox = item.querySelector('.list-item__checkbox') as HTMLInputElement;
+        item.classList.toggle("is-selected", isSelected);
+        const checkbox = item.querySelector(".list-item__checkbox") as HTMLInputElement;
         if (checkbox) {
           checkbox.checked = isSelected;
         }
@@ -1557,9 +1631,9 @@ export abstract class PanelManagerBase {
 
     // 更新紧凑视图中的项
     document.querySelectorAll(compactItemSelector).forEach((item) => {
-      const id = item.getAttribute('data-id');
+      const id = item.getAttribute("data-id");
       if (id) {
-        item.classList.toggle('is-selected', selectedIds.has(id));
+        item.classList.toggle("is-selected", selectedIds.has(id));
       }
     });
   }
@@ -1630,12 +1704,11 @@ export abstract class PanelManagerBase {
       toolbarContext: this.toolbarContext,
       renderView: () => this.renderView(),
       updateSelectionUI: () => this.updateSelectionUI(),
-      items: items
+      items: items,
     };
 
     strategy.bindEvents(container, items, eventContext);
   }
-
 
   /**
    * 处理反选
@@ -1652,9 +1725,11 @@ export abstract class PanelManagerBase {
    * 处理批量删除
    */
   protected async handleBatchDelete(): Promise<void> {
-    const isPrompt = this.panelType === 'prompt';
+    const isPrompt = this.panelType === "prompt";
     await batchToolbarMiddle.executeDelete(this.toolbarContext, {
-      confirmConfig: isPrompt ? DialogConfig.BATCH_DELETE_PROMPTS : DialogConfig.BATCH_DELETE_IMAGES,
+      confirmConfig: isPrompt
+        ? DialogConfig.BATCH_DELETE_PROMPTS
+        : DialogConfig.BATCH_DELETE_IMAGES,
       execute: async (ids) => {
         const result = await (isPrompt
           ? window.electronAPI.softDeletePrompts(ids)
@@ -1671,7 +1746,7 @@ export abstract class PanelManagerBase {
         this.app.showToast?.(msg, type);
       },
       successMessage: (deleted) => {
-        const msg = `${deleted} 个${isPrompt ? '提示词' : '图像'}已删除`;
+        const msg = `${deleted} 个${isPrompt ? "提示词" : "图像"}已删除`;
         return msg;
       },
     });
@@ -1682,9 +1757,9 @@ export abstract class PanelManagerBase {
     if (selectedIds.length === 0) return;
 
     const tagInputResult = await DialogService.showInputDialog({
-      title: '批量添加标签',
-      placeholder: '请输入标签名，多个标签用逗号分隔',
-      autocomplete: this.panelType === 'prompt' ? 'prompt' : 'image'
+      title: "批量添加标签",
+      placeholder: "请输入标签名，多个标签用逗号分隔",
+      autocomplete: this.panelType === "prompt" ? "prompt" : "image",
     });
 
     if (!tagInputResult) return;
@@ -1696,12 +1771,12 @@ export abstract class PanelManagerBase {
     try {
       await batchToolbarMiddle.batchAddTag(this.toolbarContext, selectedIds, tagNames);
       await this.refreshAfterUpdate();
-      this.app.showToast?.(`已为 ${selectedIds.length} 个项目添加标签`, 'success');
+      this.app.showToast?.(`已为 ${selectedIds.length} 个项目添加标签`, "success");
       // 添加成功后退出批量模式
       this.exitBatchMode();
     } catch (error) {
-      window.electronAPI.logError('PanelManagerBase.ts', 'Failed to batch add tag', error);
-      this.app.showToast?.('批量添加标签失败', 'error');
+      window.electronAPI.logError("PanelManagerBase.ts", "Failed to batch add tag", error);
+      this.app.showToast?.("批量添加标签失败", "error");
     }
   }
 
@@ -1716,13 +1791,16 @@ export abstract class PanelManagerBase {
       await batchToolbarMiddle.batchFavorite(this.toolbarContext, selectedIds);
       await this.refreshAfterUpdate();
 
-      const isPrompt = this.panelType === 'prompt';
-      this.app.showToast?.(`已切换 ${selectedIds.length} 个${isPrompt ? '提示词' : '图像'}的收藏状态`, 'success');
+      const isPrompt = this.panelType === "prompt";
+      this.app.showToast?.(
+        `已切换 ${selectedIds.length} 个${isPrompt ? "提示词" : "图像"}的收藏状态`,
+        "success",
+      );
       // 切换成功后退出批量模式
       this.exitBatchMode();
     } catch (error) {
-      window.electronAPI.logError('PanelManagerBase.ts', 'Failed to batch toggle favorite', error);
-      this.app.showToast?.('切换收藏状态失败', 'error');
+      window.electronAPI.logError("PanelManagerBase.ts", "Failed to batch toggle favorite", error);
+      this.app.showToast?.("切换收藏状态失败", "error");
     }
   }
 
@@ -1746,13 +1824,13 @@ export abstract class PanelManagerBase {
     // 从当前项目列表中查找
     const item = this.getItems().find((i: IPanelItem) => String(i.id) === String(itemId));
     if (!item) {
-      throw new Error('项目不存在');
+      throw new Error("项目不存在");
     }
 
     // 检查标签是否已存在
     const currentTags = item.tags || [];
     if (currentTags.includes(tagName)) {
-      throw new Error('该标签已存在');
+      throw new Error("该标签已存在");
     }
 
     // 确定类型
@@ -1762,8 +1840,8 @@ export abstract class PanelManagerBase {
     const tagService = TagService.getInstance();
     const result = await tagService.linkTagsToItem({
       tagNames: [tagName],
-      type: type as 'prompt' | 'image',
-      itemId: item.id
+      type: type as "prompt" | "image",
+      itemId: item.id,
     });
 
     if (result.errors.length > 0) {

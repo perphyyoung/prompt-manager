@@ -1,8 +1,5 @@
 {
-  "jsPlugins": [
-    "./oxlint-rules/custom-rules.js",
-    "eslint-plugin-no-unsanitized"
-  ],
+  "jsPlugins": ["./oxlint-rules/custom-rules.js", "eslint-plugin-no-unsanitized"],
   "ignorePatterns": [
     "out/**",
     "dist/**",

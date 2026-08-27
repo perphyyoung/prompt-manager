@@ -1,5 +1,5 @@
-import { Constants } from '../../constants.ts';
-import { localStorageManager } from '../configs/LocalStorageConfig.ts';
+import { Constants } from "../../constants.ts";
+import { localStorageManager } from "../configs/LocalStorageConfig.ts";
 
 /**
  * SearchSortManager 构造选项
@@ -53,8 +53,8 @@ export class SearchSortManager {
     this.app = options.app;
 
     // 搜索状态
-    this.searchQuery = '';
-    this.imageSearchQuery = '';
+    this.searchQuery = "";
+    this.imageSearchQuery = "";
 
     // 防抖定时器
     this.searchDebounceTimer = null;
@@ -79,33 +79,37 @@ export class SearchSortManager {
    */
   private bindSearchEvents(): void {
     // 提示词搜索
-    const promptSearchInput = document.getElementById(Constants.Ids.PROMPT_SEARCH_INPUT) as HTMLInputElement | null;
+    const promptSearchInput = document.getElementById(
+      Constants.Ids.PROMPT_SEARCH_INPUT,
+    ) as HTMLInputElement | null;
     const clearPromptSearchBtn = document.getElementById(Constants.Ids.CLEAR_PROMPT_SEARCH_BTN);
 
     if (promptSearchInput) {
-      promptSearchInput.addEventListener('input', (e) => {
+      promptSearchInput.addEventListener("input", (e) => {
         this.handlePromptSearch((e.target as HTMLInputElement).value, clearPromptSearchBtn);
       });
     }
 
     if (clearPromptSearchBtn) {
-      clearPromptSearchBtn.addEventListener('click', () => {
+      clearPromptSearchBtn.addEventListener("click", () => {
         this.clearPromptSearch(promptSearchInput, clearPromptSearchBtn);
       });
     }
 
     // 图像搜索
-    const imageSearchInput = document.getElementById(Constants.Ids.IMAGE_SEARCH_INPUT) as HTMLInputElement | null;
+    const imageSearchInput = document.getElementById(
+      Constants.Ids.IMAGE_SEARCH_INPUT,
+    ) as HTMLInputElement | null;
     const clearImageSearchBtn = document.getElementById(Constants.Ids.CLEAR_IMAGE_SEARCH_BTN);
 
     if (imageSearchInput) {
-      imageSearchInput.addEventListener('input', (e) => {
+      imageSearchInput.addEventListener("input", (e) => {
         this.handleImageSearch((e.target as HTMLInputElement).value, clearImageSearchBtn);
       });
     }
 
     if (clearImageSearchBtn) {
-      clearImageSearchBtn.addEventListener('click', () => {
+      clearImageSearchBtn.addEventListener("click", () => {
         this.clearImageSearch(imageSearchInput, clearImageSearchBtn);
       });
     }
@@ -121,7 +125,7 @@ export class SearchSortManager {
     this.searchQuery = value;
 
     if (clearBtn) {
-      clearBtn.style.display = value ? 'flex' : 'none';
+      clearBtn.style.display = value ? "flex" : "none";
     }
 
     this.app.promptPanelManager?.exitBatchMode();
@@ -146,13 +150,13 @@ export class SearchSortManager {
    */
   private clearPromptSearch(input: HTMLInputElement | null, clearBtn: HTMLElement | null): void {
     if (input) {
-      input.value = '';
+      input.value = "";
       input.focus();
     }
-    this.searchQuery = '';
+    this.searchQuery = "";
 
     if (clearBtn) {
-      clearBtn.style.display = 'none';
+      clearBtn.style.display = "none";
     }
 
     this.app.promptPanelManager?.exitBatchMode();
@@ -172,7 +176,7 @@ export class SearchSortManager {
     this.imageSearchQuery = value;
 
     if (clearBtn) {
-      clearBtn.style.display = value ? 'flex' : 'none';
+      clearBtn.style.display = value ? "flex" : "none";
     }
 
     this.app.imagePanelManager?.exitBatchMode();
@@ -197,13 +201,13 @@ export class SearchSortManager {
    */
   private clearImageSearch(input: HTMLInputElement | null, clearBtn: HTMLElement | null): void {
     if (input) {
-      input.value = '';
+      input.value = "";
       input.focus();
     }
-    this.imageSearchQuery = '';
+    this.imageSearchQuery = "";
 
     if (clearBtn) {
-      clearBtn.style.display = 'none';
+      clearBtn.style.display = "none";
     }
 
     this.app.imagePanelManager?.exitBatchMode();
@@ -231,24 +235,28 @@ export class SearchSortManager {
    * @private
    */
   private bindPromptSortEvents(): void {
-    const promptSortSelect = document.getElementById(Constants.Ids.PROMPT_SORT_SELECT) as HTMLSelectElement | null;
+    const promptSortSelect = document.getElementById(
+      Constants.Ids.PROMPT_SORT_SELECT,
+    ) as HTMLSelectElement | null;
     const promptSortReverseBtn = document.getElementById(Constants.Ids.PROMPT_SORT_REVERSE_BTN);
-    const promptCardSizeSlider = document.getElementById(Constants.Ids.PROMPT_CARD_SIZE_SLIDER) as HTMLInputElement | null;
+    const promptCardSizeSlider = document.getElementById(
+      Constants.Ids.PROMPT_CARD_SIZE_SLIDER,
+    ) as HTMLInputElement | null;
 
     if (!this.app.promptPanelManager) return;
 
     // 排序选择
     if (promptSortSelect) {
       promptSortSelect.value = `${this.app.promptPanelManager.sortBy}-${this.app.promptPanelManager.sortOrder}`;
-      promptSortSelect.addEventListener('change', (e) => {
-        const [sortBy, sortOrder] = (e.target as HTMLSelectElement).value.split('-');
+      promptSortSelect.addEventListener("change", (e) => {
+        const [sortBy, sortOrder] = (e.target as HTMLSelectElement).value.split("-");
         this.setPromptSort(sortBy, sortOrder);
       });
     }
 
     // 排序反转
     if (promptSortReverseBtn) {
-      promptSortReverseBtn.addEventListener('click', () => {
+      promptSortReverseBtn.addEventListener("click", () => {
         this.togglePromptSortOrder(promptSortSelect);
       });
     }
@@ -264,14 +272,14 @@ export class SearchSortManager {
    */
   private setupCardSizeSlider(
     slider: HTMLInputElement,
-    manager: { cardSize: number; setCardSize: (size: number) => void }
+    manager: { cardSize: number; setCardSize: (size: number) => void },
   ): void {
     slider.min = String(Constants.CardSize.MIN);
     slider.max = String(Constants.CardSize.MAX);
     slider.step = String(Constants.CardSize.STEP);
     slider.value = String(manager.cardSize);
     manager.setCardSize(manager.cardSize);
-    slider.addEventListener('input', (e) => {
+    slider.addEventListener("input", (e) => {
       manager.setCardSize(parseInt((e.target as HTMLInputElement).value, 10));
     });
     // 注意：不需要 change 事件监听器，因为 setCardSize 内部已经处理了 localStorage 写入
@@ -299,7 +307,7 @@ export class SearchSortManager {
   togglePromptSortOrder(sortSelect: HTMLSelectElement | null): void {
     if (!this.app.promptPanelManager) return;
 
-    const newOrder = this.app.promptPanelManager.sortOrder === 'asc' ? 'desc' : 'asc';
+    const newOrder = this.app.promptPanelManager.sortOrder === "asc" ? "desc" : "asc";
     this.app.promptPanelManager.sortOrder = newOrder;
     localStorageManager.set(Constants.LocalStorageKey.PROMPT_SORT_ORDER, newOrder);
 
@@ -315,24 +323,28 @@ export class SearchSortManager {
    * @private
    */
   private bindImageSortEvents(): void {
-    const imageSortSelect = document.getElementById(Constants.Ids.IMAGE_SORT_SELECT) as HTMLSelectElement | null;
+    const imageSortSelect = document.getElementById(
+      Constants.Ids.IMAGE_SORT_SELECT,
+    ) as HTMLSelectElement | null;
     const imageSortReverseBtn = document.getElementById(Constants.Ids.IMAGE_SORT_REVERSE_BTN);
-    const imageCardSizeSlider = document.getElementById(Constants.Ids.IMAGE_CARD_SIZE_SLIDER) as HTMLInputElement | null;
+    const imageCardSizeSlider = document.getElementById(
+      Constants.Ids.IMAGE_CARD_SIZE_SLIDER,
+    ) as HTMLInputElement | null;
 
     if (!this.app.imagePanelManager) return;
 
     // 排序选择
     if (imageSortSelect) {
       imageSortSelect.value = `${this.app.imagePanelManager.sortBy}-${this.app.imagePanelManager.sortOrder}`;
-      imageSortSelect.addEventListener('change', (e) => {
-        const [sortBy, sortOrder] = (e.target as HTMLSelectElement).value.split('-');
+      imageSortSelect.addEventListener("change", (e) => {
+        const [sortBy, sortOrder] = (e.target as HTMLSelectElement).value.split("-");
         this.setImageSort(sortBy, sortOrder);
       });
     }
 
     // 排序反转
     if (imageSortReverseBtn) {
-      imageSortReverseBtn.addEventListener('click', () => {
+      imageSortReverseBtn.addEventListener("click", () => {
         this.toggleImageSortOrder(imageSortSelect);
       });
     }
@@ -365,7 +377,7 @@ export class SearchSortManager {
   toggleImageSortOrder(sortSelect: HTMLSelectElement | null): void {
     if (!this.app.imagePanelManager) return;
 
-    const newOrder = this.app.imagePanelManager.sortOrder === 'asc' ? 'desc' : 'asc';
+    const newOrder = this.app.imagePanelManager.sortOrder === "asc" ? "desc" : "asc";
     this.app.imagePanelManager.sortOrder = newOrder;
     localStorageManager.set(Constants.LocalStorageKey.IMAGE_SORT_ORDER, newOrder);
 
@@ -398,7 +410,9 @@ export class SearchSortManager {
    */
   setPromptSearchQuery(query: string): void {
     this.searchQuery = query;
-    const input = document.getElementById(Constants.Ids.PROMPT_SEARCH_INPUT) as HTMLInputElement | null;
+    const input = document.getElementById(
+      Constants.Ids.PROMPT_SEARCH_INPUT,
+    ) as HTMLInputElement | null;
     if (input) {
       input.value = query;
     }
@@ -410,7 +424,9 @@ export class SearchSortManager {
    */
   setImageSearchQuery(query: string): void {
     this.imageSearchQuery = query;
-    const input = document.getElementById(Constants.Ids.IMAGE_SEARCH_INPUT) as HTMLInputElement | null;
+    const input = document.getElementById(
+      Constants.Ids.IMAGE_SEARCH_INPUT,
+    ) as HTMLInputElement | null;
     if (input) {
       input.value = query;
     }
@@ -422,11 +438,11 @@ export class SearchSortManager {
   clearAllSearches(): void {
     this.clearPromptSearch(
       document.getElementById(Constants.Ids.PROMPT_SEARCH_INPUT) as HTMLInputElement | null,
-      document.getElementById(Constants.Ids.CLEAR_PROMPT_SEARCH_BTN)
+      document.getElementById(Constants.Ids.CLEAR_PROMPT_SEARCH_BTN),
     );
     this.clearImageSearch(
       document.getElementById(Constants.Ids.IMAGE_SEARCH_INPUT) as HTMLInputElement | null,
-      document.getElementById(Constants.Ids.CLEAR_IMAGE_SEARCH_BTN)
+      document.getElementById(Constants.Ids.CLEAR_IMAGE_SEARCH_BTN),
     );
   }
 }

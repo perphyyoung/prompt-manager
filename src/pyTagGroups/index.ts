@@ -12,7 +12,7 @@
  */
 
 // 主库类
-export { PyTagGroups } from './PyTagGroups.ts';
+export { PyTagGroups } from "./PyTagGroups.ts";
 
 // 类型定义
 export type {
@@ -29,7 +29,7 @@ export type {
   TagCreateOptions,
   TagQueryOptions,
   ValidationResult,
-} from './types.ts';
+} from "./types.ts";
 
 // 异常类
 export {
@@ -39,7 +39,7 @@ export {
   InvalidTagNameError,
   ReservedTagError,
   TagGroupNotFoundError,
-} from './types.ts';
+} from "./types.ts";
 
 // 工具函数（按需导出）
 export {
@@ -51,7 +51,7 @@ export {
   buildTagsWithGroupInfo,
   filterNewTags,
   filterExistingTags,
-} from './utils.ts';
+} from "./utils.ts";
 
 // 验证函数（按需导出）
 export {
@@ -61,7 +61,7 @@ export {
   validateGroupName,
   getReservedTags,
   getAllReservedTags,
-} from './validation.ts';
+} from "./validation.ts";
 
 // 操作函数（高级使用，按需导出）
 export {
@@ -75,20 +75,13 @@ export {
   updateTagGroup,
   deleteTagGroup,
   clearTagsCache,
-} from './operations.ts';
+} from "./operations.ts";
 
 // 数据访问层（高级使用，按需导出）
-export type { TagDataAccess } from './dataAccess.ts';
-export { ElectronTagDataAccess, createDataAccess } from './dataAccess.ts';
+export type { TagDataAccess } from "./dataAccess.ts";
+export { ElectronTagDataAccess, createDataAccess } from "./dataAccess.ts";
 
 // 项目标签关联服务
-export {
-  linkTags,
-  addTagsToItems,
-  parseAndAddTags
-} from './itemTagService.ts';
+export { linkTags, addTagsToItems, parseAndAddTags } from "./itemTagService.ts";
 
-export type {
-  LinkTagsOptions,
-  LinkTagsResult
-} from './itemTagService.ts';
+export type { LinkTagsOptions, LinkTagsResult } from "./itemTagService.ts";

@@ -3,17 +3,17 @@
  * 集中注册所有 LocalStorage 配置项
  */
 
-import { localStorageManager } from '../../utils/LocalStorageManager';
-import { Constants } from '../../constants';
+import { localStorageManager } from "../../utils/LocalStorageManager";
+import { Constants } from "../../constants";
 
 /**
  * 主题配置
  */
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.THEME,
-  defaultValue: 'dark',
-  parser: (value) => value === 'light' ? 'light' : 'dark',
-  validator: (value) => value === 'light' || value === 'dark'
+  defaultValue: "dark",
+  parser: (value) => (value === "light" ? "light" : "dark"),
+  validator: (value) => value === "light" || value === "dark",
 });
 
 /**
@@ -21,7 +21,7 @@ localStorageManager.registerConfig({
  */
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.CARD_TEXT_COLOR,
-  defaultValue: '#ffffff'
+  defaultValue: "#ffffff",
 });
 
 /**
@@ -29,7 +29,7 @@ localStorageManager.registerConfig({
  */
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.FONT_FAMILY,
-  defaultValue: Constants.FontFamily.DEFAULT
+  defaultValue: Constants.FontFamily.DEFAULT,
 });
 
 /**
@@ -40,7 +40,7 @@ localStorageManager.registerConfig({
   defaultValue: Constants.FontSize.DEFAULT,
   parser: (value) => parseFloat(value),
   serializer: (value) => String(value),
-  validator: (value) => value >= Constants.FontSize.MIN && value <= Constants.FontSize.MAX
+  validator: (value) => value >= Constants.FontSize.MIN && value <= Constants.FontSize.MAX,
 });
 
 /**
@@ -49,7 +49,7 @@ localStorageManager.registerConfig({
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.VIEW_MODE,
   defaultValue: Constants.ViewMode.SAFE,
-  validator: (value) => value === Constants.ViewMode.SAFE || value === Constants.ViewMode.NSFW
+  validator: (value) => value === Constants.ViewMode.SAFE || value === Constants.ViewMode.NSFW,
 });
 
 /**
@@ -57,7 +57,7 @@ localStorageManager.registerConfig({
  */
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.CURRENT_PANEL,
-  defaultValue: 'prompt'
+  defaultValue: "prompt",
 });
 
 /**
@@ -66,8 +66,8 @@ localStorageManager.registerConfig({
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.SIDEBAR_COLLAPSED,
   defaultValue: false,
-  parser: (value) => value === 'true',
-  serializer: (value) => String(value)
+  parser: (value) => value === "true",
+  serializer: (value) => String(value),
 });
 
 /**
@@ -75,13 +75,13 @@ localStorageManager.registerConfig({
  */
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.PROMPT_SORT_BY,
-  defaultValue: 'updatedAt'
+  defaultValue: "updatedAt",
 });
 
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.PROMPT_SORT_ORDER,
-  defaultValue: 'desc',
-  validator: (value) => value === 'asc' || value === 'desc'
+  defaultValue: "desc",
+  validator: (value) => value === "asc" || value === "desc",
 });
 
 /**
@@ -89,13 +89,13 @@ localStorageManager.registerConfig({
  */
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.IMAGE_SORT_BY,
-  defaultValue: 'updatedAt'
+  defaultValue: "updatedAt",
 });
 
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.IMAGE_SORT_ORDER,
-  defaultValue: 'desc',
-  validator: (value) => value === 'asc' || value === 'desc'
+  defaultValue: "desc",
+  validator: (value) => value === "asc" || value === "desc",
 });
 
 /**
@@ -106,7 +106,7 @@ localStorageManager.registerConfig({
   defaultValue: Constants.CardSize.DEFAULT,
   parser: (value) => parseInt(value, 10),
   serializer: (value) => String(value),
-  validator: (value) => value >= Constants.CardSize.MIN && value <= Constants.CardSize.MAX
+  validator: (value) => value >= Constants.CardSize.MIN && value <= Constants.CardSize.MAX,
 });
 
 localStorageManager.registerConfig({
@@ -114,7 +114,7 @@ localStorageManager.registerConfig({
   defaultValue: Constants.CardSize.DEFAULT,
   parser: (value) => parseInt(value, 10),
   serializer: (value) => String(value),
-  validator: (value) => value >= Constants.CardSize.MIN && value <= Constants.CardSize.MAX
+  validator: (value) => value >= Constants.CardSize.MIN && value <= Constants.CardSize.MAX,
 });
 
 /**
@@ -123,8 +123,8 @@ localStorageManager.registerConfig({
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.CARDS_INFO_VISIBLE,
   defaultValue: true,
-  parser: (value) => value !== 'false',
-  serializer: (value) => String(value)
+  parser: (value) => value !== "false",
+  serializer: (value) => String(value),
 });
 
 /**
@@ -132,24 +132,24 @@ localStorageManager.registerConfig({
  */
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.PROMPT_TAG_FILTER_SORT_BY,
-  defaultValue: 'count'
+  defaultValue: "count",
 });
 
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.PROMPT_TAG_FILTER_SORT_ORDER,
-  defaultValue: 'desc',
-  validator: (value) => value === 'asc' || value === 'desc'
+  defaultValue: "desc",
+  validator: (value) => value === "asc" || value === "desc",
 });
 
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.IMAGE_TAG_FILTER_SORT_BY,
-  defaultValue: 'count'
+  defaultValue: "count",
 });
 
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.IMAGE_TAG_FILTER_SORT_ORDER,
-  defaultValue: 'desc',
-  validator: (value) => value === 'asc' || value === 'desc'
+  defaultValue: "desc",
+  validator: (value) => value === "asc" || value === "desc",
 });
 
 /**
@@ -157,24 +157,24 @@ localStorageManager.registerConfig({
  */
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.PROMPT_TAG_SORT_BY,
-  defaultValue: 'count'
+  defaultValue: "count",
 });
 
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.PROMPT_TAG_SORT_ORDER,
-  defaultValue: 'desc',
-  validator: (value) => value === 'asc' || value === 'desc'
+  defaultValue: "desc",
+  validator: (value) => value === "asc" || value === "desc",
 });
 
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.IMAGE_TAG_SORT_BY,
-  defaultValue: 'count'
+  defaultValue: "count",
 });
 
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.IMAGE_TAG_SORT_ORDER,
-  defaultValue: 'desc',
-  validator: (value) => value === 'asc' || value === 'desc'
+  defaultValue: "desc",
+  validator: (value) => value === "asc" || value === "desc",
 });
 
 /**
@@ -182,13 +182,13 @@ localStorageManager.registerConfig({
  */
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_BY,
-  defaultValue: 'updatedAt'
+  defaultValue: "updatedAt",
 });
 
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_ORDER,
-  defaultValue: 'desc',
-  validator: (value) => value === 'asc' || value === 'desc'
+  defaultValue: "desc",
+  validator: (value) => value === "asc" || value === "desc",
 });
 
 /**
@@ -197,15 +197,15 @@ localStorageManager.registerConfig({
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.PROMPT_TAG_FILTER_COLLAPSED,
   defaultValue: false,
-  parser: (value) => value === 'true',
-  serializer: (value) => String(value)
+  parser: (value) => value === "true",
+  serializer: (value) => String(value),
 });
 
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.IMAGE_TAG_FILTER_COLLAPSED,
   defaultValue: false,
-  parser: (value) => value === 'true',
-  serializer: (value) => String(value)
+  parser: (value) => value === "true",
+  serializer: (value) => String(value),
 });
 
 /**
@@ -213,7 +213,7 @@ localStorageManager.registerConfig({
  */
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.PROMPT_VIEW_MODE,
-  defaultValue: 'grid'
+  defaultValue: "grid",
 });
 
 /**
@@ -221,7 +221,7 @@ localStorageManager.registerConfig({
  */
 localStorageManager.registerConfig({
   key: Constants.LocalStorageKey.IMAGE_VIEW_MODE,
-  defaultValue: 'grid'
+  defaultValue: "grid",
 });
 
 // 导出已配置的 localStorageManager 实例

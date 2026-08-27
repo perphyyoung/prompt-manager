@@ -7,10 +7,10 @@ export class DatabaseError extends Error {
     message: string,
     public readonly code: DatabaseErrorCode,
     public readonly originalError?: Error,
-    public readonly context?: Record<string, unknown>
+    public readonly context?: Record<string, unknown>,
   ) {
     super(message);
-    this.name = 'DatabaseError';
+    this.name = "DatabaseError";
 
     // 保持原型链
     Object.setPrototypeOf(this, DatabaseError.prototype);
@@ -30,7 +30,7 @@ export class DatabaseError extends Error {
       code: this.code,
       context: filteredContext,
       stack: this.stack,
-      originalError: this.originalError?.message
+      originalError: this.originalError?.message,
     };
   }
 
@@ -38,19 +38,19 @@ export class DatabaseError extends Error {
    * 清理上下文中的敏感数据
    */
   private sanitizeContext(context: Record<string, unknown>): Record<string, unknown> {
-    const sensitiveKeys = ['password', 'token', 'secret', 'key', 'auth'];
+    const sensitiveKeys = ["password", "token", "secret", "key", "auth"];
     const sanitized: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(context)) {
       const lowerKey = key.toLowerCase();
-      if (sensitiveKeys.some(sk => lowerKey.includes(sk))) {
-        sanitized[key] = '***';
-      } else if (key === 'params' && Array.isArray(value)) {
+      if (sensitiveKeys.some((sk) => lowerKey.includes(sk))) {
+        sanitized[key] = "***";
+      } else if (key === "params" && Array.isArray(value)) {
         // 对 params 数组也进行敏感数据过滤
         sanitized[key] = value.map((param) => {
-          if (typeof param === 'string' && param.length > 100) {
+          if (typeof param === "string" && param.length > 100) {
             // 截断过长的参数
-            return param.substring(0, 100) + '...';
+            return param.substring(0, 100) + "...";
           }
           return param;
         });
@@ -68,21 +68,21 @@ export class DatabaseError extends Error {
  */
 export enum DatabaseErrorCode {
   // 连接错误
-  DB_NOT_INITIALIZED = 'DB_NOT_INITIALIZED',
-  CONNECTION_FAILED = 'CONNECTION_FAILED',
+  DB_NOT_INITIALIZED = "DB_NOT_INITIALIZED",
+  CONNECTION_FAILED = "CONNECTION_FAILED",
 
   // SQL 执行错误
-  SQL_ERROR = 'SQL_ERROR',
-  CONSTRAINT_VIOLATION = 'CONSTRAINT_VIOLATION',
+  SQL_ERROR = "SQL_ERROR",
+  CONSTRAINT_VIOLATION = "CONSTRAINT_VIOLATION",
 
   // 业务逻辑错误
-  DUPLICATE_NAME = 'DUPLICATE_NAME',
-  ENTITY_NOT_FOUND = 'ENTITY_NOT_FOUND',
-  INVALID_OPERATION = 'INVALID_OPERATION',
+  DUPLICATE_NAME = "DUPLICATE_NAME",
+  ENTITY_NOT_FOUND = "ENTITY_NOT_FOUND",
+  INVALID_OPERATION = "INVALID_OPERATION",
 
   // 事务错误
-  TRANSACTION_FAILED = 'TRANSACTION_FAILED',
-  ROLLBACK_FAILED = 'ROLLBACK_FAILED'
+  TRANSACTION_FAILED = "TRANSACTION_FAILED",
+  ROLLBACK_FAILED = "ROLLBACK_FAILED",
 }
 
 /**
@@ -90,13 +90,11 @@ export enum DatabaseErrorCode {
  */
 export class DuplicateNameError extends DatabaseError {
   constructor(entity: string, name: string) {
-    super(
-      `${entity} 名称 "${name}" 已存在`,
-      DatabaseErrorCode.DUPLICATE_NAME,
-      undefined,
-      { entity, name }
-    );
-    this.name = 'DuplicateNameError';
+    super(`${entity} 名称 "${name}" 已存在`, DatabaseErrorCode.DUPLICATE_NAME, undefined, {
+      entity,
+      name,
+    });
+    this.name = "DuplicateNameError";
     Object.setPrototypeOf(this, DuplicateNameError.prototype);
   }
 }
@@ -106,13 +104,11 @@ export class DuplicateNameError extends DatabaseError {
  */
 export class EntityNotFoundError extends DatabaseError {
   constructor(entity: string, id: string) {
-    super(
-      `${entity} (ID: ${id}) 不存在`,
-      DatabaseErrorCode.ENTITY_NOT_FOUND,
-      undefined,
-      { entity, id }
-    );
-    this.name = 'EntityNotFoundError';
+    super(`${entity} (ID: ${id}) 不存在`, DatabaseErrorCode.ENTITY_NOT_FOUND, undefined, {
+      entity,
+      id,
+    });
+    this.name = "EntityNotFoundError";
     Object.setPrototypeOf(this, EntityNotFoundError.prototype);
   }
 }
@@ -123,16 +119,11 @@ export class EntityNotFoundError extends DatabaseError {
 export class ConstraintViolationError extends DatabaseError {
   constructor(
     message: string,
-    public readonly constraintType: 'UNIQUE' | 'FOREIGN_KEY' | 'CHECK' | 'NOT_NULL',
-    originalError?: Error
+    public readonly constraintType: "UNIQUE" | "FOREIGN_KEY" | "CHECK" | "NOT_NULL",
+    originalError?: Error,
   ) {
-    super(
-      message,
-      DatabaseErrorCode.CONSTRAINT_VIOLATION,
-      originalError,
-      { constraintType }
-    );
-    this.name = 'ConstraintViolationError';
+    super(message, DatabaseErrorCode.CONSTRAINT_VIOLATION, originalError, { constraintType });
+    this.name = "ConstraintViolationError";
     Object.setPrototypeOf(this, ConstraintViolationError.prototype);
   }
 }
@@ -151,6 +142,8 @@ export function isDatabaseError(error: unknown): error is DatabaseError {
 export function isConstraintError(error: unknown): boolean {
   if (!isDatabaseError(error)) return false;
   // 检查错误码或错误类型
-  return error.code === DatabaseErrorCode.CONSTRAINT_VIOLATION ||
-         error.name === 'ConstraintViolationError';
+  return (
+    error.code === DatabaseErrorCode.CONSTRAINT_VIOLATION ||
+    error.name === "ConstraintViolationError"
+  );
 }

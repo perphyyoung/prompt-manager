@@ -17,10 +17,10 @@ import {
   parseTagInput,
   TagGroup,
   Tag,
-  PyTagGroups
-} from '../../pyTagGroups/index.ts';
-import { createDataAccess } from '../../pyTagGroups/dataAccess.ts';
-import { Events } from '../../constants.ts';
+  PyTagGroups,
+} from "../../pyTagGroups/index.ts";
+import { createDataAccess } from "../../pyTagGroups/dataAccess.ts";
+import { Events } from "../../constants.ts";
 
 // ========== 选项类型 ==========
 
@@ -121,7 +121,7 @@ export class TagService {
         success: true,
         created: [],
         skipped: [],
-        errors: []
+        errors: [],
       };
     }
 
@@ -180,7 +180,7 @@ export class TagService {
         skipped: [],
         errors: [],
         linkedToItem: false,
-        linkedItemCount: 0
+        linkedItemCount: 0,
       };
     }
 
@@ -194,7 +194,7 @@ export class TagService {
     const linkResult = await linkTags({
       tagNames: names,
       type,
-      itemIds: uniqueIds.length > 0 ? uniqueIds : undefined
+      itemIds: uniqueIds.length > 0 ? uniqueIds : undefined,
     });
 
     // 4. 触发事件和缓存更新
@@ -205,7 +205,7 @@ export class TagService {
     return {
       ...linkResult,
       linkedToItem: uniqueIds.length > 0,
-      linkedItemCount: uniqueIds.length
+      linkedItemCount: uniqueIds.length,
     };
   }
 
@@ -238,7 +238,7 @@ export class TagService {
 
       return true;
     } catch (error) {
-      window.electronAPI.logError('TagService', 'Failed to unlink tag from item:', error);
+      window.electronAPI.logError("TagService", "Failed to unlink tag from item:", error);
       return false;
     }
   }
@@ -391,10 +391,13 @@ export class TagService {
    * @returns 标签使用次数映射
    */
   static countTagUsage(tags: string[], items: Array<{ tags?: string[] }>): Record<string, number> {
-    return tags.reduce((counts, tag) => {
-      counts[tag] = items.filter((item) => item.tags?.includes(tag)).length;
-      return counts;
-    }, {} as Record<string, number>);
+    return tags.reduce(
+      (counts, tag) => {
+        counts[tag] = items.filter((item) => item.tags?.includes(tag)).length;
+        return counts;
+      },
+      {} as Record<string, number>,
+    );
   }
 
   // ========== 私有方法 ==========
@@ -407,14 +410,10 @@ export class TagService {
    */
   private parseAndNormalizeTagNames(tagNames: string | string[]): string[] {
     // 1. 如果是字符串，使用 parseTagInput 解析
-    const names = typeof tagNames === 'string'
-      ? parseTagInput(tagNames)
-      : tagNames;
+    const names = typeof tagNames === "string" ? parseTagInput(tagNames) : tagNames;
 
     // 2. 标准化处理
-    return names
-      .map(n => n.trim())
-      .filter(n => n.length > 0);
+    return names.map((n) => n.trim()).filter((n) => n.length > 0);
   }
 
   /**
@@ -423,7 +422,7 @@ export class TagService {
   private emitItemsChanged(type: DataType): void {
     if (!this.eventBus) return;
 
-    if (type === 'prompt') {
+    if (type === "prompt") {
       this.eventBus.emit(Events.PROMPTS_CHANGED);
     } else {
       this.eventBus.emit(Events.IMAGES_CHANGED);

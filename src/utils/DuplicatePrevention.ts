@@ -1,4 +1,4 @@
-import { logger } from './Logger.ts';
+import { logger } from "./Logger.ts";
 /**
  * 防重复提交工具
  * 提供装饰器和辅助函数防止重复提交
@@ -17,13 +17,15 @@ interface DuplicatePreventionOptions {
 /**
  * 带防重复提交功能的方法类型
  */
-type MethodWithDuplicatePrevention<T, Args extends unknown[], R> =
-  ((this: T, ...args: Args) => Promise<R>) & {
-    /** 是否正在执行中 */
-    _isExecuting?: boolean;
-    /** 重置执行状态 */
-    _resetExecution?: () => void;
-  };
+type MethodWithDuplicatePrevention<T, Args extends unknown[], R> = ((
+  this: T,
+  ...args: Args
+) => Promise<R>) & {
+  /** 是否正在执行中 */
+  _isExecuting?: boolean;
+  /** 重置执行状态 */
+  _resetExecution?: () => void;
+};
 
 /**
  * 防重复提交装饰器
@@ -41,25 +43,22 @@ type MethodWithDuplicatePrevention<T, Args extends unknown[], R> =
  * @returns 装饰器函数
  */
 export function withDuplicatePrevention<T, Args extends unknown[], R>(
-  options: DuplicatePreventionOptions = {}
+  options: DuplicatePreventionOptions = {},
 ): (
   target: MethodWithDuplicatePrevention<T, Args, R>,
-  context: ClassMethodDecoratorContext<T, MethodWithDuplicatePrevention<T, Args, R>>
+  context: ClassMethodDecoratorContext<T, MethodWithDuplicatePrevention<T, Args, R>>,
 ) => MethodWithDuplicatePrevention<T, Args, R> {
-  const { errorMessage = '操作正在进行中，请稍候...', autoReset = true } = options;
+  const { errorMessage = "操作正在进行中，请稍候...", autoReset = true } = options;
 
   return function (
     target: MethodWithDuplicatePrevention<T, Args, R>,
-    _context: ClassMethodDecoratorContext<T, MethodWithDuplicatePrevention<T, Args, R>>
+    _context: ClassMethodDecoratorContext<T, MethodWithDuplicatePrevention<T, Args, R>>,
   ): MethodWithDuplicatePrevention<T, Args, R> {
     let isExecuting = false;
 
-    const wrappedMethod = async function (
-      this: T,
-      ...args: Args
-    ): Promise<R | undefined> {
+    const wrappedMethod = async function (this: T, ...args: Args): Promise<R | undefined> {
       if (isExecuting) {
-        logger.warn('DuplicatePrevention', errorMessage);
+        logger.warn("DuplicatePrevention", errorMessage);
         return undefined;
       }
 
@@ -99,14 +98,14 @@ export function withDuplicatePrevention<T, Args extends unknown[], R>(
  */
 export function wrapWithDuplicatePrevention<T, Args extends unknown[], R>(
   fn: (this: T, ...args: Args) => Promise<R>,
-  options: DuplicatePreventionOptions = {}
+  options: DuplicatePreventionOptions = {},
 ): (this: T, ...args: Args) => Promise<R | undefined> {
-  const { errorMessage = '操作正在进行中，请稍候...', autoReset = true } = options;
+  const { errorMessage = "操作正在进行中，请稍候...", autoReset = true } = options;
   let isExecuting = false;
 
   return async function (this: T, ...args: Args): Promise<R | undefined> {
     if (isExecuting) {
-      logger.warn('DuplicatePrevention', errorMessage);
+      logger.warn("DuplicatePrevention", errorMessage);
       return undefined;
     }
 
@@ -150,12 +149,12 @@ export function createDuplicatePreventionExecutor() {
      */
     async execute<R>(
       fn: () => Promise<R>,
-      options: DuplicatePreventionOptions = {}
+      options: DuplicatePreventionOptions = {},
     ): Promise<R | undefined> {
-      const { errorMessage = '操作正在进行中，请稍候...' } = options;
+      const { errorMessage = "操作正在进行中，请稍候..." } = options;
 
       if (isExecuting) {
-        logger.warn('DuplicatePrevention', errorMessage);
+        logger.warn("DuplicatePrevention", errorMessage);
         return undefined;
       }
 
@@ -181,7 +180,7 @@ export function createDuplicatePreventionExecutor() {
      */
     get isExecuting(): boolean {
       return isExecuting;
-    }
+    },
   };
 }
 
@@ -192,7 +191,7 @@ export interface IDuplicatePrevention {
   executeWithPrevention<R>(
     operationKey: string,
     fn: () => Promise<R>,
-    options?: DuplicatePreventionOptions
+    options?: DuplicatePreventionOptions,
   ): Promise<R | undefined>;
   resetPreventionState(operationKey: string): void;
   resetAllPreventionStates(): void;
@@ -212,10 +211,13 @@ export interface IDuplicatePrevention {
  * }
  */
 export function DuplicatePreventionMixin<T extends new (...args: any[]) => object>(
-  Base: T
+  Base: T,
 ): T & (new (...args: any[]) => IDuplicatePrevention) {
   return class extends Base implements IDuplicatePrevention {
-    private _duplicatePreventionExecutors = new Map<string, ReturnType<typeof createDuplicatePreventionExecutor>>();
+    private _duplicatePreventionExecutors = new Map<
+      string,
+      ReturnType<typeof createDuplicatePreventionExecutor>
+    >();
 
     constructor(...args: any[]) {
       super(...args);
@@ -231,7 +233,7 @@ export function DuplicatePreventionMixin<T extends new (...args: any[]) => objec
     executeWithPrevention<R>(
       operationKey: string,
       fn: () => Promise<R>,
-      options: DuplicatePreventionOptions = {}
+      options: DuplicatePreventionOptions = {},
     ): Promise<R | undefined> {
       if (!this._duplicatePreventionExecutors.has(operationKey)) {
         this._duplicatePreventionExecutors.set(operationKey, createDuplicatePreventionExecutor());
@@ -256,7 +258,7 @@ export function DuplicatePreventionMixin<T extends new (...args: any[]) => objec
      * 重置所有操作的执行状态
      */
     resetAllPreventionStates(): void {
-      this._duplicatePreventionExecutors.forEach(executor => executor.reset());
+      this._duplicatePreventionExecutors.forEach((executor) => executor.reset());
     }
   } as T & (new (...args: any[]) => IDuplicatePrevention);
 }

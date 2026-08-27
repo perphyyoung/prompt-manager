@@ -1,4 +1,4 @@
-import { vi, MockedFunction } from 'vitest';
+import { vi, MockedFunction } from "vitest";
 
 interface IPanelManagerOptions {
   selectedIds?: string[];
@@ -28,19 +28,19 @@ interface IEventBus {
 export const createMockPanelManager = (options: IPanelManagerOptions = {}): IPanelManager => ({
   selectedIds: new Set(options.selectedIds ?? []),
   app: {
-    showToast: vi.fn()
+    showToast: vi.fn(),
   },
   renderView: vi.fn(),
   toolbarController: {
     updateUI: vi.fn(),
-    exitBatchMode: vi.fn()
+    exitBatchMode: vi.fn(),
   },
   loadData: vi.fn().mockResolvedValue(undefined),
   batchInvert: vi.fn(),
   batchCancel: vi.fn(),
-  ...(options as Omit<IPanelManagerOptions, 'selectedIds'>)
+  ...(options as Omit<IPanelManagerOptions, "selectedIds">),
 });
 
 export const createMockEventBus = (): IEventBus => ({
-  emit: vi.fn()
+  emit: vi.fn(),
 });

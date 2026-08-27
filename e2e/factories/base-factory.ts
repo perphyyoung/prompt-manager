@@ -65,12 +65,17 @@ export abstract class BaseTestDataFactory<T> {
   /**
    * 获取现有标签组列表（子类实现）
    */
-  protected abstract _getTagGroups(): Promise<Array<{ id: number; name: string; sortOrder: number }>>;
+  protected abstract _getTagGroups(): Promise<
+    Array<{ id: number; name: string; sortOrder: number }>
+  >;
 
   /**
    * 调用创建标签组 API（子类实现）
    */
-  protected abstract _createTagGroupApi(name: string, sortOrder: number): Promise<{ id: number; name: string; sortOrder: number } | null>;
+  protected abstract _createTagGroupApi(
+    name: string,
+    sortOrder: number,
+  ): Promise<{ id: number; name: string; sortOrder: number } | null>;
 
   /**
    * 将标签分配到标签组（子类实现）
@@ -82,14 +87,15 @@ export abstract class BaseTestDataFactory<T> {
    * @param name - 组名称
    * @param isTop - 是否为首位组（true 时自动取现有最小 sortOrder - 1）
    */
-  async createTagGroup(name: string, isTop?: boolean): Promise<{ id: number; name: string; sortOrder: number }> {
+  async createTagGroup(
+    name: string,
+    isTop?: boolean,
+  ): Promise<{ id: number; name: string; sortOrder: number }> {
     let finalSortOrder = 0;
 
     if (isTop) {
       const groups = await this._getTagGroups();
-      const minSortOrder = groups.length > 0
-        ? Math.min(...groups.map((g) => g.sortOrder))
-        : 0;
+      const minSortOrder = groups.length > 0 ? Math.min(...groups.map((g) => g.sortOrder)) : 0;
       finalSortOrder = minSortOrder - 1;
     }
 
@@ -109,7 +115,11 @@ export abstract class BaseTestDataFactory<T> {
    * @param isTop - 是否为首位组
    * @returns 创建的标签组信息和标签名
    */
-  async createTagInGroup(groupName: string, tagLabel: string, isTop?: boolean): Promise<{ group: { id: number; name: string; sortOrder: number }; tagName: string }> {
+  async createTagInGroup(
+    groupName: string,
+    tagLabel: string,
+    isTop?: boolean,
+  ): Promise<{ group: { id: number; name: string; sortOrder: number }; tagName: string }> {
     const tagName = this.generateName(tagLabel);
     await this.createTag(tagName);
     const group = await this.createTagGroup(groupName, isTop);

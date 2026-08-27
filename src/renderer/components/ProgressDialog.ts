@@ -3,7 +3,7 @@
  * 用于显示长时间操作的进度
  */
 
-import { Constants } from '../../constants';
+import { Constants } from "../../constants";
 
 export interface ProgressDialogOptions {
   title?: string;
@@ -47,9 +47,15 @@ export class ProgressDialog {
     this.statusEl = document.getElementById(Constants.Ids.PROGRESS_STATUS);
     this.detailEl = document.getElementById(Constants.Ids.PROGRESS_DETAIL);
     this.timeEl = document.getElementById(Constants.Ids.PROGRESS_TIME);
-    this.cancelBtn = document.getElementById(Constants.Ids.CANCEL_PROGRESS_BTN) as HTMLButtonElement | null;
-    this.closeBtn = document.getElementById(Constants.Ids.CLOSE_PROGRESS_DIALOG) as HTMLButtonElement | null;
-    this.closeProgressBtn = document.getElementById(Constants.Ids.CLOSE_PROGRESS_BTN) as HTMLButtonElement | null;
+    this.cancelBtn = document.getElementById(
+      Constants.Ids.CANCEL_PROGRESS_BTN,
+    ) as HTMLButtonElement | null;
+    this.closeBtn = document.getElementById(
+      Constants.Ids.CLOSE_PROGRESS_DIALOG,
+    ) as HTMLButtonElement | null;
+    this.closeProgressBtn = document.getElementById(
+      Constants.Ids.CLOSE_PROGRESS_BTN,
+    ) as HTMLButtonElement | null;
     this.actionsEl = document.getElementById(Constants.Ids.PROGRESS_ACTIONS);
 
     this.bindEvents();
@@ -60,11 +66,11 @@ export class ProgressDialog {
    * @private
    */
   private bindEvents(): void {
-    this.cancelBtn?.addEventListener('click', () => {
+    this.cancelBtn?.addEventListener("click", () => {
       this.handleCancel();
     });
 
-    this.closeBtn?.addEventListener('click', () => {
+    this.closeBtn?.addEventListener("click", () => {
       this.hide();
       // 触发完成回调
       if (this.onCompleteCallback) {
@@ -73,7 +79,7 @@ export class ProgressDialog {
       }
     });
 
-    this.closeProgressBtn?.addEventListener('click', () => {
+    this.closeProgressBtn?.addEventListener("click", () => {
       this.hide();
       // 触发完成回调
       if (this.onCompleteCallback) {
@@ -83,7 +89,7 @@ export class ProgressDialog {
     });
 
     // 点击背景关闭（可选）
-    this.dialog?.addEventListener('click', (e: Event) => {
+    this.dialog?.addEventListener("click", (e: Event) => {
       if (e.target === this.dialog && !this.isInProgress()) {
         this.hide();
         // 触发完成回调
@@ -120,28 +126,28 @@ export class ProgressDialog {
     // 重置进度
     this.updateProgress(0);
     if (this.detailEl) {
-      this.detailEl.textContent = '';
+      this.detailEl.textContent = "";
     }
     if (this.timeEl) {
-      this.timeEl.textContent = '';
+      this.timeEl.textContent = "";
     }
 
     // 显示取消按钮，隐藏关闭按钮
     if (this.cancelBtn) {
-      this.cancelBtn.style.display = 'block';
+      this.cancelBtn.style.display = "block";
       this.cancelBtn.disabled = false;
-      this.cancelBtn.textContent = '取消';
+      this.cancelBtn.textContent = "取消";
     }
     if (this.closeBtn) {
-      this.closeBtn.style.display = 'none';
+      this.closeBtn.style.display = "none";
     }
     if (this.closeProgressBtn) {
-      this.closeProgressBtn.style.display = 'none';
+      this.closeProgressBtn.style.display = "none";
     }
 
     // 显示对话框
-    this.dialog.style.display = 'flex';
-    this.dialog.classList.add('active');
+    this.dialog.style.display = "flex";
+    this.dialog.classList.add("active");
 
     // 开始更新时间
     this.startTimeUpdate();
@@ -154,8 +160,8 @@ export class ProgressDialog {
     if (!this.dialog) return;
 
     this.isVisible = false;
-    this.dialog.style.display = 'none';
-    this.dialog.classList.remove('active');
+    this.dialog.style.display = "none";
+    this.dialog.classList.remove("active");
     this.stopTimeUpdate();
   }
 
@@ -203,23 +209,23 @@ export class ProgressDialog {
    * 完成操作
    * @param message - 完成消息
    */
-  complete(message = '完成'): void {
+  complete(message = "完成"): void {
     this.updateProgress(100);
 
     // 更新状态消息，支持换行
     if (this.statusEl) {
-      this.statusEl.innerHTML = message.replace(/\n/g, '<br>');
+      this.statusEl.innerHTML = message.replace(/\n/g, "<br>");
     }
 
     // 隐藏取消按钮，显示关闭按钮
     if (this.cancelBtn) {
-      this.cancelBtn.style.display = 'none';
+      this.cancelBtn.style.display = "none";
     }
     if (this.closeBtn) {
-      this.closeBtn.style.display = 'block';
+      this.closeBtn.style.display = "block";
     }
     if (this.closeProgressBtn) {
-      this.closeProgressBtn.style.display = 'block';
+      this.closeProgressBtn.style.display = "block";
     }
 
     this.stopTimeUpdate();
@@ -231,21 +237,21 @@ export class ProgressDialog {
    * @param message - 错误消息
    */
   error(message: string): void {
-    this.updateProgress(0, '出错', message);
+    this.updateProgress(0, "出错", message);
 
     if (this.fillEl) {
-      this.fillEl.style.background = 'var(--danger-color)';
+      this.fillEl.style.background = "var(--danger-color)";
     }
 
     // 隐藏取消按钮，显示关闭按钮
     if (this.cancelBtn) {
-      this.cancelBtn.style.display = 'none';
+      this.cancelBtn.style.display = "none";
     }
     if (this.closeBtn) {
-      this.closeBtn.style.display = 'block';
+      this.closeBtn.style.display = "block";
     }
     if (this.closeProgressBtn) {
-      this.closeProgressBtn.style.display = 'block';
+      this.closeProgressBtn.style.display = "block";
     }
 
     this.stopTimeUpdate();
@@ -263,10 +269,10 @@ export class ProgressDialog {
     // 禁用取消按钮，显示取消中状态
     if (this.cancelBtn) {
       this.cancelBtn.disabled = true;
-      this.cancelBtn.textContent = '正在取消...';
+      this.cancelBtn.textContent = "正在取消...";
     }
 
-    this.updateProgress(0, '正在取消...');
+    this.updateProgress(0, "正在取消...");
   }
 
   /**
@@ -310,7 +316,7 @@ export class ProgressDialog {
    * @returns 是否正在进行
    */
   isInProgress(): boolean {
-    return this.isVisible && this.cancelBtn !== null && this.cancelBtn.style.display !== 'none';
+    return this.isVisible && this.cancelBtn !== null && this.cancelBtn.style.display !== "none";
   }
 
   /**
@@ -318,16 +324,16 @@ export class ProgressDialog {
    */
   reset(): void {
     this.hide();
-    this.updateProgress(0, '准备中...');
+    this.updateProgress(0, "准备中...");
     if (this.detailEl) {
-      this.detailEl.textContent = '';
+      this.detailEl.textContent = "";
     }
     if (this.timeEl) {
-      this.timeEl.textContent = '';
+      this.timeEl.textContent = "";
     }
 
     if (this.fillEl) {
-      this.fillEl.style.background = '';
+      this.fillEl.style.background = "";
     }
   }
 }

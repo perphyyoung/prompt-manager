@@ -21,11 +21,11 @@ export class PanelRenderer {
     if (!container) return;
 
     if (!items || items.length === 0) {
-      container.innerHTML = '';
+      container.innerHTML = "";
       return;
     }
 
-    container.innerHTML = items.map((item, index) => renderItem(item, index)).join('');
+    container.innerHTML = items.map((item, index) => renderItem(item, index)).join("");
   }
 
   /**
@@ -39,11 +39,11 @@ export class PanelRenderer {
     if (!container) return;
 
     if (!items || items.length === 0) {
-      container.innerHTML = '';
+      container.innerHTML = "";
       return;
     }
 
-    container.innerHTML = items.map((item, index) => renderItem(item, index)).join('');
+    container.innerHTML = items.map((item, index) => renderItem(item, index)).join("");
   }
 
   /**
@@ -64,12 +64,15 @@ export class PanelRenderer {
   static updateSelectionState(container: HTMLElement | null, selectedIds: Set<string>): void {
     if (!container) return;
 
-    const items = container.querySelectorAll('[data-id], [data-image-id], [data-prompt-id]');
-    items.forEach(item => {
-      const id = (item as HTMLElement).dataset.id || (item as HTMLElement).dataset.imageId || (item as HTMLElement).dataset.promptId;
+    const items = container.querySelectorAll("[data-id], [data-image-id], [data-prompt-id]");
+    items.forEach((item) => {
+      const id =
+        (item as HTMLElement).dataset.id ||
+        (item as HTMLElement).dataset.imageId ||
+        (item as HTMLElement).dataset.promptId;
       if (id) {
         const isSelected = selectedIds.has(id);
-        item.classList.toggle('is-selected', isSelected);
+        item.classList.toggle("is-selected", isSelected);
 
         const checkbox = item.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
         if (checkbox) {
@@ -86,11 +89,16 @@ export class PanelRenderer {
    * @param attribute - 属性名
    * @param value - 属性值
    */
-  static updateItemsAttribute(container: HTMLElement | null, selector: string, attribute: string, value: string): void {
+  static updateItemsAttribute(
+    container: HTMLElement | null,
+    selector: string,
+    attribute: string,
+    value: string,
+  ): void {
     if (!container) return;
 
     const items = container.querySelectorAll(selector);
-    items.forEach(item => {
+    items.forEach((item) => {
       item.setAttribute(attribute, value);
     });
   }
@@ -101,11 +109,15 @@ export class PanelRenderer {
    * @param selector - 选择器
    * @param handler - 事件处理函数
    */
-  static bindItemClickEvents(container: HTMLElement | null, selector: string, handler: (event: Event) => void): void {
+  static bindItemClickEvents(
+    container: HTMLElement | null,
+    selector: string,
+    handler: (event: Event) => void,
+  ): void {
     if (!container) return;
 
-    container.querySelectorAll(selector).forEach(item => {
-      item.addEventListener('click', handler);
+    container.querySelectorAll(selector).forEach((item) => {
+      item.addEventListener("click", handler);
     });
   }
 
@@ -120,16 +132,16 @@ export class PanelRenderer {
     container: HTMLElement | null,
     selector: string,
     enterHandler?: (event: Event) => void,
-    leaveHandler?: (event: Event) => void
+    leaveHandler?: (event: Event) => void,
   ): void {
     if (!container) return;
 
-    container.querySelectorAll(selector).forEach(item => {
+    container.querySelectorAll(selector).forEach((item) => {
       if (enterHandler) {
-        item.addEventListener('mouseenter', enterHandler);
+        item.addEventListener("mouseenter", enterHandler);
       }
       if (leaveHandler) {
-        item.addEventListener('mouseleave', leaveHandler);
+        item.addEventListener("mouseleave", leaveHandler);
       }
     });
   }
@@ -143,7 +155,7 @@ export class PanelRenderer {
   static async loadBackgroundImages(
     container: HTMLElement | null,
     selector: string,
-    getPathFn: (element: Element) => string | null
+    getPathFn: (element: Element) => string | null,
   ): Promise<void> {
     if (!container) return;
 
@@ -154,9 +166,13 @@ export class PanelRenderer {
 
       try {
         const fullPath = await window.electronAPI.getImagePath(path);
-        (el as HTMLElement).style.backgroundImage = `url('file://${fullPath.replace(/\\/g, '/')}')`;
+        (el as HTMLElement).style.backgroundImage = `url('file://${fullPath.replace(/\\/g, "/")}')`;
       } catch (error) {
-        window.electronAPI?.logError?.('PanelRenderer.ts', 'Failed to load background image:', error);
+        window.electronAPI?.logError?.(
+          "PanelRenderer.ts",
+          "Failed to load background image:",
+          error,
+        );
       }
     }
   }
@@ -168,15 +184,20 @@ export class PanelRenderer {
    * @param message - 空状态消息
    * @param title - 空状态标题（可选，不传则使用默认标题）
    */
-  static showEmptyState(containerId: string, emptyStateId: string, message = '暂无数据', title?: string): void {
+  static showEmptyState(
+    containerId: string,
+    emptyStateId: string,
+    message = "暂无数据",
+    title?: string,
+  ): void {
     const container = document.getElementById(containerId);
     const emptyState = document.getElementById(emptyStateId);
 
-    if (container) container.innerHTML = '';
+    if (container) container.innerHTML = "";
     if (emptyState) {
-      emptyState.style.display = 'flex';
-      const h3 = emptyState.querySelector('h3');
-      const p = emptyState.querySelector('p');
+      emptyState.style.display = "flex";
+      const h3 = emptyState.querySelector("h3");
+      const p = emptyState.querySelector("p");
       if (title && h3) h3.textContent = title;
       if (p) p.textContent = message;
     }
@@ -191,7 +212,7 @@ export class PanelRenderer {
     const container = document.getElementById(containerId);
     const emptyState = document.getElementById(emptyStateId);
 
-    if (container) container.style.display = 'grid';
-    if (emptyState) emptyState.style.display = 'none';
+    if (container) container.style.display = "grid";
+    if (emptyState) emptyState.style.display = "none";
   }
 }

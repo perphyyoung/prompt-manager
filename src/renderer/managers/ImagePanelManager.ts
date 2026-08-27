@@ -1,16 +1,16 @@
-import { cacheManager, cyrb53 } from '../../utils/index.ts';
-import { PanelManagerBase, IPanelItem, PANEL_PAGE_SIZE } from './PanelManagerBase.ts';
-import { localStorageManager } from '../configs/LocalStorageConfig.ts';
-import type { IApp } from '../app.types.ts';
-import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig } from './SharedComponents/index.ts';
-import { Constants, Events } from '../../constants.ts';
-import { DialogConfig } from '../services/index.ts';
-import { batchToolbarMiddle } from '../../middle/index.ts';
+import { cacheManager, cyrb53 } from "../../utils/index.ts";
+import { PanelManagerBase, IPanelItem, PANEL_PAGE_SIZE } from "./PanelManagerBase.ts";
+import { localStorageManager } from "../configs/LocalStorageConfig.ts";
+import type { IApp } from "../app.types.ts";
+import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig } from "./SharedComponents/index.ts";
+import { Constants, Events } from "../../constants.ts";
+import { DialogConfig } from "../services/index.ts";
+import { batchToolbarMiddle } from "../../middle/index.ts";
 
-import { IImage } from '../../types/entities.ts';
-import { VirtualWindowRenderer } from '../renderer_utils/index.ts';
-import { BaseEventStrategy, IEventStrategySelectors } from './Strategies/BaseEventStrategy.ts';
-import { IEventStrategy, IEventStrategyItem } from './Strategies/IEventStrategy.ts';
+import { IImage } from "../../types/entities.ts";
+import { VirtualWindowRenderer } from "../renderer_utils/index.ts";
+import { BaseEventStrategy, IEventStrategySelectors } from "./Strategies/BaseEventStrategy.ts";
+import { IEventStrategy, IEventStrategyItem } from "./Strategies/IEventStrategy.ts";
 
 interface PromptRef {
   promptId: string;
@@ -42,7 +42,7 @@ export class ImagePanelManager extends PanelManagerBase {
   private windowRenderer: VirtualWindowRenderer<IImage> | null = null;
 
   // 面板类型
-  protected readonly panelType = 'image' as const;
+  protected readonly panelType = "image" as const;
 
   // —— 基类滚动/分页追赶钩子实现 ——
 
@@ -87,7 +87,7 @@ export class ImagePanelManager extends PanelManagerBase {
       cardSize: Constants.LocalStorageKey.IMAGE_CARD_SIZE,
       tagFilterSortBy: Constants.LocalStorageKey.IMAGE_TAG_FILTER_SORT_BY,
       tagFilterSortOrder: Constants.LocalStorageKey.IMAGE_TAG_FILTER_SORT_ORDER,
-      tagFilterCollapsed: Constants.LocalStorageKey.IMAGE_TAG_FILTER_COLLAPSED
+      tagFilterCollapsed: Constants.LocalStorageKey.IMAGE_TAG_FILTER_COLLAPSED,
     };
   }
 
@@ -98,18 +98,18 @@ export class ImagePanelManager extends PanelManagerBase {
     [Constants.MULTI_REF_TAG, (img) => !!img.promptRefs && img.promptRefs.length > 1],
     [Constants.SAFE_TAG, (img) => img.isSafe !== 0],
     [Constants.UNSAFE_TAG, (img) => img.isSafe === 0],
-    [Constants.NO_TAG_TAG, (img) => !img.tags || img.tags.length === 0]
+    [Constants.NO_TAG_TAG, (img) => !img.tags || img.tags.length === 0],
   ]);
 
   constructor(app: IApp) {
     super({
       app: app,
-      defaultCardSize: 180
+      defaultCardSize: 180,
     });
 
     // 从 localStorage 加载设置（在 super 之后，init 之前）
     // 图像主页仅保留网格视图
-    this.viewModeType = 'grid';
+    this.viewModeType = "grid";
     this.sortBy = localStorageManager.get<string>(this.storageKeys.sortBy);
     this.sortOrder = localStorageManager.get<string>(this.storageKeys.sortOrder);
     this.cardSize = localStorageManager.get<number>(this.storageKeys.cardSize);
@@ -131,7 +131,9 @@ export class ImagePanelManager extends PanelManagerBase {
    * @private
    */
   private bindImageToolbarEvents(): void {
-    document.getElementById(Constants.Ids.IMAGE_ADD_BTN)?.addEventListener('click', () => this.app.imageUploadManager?.open());
+    document
+      .getElementById(Constants.Ids.IMAGE_ADD_BTN)
+      ?.addEventListener("click", () => this.app.imageUploadManager?.open());
   }
 
   /**
@@ -139,7 +141,9 @@ export class ImagePanelManager extends PanelManagerBase {
    * @private
    */
   private bindTagFilterActionEvent(): void {
-    document.getElementById(Constants.Ids.IMAGE_TAG_FILTER_ACTION_BTN)?.addEventListener('click', () => this.handleFilterAction());
+    document
+      .getElementById(Constants.Ids.IMAGE_TAG_FILTER_ACTION_BTN)
+      ?.addEventListener("click", () => this.handleFilterAction());
   }
 
   /**
@@ -168,13 +172,13 @@ export class ImagePanelManager extends PanelManagerBase {
    */
   protected getUIConfig() {
     return {
-      cardSelector: '.image-card',
-      listItemSelector: '.list-item--image',
-      cardBgSelector: '.image-card-bg, .card__bg',
+      cardSelector: ".image-card",
+      listItemSelector: ".list-item--image",
+      cardBgSelector: ".image-card-bg, .card__bg",
       gridContainerId: Constants.Ids.IMAGE_GRID,
       listContainerId: Constants.Ids.IMAGE_LIST,
-      dragSource: 'image-tag',
-      getCardDropSelector: () => '.image-card, .list-item--image',
+      dragSource: "image-tag",
+      getCardDropSelector: () => ".image-card, .list-item--image",
 
       getElementId: (element: HTMLElement): string | undefined => {
         return element.dataset.id || element.dataset.imageId || undefined;
@@ -185,25 +189,25 @@ export class ImagePanelManager extends PanelManagerBase {
         const imgWithPrompt = img as ImageWithPromptContent;
         if (imgWithPrompt.promptRefs && imgWithPrompt.promptRefs.length > 0) {
           return {
-            content: imgWithPrompt.promptRefs[0].promptContent || '',
-            hasContent: !!imgWithPrompt.promptRefs[0].promptContent
+            content: imgWithPrompt.promptRefs[0].promptContent || "",
+            hasContent: !!imgWithPrompt.promptRefs[0].promptContent,
           };
         }
-        return { content: '', hasContent: false };
+        return { content: "", hasContent: false };
       },
 
       getDeleteConfirmConfig: (item: IPanelItem) => {
         const img = item as IImage;
         return {
           config: DialogConfig.DELETE_IMAGE_TO_TRASH,
-          name: img.fileName || '未命名图像'
+          name: img.fileName || "未命名图像",
         };
       },
 
       getCardImagePath: (item: IPanelItem): string | null => {
         const img = item as IImage;
-        const thumbnailPath = typeof img.thumbnailPath === 'string' ? img.thumbnailPath : undefined;
-        const relativePath = typeof img.relativePath === 'string' ? img.relativePath : undefined;
+        const thumbnailPath = typeof img.thumbnailPath === "string" ? img.thumbnailPath : undefined;
+        const relativePath = typeof img.relativePath === "string" ? img.relativePath : undefined;
         return thumbnailPath || relativePath || null;
       },
 
@@ -213,19 +217,19 @@ export class ImagePanelManager extends PanelManagerBase {
 
       getOpenLocationPath: (item: IPanelItem): string | null => {
         const img = item as IImage;
-        const relativePath = typeof img.relativePath === 'string' ? img.relativePath : undefined;
+        const relativePath = typeof img.relativePath === "string" ? img.relativePath : undefined;
         return relativePath || null;
       },
 
       getListTitle: (item: IPanelItem): string => {
         const img = item as IImage;
-        return img.fileName || '无文件名';
+        return img.fileName || "无文件名";
       },
 
       getListContent: (item: IPanelItem): string => {
         const img = item as IImage & { promptRefs?: Array<{ promptContent?: string }> };
-        return img.promptRefs?.[0]?.promptContent || '';
-      }
+        return img.promptRefs?.[0]?.promptContent || "";
+      },
     };
   }
 
@@ -249,21 +253,24 @@ export class ImagePanelManager extends PanelManagerBase {
    * 获取搜索查询（实现基类抽象方法）
    */
   getSearchQuery(): string {
-    return this.app.searchSortManager?.getImageSearchQuery() || '';
+    return this.app.searchSortManager?.getImageSearchQuery() || "";
   }
 
   /**
    * 获取特殊标签检查函数 Map（实现基类抽象方法）
    */
   getSpecialTagChecks(): Map<string, (item: Record<string, unknown>) => boolean> {
-    return ImagePanelManager.IMAGE_SPECIAL_TAG_PREDICATES as Map<string, (item: Record<string, unknown>) => boolean>;
+    return ImagePanelManager.IMAGE_SPECIAL_TAG_PREDICATES as Map<
+      string,
+      (item: Record<string, unknown>) => boolean
+    >;
   }
 
   /**
    * 获取项目类型标识（实现基类抽象方法）
    */
-  getItemType(): 'prompt' | 'image' {
-    return 'image';
+  getItemType(): "prompt" | "image" {
+    return "image";
   }
 
   /**
@@ -288,18 +295,18 @@ export class ImagePanelManager extends PanelManagerBase {
   /**
    * 构建分页查询选项
    */
-  private buildPaginatedOptions(): import('../../main/database-types.js').GetImagesPaginatedOptions {
+  private buildPaginatedOptions(): import("../../main/database-types.js").GetImagesPaginatedOptions {
     const { tagNames, specialTags } = this.splitSelectedTags();
     return {
-      sortBy: this.sortBy || 'updatedAt',
-      sortOrder: this.sortOrder === 'asc' ? 'asc' : 'desc',
+      sortBy: this.sortBy || "updatedAt",
+      sortOrder: this.sortOrder === "asc" ? "asc" : "desc",
       searchQuery: this.getSearchQuery() || undefined,
       tagNames: tagNames.length > 0 ? tagNames : undefined,
       specialTags: specialTags.length > 0 ? specialTags : undefined,
-      isSafe: this.app.viewMode === 'safe' ? true : undefined,
+      isSafe: this.app.viewMode === "safe" ? true : undefined,
       invertedFilter: this.invertedFilter,
       limit: PANEL_PAGE_SIZE,
-      offset: this.currentOffset
+      offset: this.currentOffset,
     };
   }
 
@@ -321,10 +328,10 @@ export class ImagePanelManager extends PanelManagerBase {
     // 预缓存路径（原图 + 缩略图）—— 主要预填充入口，兜底写入见 loadCardBackgroundsForItems
     await this.prefetchImagePaths(page.items);
     // 校验本页缩略图文件完整性，缺失的由主进程按需重建（懒自愈）
-    await this.ensureThumbnailsForPage(page.items.map(img => String(img.id)));
+    await this.ensureThumbnailsForPage(page.items.map((img) => String(img.id)));
     // 重建指纹基准（全量渲染后所有项视为"已同步"）
     this.itemFingerprints = new Map(
-      page.items.map(img => [String(img.id), this.getItemFingerprint(img)])
+      page.items.map((img) => [String(img.id), this.getItemFingerprint(img)]),
     );
     // 失败时保留旧缓存：数据仍以数据库为准，清空只会导致后续全部重新 IPC
     return page.items;
@@ -359,7 +366,7 @@ export class ImagePanelManager extends PanelManagerBase {
       this.currentOffset += PANEL_PAGE_SIZE;
       const page = await this.fetchPage();
 
-      const newItems = page.items.filter(img => !this.loadedImageIds.has(String(img.id)));
+      const newItems = page.items.filter((img) => !this.loadedImageIds.has(String(img.id)));
       for (const img of newItems) {
         this.loadedImageIds.add(String(img.id));
         cacheManager.cacheImage(img);
@@ -383,8 +390,8 @@ export class ImagePanelManager extends PanelManagerBase {
         this.windowRenderer?.refresh(true);
       }
     } catch (error) {
-      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to load more images:', error);
-      this.app.showToast?.('加载更多图像失败', 'error');
+      window.electronAPI.logError("ImagePanelManager.ts", "Failed to load more images:", error);
+      this.app.showToast?.("加载更多图像失败", "error");
     } finally {
       this.isLoading = false;
     }
@@ -433,8 +440,8 @@ export class ImagePanelManager extends PanelManagerBase {
       await this.refreshTagCounts();
       await this.renderTagFilters();
     } catch (error) {
-      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to render image list:', error);
-      this.app.showToast?.('加载图像失败', 'error');
+      window.electronAPI.logError("ImagePanelManager.ts", "Failed to render image list:", error);
+      this.app.showToast?.("加载图像失败", "error");
     }
   }
 
@@ -466,12 +473,26 @@ export class ImagePanelManager extends PanelManagerBase {
       // 空态下列表未渲染，复位标志以保证"从无到有"时能正常渲染
       this.listViewRendered = false;
       if (currentSearchQuery) {
-        PanelRenderer.showEmptyState(Constants.Ids.IMAGE_GRID, Constants.Ids.IMAGE_EMPTY_STATE, `未找到匹配"${currentSearchQuery}"的图像`, '搜索无结果');
+        PanelRenderer.showEmptyState(
+          Constants.Ids.IMAGE_GRID,
+          Constants.Ids.IMAGE_EMPTY_STATE,
+          `未找到匹配"${currentSearchQuery}"的图像`,
+          "搜索无结果",
+        );
       } else if (this.selectedTags.size > 0) {
-        const selectedTagNames = Array.from(this.selectedTags).join(', ');
-        PanelRenderer.showEmptyState(Constants.Ids.IMAGE_GRID, Constants.Ids.IMAGE_EMPTY_STATE, `没有符合标签"${selectedTagNames}"的图像`, '筛选无结果');
+        const selectedTagNames = Array.from(this.selectedTags).join(", ");
+        PanelRenderer.showEmptyState(
+          Constants.Ids.IMAGE_GRID,
+          Constants.Ids.IMAGE_EMPTY_STATE,
+          `没有符合标签"${selectedTagNames}"的图像`,
+          "筛选无结果",
+        );
       } else {
-        PanelRenderer.showEmptyState(Constants.Ids.IMAGE_GRID, Constants.Ids.IMAGE_EMPTY_STATE, '暂无图像');
+        PanelRenderer.showEmptyState(
+          Constants.Ids.IMAGE_GRID,
+          Constants.Ids.IMAGE_EMPTY_STATE,
+          "暂无图像",
+        );
       }
       return;
     }
@@ -480,13 +501,13 @@ export class ImagePanelManager extends PanelManagerBase {
 
     // 渲染网格视图（图像主页仅保留网格视图）
     // wrapper 模式下不再使用 CSS grid 排布（卡片由 absolute 定位），覆盖为块级滚动容器
-    container!.style.display = 'block';
-    container!.innerHTML = '';
+    container!.style.display = "block";
+    container!.innerHTML = "";
 
     // lap 模式：固定高度 wrapper 撑起 scrollHeight，可见卡片 absolute 定位其上，
     // 内容替换不产生文档流位移，scrollHeight 恒定
-    const wrapper = document.createElement('div');
-    wrapper.className = 'virtual-wrapper';
+    const wrapper = document.createElement("div");
+    wrapper.className = "virtual-wrapper";
     container!.appendChild(wrapper);
     this.setupVirtualScroller(container!, wrapper);
     this.bindCardDropEvents(container!);
@@ -520,9 +541,11 @@ export class ImagePanelManager extends PanelManagerBase {
       renderCardHtml: (img, index) => this.createCard(img, index),
       onBindContainerEvents: (data) => this.bindItemEvents(data),
       onBindItemButtons: (items) => this.bindCardButtonEvents(items),
-      onLoadItemImages: async (items) => { await this.loadCardBackgroundsForItems(items); },
-      onBindHoverPreview: () => this.bindHoverPreview('.image-card'),
-      onWindowSettled: () => this.ensureWindowData()
+      onLoadItemImages: async (items) => {
+        await this.loadCardBackgroundsForItems(items);
+      },
+      onBindHoverPreview: () => this.bindHoverPreview(".image-card"),
+      onWindowSettled: () => this.ensureWindowData(),
     });
     this.windowRenderer.attach(container, wrapper);
   }
@@ -544,10 +567,10 @@ export class ImagePanelManager extends PanelManagerBase {
       if (result.fixed.length === 0) return;
 
       cacheManager.setImagePaths(
-        result.fixed.map(f => ({ imageId: f.id, fullPath: f.fullPath })),
-        'thumbnail'
+        result.fixed.map((f) => ({ imageId: f.id, fullPath: f.fullPath })),
+        "thumbnail",
       );
-      const byId = new Map(result.fixed.map(f => [f.id, f.relativePath]));
+      const byId = new Map(result.fixed.map((f) => [f.id, f.relativePath]));
       for (const img of this.filteredImages) {
         const rel = byId.get(String(img.id));
         if (rel) img.thumbnailPath = rel;
@@ -555,7 +578,7 @@ export class ImagePanelManager extends PanelManagerBase {
       // 既有窗口节点的背景图指向已失效路径，强制全量重建以加载新背景
       this.windowRenderer?.requestFullRerender();
     } catch (error) {
-      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to ensure thumbnails:', error);
+      window.electronAPI.logError("ImagePanelManager.ts", "Failed to ensure thumbnails:", error);
     }
   }
 
@@ -570,7 +593,11 @@ export class ImagePanelManager extends PanelManagerBase {
       batchToolbarMiddle.selectAll(this.toolbarContext, ids);
       this.updateSelectionUI();
     } catch (error) {
-      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to select all images by filter:', error);
+      window.electronAPI.logError(
+        "ImagePanelManager.ts",
+        "Failed to select all images by filter:",
+        error,
+      );
       super.selectAllVisibleItems();
     }
   }
@@ -584,7 +611,7 @@ export class ImagePanelManager extends PanelManagerBase {
       sortBy: this.sortBy,
       app: this.app,
       selectedIds: batchToolbarMiddle.getSelectedIds(this.toolbarContext),
-      index
+      index,
     });
   }
 
@@ -604,8 +631,8 @@ export class ImagePanelManager extends PanelManagerBase {
         n: (img as Record<string, unknown>).note,
         tp: img.thumbnailPath,
         rp: img.relativePath,
-        pr: (imgWithPrompt.promptRefs || []).map(r => ({ id: r.promptId, c: r.promptContent }))
-      })
+        pr: (imgWithPrompt.promptRefs || []).map((r) => ({ id: r.promptId, c: r.promptContent })),
+      }),
     );
   }
 
@@ -633,8 +660,8 @@ export class ImagePanelManager extends PanelManagerBase {
     const container = document.getElementById(Constants.Ids.IMAGE_GRID);
     if (!container) return;
 
-    const itemIds = new Set(items.map(img => String(img.id)));
-    const cards = container.querySelectorAll('.image-card');
+    const itemIds = new Set(items.map((img) => String(img.id)));
+    const cards = container.querySelectorAll(".image-card");
     const uncached: Array<{ imageId: string; relativePath: string; card: HTMLElement }> = [];
 
     for (const card of cards) {
@@ -642,17 +669,20 @@ export class ImagePanelManager extends PanelManagerBase {
       if (!imageId || !itemIds.has(imageId)) continue;
 
       // 路径缓存的"纯读"：仅当缓存命中时直接使用
-      const cachedPath = cacheManager.getImagePath(imageId, 'thumbnail');
+      const cachedPath = cacheManager.getImagePath(imageId, "thumbnail");
       if (cachedPath) {
-        const bgElement = card.querySelector('.image-card-bg, .card__bg');
+        const bgElement = card.querySelector(".image-card-bg, .card__bg");
         if (bgElement) {
-          (bgElement as HTMLElement).style.backgroundImage = `url('file://${cachedPath.replace(/\\/g, '/')}')`;
+          (bgElement as HTMLElement).style.backgroundImage =
+            `url('file://${cachedPath.replace(/\\/g, "/")}')`;
         }
         continue;
       }
 
       // 缓存未命中（极端情况：分页预缓存前已渲染） → 收集后单次 IPC 兜底
-      const img = this.filteredImages.find(i => String(i.id) === imageId) || this.images.find(i => String(i.id) === imageId);
+      const img =
+        this.filteredImages.find((i) => String(i.id) === imageId) ||
+        this.images.find((i) => String(i.id) === imageId);
       const imagePath = img?.thumbnailPath || img?.relativePath;
       if (img && imagePath) {
         uncached.push({ imageId, relativePath: imagePath, card: card as HTMLElement });
@@ -662,22 +692,27 @@ export class ImagePanelManager extends PanelManagerBase {
     if (uncached.length === 0) return;
 
     try {
-      const relativePaths = uncached.map(u => u.relativePath);
+      const relativePaths = uncached.map((u) => u.relativePath);
       const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
       const entries: Array<{ imageId: string; fullPath: string }> = [];
       uncached.forEach((u, i) => {
         const fullPath = fullPaths[i];
         if (fullPath) {
           entries.push({ imageId: u.imageId, fullPath });
-          const bgElement = u.card.querySelector('.image-card-bg, .card__bg');
+          const bgElement = u.card.querySelector(".image-card-bg, .card__bg");
           if (bgElement) {
-            (bgElement as HTMLElement).style.backgroundImage = `url('file://${fullPath.replace(/\\/g, '/')}')`;
+            (bgElement as HTMLElement).style.backgroundImage =
+              `url('file://${fullPath.replace(/\\/g, "/")}')`;
           }
         }
       });
-      cacheManager.setImagePaths(entries, 'thumbnail');
+      cacheManager.setImagePaths(entries, "thumbnail");
     } catch (error) {
-      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to load card backgrounds (fallback):', error);
+      window.electronAPI.logError(
+        "ImagePanelManager.ts",
+        "Failed to load card backgrounds (fallback):",
+        error,
+      );
     }
   }
 
@@ -690,20 +725,27 @@ export class ImagePanelManager extends PanelManagerBase {
 
     tooltip.bind(selector, {
       getContent: (element: Element) => {
-        const imageId = (element as HTMLElement).dataset.id || (element as HTMLElement).dataset.imageId;
-        const image = this.filteredImages.find(img => String(img.id) === String(imageId)) ||
-          this.images.find(img => String(img.id) === String(imageId));
+        const imageId =
+          (element as HTMLElement).dataset.id || (element as HTMLElement).dataset.imageId;
+        const image =
+          this.filteredImages.find((img) => String(img.id) === String(imageId)) ||
+          this.images.find((img) => String(img.id) === String(imageId));
         const imageWithPrompt = image as ImageWithPromptContent | undefined;
-        if (!imageWithPrompt || !imageWithPrompt.promptRefs || imageWithPrompt.promptRefs.length === 0) {
-          return '';
+        if (
+          !imageWithPrompt ||
+          !imageWithPrompt.promptRefs ||
+          imageWithPrompt.promptRefs.length === 0
+        ) {
+          return "";
         }
-        return imageWithPrompt.promptRefs[0].promptContent || '';
+        return imageWithPrompt.promptRefs[0].promptContent || "";
       },
       getImageId: (element: Element) => {
-        const imageId = (element as HTMLElement).dataset.id || (element as HTMLElement).dataset.imageId;
+        const imageId =
+          (element as HTMLElement).dataset.id || (element as HTMLElement).dataset.imageId;
         return imageId || null;
       },
-      delay: 500
+      delay: 500,
     });
   }
 
@@ -760,7 +802,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 获取标签拖拽类型（实现基类抽象方法）
    */
   getTagDragType(): string {
-    return 'image-tag';
+    return "image-tag";
   }
 
   /**
@@ -790,35 +832,35 @@ export class ImagePanelManager extends PanelManagerBase {
       const options = this.buildCountOptions();
       const [tagCounts, specialTagCounts] = await Promise.all([
         window.electronAPI.countImageTags(options),
-        window.electronAPI.countImageSpecialTags(options)
+        window.electronAPI.countImageSpecialTags(options),
       ]);
       this.lastTagCounts = tagCounts;
       this.lastSpecialTagCounts = specialTagCounts;
     } catch (error) {
-      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to refresh tag counts:', error);
+      window.electronAPI.logError("ImagePanelManager.ts", "Failed to refresh tag counts:", error);
     }
   }
 
-  private lastSpecialTagCounts: import('../../main/database-types.js').ImageSpecialTagCounts = {
+  private lastSpecialTagCounts: import("../../main/database-types.js").ImageSpecialTagCounts = {
     favorite: 0,
     unreferenced: 0,
     multiRef: 0,
     noTag: 0,
     safe: 0,
-    unsafe: 0
+    unsafe: 0,
   };
 
   /**
    * 构建计数查询选项
    */
-  private buildCountOptions(): import('../../main/database-types.js').CountImageTagsOptions {
+  private buildCountOptions(): import("../../main/database-types.js").CountImageTagsOptions {
     const { tagNames, specialTags } = this.splitSelectedTags();
     return {
       searchQuery: this.getSearchQuery() || undefined,
       tagNames: tagNames.length > 0 ? tagNames : undefined,
       specialTags: specialTags.length > 0 ? specialTags : undefined,
-      isSafe: this.app.viewMode === 'safe' ? true : undefined,
-      invertedFilter: this.invertedFilter
+      isSafe: this.app.viewMode === "safe" ? true : undefined,
+      invertedFilter: this.invertedFilter,
     };
   }
 
@@ -844,7 +886,7 @@ export class ImagePanelManager extends PanelManagerBase {
     }
 
     // NSFW 模式下显示安全评级标签
-    if (this.app.viewMode === 'nsfw') {
+    if (this.app.viewMode === "nsfw") {
       if (counts.safe > 0) {
         specialTags.push({ tag: Constants.SAFE_TAG, count: counts.safe });
       }
@@ -862,8 +904,8 @@ export class ImagePanelManager extends PanelManagerBase {
   async deleteItem(id: string): Promise<void> {
     try {
       await window.electronAPI.softDeleteImage(id);
-      cacheManager.removeCachedItem(id, 'image');
-      const image = this.images.find(img => String(img.id) === String(id));
+      cacheManager.removeCachedItem(id, "image");
+      const image = this.images.find((img) => String(img.id) === String(id));
       if (image) {
         image.isDeleted = true;
       }
@@ -880,14 +922,14 @@ export class ImagePanelManager extends PanelManagerBase {
       }
 
       // 刷新统计界面
-      if (this.app.currentPanel === 'statistics') {
+      if (this.app.currentPanel === "statistics") {
         await this.app.renderStatistics?.();
       }
 
-      this.app.showToast('图像已移至回收站', 'success');
+      this.app.showToast("图像已移至回收站", "success");
     } catch (error) {
-      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to delete image:', error);
-      this.app.showToast('删除失败：' + (error as Error).message, 'error');
+      window.electronAPI.logError("ImagePanelManager.ts", "Failed to delete image:", error);
+      this.app.showToast("删除失败：" + (error as Error).message, "error");
     }
   }
 
@@ -898,17 +940,17 @@ export class ImagePanelManager extends PanelManagerBase {
     try {
       await window.electronAPI.updateImage(id, { isFavorite: isFavorite ? 1 : 0 });
 
-      const img = this.images.find(i => String(i.id) === String(id));
+      const img = this.images.find((i) => String(i.id) === String(id));
       if (img) {
         img.isFavorite = isFavorite ? 1 : 0;
       }
 
-      this.app.showToast(isFavorite ? '已收藏' : '已取消收藏', 'success');
+      this.app.showToast(isFavorite ? "已收藏" : "已取消收藏", "success");
       this.updateFavoriteUI(id, isFavorite);
       this.renderTagFilters();
     } catch (error) {
-      window.electronAPI.logError('ImagePanelManager.ts', 'toggleFavorite error:', error);
-      this.app.showToast('操作失败：' + (error as Error).message, 'error');
+      window.electronAPI.logError("ImagePanelManager.ts", "toggleFavorite error:", error);
+      this.app.showToast("操作失败：" + (error as Error).message, "error");
     }
   }
 
@@ -977,8 +1019,8 @@ export class ImagePanelManager extends PanelManagerBase {
       await this.refreshTagCounts();
       await this.renderTagFilters();
     } catch (error) {
-      window.electronAPI.logError('ImagePanelManager.ts', 'Failed to refresh incremental:', error);
-      this.app.showToast?.('刷新失败', 'error');
+      window.electronAPI.logError("ImagePanelManager.ts", "Failed to refresh incremental:", error);
+      this.app.showToast?.("刷新失败", "error");
     }
   }
 
@@ -1027,9 +1069,9 @@ class ImageEventStrategy extends BaseEventStrategy {
 
   protected getSelectors(): IEventStrategySelectors {
     return {
-      checkbox: '.card-checkbox',
-      item: '.image-card',
-      exclude: ['.action-btn', '.card-checkbox'],
+      checkbox: ".card-checkbox",
+      item: ".image-card",
+      exclude: [".action-btn", ".card-checkbox"],
     };
   }
 

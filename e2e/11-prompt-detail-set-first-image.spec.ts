@@ -104,10 +104,10 @@ test.describe('提示词详情界面"设首张"功能', () => {
     await firstImageItem.click({ button: "right" });
 
     // 等待右键菜单显示
-    await page.waitForSelector(
-      '.context-menu-item[data-item-id="openLocation"]',
-      { state: "visible", timeout: 1000 },
-    );
+    await page.waitForSelector('.context-menu-item[data-item-id="openLocation"]', {
+      state: "visible",
+      timeout: 1000,
+    });
 
     // 验证"打开本地保存位置"菜单项可见
     const openLocationItem = page.locator('.context-menu-item[data-item-id="openLocation"]');
@@ -124,10 +124,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
   // ========== 双图像测试组（≥2张图像）==========
 
-  test("双图像：右键点击第二张图像并设为首张", async ({
-    electronTest,
-    page,
-  }) => {
+  test("双图像：右键点击第二张图像并设为首张", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 查找有≥2张图像的提示词
@@ -187,10 +184,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(afterImageIds[0]).toBe(lastImageId);
   });
 
-  test("双图像：设为首张后刷新页面验证顺序保持", async ({
-    electronTest,
-    page,
-  }) => {
+  test("双图像：设为首张后刷新页面验证顺序保持", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 复用同一个提示词
@@ -232,10 +226,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(afterReopenIds).toEqual(afterSetFirstIds);
   });
 
-  test("双图像：检查数据库中images字段正确更新", async ({
-    electronTest,
-    page,
-  }) => {
+  test("双图像：检查数据库中images字段正确更新", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 复用同一个提示词
@@ -248,8 +239,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     // 获取数据库中的原始图像顺序
     const dbPromptBefore = await getPromptFromDatabase(page, promptId!);
     expect(dbPromptBefore).toBeTruthy();
-    const dbImageIdsBefore =
-      dbPromptBefore!.images?.map((img) => String(img.id)) || [];
+    const dbImageIdsBefore = dbPromptBefore!.images?.map((img) => String(img.id)) || [];
     const targetImageId = dbImageIdsBefore[1];
 
     // 右键点击第二张图像并选择"设为首张"
@@ -263,8 +253,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(dbPromptAfter).toBeTruthy();
 
     // 获取数据库中的新图像顺序
-    const dbImageIdsAfter =
-      dbPromptAfter!.images?.map((img) => String(img.id)) || [];
+    const dbImageIdsAfter = dbPromptAfter!.images?.map((img) => String(img.id)) || [];
 
     // 验证数据库中的顺序已更新
     expect(dbImageIdsAfter[0]).toBe(targetImageId);
@@ -294,15 +283,13 @@ test.describe('提示词详情界面"设首张"功能', () => {
     await secondImageItem.click({ button: "right" });
 
     // 等待右键菜单显示（使用特定菜单项选择器来定位图像右键菜单）
-    await page.waitForSelector(
-      '.context-menu-item[data-item-id="setAsFirst"]',
-      { state: "visible", timeout: 1000 },
-    );
+    await page.waitForSelector('.context-menu-item[data-item-id="setAsFirst"]', {
+      state: "visible",
+      timeout: 1000,
+    });
 
     // 验证菜单项存在
-    const menuItem = await page.$(
-      '.context-menu-item[data-item-id="setAsFirst"]',
-    );
+    const menuItem = await page.$('.context-menu-item[data-item-id="setAsFirst"]');
     expect(menuItem).not.toBeNull();
 
     // 验证菜单项文本
@@ -316,10 +303,10 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
     // 关闭菜单（点击其他地方）
     await page.click(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
-    await page.waitForSelector(
-      '.context-menu-item[data-item-id="setAsFirst"]',
-      { state: "hidden", timeout: 1000 },
-    );
+    await page.waitForSelector('.context-menu-item[data-item-id="setAsFirst"]', {
+      state: "hidden",
+      timeout: 1000,
+    });
   });
 
   test("双图像：菜单项点击响应正常", async ({ electronTest, page }) => {
@@ -343,19 +330,19 @@ test.describe('提示词详情界面"设首张"功能', () => {
     await secondImageItem.click({ button: "right" });
 
     // 等待右键菜单显示（使用特定菜单项选择器来定位图像右键菜单）
-    await page.waitForSelector(
-      '.context-menu-item[data-item-id="setAsFirst"]',
-      { state: "visible", timeout: 1000 },
-    );
+    await page.waitForSelector('.context-menu-item[data-item-id="setAsFirst"]', {
+      state: "visible",
+      timeout: 1000,
+    });
 
     // 点击菜单项
     await page.click('.context-menu-item[data-item-id="setAsFirst"]');
 
     // 验证菜单消失
-    await page.waitForSelector(
-      '.context-menu-item[data-item-id="setAsFirst"]',
-      { state: "hidden", timeout: 1000 },
-    );
+    await page.waitForSelector('.context-menu-item[data-item-id="setAsFirst"]', {
+      state: "hidden",
+      timeout: 1000,
+    });
 
     // 等待图像顺序变化
     await waitForImageOrderChange(page, secondImageId);
@@ -365,10 +352,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(afterImageIds[0]).toBe(secondImageId);
   });
 
-  test("双图像：验证currentImagesCache正确更新", async ({
-    electronTest,
-    page,
-  }) => {
+  test("双图像：验证currentImagesCache正确更新", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 复用同一个提示词
@@ -435,8 +419,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(dbPromptAfter).toBeTruthy();
 
     // 获取数据库中的图像顺序
-    const dbImageIds =
-      dbPromptAfter!.images?.map((img) => String(img.id)) || [];
+    const dbImageIds = dbPromptAfter!.images?.map((img) => String(img.id)) || [];
 
     // 验证缓存与数据库一致
     expect(cacheImageIds).toEqual(dbImageIds);

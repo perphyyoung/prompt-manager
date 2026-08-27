@@ -4,9 +4,9 @@
  * 检查 this.xxx 在使用前是否被赋值
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,8 +17,8 @@ const issues = [];
  * 检查文件
  */
 function checkFile(filePath) {
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n');
+  const content = fs.readFileSync(filePath, "utf-8");
+  const lines = content.split("\n");
 
   // 简单的类分析
   let currentClass = null;
@@ -41,7 +41,7 @@ function checkFile(filePath) {
     }
 
     // 检测构造函数结束（简化判断）
-    if (inConstructor && line.trim() === '}' && !line.includes('{')) {
+    if (inConstructor && line.trim() === "}" && !line.includes("{")) {
       inConstructor = false;
     }
 
@@ -65,10 +65,10 @@ function checkFile(filePath) {
         issues.push({
           file: filePath,
           line: lineNum,
-          type: 'warning',
+          type: "warning",
           message: `属性 '${propName}' 可能在构造函数中未初始化`,
           code: line.trim(),
-          className: currentClass
+          className: currentClass,
         });
       }
     }
@@ -80,14 +80,14 @@ function checkFile(filePath) {
  */
 function walkDir(dir, callback) {
   const files = fs.readdirSync(dir);
-  files.forEach(file => {
+  files.forEach((file) => {
     const filePath = path.join(dir, file);
     const stat = fs.statSync(filePath);
     if (stat.isDirectory()) {
-      if (file !== 'node_modules' && file !== 'tests') {
+      if (file !== "node_modules" && file !== "tests") {
         walkDir(filePath, callback);
       }
-    } else if (file.endsWith('.js')) {
+    } else if (file.endsWith(".js")) {
       callback(filePath);
     }
   });
@@ -97,15 +97,15 @@ function walkDir(dir, callback) {
  * 主函数
  */
 function main() {
-  console.log('🔍 检查属性初始化...\n');
+  console.log("🔍 检查属性初始化...\n");
 
-  const targetDir = path.join(__dirname, '..', 'renderer');
+  const targetDir = path.join(__dirname, "..", "renderer");
   if (fs.existsSync(targetDir)) {
     walkDir(targetDir, checkFile);
   }
 
   if (issues.length === 0) {
-    console.log('✅ 没有发现潜在问题\n');
+    console.log("✅ 没有发现潜在问题\n");
   } else {
     console.log(`⚠️ 发现 ${issues.length} 个潜在问题：\n`);
 
@@ -116,7 +116,7 @@ function main() {
         console.log(`   类: ${issue.className}`);
       }
       console.log(`   代码: ${issue.code}`);
-      console.log('');
+      console.log("");
     });
   }
 }

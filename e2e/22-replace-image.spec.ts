@@ -76,10 +76,9 @@ test.describe("替换图像功能", () => {
       await menuItem.click();
 
       // 等待成功提示
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("图像已替换")`,
-        { timeout: 2000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("图像已替换")`, {
+        timeout: 2000,
+      });
 
       // 验证旧图像已进入回收站
       const trashImages = await page.evaluate(async () => {
@@ -146,10 +145,9 @@ test.describe("替换图像功能", () => {
       await menuItem.click();
 
       // 等待成功提示
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("图像已替换")`,
-        { timeout: 2000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("图像已替换")`, {
+        timeout: 2000,
+      });
 
       // 验证旧图像已进入回收站
       const trashImages = await page.evaluate(async () => {

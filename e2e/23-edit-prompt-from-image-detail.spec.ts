@@ -9,10 +9,7 @@ import { enterImageDetailView, test } from "./electron-test.ts";
  * 当前选中的提示词详情，无论关联一个还是多个提示词。
  */
 
-async function openPromptDetailFromImageAndVerify(
-  page: any,
-  expectedTitle: string,
-): Promise<void> {
+async function openPromptDetailFromImageAndVerify(page: any, expectedTitle: string): Promise<void> {
   // 点击编辑按钮
   await page.click(`#${Constants.Ids.EDIT_PROMPT_FROM_IMAGE_BTN}`);
 
@@ -42,10 +39,9 @@ test.describe("图像详情界面单提示词编辑跳转", () => {
 
     // 创建测试图像，并关联一个提示词
     const image = await factory.createImageFactory().create({ label: "single-prompt" });
-    await factory.createPromptFactory().createWithImages(
-      { title: promptTitle, label: "single" },
-      [image.id],
-    );
+    await factory
+      .createPromptFactory()
+      .createWithImages({ title: promptTitle, label: "single" }, [image.id]);
 
     await electronTest.refreshData();
   });
@@ -75,14 +71,12 @@ test.describe("图像详情界面多提示词编辑跳转", () => {
 
     // 创建测试图像，并关联两个提示词
     const image = await factory.createImageFactory().create({ label: "multi-prompt" });
-    await factory.createPromptFactory().createWithImages(
-      { title: promptOld, label: "old" },
-      [image.id],
-    );
-    await factory.createPromptFactory().createWithImages(
-      { title: promptNew, label: "new" },
-      [image.id],
-    );
+    await factory
+      .createPromptFactory()
+      .createWithImages({ title: promptOld, label: "old" }, [image.id]);
+    await factory
+      .createPromptFactory()
+      .createWithImages({ title: promptNew, label: "new" }, [image.id]);
 
     await electronTest.refreshData();
   });

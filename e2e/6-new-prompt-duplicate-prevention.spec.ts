@@ -26,10 +26,7 @@ test.describe("新建提示词防重复提交", () => {
     await electronTest.refreshData();
   });
 
-  test("快速点击完成按钮应该只创建一个提示词", async ({
-    electronTest,
-    page,
-  }) => {
+  test("快速点击完成按钮应该只创建一个提示词", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图并获取第一个图像
@@ -44,9 +41,7 @@ test.describe("新建提示词防重复提交", () => {
     });
 
     // 检查按钮状态，如有"编辑"则先解除关联
-    const editPromptBtn = page.locator(
-      `#${Constants.Ids.EDIT_PROMPT_FROM_IMAGE_BTN}`,
-    );
+    const editPromptBtn = page.locator(`#${Constants.Ids.EDIT_PROMPT_FROM_IMAGE_BTN}`);
     await editPromptBtn.waitFor({ state: "visible", timeout: 1000 });
 
     const btnText = await editPromptBtn.textContent();
@@ -56,10 +51,9 @@ test.describe("新建提示词防重复提交", () => {
       await expect(unlinkBtn).toBeVisible();
       await unlinkBtn.click();
 
-      await page.waitForSelector(
-        `#${Constants.Ids.CONFIRM_MODAL}[style*="flex"]`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}[style*="flex"]`, {
+        timeout: 1000,
+      });
       await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
       await page.waitForFunction(
@@ -127,10 +121,7 @@ test.describe("新建提示词防重复提交", () => {
     // 验证创建的提示词内容正确
     const createdPrompt = await page.evaluate(
       async (params: { content: string }): Promise<IPrompt | undefined> => {
-        const prompts = await window.electronAPI.getPrompts(
-          "createdAt",
-          "desc",
-        );
+        const prompts = await window.electronAPI.getPrompts("createdAt", "desc");
         return prompts.find((p: IPrompt) => p.content === params.content);
       },
       { content: testContent },
@@ -140,10 +131,7 @@ test.describe("新建提示词防重复提交", () => {
     expect(createdPrompt?.content).toBe(testContent);
   });
 
-  test("重复点击完成按钮时应该只执行一次保存", async ({
-    electronTest,
-    page,
-  }) => {
+  test("重复点击完成按钮时应该只执行一次保存", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图并获取第一个图像
@@ -158,9 +146,7 @@ test.describe("新建提示词防重复提交", () => {
     });
 
     // 检查按钮状态，如有"编辑"则先解除关联
-    const editPromptBtn = page.locator(
-      `#${Constants.Ids.EDIT_PROMPT_FROM_IMAGE_BTN}`,
-    );
+    const editPromptBtn = page.locator(`#${Constants.Ids.EDIT_PROMPT_FROM_IMAGE_BTN}`);
     await editPromptBtn.waitFor({ state: "visible", timeout: 1000 });
 
     const btnText = await editPromptBtn.textContent();
@@ -170,10 +156,9 @@ test.describe("新建提示词防重复提交", () => {
       await expect(unlinkBtn).toBeVisible();
       await unlinkBtn.click();
 
-      await page.waitForSelector(
-        `#${Constants.Ids.CONFIRM_MODAL}[style*="flex"]`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}[style*="flex"]`, {
+        timeout: 1000,
+      });
       await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
       await page.waitForFunction(
@@ -239,10 +224,7 @@ test.describe("新建提示词防重复提交", () => {
     // 验证只创建了指定内容的提示词
     const createdPrompts = await page.evaluate(
       async (params: { content: string }) => {
-        const prompts = await window.electronAPI.getPrompts(
-          "createdAt",
-          "desc",
-        );
+        const prompts = await window.electronAPI.getPrompts("createdAt", "desc");
         return prompts.filter((p: IPrompt) => p.content === params.content);
       },
       { content: testContent },
@@ -266,9 +248,7 @@ test.describe("新建提示词防重复提交", () => {
     });
 
     // 检查按钮状态，如有"编辑"则先解除关联
-    const editPromptBtn = page.locator(
-      `#${Constants.Ids.EDIT_PROMPT_FROM_IMAGE_BTN}`,
-    );
+    const editPromptBtn = page.locator(`#${Constants.Ids.EDIT_PROMPT_FROM_IMAGE_BTN}`);
     await editPromptBtn.waitFor({ state: "visible", timeout: 1000 });
 
     const btnText = await editPromptBtn.textContent();
@@ -278,10 +258,9 @@ test.describe("新建提示词防重复提交", () => {
       await expect(unlinkBtn).toBeVisible();
       await unlinkBtn.click();
 
-      await page.waitForSelector(
-        `#${Constants.Ids.CONFIRM_MODAL}[style*="flex"]`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}[style*="flex"]`, {
+        timeout: 1000,
+      });
       await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
 
       await page.waitForFunction(

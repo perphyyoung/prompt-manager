@@ -12,7 +12,7 @@ export type TagName = string;
 export type TagGroupId = number;
 
 /** 支持的数据类型 */
-export type DataType = 'prompt' | 'image';
+export type DataType = "prompt" | "image";
 
 /** 标签对象 */
 export interface Tag {
@@ -39,11 +39,11 @@ export interface TagGroup {
 
 /** 错误代码 */
 export type ErrorCode =
-  | 'RESERVED' // 系统保留标签
-  | 'EXISTS' // 已存在
-  | 'INVALID' // 无效名称
-  | 'PERMISSION' // 权限不足
-  | 'NOT_FOUND'; // 不存在
+  | "RESERVED" // 系统保留标签
+  | "EXISTS" // 已存在
+  | "INVALID" // 无效名称
+  | "PERMISSION" // 权限不足
+  | "NOT_FOUND"; // 不存在
 
 /** 错误信息 */
 export interface TagError {
@@ -79,7 +79,7 @@ export interface TagCreateOptions {
 /** 查询标签选项 */
 export interface TagQueryOptions {
   /** 排序方式 */
-  sortBy?: 'name' | 'count';
+  sortBy?: "name" | "count";
 }
 
 // ========== 验证结果类型 ==========
@@ -98,50 +98,50 @@ export class TagOperationError extends Error {
   constructor(
     message: string,
     public readonly code: ErrorCode,
-    public readonly tag?: TagName
+    public readonly tag?: TagName,
   ) {
     super(message);
-    this.name = 'TagOperationError';
+    this.name = "TagOperationError";
   }
 }
 
 /** 标签已存在异常 */
 export class TagExistsError extends TagOperationError {
   constructor(tag: TagName) {
-    super(`标签 "${tag}" 已存在`, 'EXISTS', tag);
-    this.name = 'TagExistsError';
+    super(`标签 "${tag}" 已存在`, "EXISTS", tag);
+    this.name = "TagExistsError";
   }
 }
 
 /** 标签不存在异常 */
 export class TagNotFoundError extends TagOperationError {
   constructor(tag: TagName) {
-    super(`标签 "${tag}" 不存在`, 'NOT_FOUND', tag);
-    this.name = 'TagNotFoundError';
+    super(`标签 "${tag}" 不存在`, "NOT_FOUND", tag);
+    this.name = "TagNotFoundError";
   }
 }
 
 /** 无效标签名异常 */
 export class InvalidTagNameError extends TagOperationError {
   constructor(tag: TagName, reason: string) {
-    super(`无效的标签名 "${tag}": ${reason}`, 'INVALID', tag);
-    this.name = 'InvalidTagNameError';
+    super(`无效的标签名 "${tag}": ${reason}`, "INVALID", tag);
+    this.name = "InvalidTagNameError";
   }
 }
 
 /** 保留标签异常 */
 export class ReservedTagError extends TagOperationError {
   constructor(tag: TagName) {
-    super(`标签 "${tag}" 是系统保留标签，无法修改`, 'RESERVED', tag);
-    this.name = 'ReservedTagError';
+    super(`标签 "${tag}" 是系统保留标签，无法修改`, "RESERVED", tag);
+    this.name = "ReservedTagError";
   }
 }
 
 /** 标签组不存在异常 */
 export class TagGroupNotFoundError extends TagOperationError {
   constructor(groupId: TagGroupId) {
-    super(`标签组 ID ${groupId} 不存在`, 'NOT_FOUND');
-    this.name = 'TagGroupNotFoundError';
+    super(`标签组 ID ${groupId} 不存在`, "NOT_FOUND");
+    this.name = "TagGroupNotFoundError";
   }
 }
 
@@ -185,6 +185,6 @@ export interface SpecialTagInfo {
 
 /** 标签排序配置 */
 export interface TagSortConfig {
-  sortBy: 'name' | 'count';
-  sortOrder: 'asc' | 'desc';
+  sortBy: "name" | "count";
+  sortOrder: "asc" | "desc";
 }

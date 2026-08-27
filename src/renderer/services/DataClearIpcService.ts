@@ -1,4 +1,4 @@
-import { logger } from '../../utils/Logger.ts';
+import { logger } from "../../utils/Logger.ts";
 /**
  * 数据清空 IPC 服务类
  * 封装清空数据的 IPC 调用，提供统一的错误处理和日志记录
@@ -11,10 +11,10 @@ export class DataClearIpcService {
   static async clearAllData(): Promise<string> {
     try {
       const result = await window.electronAPI.clearAllData();
-      logger.info('DataClearIpcService', '清空数据成功');
+      logger.info("DataClearIpcService", "清空数据成功");
       return result;
     } catch (error) {
-      logger.error('DataClearIpcService', '清空数据失败:', error);
+      logger.error("DataClearIpcService", "清空数据失败:", error);
       throw error;
     }
   }

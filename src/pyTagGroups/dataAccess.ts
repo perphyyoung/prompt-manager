@@ -3,7 +3,7 @@
  * 抽象底层数据操作，便于测试和替换实现
  */
 
-import type { TagName, TagGroup, TagGroupId, DataType } from './types.ts';
+import type { TagName, TagGroup, TagGroupId, DataType } from "./types.ts";
 
 /**
  * 数据访问接口
@@ -40,69 +40,70 @@ export class ElectronTagDataAccess implements TagDataAccess {
   }
 
   async getTags(): Promise<TagName[]> {
-    return this.type === 'prompt'
+    return this.type === "prompt"
       ? window.electronAPI.getPromptTags()
       : window.electronAPI.getImageTags();
   }
 
   async addTag(tag: TagName): Promise<void> {
-    return this.type === 'prompt'
+    return this.type === "prompt"
       ? window.electronAPI.addPromptTag(tag)
       : window.electronAPI.addImageTag(tag);
   }
 
   async renameTag(oldName: TagName, newName: TagName): Promise<void> {
-    return this.type === 'prompt'
+    return this.type === "prompt"
       ? window.electronAPI.renamePromptTag(oldName, newName)
       : window.electronAPI.renameImageTag(oldName, newName);
   }
 
   async deleteTag(tag: TagName): Promise<void> {
-    return this.type === 'prompt'
+    return this.type === "prompt"
       ? window.electronAPI.deletePromptTag(tag)
       : window.electronAPI.deleteImageTag(tag);
   }
 
   async getTagGroups(): Promise<TagGroup[]> {
-    return this.type === 'prompt'
+    return this.type === "prompt"
       ? window.electronAPI.getPromptTagGroups()
       : window.electronAPI.getImageTagGroups();
   }
 
   async createTagGroup(name: string, sortOrder: number): Promise<TagGroup> {
-    return this.type === 'prompt'
+    return this.type === "prompt"
       ? window.electronAPI.createPromptTagGroup(name, sortOrder)
       : window.electronAPI.createImageTagGroup(name, sortOrder);
   }
 
   async updateTagGroup(id: TagGroupId, attrs: Partial<TagGroup>): Promise<void> {
-    return this.type === 'prompt'
+    return this.type === "prompt"
       ? window.electronAPI.updatePromptTagGroupAttrs(id, attrs)
       : window.electronAPI.updateImageTagGroupAttrs(id, attrs);
   }
 
   async deleteTagGroup(id: TagGroupId): Promise<void> {
-    return this.type === 'prompt'
+    return this.type === "prompt"
       ? window.electronAPI.deletePromptTagGroup(id)
       : window.electronAPI.deleteImageTagGroup(id);
   }
 
   async assignTagToGroup(tag: TagName, groupId: TagGroupId | null): Promise<void> {
-    return this.type === 'prompt'
+    return this.type === "prompt"
       ? window.electronAPI.assignPromptTagToBelongGroup(tag, groupId)
       : window.electronAPI.assignImageTagToBelongGroup(tag, groupId);
   }
 
   async getItemsByTag(tag: TagName): Promise<string[]> {
-    return this.type === 'prompt'
+    return this.type === "prompt"
       ? window.electronAPI.getPromptsByTag(tag)
       : window.electronAPI.getImagesByTag(tag);
   }
 
   async removeTagFromItem(itemId: string, tag: TagName): Promise<void> {
-    const result = this.type === 'prompt'
-      ? await window.electronAPI.removeTagFromPrompt(itemId, tag)
-      : await window.electronAPI.removeTagFromImage(itemId, tag);
+    const result =
+      this.type === "prompt"
+        ? await window.electronAPI.removeTagFromPrompt(itemId, tag)
+        : await window.electronAPI.removeTagFromImage(itemId, tag);
     if (!result) {
       throw new Error(`Failed to remove tag "${tag}" from item "${itemId}"`);
     }

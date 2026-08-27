@@ -1,4 +1,4 @@
-import { cacheManager } from '../../utils/index.ts';
+import { cacheManager } from "../../utils/index.ts";
 
 interface SaveResult {
   success: boolean;
@@ -29,10 +29,10 @@ export abstract class SaveStrategy {
     const inputElement = element as HTMLInputElement;
     const selectElement = element as HTMLSelectElement;
 
-    if (tagName === 'input' && inputElement.type === 'checkbox') {
+    if (tagName === "input" && inputElement.type === "checkbox") {
       return inputElement.checked;
-    } else if (tagName === 'select' && selectElement.multiple) {
-      return Array.from(selectElement.selectedOptions).map(opt => opt.value);
+    } else if (tagName === "select" && selectElement.multiple) {
+      return Array.from(selectElement.selectedOptions).map((opt) => opt.value);
     } else {
       return (element as HTMLInputElement | HTMLTextAreaElement).value;
     }
@@ -65,14 +65,14 @@ export class PromptSaveStrategy extends SaveStrategy {
 
   getSuccessMessage(fieldName: string, value: unknown): string {
     const messages: Record<string, string> = {
-      'isSafe': value ? 'Marked as safe' : 'Marked as unsafe',
-      'isFavorite': value ? 'Added to favorites' : 'Removed from favorites',
-      'title': 'Title saved',
-      'content': 'Content saved',
-      'contentTranslate': 'Translation saved',
-      'note': 'Note saved'
+      isSafe: value ? "Marked as safe" : "Marked as unsafe",
+      isFavorite: value ? "Added to favorites" : "Removed from favorites",
+      title: "Title saved",
+      content: "Content saved",
+      contentTranslate: "Translation saved",
+      note: "Note saved",
     };
-    return messages[fieldName] || 'Saved';
+    return messages[fieldName] || "Saved";
   }
 }
 
@@ -108,12 +108,12 @@ export class ImageSaveStrategy extends SaveStrategy {
 
   getSuccessMessage(fieldName: string, value: unknown): string {
     const messages: Record<string, string> = {
-      'isSafe': value ? 'Marked as safe' : 'Marked as unsafe',
-      'isFavorite': value ? 'Added to favorites' : 'Removed from favorites',
-      'fileName': 'File name saved',
-      'note': 'Note saved',
-      'tags': 'Tags updated'
+      isSafe: value ? "Marked as safe" : "Marked as unsafe",
+      isFavorite: value ? "Added to favorites" : "Removed from favorites",
+      fileName: "File name saved",
+      note: "Note saved",
+      tags: "Tags updated",
     };
-    return messages[fieldName] || 'Saved';
+    return messages[fieldName] || "Saved";
   }
 }

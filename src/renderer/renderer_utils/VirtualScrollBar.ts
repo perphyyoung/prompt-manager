@@ -63,8 +63,8 @@ export class VirtualScrollBar {
   destroy(): void {
     // 拖拽中销毁时兜底：复位文本选中状态并卸载全局监听
     this.detachGlobalDragListeners();
-    document.body.style.userSelect = '';
-    this.mount.innerHTML = '';
+    document.body.style.userSelect = "";
+    this.mount.innerHTML = "";
     this.track = null;
     this.thumb = null;
   }
@@ -81,20 +81,20 @@ export class VirtualScrollBar {
         <button type="button" class="vsb__page-btn vsb__page-btn--down" title="下一页">▼</button>
       </div>
     `;
-    this.track = this.mount.querySelector('.vsb__track');
-    this.thumb = this.mount.querySelector('.vsb__thumb');
+    this.track = this.mount.querySelector(".vsb__track");
+    this.thumb = this.mount.querySelector(".vsb__thumb");
 
-    this.thumb?.addEventListener('mousedown', (e) => {
+    this.thumb?.addEventListener("mousedown", (e) => {
       e.stopPropagation();
       this.isDragging = true;
       this.dragStartY = e.clientY;
       this.dragStartThumbTop = this.currentThumbTop();
-      document.body.style.userSelect = 'none';
+      document.body.style.userSelect = "none";
       // 仅拖拽期间挂载全局监听，避免实例全生命周期的常驻开销
-      window.addEventListener('mousemove', this.handleMouseMove);
-      window.addEventListener('mouseup', this.handleMouseUp);
+      window.addEventListener("mousemove", this.handleMouseMove);
+      window.addEventListener("mouseup", this.handleMouseUp);
     });
-    this.track?.addEventListener('click', (e) => {
+    this.track?.addEventListener("click", (e) => {
       if (!this.track) return;
       const rect = this.track.getBoundingClientRect();
       const clickY = e.clientY - rect.top;
@@ -102,10 +102,10 @@ export class VirtualScrollBar {
       const targetTop = Math.max(0, Math.min(clickY - halfThumb, this.maxThumbTop()));
       this.seekFromThumbTop(targetTop);
     });
-    this.mount.querySelector('.vsb__page-btn--up')?.addEventListener('click', () => {
+    this.mount.querySelector(".vsb__page-btn--up")?.addEventListener("click", () => {
       this.seek(Math.max(0, this.startIndex - Math.max(1, this.getPageSize())));
     });
-    this.mount.querySelector('.vsb__page-btn--down')?.addEventListener('click', () => {
+    this.mount.querySelector(".vsb__page-btn--down")?.addEventListener("click", () => {
       const maxOffset = Math.max(0, this.getTotal() - Math.max(1, this.getPageSize()));
       this.seek(Math.min(maxOffset, this.startIndex + Math.max(1, this.getPageSize())));
     });
@@ -122,14 +122,14 @@ export class VirtualScrollBar {
   private handleMouseUp = (): void => {
     if (!this.isDragging) return;
     this.isDragging = false;
-    document.body.style.userSelect = '';
+    document.body.style.userSelect = "";
     this.detachGlobalDragListeners();
   };
 
   /** 卸载拖拽期间挂载的全局监听（幂等） */
   private detachGlobalDragListeners(): void {
-    window.removeEventListener('mousemove', this.handleMouseMove);
-    window.removeEventListener('mouseup', this.handleMouseUp);
+    window.removeEventListener("mousemove", this.handleMouseMove);
+    window.removeEventListener("mouseup", this.handleMouseUp);
   }
 
   private seek(index: number): void {
@@ -163,7 +163,7 @@ export class VirtualScrollBar {
   }
 
   private currentThumbTop(): number {
-    return parseFloat(this.thumb?.style.top || '0') || 0;
+    return parseFloat(this.thumb?.style.top || "0") || 0;
   }
 
   private updateThumb(): void {
@@ -173,10 +173,11 @@ export class VirtualScrollBar {
     const thumbH = this.thumbHeightPx();
     const maxTop = this.maxThumbTop();
     const maxOffset = Math.max(1, this.maxOffset());
-    const top = total <= pageSize ? 0 : Math.min(Math.max(0, (this.startIndex / maxOffset) * maxTop), maxTop);
+    const top =
+      total <= pageSize ? 0 : Math.min(Math.max(0, (this.startIndex / maxOffset) * maxTop), maxTop);
     const canScroll = total > pageSize;
     this.thumb.style.height = `${thumbH}px`;
     this.thumb.style.top = `${top}px`;
-    this.thumb.style.display = canScroll ? '' : 'none';
+    this.thumb.style.display = canScroll ? "" : "none";
   }
 }

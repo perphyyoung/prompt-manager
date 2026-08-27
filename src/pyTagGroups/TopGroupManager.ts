@@ -4,8 +4,8 @@ import {
   TopGroupInfo,
   HeaderTagItem,
   SpecialTagInfo,
-  TagSortConfig
-} from './types';
+  TagSortConfig,
+} from "./types";
 
 /**
  * 首位组管理器
@@ -19,10 +19,10 @@ export class TopGroupManager {
   static sortTagsWithGroupPriority(
     tags: TagInfo[],
     tagCounts: Record<string, number>,
-    config: TagSortConfig
+    config: TagSortConfig,
   ): TagInfo[] {
     const sorted = [...tags];
-    const order = config.sortOrder === 'asc' ? 1 : -1;
+    const order = config.sortOrder === "asc" ? 1 : -1;
 
     sorted.sort((a, b) => {
       // 首先按组排序：有组的排在无组前面，组按 groupSortOrder 排序
@@ -35,15 +35,15 @@ export class TopGroupManager {
       // 同一组内按当前排序规则排序
       const countA = tagCounts[a.name] || 0;
       const countB = tagCounts[b.name] || 0;
-      const nameA = (a.name || '').toLowerCase();
-      const nameB = (b.name || '').toLowerCase();
+      const nameA = (a.name || "").toLowerCase();
+      const nameB = (b.name || "").toLowerCase();
 
-      if (config.sortBy === 'count') {
+      if (config.sortBy === "count") {
         if (countA !== countB) {
           return (countA - countB) * order;
         }
         return nameA.localeCompare(nameB);
-      } else if (config.sortBy === 'name') {
+      } else if (config.sortBy === "name") {
         return nameA.localeCompare(nameB) * order;
       }
       return 0;
@@ -61,22 +61,22 @@ export class TopGroupManager {
   static buildGroupMap(
     allGroups: Array<{ id: number; name: string; sortOrder?: number }>,
     tags: TagInfo[],
-    tagCounts: Record<string, number>
+    tagCounts: Record<string, number>,
   ): Map<number, TopGroupInfo> {
     const groupMap = new Map<number, TopGroupInfo>();
 
     // 首先注册所有组（包括空组）
-    allGroups.forEach(group => {
+    allGroups.forEach((group) => {
       groupMap.set(group.id, {
         groupId: group.id,
         groupName: group.name,
         groupSortOrder: group.sortOrder ?? 0,
-        tags: []
+        tags: [],
       });
     });
 
     // 然后填充标签
-    tags.forEach(tag => {
+    tags.forEach((tag) => {
       const count = tagCounts[tag.name] || 0;
       if (tag.groupId && groupMap.has(tag.groupId)) {
         groupMap.get(tag.groupId)!.tags.push({ ...tag, count });
@@ -90,8 +90,7 @@ export class TopGroupManager {
    * 获取排序后的组列表（包括空组）
    */
   static getSortedGroups(groupMap: Map<number, TopGroupInfo>): TopGroupInfo[] {
-    return Array.from(groupMap.values())
-      .sort((a, b) => a.groupSortOrder - b.groupSortOrder);
+    return Array.from(groupMap.values()).sort((a, b) => a.groupSortOrder - b.groupSortOrder);
   }
 
   /**
@@ -111,7 +110,7 @@ export class TopGroupManager {
     sortedTags: TagInfo[],
     tagCounts: Record<string, number>,
     selectedTags: Set<string>,
-    allSpecialTags: string[]
+    allSpecialTags: string[],
   ): HeaderTagItem[] {
     const tagsToShow: HeaderTagItem[] = [];
     const selectedSet = selectedTags;
@@ -122,9 +121,9 @@ export class TopGroupManager {
       tagsToShow.push({
         tag,
         count,
-        className: isActive ? 'active' : '',
+        className: isActive ? "active" : "",
         isSpecial: true,
-        isTopGroup: false
+        isTopGroup: false,
       });
     });
 
@@ -136,14 +135,14 @@ export class TopGroupManager {
     // 添加首位组标签（包括计数为0的标签）
     if (topGroup) {
       topGroup.tags.forEach((tagInfo: TagWithCount) => {
-        if (!tagsToShow.some(t => t.tag === tagInfo.name)) {
+        if (!tagsToShow.some((t) => t.tag === tagInfo.name)) {
           const isActive = selectedSet.has(tagInfo.name);
           tagsToShow.push({
             tag: tagInfo.name,
             count: tagInfo.count,
-            className: isActive ? 'active' : '',
+            className: isActive ? "active" : "",
             isSpecial: false,
-            isTopGroup: true
+            isTopGroup: true,
           });
         }
       });
@@ -151,17 +150,17 @@ export class TopGroupManager {
 
     // 添加选中的普通标签
     const tagToGroupMap = new Map<string, { groupId: number; groupSortOrder: number }>();
-    sortedTags.forEach(t => {
+    sortedTags.forEach((t) => {
       if (t.groupId && !tagToGroupMap.has(t.name)) {
         tagToGroupMap.set(t.name, {
           groupId: t.groupId,
-          groupSortOrder: t.groupSortOrder || 0
+          groupSortOrder: t.groupSortOrder || 0,
         });
       }
     });
 
-    selectedSet.forEach(tag => {
-      if (!tagsToShow.some(t => t.tag === tag) && !allSpecialTags.includes(tag)) {
+    selectedSet.forEach((tag) => {
+      if (!tagsToShow.some((t) => t.tag === tag) && !allSpecialTags.includes(tag)) {
         const count = tagCounts[tag] || 0;
         const groupInfo = tagToGroupMap.get(tag);
         const isInTopGroup = groupInfo?.groupId === topGroupId;
@@ -169,9 +168,9 @@ export class TopGroupManager {
         tagsToShow.push({
           tag,
           count,
-          className: 'active',
+          className: "active",
           isSpecial: false,
-          isTopGroup: isInTopGroup
+          isTopGroup: isInTopGroup,
         });
       }
     });

@@ -55,9 +55,7 @@ test.describe("图像标签筛选区", () => {
     await expect(noTagBtn).toHaveClass(/active/);
 
     // 验证"标签筛选"按钮变成"清除筛选"
-    const filterActionBtn = page.locator(
-      `#${Constants.Ids.IMAGE_TAG_FILTER_ACTION_BTN}`,
-    );
+    const filterActionBtn = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_ACTION_BTN}`);
     await expect(filterActionBtn).toHaveText("清除筛选");
     await expect(filterActionBtn).toHaveClass(/has-filters/);
 
@@ -127,9 +125,7 @@ test.describe("图像标签筛选区", () => {
     );
 
     // 获取排序选择器
-    const sortSelect = page.locator(
-      `#${Constants.Ids.IMAGE_TAG_FILTER_SORT_SELECT}`,
-    );
+    const sortSelect = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_SORT_SELECT}`);
     await expect(sortSelect).toBeVisible({ timeout: 1000 });
 
     // 切换到"名称（A→Z）"排序
@@ -183,9 +179,7 @@ test.describe("图像标签筛选区", () => {
     const expectedNewOrder = initialOrder === "asc" ? "desc" : "asc";
 
     // 点击逆序按钮
-    const orderBtn = page.locator(
-      `#${Constants.Ids.IMAGE_TAG_FILTER_ORDER_BTN}`,
-    );
+    const orderBtn = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_ORDER_BTN}`);
     await expect(orderBtn).toBeVisible({ timeout: 1000 });
     await orderBtn.click();
 
@@ -214,16 +208,12 @@ test.describe("图像标签筛选区", () => {
     await enterImageGridView(page);
 
     // 点击标签管理器按钮
-    const tagManagerBtn = page.locator(
-      `#${Constants.Ids.IMAGE_TAG_MANAGER_BTN}`,
-    );
+    const tagManagerBtn = page.locator(`#${Constants.Ids.IMAGE_TAG_MANAGER_BTN}`);
     await expect(tagManagerBtn).toBeVisible({ timeout: 1000 });
     await tagManagerBtn.click();
 
     // 验证标签管理器模态框已打开
-    const tagManagerModal = page.locator(
-      `#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`,
-    );
+    const tagManagerModal = page.locator(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`);
     await expect(tagManagerModal).toBeVisible({ timeout: 1000 });
 
     // 关闭标签管理器
@@ -231,10 +221,7 @@ test.describe("图像标签筛选区", () => {
     await expect(tagManagerModal).toBeHidden({ timeout: 1000 });
   });
 
-  test("收起/展开按钮应该能控制标签筛选区显示", async ({
-    electronTest,
-    page,
-  }) => {
+  test("收起/展开按钮应该能控制标签筛选区显示", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 切换到图像面板（不依赖卡片存在）
@@ -259,15 +246,11 @@ test.describe("图像标签筛选区", () => {
     );
 
     // 验证内容区域已隐藏
-    const tagFilterContent = page.locator(
-      `#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT}`,
-    );
+    const tagFilterContent = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT}`);
     await expect(tagFilterContent).toBeHidden();
 
     // 验证头部标签容器可见（收起时显示）
-    const headerTags = page.locator(
-      `#${Constants.Ids.IMAGE_TAG_FILTER_HEADER_TAGS}`,
-    );
+    const headerTags = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_HEADER_TAGS}`);
     await expect(headerTags).toBeVisible();
 
     // 再次点击展开
@@ -306,9 +289,7 @@ test.describe("图像标签筛选区", () => {
     );
 
     // 验证头部标签容器可见
-    const headerTags = page.locator(
-      `#${Constants.Ids.IMAGE_TAG_FILTER_HEADER_TAGS}`,
-    );
+    const headerTags = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_HEADER_TAGS}`);
     await expect(headerTags).toBeVisible();
 
     // 测试1: 点击头部区域的"收藏"特殊标签进行筛选
@@ -322,9 +303,7 @@ test.describe("图像标签筛选区", () => {
       await expect(favoriteTagBtn).toHaveClass(/active/);
 
       // 验证"标签筛选"按钮变成"清除筛选"
-      const filterActionBtn = page.locator(
-        `#${Constants.Ids.IMAGE_TAG_FILTER_ACTION_BTN}`,
-      );
+      const filterActionBtn = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_ACTION_BTN}`);
       await expect(filterActionBtn).toHaveText("清除筛选");
 
       // 清除筛选
@@ -334,9 +313,7 @@ test.describe("图像标签筛选区", () => {
 
     // 测试2: 点击头部区域的普通标签（首位组标签）进行筛选
     const firstTagBtn = headerTags
-      .locator(
-        '.tag-filter-item:not([data-tag="' + Constants.FAVORITE_TAG + '"])',
-      )
+      .locator('.tag-filter-item:not([data-tag="' + Constants.FAVORITE_TAG + '"])')
       .first();
     const hasRegularTag = (await firstTagBtn.count()) > 0;
 
@@ -345,9 +322,7 @@ test.describe("图像标签筛选区", () => {
       await expect(firstTagBtn).toHaveClass(/active/);
 
       // 验证"标签筛选"按钮变成"清除筛选"
-      const filterActionBtn = page.locator(
-        `#${Constants.Ids.IMAGE_TAG_FILTER_ACTION_BTN}`,
-      );
+      const filterActionBtn = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_ACTION_BTN}`);
       await expect(filterActionBtn).toHaveText("清除筛选");
     }
   });
@@ -387,9 +362,7 @@ test.describe("提示词标签筛选区", () => {
     await expect(noTagBtn).toHaveClass(/active/);
 
     // 验证"标签筛选"按钮变成"清除筛选"
-    const filterActionBtn = page.locator(
-      `#${Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN}`,
-    );
+    const filterActionBtn = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN}`);
     await expect(filterActionBtn).toHaveText("清除筛选");
     await expect(filterActionBtn).toHaveClass(/has-filters/);
 
@@ -459,9 +432,7 @@ test.describe("提示词标签筛选区", () => {
     );
 
     // 获取排序选择器
-    const sortSelect = page.locator(
-      `#${Constants.Ids.PROMPT_TAG_FILTER_SORT_SELECT}`,
-    );
+    const sortSelect = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_SORT_SELECT}`);
     await expect(sortSelect).toBeVisible({ timeout: 1000 });
 
     // 切换到"名称（A→Z）"排序
@@ -515,9 +486,7 @@ test.describe("提示词标签筛选区", () => {
     const expectedNewOrder = initialOrder === "asc" ? "desc" : "asc";
 
     // 点击逆序按钮
-    const orderBtn = page.locator(
-      `#${Constants.Ids.PROMPT_TAG_FILTER_ORDER_BTN}`,
-    );
+    const orderBtn = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_ORDER_BTN}`);
     await expect(orderBtn).toBeVisible({ timeout: 1000 });
     await orderBtn.click();
 
@@ -546,16 +515,12 @@ test.describe("提示词标签筛选区", () => {
     await enterPromptGridView(page);
 
     // 点击标签管理器按钮
-    const tagManagerBtn = page.locator(
-      `#${Constants.Ids.PROMPT_TAG_MANAGER_BTN}`,
-    );
+    const tagManagerBtn = page.locator(`#${Constants.Ids.PROMPT_TAG_MANAGER_BTN}`);
     await expect(tagManagerBtn).toBeVisible({ timeout: 1000 });
     await tagManagerBtn.click();
 
     // 验证标签管理器模态框已打开
-    const tagManagerModal = page.locator(
-      `#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`,
-    );
+    const tagManagerModal = page.locator(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`);
     await expect(tagManagerModal).toBeVisible({ timeout: 1000 });
 
     // 关闭标签管理器
@@ -563,10 +528,7 @@ test.describe("提示词标签筛选区", () => {
     await expect(tagManagerModal).toBeHidden({ timeout: 1000 });
   });
 
-  test("收起/展开按钮应该能控制标签筛选区显示", async ({
-    electronTest,
-    page,
-  }) => {
+  test("收起/展开按钮应该能控制标签筛选区显示", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 切换到提示词面板（不依赖卡片存在）
@@ -591,15 +553,11 @@ test.describe("提示词标签筛选区", () => {
     );
 
     // 验证内容区域已隐藏
-    const tagFilterContent = page.locator(
-      `#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`,
-    );
+    const tagFilterContent = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`);
     await expect(tagFilterContent).toBeHidden();
 
     // 验证头部标签容器可见（收起时显示）
-    const headerTags = page.locator(
-      `#${Constants.Ids.PROMPT_TAG_FILTER_HEADER_TAGS}`,
-    );
+    const headerTags = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_HEADER_TAGS}`);
     await expect(headerTags).toBeVisible();
 
     // 再次点击展开
@@ -638,9 +596,7 @@ test.describe("提示词标签筛选区", () => {
     );
 
     // 验证头部标签容器可见
-    const headerTags = page.locator(
-      `#${Constants.Ids.PROMPT_TAG_FILTER_HEADER_TAGS}`,
-    );
+    const headerTags = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_HEADER_TAGS}`);
     await expect(headerTags).toBeVisible();
 
     // 测试1: 点击头部区域的"收藏"特殊标签进行筛选
@@ -654,9 +610,7 @@ test.describe("提示词标签筛选区", () => {
       await expect(favoriteTagBtn).toHaveClass(/active/);
 
       // 验证"标签筛选"按钮变成"清除筛选"
-      const filterActionBtn = page.locator(
-        `#${Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN}`,
-      );
+      const filterActionBtn = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN}`);
       await expect(filterActionBtn).toHaveText("清除筛选");
 
       // 清除筛选
@@ -666,9 +620,7 @@ test.describe("提示词标签筛选区", () => {
 
     // 测试2: 点击头部区域的普通标签（首位组标签）进行筛选
     const firstTagBtn = headerTags
-      .locator(
-        '.tag-filter-item:not([data-tag="' + Constants.FAVORITE_TAG + '"])',
-      )
+      .locator('.tag-filter-item:not([data-tag="' + Constants.FAVORITE_TAG + '"])')
       .first();
     const hasRegularTag = (await firstTagBtn.count()) > 0;
 
@@ -677,9 +629,7 @@ test.describe("提示词标签筛选区", () => {
       await expect(firstTagBtn).toHaveClass(/active/);
 
       // 验证"标签筛选"按钮变成"清除筛选"
-      const filterActionBtn = page.locator(
-        `#${Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN}`,
-      );
+      const filterActionBtn = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN}`);
       await expect(filterActionBtn).toHaveText("清除筛选");
     }
   });

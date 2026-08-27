@@ -1,4 +1,4 @@
-import { DataClearApi } from './DataClearApi.ts';
+import { DataClearApi } from "./DataClearApi.ts";
 
 /**
  * 模拟的数据清空 API
@@ -10,7 +10,7 @@ export class MockDataClearApi extends DataClearApi {
    * @returns 模拟的旧数据目录路径
    */
   async clearAllData(): Promise<string> {
-    console.log('[MockDataClearApi] 模拟清空数据');
-    return 'mock-old-data-dir';
+    console.log("[MockDataClearApi] 模拟清空数据");
+    return "mock-old-data-dir";
   }
 }

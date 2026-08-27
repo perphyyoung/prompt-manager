@@ -1,6 +1,6 @@
-import { localTime } from '../../../utils/index.ts';
-import { Constants, Events } from '../../../constants.ts';
-import type { CacheUpdateData, TrashItem } from './TrashTypes.ts';
+import { localTime } from "../../../utils/index.ts";
+import { Constants, Events } from "../../../constants.ts";
+import type { CacheUpdateData, TrashItem } from "./TrashTypes.ts";
 
 /**
  * 图像回收站处理器
@@ -9,7 +9,7 @@ import type { CacheUpdateData, TrashItem } from './TrashTypes.ts';
 export class ImageTrashHandler {
   readonly type: string = Constants.TrashType.IMAGE;
   readonly containerId: string = Constants.Ids.IMAGE_TRASH_LIST;
-  readonly label: string = '图像';
+  readonly label: string = "图像";
   readonly eventName: string = Events.IMAGES_CHANGED;
 
   // ========== API 操作 ==========
@@ -46,7 +46,7 @@ export class ImageTrashHandler {
     return {
       isDeleted: 0,
       deletedAt: null,
-      updatedAt: localTime()
+      updatedAt: localTime(),
     };
   }
 

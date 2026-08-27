@@ -54,9 +54,7 @@ test.describe("主界面卡片视图多选功能", () => {
       await expect(firstCheckbox).toBeVisible();
       await firstCheckbox.click();
 
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`,
-      );
+      const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`);
       await expect(batchToolbar).toBeVisible();
 
       const countText = batchToolbar.locator(".batch-toolbar-count");
@@ -99,9 +97,7 @@ test.describe("主界面卡片视图多选功能", () => {
       const searchInput = page.locator(`#${Constants.Ids.IMAGE_SEARCH_INPUT}`);
       await searchInput.fill("");
 
-      const filterActionBtn = page.locator(
-        `#${Constants.Ids.IMAGE_TAG_FILTER_ACTION_BTN}`,
-      );
+      const filterActionBtn = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_ACTION_BTN}`);
       const btnText = await filterActionBtn.textContent();
       if (btnText === "清除筛选") {
         await filterActionBtn.click();
@@ -130,9 +126,7 @@ test.describe("主界面卡片视图多选功能", () => {
         state: "visible",
       });
 
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`,
-      );
+      const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`);
 
       // 等待按钮可见且稳定
       const invertBtn = batchToolbar.locator('[data-action="Invert"]');
@@ -157,9 +151,7 @@ test.describe("主界面卡片视图多选功能", () => {
           { timeout: 1000 },
         );
 
-        const countText = await batchToolbar
-          .locator(".batch-toolbar-count")
-          .textContent();
+        const countText = await batchToolbar.locator(".batch-toolbar-count").textContent();
         expect(countText).toContain(`${expectedCount}`);
       }
     });
@@ -179,9 +171,7 @@ test.describe("主界面卡片视图多选功能", () => {
         state: "visible",
       });
 
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`,
-      );
+      const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`);
       await batchToolbar.locator('[data-action="Cancel"]').click();
 
       await expect(batchToolbar).not.toBeVisible();
@@ -217,9 +207,7 @@ test.describe("主界面卡片视图多选功能", () => {
         state: "visible",
       });
 
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`,
-      );
+      const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`);
       await expect(batchToolbar).toBeVisible();
 
       await page.waitForFunction(
@@ -235,33 +223,22 @@ test.describe("主界面卡片视图多选功能", () => {
         { timeout: 1000 },
       );
 
-      const countText = await batchToolbar
-        .locator(".batch-toolbar-count")
-        .textContent();
+      const countText = await batchToolbar.locator(".batch-toolbar-count").textContent();
       expect(countText).toContain(`${totalImages}`);
 
       // 清理：退出批量模式，避免影响后续测试
       await page.keyboard.press("Escape");
-      await batchToolbar
-        .waitFor({ state: "hidden", timeout: 1000 })
-        .catch(() => {});
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 }).catch(() => {});
     });
 
-    test("图像批量收藏功能 - 验证批量收藏按钮切换图像收藏状态", async ({
-      electronTest,
-      page,
-    }) => {
+    test("图像批量收藏功能 - 验证批量收藏按钮切换图像收藏状态", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
       // 先清除可能遗留的选择状态
       await page.keyboard.press("Escape");
       // 等待批量工具栏消失（如果存在）
-      const batchToolbarBefore = page.locator(
-        `#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`,
-      );
-      await batchToolbarBefore
-        .waitFor({ state: "hidden", timeout: 1000 })
-        .catch(() => {});
+      const batchToolbarBefore = page.locator(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`);
+      await batchToolbarBefore.waitFor({ state: "hidden", timeout: 1000 }).catch(() => {});
 
       // 注意：不在此调用 enterImageGridView，因为 beforeAll 已准备好视图
 
@@ -289,9 +266,7 @@ test.describe("主界面卡片视图多选功能", () => {
         timeout: 1000,
       });
 
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`,
-      );
+      const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`);
       await batchToolbar.locator('[data-action="Favorite"]').click();
 
       // 根据 PRD 约束：批量收藏后选中集不变，工具栏保持显示
@@ -325,7 +300,6 @@ test.describe("主界面卡片视图多选功能", () => {
       await page.keyboard.press("Escape");
       await batchToolbar.waitFor({ state: "hidden", timeout: 1000 });
     });
-
   });
 
   test.describe("提示词面板多选功能", () => {
@@ -359,9 +333,7 @@ test.describe("主界面卡片视图多选功能", () => {
       await expect(firstCheckbox).toBeVisible();
       await firstCheckbox.click();
 
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`,
-      );
+      const batchToolbar = page.locator(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`);
       await expect(batchToolbar).toBeVisible();
 
       const countText = batchToolbar.locator(".batch-toolbar-count");
@@ -385,10 +357,9 @@ test.describe("主界面卡片视图多选功能", () => {
       await firstCard.hover();
       await firstCard.locator(".card-checkbox").click();
 
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`,
-        { state: "visible" },
-      );
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`, {
+        state: "visible",
+      });
 
       const secondCard = page.locator(".prompt-card").nth(1);
       const secondCheckbox = secondCard.locator(".card-checkbox");
@@ -405,9 +376,7 @@ test.describe("主界面卡片视图多选功能", () => {
       const searchInput = page.locator(`#${Constants.Ids.PROMPT_SEARCH_INPUT}`);
       await searchInput.fill("");
 
-      const filterActionBtn = page.locator(
-        `#${Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN}`,
-      );
+      const filterActionBtn = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_ACTION_BTN}`);
       const btnText = await filterActionBtn.textContent();
       if (btnText === "清除筛选") {
         await filterActionBtn.click();
@@ -432,14 +401,11 @@ test.describe("主界面卡片视图多选功能", () => {
       await firstCard.hover();
       await firstCard.locator(".card-checkbox").click();
 
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`,
-        { state: "visible" },
-      );
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`, {
+        state: "visible",
+      });
 
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`,
-      );
+      const batchToolbar = page.locator(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`);
       // 等待按钮可见且稳定
       const invertBtn = batchToolbar.locator('[data-action="Invert"]');
       await expect(invertBtn).toBeVisible({ timeout: 1000 });
@@ -463,9 +429,7 @@ test.describe("主界面卡片视图多选功能", () => {
           { timeout: 1000 },
         );
 
-        const countText = await batchToolbar
-          .locator(".batch-toolbar-count")
-          .textContent();
+        const countText = await batchToolbar.locator(".batch-toolbar-count").textContent();
         expect(countText).toContain(`${expectedCount}`);
       }
     });
@@ -481,14 +445,11 @@ test.describe("主界面卡片视图多选功能", () => {
       await firstCard.hover();
       await firstCard.locator(".card-checkbox").click();
 
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`,
-        { state: "visible" },
-      );
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`, {
+        state: "visible",
+      });
 
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`,
-      );
+      const batchToolbar = page.locator(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`);
       await batchToolbar.locator('[data-action="Cancel"]').click();
 
       await expect(batchToolbar).not.toBeVisible();
@@ -508,10 +469,7 @@ test.describe("主界面卡片视图多选功能", () => {
       // 注意：不在此调用 enterPromptGridView，因为 beforeAll 已准备好视图
 
       const totalPrompts = await page.evaluate(async () => {
-        const prompts = await window.electronAPI.getPrompts(
-          "createdAt",
-          "desc",
-        );
+        const prompts = await window.electronAPI.getPrompts("createdAt", "desc");
         return prompts.filter((p: IPrompt) => !p.isDeleted).length;
       });
 
@@ -523,14 +481,11 @@ test.describe("主界面卡片视图多选功能", () => {
       await page.focus(`#${Constants.Ids.PROMPT_GRID}`);
       await page.keyboard.press("Control+a");
 
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`,
-        { state: "visible" },
-      );
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`, {
+        state: "visible",
+      });
 
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`,
-      );
+      const batchToolbar = page.locator(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`);
       await expect(batchToolbar).toBeVisible();
 
       await page.waitForFunction(
@@ -546,16 +501,12 @@ test.describe("主界面卡片视图多选功能", () => {
         { timeout: 1000 },
       );
 
-      const countText = await batchToolbar
-        .locator(".batch-toolbar-count")
-        .textContent();
+      const countText = await batchToolbar.locator(".batch-toolbar-count").textContent();
       expect(countText).toContain(`${totalPrompts}`);
 
       // 清理：退出批量模式，避免影响后续测试
       await page.keyboard.press("Escape");
-      await batchToolbar
-        .waitFor({ state: "hidden", timeout: 1000 })
-        .catch(() => {});
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 }).catch(() => {});
     });
 
     test("提示词批量收藏功能 - 验证批量收藏按钮切换提示词收藏状态", async ({
@@ -574,10 +525,7 @@ test.describe("主界面卡片视图多选功能", () => {
 
       // 记录当前收藏状态（在点击复选框之前）
       const originalFavoriteStatus = await page.evaluate(async (id: string) => {
-        const prompts = await window.electronAPI.getPrompts(
-          "updatedAt",
-          "desc",
-        );
+        const prompts = await window.electronAPI.getPrompts("updatedAt", "desc");
         const prompt = prompts.find((p: IPrompt) => String(p.id) === id);
         return !!prompt?.isFavorite;
       }, firstPromptId as string);
@@ -588,14 +536,12 @@ test.describe("主界面卡片视图多选功能", () => {
       await firstCheckbox.click();
 
       // 点击复选框后立即等待工具栏显示
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`,
-        { state: "visible", timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`, {
+        state: "visible",
+        timeout: 1000,
+      });
 
-      const batchToolbar = page.locator(
-        `#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`,
-      );
+      const batchToolbar = page.locator(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`);
       // 等待按钮可见且稳定
       const favoriteBtn = batchToolbar.locator('[data-action="Favorite"]');
       await expect(favoriteBtn).toBeVisible({ timeout: 1000 });
@@ -605,10 +551,7 @@ test.describe("主界面卡片视图多选功能", () => {
       // 等待收藏操作完成 - 使用 waitForFunction 检查状态变化
       await page.waitForFunction(
         async (args: { id: string; originalStatus: boolean }) => {
-          const prompts = await window.electronAPI.getPrompts(
-            "updatedAt",
-            "desc",
-          );
+          const prompts = await window.electronAPI.getPrompts("updatedAt", "desc");
           const prompt = prompts.find((p: IPrompt) => String(p.id) === args.id);
           const currentStatus = !!prompt?.isFavorite;
           return currentStatus !== args.originalStatus;
@@ -626,10 +569,7 @@ test.describe("主界面卡片视图多选功能", () => {
 
       // 验证状态已切换
       const newFavoriteStatus = await page.evaluate(async (id: string) => {
-        const prompts = await window.electronAPI.getPrompts(
-          "updatedAt",
-          "desc",
-        );
+        const prompts = await window.electronAPI.getPrompts("updatedAt", "desc");
         const prompt = prompts.find((p: IPrompt) => String(p.id) === id);
         return !!prompt?.isFavorite;
       }, firstPromptId as string);

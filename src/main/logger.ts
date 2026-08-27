@@ -3,15 +3,15 @@
  * 日志统一存储在 rootDir 下的 pm.log
  */
 
-import log from 'electron-log';
-import path from 'path';
+import log from "electron-log";
+import path from "path";
 
 // 日志文件路径（由 initLogger 设置）
 let logFilePath: string;
 
 // 配置日志级别
 // const logLevel = 'debug';
-const logLevel = 'warn';
+const logLevel = "warn";
 log.transports.file.level = logLevel;
 log.transports.console.level = logLevel;
 
@@ -19,17 +19,18 @@ log.transports.console.level = logLevel;
 log.transports.file.maxSize = 10 * 1024 * 1024; // 10MB
 
 // 自定义日志格式
-log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] [{processType}] [{component}] {text}';
-log.transports.console.format = '[{h}:{i}:{s}] [{level}] [{component}] {text}';
+log.transports.file.format =
+  "[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] [{processType}] [{component}] {text}";
+log.transports.console.format = "[{h}:{i}:{s}] [{level}] [{component}] {text}";
 
 /**
  * 初始化日志系统
  * @param rootDir - 应用根目录
  */
 export function initLogger(rootDir: string): void {
-  logFilePath = path.join(rootDir, 'pm.log');
+  logFilePath = path.join(rootDir, "pm.log");
   log.transports.file.resolvePathFn = () => logFilePath;
-  
+
   // 注册全局异常处理器
   registerExceptionHandlers();
 }
@@ -41,7 +42,7 @@ export function initLogger(rootDir: string): void {
  */
 export function getLogPath(): string {
   if (!logFilePath) {
-    throw new Error('Logger not initialized. Call initLogger() first.');
+    throw new Error("Logger not initialized. Call initLogger() first.");
   }
   return logFilePath;
 }
@@ -52,7 +53,7 @@ export function getLogPath(): string {
  * @returns 序列化后的字符串
  */
 function serializeData(data: unknown): string {
-  if (data === null || data === undefined) return '';
+  if (data === null || data === undefined) return "";
   if (data instanceof Error) {
     return JSON.stringify({ message: data.message, name: data.name, stack: data.stack }, null, 2);
   }
@@ -70,7 +71,7 @@ function serializeData(data: unknown): string {
  * @param data - 附加数据
  */
 export function logInfo(component: string, message: string, data?: unknown): void {
-  const dataStr = data ? `\nData: ${serializeData(data)}` : '';
+  const dataStr = data ? `\nData: ${serializeData(data)}` : "";
   log.info(`[${component}] ${message}${dataStr}`);
 }
 
@@ -81,7 +82,7 @@ export function logInfo(component: string, message: string, data?: unknown): voi
  * @param data - 附加数据
  */
 export function logDebug(component: string, message: string, data?: unknown): void {
-  const dataStr = data ? `\nData: ${serializeData(data)}` : '';
+  const dataStr = data ? `\nData: ${serializeData(data)}` : "";
   log.debug(`[${component}] ${message}${dataStr}`);
 }
 
@@ -92,7 +93,7 @@ export function logDebug(component: string, message: string, data?: unknown): vo
  * @param data - 附加数据
  */
 export function logWarn(component: string, message: string, data?: unknown): void {
-  const dataStr = data ? `\nData: ${serializeData(data)}` : '';
+  const dataStr = data ? `\nData: ${serializeData(data)}` : "";
   log.warn(`[${component}] ${message}${dataStr}`);
 }
 
@@ -103,11 +104,11 @@ export function logWarn(component: string, message: string, data?: unknown): voi
  * @param error - 错误对象
  */
 export function logError(component: string, message: string, error?: unknown): void {
-  let errorStr = '';
+  let errorStr = "";
 
   if (error instanceof Error) {
     errorStr = `\nError: ${error.name}: ${error.message}\nStack: ${error.stack}`;
-  } else if (error && typeof error === 'object') {
+  } else if (error && typeof error === "object") {
     errorStr = `\nError: ${serializeData(error)}`;
   } else if (error !== undefined) {
     errorStr = `\nError: ${String(error)}`;
@@ -124,15 +125,15 @@ let exceptionHandlersRegistered = false;
  */
 function registerExceptionHandlers(): void {
   if (exceptionHandlersRegistered) return;
-  
-  process.on('uncaughtException', (error) => {
-    logError('Main', 'Uncaught Exception', error);
+
+  process.on("uncaughtException", (error) => {
+    logError("Main", "Uncaught Exception", error);
   });
-  
-  process.on('unhandledRejection', (reason) => {
-    logError('Main', 'Unhandled Rejection', reason);
+
+  process.on("unhandledRejection", (reason) => {
+    logError("Main", "Unhandled Rejection", reason);
   });
-  
+
   exceptionHandlersRegistered = true;
 }
 
@@ -142,5 +143,5 @@ export default {
   logWarn,
   logError,
   getLogPath,
-  initLogger
+  initLogger,
 };

@@ -1,9 +1,5 @@
 import { expect } from "@playwright/test";
-import {
-  test,
-  enterImageGridView,
-  enterPromptGridView,
-} from "./electron-test.ts";
+import { test, enterImageGridView, enterPromptGridView } from "./electron-test.ts";
 import { Constants } from "../src/constants.ts";
 
 test.describe("批量工具栏 - 主界面功能测试", () => {
@@ -16,10 +12,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 全选按钮 ====================
-  test("图像主界面-全选按钮应该选中所有卡片", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像主界面-全选按钮应该选中所有卡片", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图
@@ -47,9 +40,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await page.waitForFunction(
       () => {
         const cards = document.querySelectorAll(".image-card");
-        const selectedCards = document.querySelectorAll(
-          ".image-card.is-selected",
-        );
+        const selectedCards = document.querySelectorAll(".image-card.is-selected");
         return selectedCards.length === cards.length;
       },
       { timeout: 1000 },
@@ -65,10 +56,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 反选按钮 ====================
-  test("图像主界面-反选按钮应该反转选择状态", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像主界面-反选按钮应该反转选择状态", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图
@@ -90,9 +78,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await page.waitForFunction(
       () => {
         const cards = document.querySelectorAll(".image-card");
-        const selectedCards = document.querySelectorAll(
-          ".image-card.is-selected",
-        );
+        const selectedCards = document.querySelectorAll(".image-card.is-selected");
         return selectedCards.length === cards.length;
       },
       { timeout: 1000 },
@@ -103,9 +89,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
 
     // PRD: 选中数为0时不退出批量模式，工具栏仍然可见，计数显示为0
     await expect(toolbar).toBeVisible({ timeout: 1000 });
-    const countText = await toolbar
-      .locator(".batch-toolbar-count")
-      .textContent();
+    const countText = await toolbar.locator(".batch-toolbar-count").textContent();
     expect(countText).toContain("已选择 0 个图像");
 
     // 点击取消退出批量模式，避免干扰后续测试
@@ -114,10 +98,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 添加标签按钮 ====================
-  test("图像主界面-添加标签按钮应该能正常批量添加标签", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像主界面-添加标签按钮应该能正常批量添加标签", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图
@@ -165,10 +146,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 收藏按钮 ====================
-  test("图像主界面-收藏按钮应该收藏选中的图像", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像主界面-收藏按钮应该收藏选中的图像", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图
@@ -195,10 +173,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await page.waitForFunction(
       async (id: string) => {
         const card = document.querySelector(`.image-card[data-id="${id}"]`);
-        return (
-          card?.classList.contains("favorited") ||
-          card?.querySelector(".favorite-icon")
-        );
+        return card?.classList.contains("favorited") || card?.querySelector(".favorite-icon");
       },
       cardId!,
       { timeout: 1000 },
@@ -206,10 +181,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 取消按钮 ====================
-  test("图像主界面-取消按钮应该退出批量模式", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像主界面-取消按钮应该退出批量模式", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图
@@ -227,9 +199,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await expect(toolbar).toBeVisible({ timeout: 1000 });
 
     // 验证计数显示
-    const countText = await toolbar
-      .locator(".batch-toolbar-count")
-      .textContent();
+    const countText = await toolbar.locator(".batch-toolbar-count").textContent();
     expect(countText).toContain("已选择 1 个图像");
 
     // 点击"取消"按钮
@@ -321,9 +291,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     // 验证选中3项
     await page.waitForFunction(
       () => {
-        const selectedCards = document.querySelectorAll(
-          ".image-card.is-selected",
-        );
+        const selectedCards = document.querySelectorAll(".image-card.is-selected");
         return selectedCards.length === 3;
       },
       { timeout: 1000 },
@@ -338,10 +306,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - Ctrl+A全选 ====================
-  test("图像主界面-Ctrl+A应该全选所有可见项目", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像主界面-Ctrl+A应该全选所有可见项目", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图
@@ -374,18 +339,14 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await page.waitForFunction(
       () => {
         const cards = document.querySelectorAll(".image-card");
-        const selectedCards = document.querySelectorAll(
-          ".image-card.is-selected",
-        );
+        const selectedCards = document.querySelectorAll(".image-card.is-selected");
         return selectedCards.length === cards.length;
       },
       { timeout: 1000 },
     );
 
     // 验证计数显示为全部
-    const countText = await toolbar
-      .locator(".batch-toolbar-count")
-      .textContent();
+    const countText = await toolbar.locator(".batch-toolbar-count").textContent();
     expect(countText).toMatch(/已选择 \d+ 个图像/);
 
     // 点击取消退出批量模式
@@ -394,10 +355,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 搜索改变退出批量模式 ====================
-  test("图像主界面-搜索改变应该退出批量模式", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像主界面-搜索改变应该退出批量模式", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图
@@ -421,10 +379,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     expect(hasSelectionModeBefore).toBe(true);
 
     // 输入搜索关键词
-    await page.fill(
-      `#${Constants.Ids.IMAGE_SEARCH_INPUT}`,
-      "test_search_keyword",
-    );
+    await page.fill(`#${Constants.Ids.IMAGE_SEARCH_INPUT}`, "test_search_keyword");
 
     // 等待搜索生效并验证工具栏隐藏
     await expect(toolbar).toBeHidden({ timeout: 1000 });
@@ -440,10 +395,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 添加标签空输入不执行 ====================
-  test("图像主界面-添加标签空输入不应该执行操作", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像主界面-添加标签空输入不应该执行操作", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图
@@ -492,9 +444,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
 
     // 验证工具栏仍然可见（选中集不变）
     await expect(toolbar).toBeVisible({ timeout: 1000 });
-    const countText = await toolbar
-      .locator(".batch-toolbar-count")
-      .textContent();
+    const countText = await toolbar.locator(".batch-toolbar-count").textContent();
     expect(countText).toContain("已选择 1 个图像");
 
     // 点击取消退出批量模式
@@ -502,10 +452,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 全选按钮 ====================
-  test("提示词主界面-全选按钮应该选中所有卡片", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词主界面-全选按钮应该选中所有卡片", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词网格视图
@@ -529,9 +476,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await page.waitForFunction(
       () => {
         const cards = document.querySelectorAll(".prompt-card");
-        const selectedCards = document.querySelectorAll(
-          ".prompt-card.is-selected",
-        );
+        const selectedCards = document.querySelectorAll(".prompt-card.is-selected");
         return selectedCards.length === cards.length;
       },
       { timeout: 1000 },
@@ -543,10 +488,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 反选按钮 ====================
-  test("提示词主界面-反选按钮应该反转选择状态", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词主界面-反选按钮应该反转选择状态", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词网格视图
@@ -568,9 +510,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await page.waitForFunction(
       () => {
         const cards = document.querySelectorAll(".prompt-card");
-        const selectedCards = document.querySelectorAll(
-          ".prompt-card.is-selected",
-        );
+        const selectedCards = document.querySelectorAll(".prompt-card.is-selected");
         return selectedCards.length === cards.length;
       },
       { timeout: 1000 },
@@ -581,9 +521,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
 
     // PRD: 选中数为0时不退出批量模式，工具栏仍然可见，计数显示为0
     await expect(toolbar).toBeVisible({ timeout: 1000 });
-    const countText = await toolbar
-      .locator(".batch-toolbar-count")
-      .textContent();
+    const countText = await toolbar.locator(".batch-toolbar-count").textContent();
     expect(countText).toContain("已选择 0 个提示词");
 
     // 点击取消退出批量模式，避免干扰后续测试
@@ -592,10 +530,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 添加标签按钮 ====================
-  test("提示词主界面-添加标签按钮应该能正常批量添加标签", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词主界面-添加标签按钮应该能正常批量添加标签", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词网格视图
@@ -633,10 +568,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     // 验证标签已添加到提示词（通过API检查）
     await page.waitForFunction(
       async (params: { id: string; tag: string }) => {
-        const prompts = await window.electronAPI.getPrompts(
-          "createdAt",
-          "desc",
-        );
+        const prompts = await window.electronAPI.getPrompts("createdAt", "desc");
         const prompt = prompts.find((p: any) => p.id === params.id);
         return prompt?.tags?.includes(params.tag);
       },
@@ -646,10 +578,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 收藏按钮 ====================
-  test("提示词主界面-收藏按钮应该收藏选中的提示词", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词主界面-收藏按钮应该收藏选中的提示词", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词网格视图
@@ -676,10 +605,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await page.waitForFunction(
       async (id: string) => {
         const card = document.querySelector(`.prompt-card[data-id="${id}"]`);
-        return (
-          card?.classList.contains("favorited") ||
-          card?.querySelector(".favorite-icon")
-        );
+        return card?.classList.contains("favorited") || card?.querySelector(".favorite-icon");
       },
       cardId!,
       { timeout: 1000 },
@@ -687,10 +613,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 取消按钮 ====================
-  test("提示词主界面-取消按钮应该退出批量模式", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词主界面-取消按钮应该退出批量模式", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词网格视图
@@ -708,9 +631,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await expect(toolbar).toBeVisible({ timeout: 1000 });
 
     // 验证计数显示
-    const countText = await toolbar
-      .locator(".batch-toolbar-count")
-      .textContent();
+    const countText = await toolbar.locator(".batch-toolbar-count").textContent();
     expect(countText).toContain("已选择 1 个提示词");
 
     // 点击"取消"按钮
@@ -746,10 +667,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - Shift+范围选择 ====================
-  test("提示词主界面-Shift+点击应该范围选择", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词主界面-Shift+点击应该范围选择", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词网格视图
@@ -781,17 +699,13 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     // 验证选中3项
     await page.waitForFunction(
       () => {
-        const selectedCards = document.querySelectorAll(
-          ".prompt-card.is-selected",
-        );
+        const selectedCards = document.querySelectorAll(".prompt-card.is-selected");
         return selectedCards.length === 3;
       },
       { timeout: 1000 },
     );
 
-    const countText = await toolbar
-      .locator(".batch-toolbar-count")
-      .textContent();
+    const countText = await toolbar.locator(".batch-toolbar-count").textContent();
     expect(countText).toContain("已选择 3 个提示词");
 
     // 点击取消退出批量模式
@@ -800,10 +714,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - Ctrl+A全选 ====================
-  test("提示词主界面-Ctrl+A应该全选所有可见项目", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词主界面-Ctrl+A应该全选所有可见项目", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词网格视图
@@ -836,9 +747,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await page.waitForFunction(
       () => {
         const cards = document.querySelectorAll(".prompt-card");
-        const selectedCards = document.querySelectorAll(
-          ".prompt-card.is-selected",
-        );
+        const selectedCards = document.querySelectorAll(".prompt-card.is-selected");
         return selectedCards.length === cards.length;
       },
       { timeout: 1000 },
@@ -850,10 +759,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 搜索改变退出批量模式 ====================
-  test("提示词主界面-搜索改变应该退出批量模式", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词主界面-搜索改变应该退出批量模式", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词网格视图
@@ -877,10 +783,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     expect(hasSelectionModeBefore).toBe(true);
 
     // 输入搜索关键词
-    await page.fill(
-      `#${Constants.Ids.PROMPT_SEARCH_INPUT}`,
-      "test_search_keyword",
-    );
+    await page.fill(`#${Constants.Ids.PROMPT_SEARCH_INPUT}`, "test_search_keyword");
 
     // 等待搜索生效并验证工具栏隐藏
     await expect(toolbar).toBeHidden({ timeout: 1000 });
@@ -896,10 +799,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 添加标签空输入不执行 ====================
-  test("提示词主界面-添加标签空输入不应该执行操作", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词主界面-添加标签空输入不应该执行操作", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词网格视图
@@ -946,9 +846,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
 
     // 验证工具栏仍然可见
     await expect(toolbar).toBeVisible({ timeout: 1000 });
-    const countText = await toolbar
-      .locator(".batch-toolbar-count")
-      .textContent();
+    const countText = await toolbar.locator(".batch-toolbar-count").textContent();
     expect(countText).toContain("已选择 1 个提示词");
 
     // 点击取消退出批量模式
@@ -956,10 +854,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 删除按钮（完整流程） ====================
-  test("图像主界面-删除按钮应该将测试图像移到回收站", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像主界面-删除按钮应该将测试图像移到回收站", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 使用 API 工厂创建2个测试图像
@@ -978,9 +873,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await page.waitForFunction(
       (ids: string[]) => {
         const cards = document.querySelectorAll(".image-card");
-        const foundIds = Array.from(cards).map((card) =>
-          card.getAttribute("data-id"),
-        );
+        const foundIds = Array.from(cards).map((card) => card.getAttribute("data-id"));
         return ids.every((id) => foundIds.includes(id));
       },
       testImageIds,
@@ -998,9 +891,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await expect(toolbar).toBeVisible({ timeout: 1000 });
 
     // 验证计数为2
-    const countText = await toolbar
-      .locator(".batch-toolbar-count")
-      .textContent();
+    const countText = await toolbar.locator(".batch-toolbar-count").textContent();
     expect(countText).toContain("已选择 2 个图像");
 
     // 点击删除按钮
@@ -1015,9 +906,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await expect(confirmModal).toBeHidden({ timeout: 1000 });
 
     // PRD: 验证清空选择（选中数=0）
-    let countTextAfter = await toolbar
-      .locator(".batch-toolbar-count")
-      .textContent();
+    let countTextAfter = await toolbar.locator(".batch-toolbar-count").textContent();
     expect(countTextAfter).toContain("已选择 0 个图像");
 
     // PRD: 验证 Toast 提示 - 等待包含"已删除"的特定 Toast
@@ -1046,9 +935,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await page.waitForFunction(
       async (ids: string[]) => {
         const images = await window.electronAPI.getImages("createdAt", "desc");
-        const testImages = images.filter((img: { id: string }) =>
-          ids.includes(img.id),
-        );
+        const testImages = images.filter((img: { id: string }) => ids.includes(img.id));
         return testImages.every((img: { isDeleted: boolean }) => img.isDeleted);
       },
       testImageIds,
@@ -1057,10 +944,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 删除按钮（完整流程） ====================
-  test("提示词主界面-删除按钮应该将测试提示词移到回收站", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词主界面-删除按钮应该将测试提示词移到回收站", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 使用 API 工厂创建2个测试提示词
@@ -1079,9 +963,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await page.waitForFunction(
       (ids: string[]) => {
         const cards = document.querySelectorAll(".prompt-card");
-        const foundIds = Array.from(cards).map((card) =>
-          card.getAttribute("data-id"),
-        );
+        const foundIds = Array.from(cards).map((card) => card.getAttribute("data-id"));
         return ids.every((id) => foundIds.includes(id));
       },
       testPromptIds,
@@ -1110,9 +992,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     await expect(confirmModal).toBeHidden({ timeout: 1000 });
 
     // PRD: 验证清空选择（选中数=0）
-    let countTextAfter = await toolbar
-      .locator(".batch-toolbar-count")
-      .textContent();
+    let countTextAfter = await toolbar.locator(".batch-toolbar-count").textContent();
     expect(countTextAfter).toContain("已选择 0 个提示词");
 
     // PRD: 验证 Toast 提示 - 等待包含"已删除"的特定 Toast
@@ -1140,13 +1020,8 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     // 通过 API 验证提示词已移到回收站（isDeleted = true）
     await page.waitForFunction(
       async (ids: string[]) => {
-        const prompts = await window.electronAPI.getPrompts(
-          "createdAt",
-          "desc",
-        );
-        const testPrompts = prompts.filter((p: { id: string }) =>
-          ids.includes(p.id),
-        );
+        const prompts = await window.electronAPI.getPrompts("createdAt", "desc");
+        const testPrompts = prompts.filter((p: { id: string }) => ids.includes(p.id));
         return testPrompts.every((p: { isDeleted: boolean }) => p.isDeleted);
       },
       testPromptIds,
@@ -1155,10 +1030,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 展开状态点击标签退出批量模式 ====================
-  test("图像主界面-展开状态点击标签应该退出批量模式", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像主界面-展开状态点击标签应该退出批量模式", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图
@@ -1191,19 +1063,17 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     expect(hasSelectionModeBefore).toBe(true);
 
     // 确保标签过滤器展开
-    const tagFilterSection = page.locator(
-      `#${Constants.Ids.IMAGE_TAG_FILTER_SECTION}`,
-    );
+    const tagFilterSection = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_SECTION}`);
     const isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) =>
       el.classList.contains("collapsed"),
     );
     if (isCollapsed) {
       await page.click(`#${Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN}`);
       // 等待标签过滤器内容可见
-      await page.waitForSelector(
-        `#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT} .tag-filter-item`,
-        { state: "visible", timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT} .tag-filter-item`, {
+        state: "visible",
+        timeout: 1000,
+      });
     }
 
     // 点击一个标签（使用可见的标签）
@@ -1226,10 +1096,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 展开状态点击标签退出批量模式 ====================
-  test("提示词主界面-展开状态点击标签应该退出批量模式", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词主界面-展开状态点击标签应该退出批量模式", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词网格视图
@@ -1262,19 +1129,17 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     expect(hasSelectionModeBefore).toBe(true);
 
     // 确保标签过滤器展开
-    const tagFilterSection = page.locator(
-      `#${Constants.Ids.PROMPT_TAG_FILTER_SECTION}`,
-    );
+    const tagFilterSection = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_SECTION}`);
     const isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) =>
       el.classList.contains("collapsed"),
     );
     if (isCollapsed) {
       await page.click(`#${Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN}`);
       // 等待标签过滤器内容可见
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT} .tag-filter-item`,
-        { state: "visible", timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT} .tag-filter-item`, {
+        state: "visible",
+        timeout: 1000,
+      });
     }
 
     // 点击一个标签（使用可见的标签）
@@ -1297,10 +1162,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 收起状态点击标签退出批量模式 ====================
-  test("图像主界面-收起状态点击标签应该退出批量模式", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像主界面-收起状态点击标签应该退出批量模式", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像网格视图
@@ -1316,19 +1178,17 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     }
 
     // 确保标签过滤器收起
-    const tagFilterSection = page.locator(
-      `#${Constants.Ids.IMAGE_TAG_FILTER_SECTION}`,
-    );
+    const tagFilterSection = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_SECTION}`);
     const isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) =>
       el.classList.contains("collapsed"),
     );
     if (!isCollapsed) {
       await page.click(`#${Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN}`);
       // 等待标签过滤器内容隐藏
-      await page.waitForSelector(
-        `#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT} .tag-filter-item`,
-        { state: "hidden", timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT} .tag-filter-item`, {
+        state: "hidden",
+        timeout: 1000,
+      });
     }
 
     // 进入批量模式，选中1项
@@ -1368,10 +1228,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 收起状态点击标签退出批量模式 ====================
-  test("提示词主界面-收起状态点击标签应该退出批量模式", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词主界面-收起状态点击标签应该退出批量模式", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词网格视图
@@ -1387,19 +1244,17 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
     }
 
     // 确保标签过滤器收起
-    const tagFilterSection = page.locator(
-      `#${Constants.Ids.PROMPT_TAG_FILTER_SECTION}`,
-    );
+    const tagFilterSection = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_SECTION}`);
     const isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) =>
       el.classList.contains("collapsed"),
     );
     if (!isCollapsed) {
       await page.click(`#${Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN}`);
       // 等待标签过滤器内容隐藏（收起状态下标签仍然可见，但内容区域折叠）
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`,
-        { state: "hidden", timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`, {
+        state: "hidden",
+        timeout: 1000,
+      });
     }
 
     // 进入批量模式，选中1项

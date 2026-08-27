@@ -10,7 +10,7 @@
  * 卡片生成、事件绑定、背景图加载等面板差异通过宿主回调注入；
  * 图像主页与提示词主页共用本实现，避免逻辑双份维护。
  */
-import { VirtualScroller, type VisibleRange } from './VirtualScroller.ts';
+import { VirtualScroller, type VisibleRange } from "./VirtualScroller.ts";
 
 /**
  * 虚拟窗口渲染器的宿主回调
@@ -61,9 +61,9 @@ export class VirtualWindowRenderer<T> {
         container,
         wrapper,
         getRowHeight: () => this.host.getRowHeight(),
-        getColumns: () => this.host.getColumns()
+        getColumns: () => this.host.getColumns(),
       },
-      (range) => this.render(range)
+      (range) => this.render(range),
     );
     this.scroller.observeResize();
   }
@@ -128,7 +128,7 @@ export class VirtualWindowRenderer<T> {
     const dataLength = this.host.getData().length;
     const viewRange: VisibleRange = {
       start: Math.min(range.start, dataLength),
-      end: Math.min(range.end, dataLength)
+      end: Math.min(range.end, dataLength),
     };
 
     // 有重叠即可增量修补（head/tail 增删），无重叠说明窗口跳跃过大，走全量重建
@@ -143,7 +143,10 @@ export class VirtualWindowRenderer<T> {
     const added: T[] = [];
     const parseNodes = (item: T, index: number): Node[] => {
       added.push(item);
-      const doc = new DOMParser().parseFromString(this.createPositionedCard(item, index), 'text/html');
+      const doc = new DOMParser().parseFromString(
+        this.createPositionedCard(item, index),
+        "text/html",
+      );
       return Array.from(doc.body.childNodes);
     };
 
@@ -186,13 +189,12 @@ export class VirtualWindowRenderer<T> {
 
   /** 全量重建窗口内容（range 应为已钳制的区间） */
   private rebuildWindow(wrapper: HTMLElement, range: VisibleRange): void {
-    const html = Array.from(
-      { length: Math.max(0, range.end - range.start) },
-      (_, i) => this.createPositionedCard(this.host.getData()[range.start + i], range.start + i)
-    ).join('');
+    const html = Array.from({ length: Math.max(0, range.end - range.start) }, (_, i) =>
+      this.createPositionedCard(this.host.getData()[range.start + i], range.start + i),
+    ).join("");
 
     const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
+    const doc = parser.parseFromString(html, "text/html");
     wrapper.replaceChildren(...Array.from(doc.body.childNodes));
 
     // 容器级事件委托需绑定最新全量数组；按钮/背景图/hover 为逐元素绑定，仅窗口内重绑

@@ -4,10 +4,10 @@
  */
 
 // BatchToolbar 中间层
-export { BatchToolbarMiddle, batchToolbarMiddle } from './BatchToolbarMiddle.ts';
+export { BatchToolbarMiddle, batchToolbarMiddle } from "./BatchToolbarMiddle.ts";
 export type {
   BatchBusinessConfig,
   ToolbarContext,
   BatchToolbarConfig,
-} from './BatchToolbarMiddle.ts';
-export type { ToolbarButtonConfig } from '../pyBatchToolbar/index.ts';
+} from "./BatchToolbarMiddle.ts";
+export type { ToolbarButtonConfig } from "../pyBatchToolbar/index.ts";

@@ -1,6 +1,6 @@
-import { localTime } from '../../../utils/index.ts';
-import { Constants, Events } from '../../../constants.ts';
-import type { CacheUpdateData, TrashItem } from './TrashTypes.ts';
+import { localTime } from "../../../utils/index.ts";
+import { Constants, Events } from "../../../constants.ts";
+import type { CacheUpdateData, TrashItem } from "./TrashTypes.ts";
 
 /**
  * 提示词回收站处理器
@@ -9,7 +9,7 @@ import type { CacheUpdateData, TrashItem } from './TrashTypes.ts';
 export class PromptTrashHandler {
   readonly type: string = Constants.TrashType.PROMPT;
   readonly containerId: string = Constants.Ids.PROMPT_TRASH_LIST;
-  readonly label: string = '提示词';
+  readonly label: string = "提示词";
   readonly eventName: string = Events.PROMPTS_CHANGED;
 
   // ========== API 操作 ==========
@@ -46,7 +46,7 @@ export class PromptTrashHandler {
     return {
       isDeleted: 0,
       deletedAt: null,
-      updatedAt: localTime()
+      updatedAt: localTime(),
     };
   }
 

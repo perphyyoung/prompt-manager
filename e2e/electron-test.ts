@@ -211,85 +211,37 @@ export class ElectronTestHelper {
     }, testName);
   }
 
-  async logWarn(
-    page: Page,
-    message: string,
-    data?: Record<string, unknown>,
-  ): Promise<void> {
+  async logWarn(page: Page, message: string, data?: Record<string, unknown>): Promise<void> {
     await page.evaluate(
-      (params: {
-        component: string;
-        message: string;
-        data?: Record<string, unknown>;
-      }) => {
-        window.electronAPI.logWarn(
-          params.component,
-          params.message,
-          params.data,
-        );
+      (params: { component: string; message: string; data?: Record<string, unknown> }) => {
+        window.electronAPI.logWarn(params.component, params.message, params.data);
       },
       { component: "E2E-Test", message, data },
     );
   }
 
-  async logError(
-    page: Page,
-    message: string,
-    data?: Record<string, unknown>,
-  ): Promise<void> {
+  async logError(page: Page, message: string, data?: Record<string, unknown>): Promise<void> {
     await page.evaluate(
-      (params: {
-        component: string;
-        message: string;
-        data?: Record<string, unknown>;
-      }) => {
-        window.electronAPI.logError(
-          params.component,
-          params.message,
-          params.data,
-        );
+      (params: { component: string; message: string; data?: Record<string, unknown> }) => {
+        window.electronAPI.logError(params.component, params.message, params.data);
       },
       { component: "E2E-Test", message, data },
     );
   }
 
-  async logInfo(
-    page: Page,
-    message: string,
-    data?: Record<string, unknown>,
-  ): Promise<void> {
+  async logInfo(page: Page, message: string, data?: Record<string, unknown>): Promise<void> {
     await page.evaluate(
-      (params: {
-        component: string;
-        message: string;
-        data?: Record<string, unknown>;
-      }) => {
-        window.electronAPI.logInfo(
-          params.component,
-          params.message,
-          params.data,
-        );
+      (params: { component: string; message: string; data?: Record<string, unknown> }) => {
+        window.electronAPI.logInfo(params.component, params.message, params.data);
       },
       { component: "E2E-Test", message, data },
     );
   }
 
-  async logDebug(
-    page: Page,
-    message: string,
-    data?: Record<string, unknown>,
-  ): Promise<void> {
+  async logDebug(page: Page, message: string, data?: Record<string, unknown>): Promise<void> {
     await page.evaluate(
-      (params: {
-        component: string;
-        message: string;
-        data?: Record<string, unknown>;
-      }) => {
-        window.electronAPI.logDebug(
-          params.component,
-          params.message,
-          params.data,
-        );
+      (params: { component: string; message: string; data?: Record<string, unknown> }) => {
+        window.electronAPI.logDebug(params.component, params.message, params.data);
       },
       { component: "E2E-Test", message, data },
     );
@@ -309,9 +261,7 @@ export class ElectronTestHelper {
    * 生成多个测试标签名
    */
   generateTagNames(count: number, prefix: string): string[] {
-    return Array.from({ length: count }, (_, i) =>
-      this.generateE2ePrefixName(`${prefix}_${i}`),
-    );
+    return Array.from({ length: count }, (_, i) => this.generateE2ePrefixName(`${prefix}_${i}`));
   }
 
   /**
@@ -351,18 +301,12 @@ export class ElectronTestHelper {
    * @param tagNames - 标签名数组
    * @param groupId - 标签组ID
    */
-  async assignImageTagsToGroup(
-    tagNames: string[],
-    groupId: number,
-  ): Promise<void> {
+  async assignImageTagsToGroup(tagNames: string[], groupId: number): Promise<void> {
     const page = this.getPage();
     await page.evaluate(
       async (params: { tags: string[]; groupId: number }) => {
         for (const tag of params.tags) {
-          await window.electronAPI.assignImageTagToBelongGroup(
-            tag,
-            params.groupId,
-          );
+          await window.electronAPI.assignImageTagToBelongGroup(tag, params.groupId);
         }
       },
       { tags: tagNames, groupId },
@@ -406,18 +350,12 @@ export class ElectronTestHelper {
    * @param tagNames - 标签名数组
    * @param groupId - 标签组ID
    */
-  async assignPromptTagsToGroup(
-    tagNames: string[],
-    groupId: number,
-  ): Promise<void> {
+  async assignPromptTagsToGroup(tagNames: string[], groupId: number): Promise<void> {
     const page = this.getPage();
     await page.evaluate(
       async (params: { tags: string[]; groupId: number }) => {
         for (const tag of params.tags) {
-          await window.electronAPI.assignPromptTagToBelongGroup(
-            tag,
-            params.groupId,
-          );
+          await window.electronAPI.assignPromptTagToBelongGroup(tag, params.groupId);
         }
       },
       { tags: tagNames, groupId },
@@ -432,9 +370,7 @@ export class ElectronTestHelper {
     const page = this.getPage();
     return await page.evaluate(async () => {
       const groups = await window.electronAPI.getImageTagGroups();
-      const sortedGroups = groups.sort(
-        (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0),
-      );
+      const sortedGroups = groups.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
       return sortedGroups[0]?.id;
     });
   }
@@ -447,9 +383,7 @@ export class ElectronTestHelper {
     const page = this.getPage();
     return await page.evaluate(async () => {
       const groups = await window.electronAPI.getPromptTagGroups();
-      const sortedGroups = groups.sort(
-        (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0),
-      );
+      const sortedGroups = groups.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
       return sortedGroups[0]?.id;
     });
   }
@@ -605,10 +539,7 @@ export class ElectronTestHelper {
     try {
       const result = await page.evaluate(
         async (params: { path: string; fileName: string }) => {
-          return await window.electronAPI.saveImageFile(
-            params.path,
-            params.fileName,
-          );
+          return await window.electronAPI.saveImageFile(params.path, params.fileName);
         },
         { path: tempPath, fileName },
       );
@@ -748,9 +679,7 @@ export class ElectronTestHelper {
     });
 
     const newPromptId = String(newPrompt.id);
-    const imageIds = (newPrompt.images || []).map(
-      (img: { id: string }) => img.id,
-    );
+    const imageIds = (newPrompt.images || []).map((img: { id: string }) => img.id);
 
     // 11. 等待新卡片出现在视图中
     await page.waitForSelector(`.prompt-card[data-id="${newPromptId}"]`, {
@@ -900,10 +829,7 @@ export class ElectronTestHelper {
     const maxWaitTime = 5000;
     let currentCount = imageCountBefore;
 
-    while (
-      currentCount <= imageCountBefore &&
-      Date.now() - startTime < maxWaitTime
-    ) {
+    while (currentCount <= imageCountBefore && Date.now() - startTime < maxWaitTime) {
       currentCount = await page.evaluate(async () => {
         const images = await window.electronAPI.getImages("updatedAt", "desc");
         return images.length;
@@ -1035,9 +961,7 @@ export class ElectronTestHelper {
 
       // 清理图像标签组
       const imageTagGroups = await window.electronAPI.getImageTagGroups();
-      const testImageTagGroups = imageTagGroups.filter((group) =>
-        group.name.startsWith("e2e_"),
-      );
+      const testImageTagGroups = imageTagGroups.filter((group) => group.name.startsWith("e2e_"));
       for (const group of testImageTagGroups) {
         await window.electronAPI.deleteImageTagGroup(group.id);
       }
@@ -1074,9 +998,7 @@ export class ElectronTestHelper {
 
       // 清理提示词标签组
       const promptTagGroups = await window.electronAPI.getPromptTagGroups();
-      const testPromptTagGroups = promptTagGroups.filter((group) =>
-        group.name.startsWith("e2e_"),
-      );
+      const testPromptTagGroups = promptTagGroups.filter((group) => group.name.startsWith("e2e_"));
       for (const group of testPromptTagGroups) {
         await window.electronAPI.deletePromptTagGroup(group.id);
       }
@@ -1131,9 +1053,7 @@ export class ElectronTestHelper {
     const page = this.getPage();
     await page.evaluate(async () => {
       const images = await window.electronAPI.getImages("updatedAt", "desc");
-      const testImages = images.filter((img) =>
-        img.fileName?.startsWith("e2e_"),
-      );
+      const testImages = images.filter((img) => img.fileName?.startsWith("e2e_"));
       for (const img of testImages) {
         await window.electronAPI.softDeleteImage(String(img.id));
       }
@@ -1218,9 +1138,7 @@ export class ElectronTestHelper {
     const page = this.getPage();
 
     // 关闭可能打开的详情模态框
-    const imageDetailModal = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_MODAL}`,
-    );
+    const imageDetailModal = page.locator(`#${Constants.Ids.IMAGE_DETAIL_MODAL}`);
     if (await imageDetailModal.isVisible().catch(() => false)) {
       await page.keyboard.press("Escape");
       await page
@@ -1231,9 +1149,7 @@ export class ElectronTestHelper {
         .catch(() => {});
     }
 
-    const promptDetailModal = page.locator(
-      `#${Constants.Ids.PROMPT_DETAIL_MODAL}`,
-    );
+    const promptDetailModal = page.locator(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
     if (await promptDetailModal.isVisible().catch(() => false)) {
       await page.keyboard.press("Escape");
       await page
@@ -1245,9 +1161,7 @@ export class ElectronTestHelper {
     }
 
     // 关闭可能打开的标签管理器（使用关闭按钮确保正确关闭）
-    const imageTagManagerModal = page.locator(
-      `#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`,
-    );
+    const imageTagManagerModal = page.locator(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`);
     if (await imageTagManagerModal.isVisible().catch(() => false)) {
       await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
       await page
@@ -1258,9 +1172,7 @@ export class ElectronTestHelper {
         .catch(() => {});
     }
 
-    const promptTagManagerModal = page.locator(
-      `#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`,
-    );
+    const promptTagManagerModal = page.locator(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`);
     if (await promptTagManagerModal.isVisible().catch(() => false)) {
       await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
       await page
@@ -1380,9 +1292,7 @@ export async function enterImageTagManager(page: any) {
   });
 
   // 如果标签管理器已经打开，先关闭它以确保数据刷新
-  const imageTagManagerModal = page.locator(
-    `#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`,
-  );
+  const imageTagManagerModal = page.locator(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`);
   if (await imageTagManagerModal.isVisible().catch(() => false)) {
     await page.click(`#${Constants.Ids.CLOSE_IMAGE_TAG_MANAGER_MODAL}`);
     await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_MANAGER_MODAL}`, {
@@ -1421,9 +1331,7 @@ export async function enterPromptTagManager(page: any) {
   });
 
   // 如果标签管理器已经打开，先关闭它以确保数据刷新
-  const promptTagManagerModal = page.locator(
-    `#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`,
-  );
+  const promptTagManagerModal = page.locator(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`);
   if (await promptTagManagerModal.isVisible().catch(() => false)) {
     await page.click(`#${Constants.Ids.CLOSE_PROMPT_TAG_MANAGER_MODAL}`);
     await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_MANAGER_MODAL}`, {
@@ -1489,10 +1397,7 @@ export async function createImageTagInManager(
   await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, tagName);
 
   if (groupId) {
-    await page.selectOption(
-      `#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`,
-      groupId,
-    );
+    await page.selectOption(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`, groupId);
   }
 
   await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
@@ -1506,12 +1411,8 @@ export async function createImageTagInManager(
   // 等待标签出现在 UI 列表中（而不是仅通过 API 验证）
   await page.waitForFunction(
     (params: { containerId: string; tagName: string }) => {
-      const items = document.querySelectorAll(
-        `#${params.containerId} .tag-manager-item`,
-      );
-      return Array.from(items).some(
-        (item) => item.getAttribute("data-tag") === params.tagName,
-      );
+      const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+      return Array.from(items).some((item) => item.getAttribute("data-tag") === params.tagName);
     },
     { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, tagName },
     { timeout: 1000 },
@@ -1542,10 +1443,7 @@ export async function createPromptTagInManager(
   await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, tagName);
 
   if (groupId) {
-    await page.selectOption(
-      `#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`,
-      groupId,
-    );
+    await page.selectOption(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`, groupId);
   }
 
   await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
@@ -1559,12 +1457,8 @@ export async function createPromptTagInManager(
   // 等待标签出现在 UI 列表中（而不是仅通过 API 验证）
   await page.waitForFunction(
     (params: { containerId: string; tagName: string }) => {
-      const items = document.querySelectorAll(
-        `#${params.containerId} .tag-manager-item`,
-      );
-      return Array.from(items).some(
-        (item) => item.getAttribute("data-tag") === params.tagName,
-      );
+      const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+      return Array.from(items).some((item) => item.getAttribute("data-tag") === params.tagName);
     },
     { containerId: Constants.Ids.PROMPT_TAG_GROUP_CARDS, tagName },
     { timeout: 1000 },
@@ -1597,10 +1491,7 @@ export async function createImageTagsInManagerBatch(
   await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, batchInput);
 
   if (groupId) {
-    await page.selectOption(
-      `#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`,
-      groupId,
-    );
+    await page.selectOption(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`, groupId);
   }
 
   await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
@@ -1614,12 +1505,8 @@ export async function createImageTagsInManagerBatch(
   // 等待所有标签出现在 UI 列表中
   await page.waitForFunction(
     (params: { containerId: string; tagNames: string[] }) => {
-      const items = document.querySelectorAll(
-        `#${params.containerId} .tag-manager-item`,
-      );
-      const itemTags = Array.from(items).map((item) =>
-        item.getAttribute("data-tag"),
-      );
+      const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+      const itemTags = Array.from(items).map((item) => item.getAttribute("data-tag"));
       return params.tagNames.every((tag) => itemTags.includes(tag));
     },
     { containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS, tagNames },
@@ -1653,10 +1540,7 @@ export async function createPromptTagsInManagerBatch(
   await page.fill(`#${Constants.Ids.INPUT_MODAL_FIELD}`, batchInput);
 
   if (groupId) {
-    await page.selectOption(
-      `#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`,
-      groupId,
-    );
+    await page.selectOption(`#${Constants.Ids.INPUT_MODAL_GROUP_SELECT}`, groupId);
   }
 
   await page.click(`#${Constants.Ids.INPUT_OK_BTN}`);
@@ -1670,12 +1554,8 @@ export async function createPromptTagsInManagerBatch(
   // 等待所有标签出现在 UI 列表中
   await page.waitForFunction(
     (params: { containerId: string; tagNames: string[] }) => {
-      const items = document.querySelectorAll(
-        `#${params.containerId} .tag-manager-item`,
-      );
-      const itemTags = Array.from(items).map((item) =>
-        item.getAttribute("data-tag"),
-      );
+      const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+      const itemTags = Array.from(items).map((item) => item.getAttribute("data-tag"));
       return params.tagNames.every((tag) => itemTags.includes(tag));
     },
     { containerId: Constants.Ids.PROMPT_TAG_GROUP_CARDS, tagNames },
@@ -1692,10 +1572,7 @@ export async function createPromptTagsInManagerBatch(
  * @param tagName - 标签名称
  * @returns 创建的标签名
  */
-export async function createImageTagInDetail(
-  page: any,
-  tagName: string,
-): Promise<string> {
+export async function createImageTagInDetail(page: any, tagName: string): Promise<string> {
   // 点击详情界面的标签输入区域
   await page.click(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT_AREA}`);
   await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, {
@@ -1713,9 +1590,7 @@ export async function createImageTagInDetail(
   await page.waitForFunction(
     (params: { tagName: string }) => {
       const tags = document.querySelectorAll(".tag-editable");
-      return Array.from(tags).some(
-        (tag) => tag.getAttribute("data-tag") === params.tagName,
-      );
+      return Array.from(tags).some((tag) => tag.getAttribute("data-tag") === params.tagName);
     },
     { tagName },
     { timeout: 1000 },
@@ -1731,10 +1606,7 @@ export async function createImageTagInDetail(
  * @param tagName - 标签名称
  * @returns 创建的标签名
  */
-export async function createPromptTagInDetail(
-  page: any,
-  tagName: string,
-): Promise<string> {
+export async function createPromptTagInDetail(page: any, tagName: string): Promise<string> {
   // 点击详情界面的标签输入区域
   await page.click(`#${Constants.Ids.PROMPT_DETAIL_TAG_INPUT_AREA}`);
   await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, {
@@ -1752,9 +1624,7 @@ export async function createPromptTagInDetail(
   await page.waitForFunction(
     (params: { tagName: string }) => {
       const tags = document.querySelectorAll(".tag-editable");
-      return Array.from(tags).some(
-        (tag) => tag.getAttribute("data-tag") === params.tagName,
-      );
+      return Array.from(tags).some((tag) => tag.getAttribute("data-tag") === params.tagName);
     },
     { tagName },
     { timeout: 1000 },
@@ -1770,10 +1640,7 @@ export async function createPromptTagInDetail(
  * @param tagName - 标签名称
  * @returns 创建的标签名
  */
-export async function createImageTagInBatchToolbar(
-  page: any,
-  tagName: string,
-): Promise<string> {
+export async function createImageTagInBatchToolbar(page: any, tagName: string): Promise<string> {
   // 点击批量工具栏的添加标签按钮
   await page.click(`#${Constants.Ids.IMAGE_BATCH_ADD_TAG_BTN}`);
   await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, {
@@ -1797,9 +1664,7 @@ export async function createImageTagInBatchToolbar(
       }
       // 或者检查标签是否出现在列表中
       const tags = document.querySelectorAll(".tag-item");
-      return Array.from(tags).some(
-        (tag) => tag.getAttribute("data-tag") === params.tagName,
-      );
+      return Array.from(tags).some((tag) => tag.getAttribute("data-tag") === params.tagName);
     },
     { tagName, toastContainerId: Constants.Ids.TOAST_CONTAINER },
     { timeout: 1000 },
@@ -1815,10 +1680,7 @@ export async function createImageTagInBatchToolbar(
  * @param tagName - 标签名称
  * @returns 创建的标签名
  */
-export async function createPromptTagInBatchToolbar(
-  page: any,
-  tagName: string,
-): Promise<string> {
+export async function createPromptTagInBatchToolbar(page: any, tagName: string): Promise<string> {
   // 点击批量工具栏的添加标签按钮
   await page.click(`#${Constants.Ids.PROMPT_BATCH_ADD_TAG_BTN}`);
   await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, {
@@ -1842,9 +1704,7 @@ export async function createPromptTagInBatchToolbar(
       }
       // 或者检查标签是否出现在列表中
       const tags = document.querySelectorAll(".tag-item");
-      return Array.from(tags).some(
-        (tag) => tag.getAttribute("data-tag") === params.tagName,
-      );
+      return Array.from(tags).some((tag) => tag.getAttribute("data-tag") === params.tagName);
     },
     { tagName, toastContainerId: Constants.Ids.TOAST_CONTAINER },
     { timeout: 1000 },
@@ -1880,9 +1740,7 @@ export async function createImageTagGroup(
   const groupIdHandle = await page.waitForFunction(
     async (name: string) => {
       const groups = await window.electronAPI.getImageTagGroups();
-      const group = groups.find(
-        (g: { name: string; id: number }) => g.name === name,
-      );
+      const group = groups.find((g: { name: string; id: number }) => g.name === name);
       return group?.id;
     },
     groupName,
@@ -1927,9 +1785,7 @@ export async function createPromptTagGroup(
   const groupIdHandle = await page.waitForFunction(
     async (name: string) => {
       const groups = await window.electronAPI.getPromptTagGroups();
-      const group = groups.find(
-        (g: { name: string; id: number }) => g.name === name,
-      );
+      const group = groups.find((g: { name: string; id: number }) => g.name === name);
       return group?.id;
     },
     groupName,
@@ -2109,10 +1965,7 @@ export async function enterImageDetailView(page: any, screenshotPath?: string) {
  * 5. Click card to open detail
  * 6. Wait for detail modal to show
  */
-export async function enterPromptDetailView(
-  page: any,
-  screenshotPath?: string,
-) {
+export async function enterPromptDetailView(page: any, screenshotPath?: string) {
   // 使用快捷键切换到提示词主界面（自动关闭可能打开的模态框）
   await page.keyboard.press("Control+p");
   await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
@@ -2161,10 +2014,7 @@ export async function enterPromptDetailView(
 /**
  * 从数据库获取图像完整信息
  */
-export async function getImageFromDatabase(
-  page: any,
-  imageId: string,
-): Promise<IImage | null> {
+export async function getImageFromDatabase(page: any, imageId: string): Promise<IImage | null> {
   return await page.evaluate(async (id: string) => {
     try {
       const image = await window.electronAPI.getImageById(id);
@@ -2179,10 +2029,7 @@ export async function getImageFromDatabase(
 /**
  * 从数据库获取提示词完整信息
  */
-export async function getPromptFromDatabase(
-  page: any,
-  promptId: string,
-): Promise<IPrompt | null> {
+export async function getPromptFromDatabase(page: any, promptId: string): Promise<IPrompt | null> {
   return await page.evaluate(async (id: string) => {
     try {
       const prompt = await window.electronAPI.getPromptById(id);
@@ -2297,12 +2144,8 @@ export async function ensureTagFilterCollapsed(
  */
 export async function getDisplayedImageIds(page: Page): Promise<string[]> {
   return await page.evaluate((containerId) => {
-    const items = document.querySelectorAll(
-      `#${containerId} .image-preview-item`,
-    );
-    return Array.from(items).map(
-      (item) => item.getAttribute("data-image-id") || "",
-    );
+    const items = document.querySelectorAll(`#${containerId} .image-preview-item`);
+    return Array.from(items).map((item) => item.getAttribute("data-image-id") || "");
   }, Constants.Ids.IMAGE_PREVIEW_LIST);
 }
 
@@ -2311,10 +2154,7 @@ export async function getDisplayedImageIds(page: Page): Promise<string[]> {
  * @param page - Playwright page 对象
  * @param imageId - 图像ID
  */
-export async function rightClickAndSetAsFirst(
-  page: Page,
-  imageId: string,
-): Promise<void> {
+export async function rightClickAndSetAsFirst(page: Page, imageId: string): Promise<void> {
   // 右键点击图像
   const imageItem = page.locator(
     `#${Constants.Ids.IMAGE_PREVIEW_LIST} .image-preview-item[data-image-id="${imageId}"]`,
@@ -2438,10 +2278,7 @@ export async function restorePromptFavoriteStatus(
  * @param page - Playwright page 对象
  * @param promptId - 提示词ID
  */
-export async function openPromptDetailById(
-  page: Page,
-  promptId: string,
-): Promise<void> {
+export async function openPromptDetailById(page: Page, promptId: string): Promise<void> {
   // 确保在提示词面板
   await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
   await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
@@ -2553,9 +2390,7 @@ export async function waitForImageOrderChange(
 ): Promise<void> {
   await page.waitForFunction(
     (params: { expectedId: string; listId: string }) => {
-      const items = document.querySelectorAll(
-        `#${params.listId} .image-preview-item`,
-      );
+      const items = document.querySelectorAll(`#${params.listId} .image-preview-item`);
       if (items.length === 0) return false;
       const firstId = items[0]?.getAttribute("data-image-id");
       return firstId === params.expectedId;

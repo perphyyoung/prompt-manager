@@ -5,7 +5,7 @@
  */
 
 // 导入类型以确保 window.electronAPI 被正确识别
-import type {} from '../app.types.ts';
+import type {} from "../app.types.ts";
 
 // 文件信息接口
 interface FileInfo {
@@ -23,13 +23,12 @@ interface UploadOptions {
 interface ImageInfo {
   id: string;
   isDuplicate?: boolean;
-  duplicateType?: 'restored_from_trash' | 'existing';
+  duplicateType?: "restored_from_trash" | "existing";
   [key: string]: unknown;
 }
 
 // 应用接口（简化）
 interface IApp {
-   
   [key: string]: any;
 }
 
@@ -51,17 +50,17 @@ export class ImageUploadService {
    */
   async upload(fileInfo: FileInfo, options: UploadOptions = {}): Promise<ImageInfo> {
     const { path: filePath, name: fileName } = fileInfo;
-    const { source = 'unknown' } = options;
+    const { source = "unknown" } = options;
 
     if (!filePath) {
-      throw new Error('File path is required');
+      throw new Error("File path is required");
     }
 
     const imageInfo = await window.electronAPI.saveImageFile(filePath, fileName);
     const fullImageInfo = await window.electronAPI.getImageById(imageInfo.id);
 
     if (!fullImageInfo) {
-      throw new Error('Failed to get image info after upload');
+      throw new Error("Failed to get image info after upload");
     }
 
     // 注意：必须先展开 fullImageInfo，再设置 duplicateType，否则会被覆盖
@@ -69,7 +68,7 @@ export class ImageUploadService {
       ...fullImageInfo,
       id: fullImageInfo.id,
       isDuplicate: imageInfo.isDuplicate,
-      source
+      source,
     };
     // 显式设置 duplicateType，确保不被覆盖
     if (imageInfo.duplicateType) {

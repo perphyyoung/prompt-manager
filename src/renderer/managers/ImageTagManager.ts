@@ -2,12 +2,12 @@
  * 图像标签管理器
  * 管理图像标签的注册、分组、排序、CRUD 操作
  */
-import { TagManager, ITagManagerElements } from './TagManager.ts';
-import { Constants } from '../../constants.ts';
+import { TagManager, ITagManagerElements } from "./TagManager.ts";
+import { Constants } from "../../constants.ts";
 
 export class ImageTagManager extends TagManager {
   constructor(app: any) {
-    super('image', app);
+    super("image", app);
   }
 
   protected getElementsConfig(): ITagManagerElements {

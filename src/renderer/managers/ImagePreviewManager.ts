@@ -1,4 +1,4 @@
-import { HtmlUtils } from '../../utils/index.ts';
+import { HtmlUtils } from "../../utils/index.ts";
 
 /**
  * ImagePreviewManager 构造选项
@@ -67,17 +67,21 @@ export class ImagePreviewManager {
     if (!container) return;
 
     if (!filePaths || filePaths.length === 0) {
-      container.innerHTML = '';
+      container.innerHTML = "";
       return;
     }
 
-    container.innerHTML = filePaths.map((path, index) => `
+    container.innerHTML = filePaths
+      .map(
+        (path, index) => `
       <div class="image-preview-item" data-index="${index}" draggable="true">
         <img src="file://${HtmlUtils.escapeHtml(path)}" alt="预览" loading="lazy">
         <button class="remove-image" data-index="${index}" title="删除">×</button>
-        ${this.onReorder ? '<div class="drag-handle" title="拖动排序">⋮⋮</div>' : ''}
+        ${this.onReorder ? '<div class="drag-handle" title="拖动排序">⋮⋮</div>' : ""}
       </div>
-    `).join('');
+    `,
+      )
+      .join("");
 
     this.bindItemEvents();
   }
@@ -91,28 +95,34 @@ export class ImagePreviewManager {
     if (!container) return;
 
     if (!images || images.length === 0) {
-      container.innerHTML = '';
+      container.innerHTML = "";
       return;
     }
 
     // 获取所有图像的完整路径
-    const imageItems = await Promise.all(images.map(async (image, index) => {
-      const imagePath = image.relativePath;
-      const fullPath = imagePath ? await window.electronAPI.getImagePath(imagePath) : '';
-      return {
-        ...image,
-        fullPath,
-        index
-      };
-    }));
+    const imageItems = await Promise.all(
+      images.map(async (image, index) => {
+        const imagePath = image.relativePath;
+        const fullPath = imagePath ? await window.electronAPI.getImagePath(imagePath) : "";
+        return {
+          ...image,
+          fullPath,
+          index,
+        };
+      }),
+    );
 
-    container.innerHTML = imageItems.map(item => `
+    container.innerHTML = imageItems
+      .map(
+        (item) => `
       <div class="image-preview-item" data-index="${item.index}" data-saved="true" draggable="true">
         <img src="file://${HtmlUtils.escapeHtml(item.fullPath)}" alt="${HtmlUtils.escapeHtml(item.fileName)}" loading="lazy">
         <button class="remove-image" data-index="${item.index}" title="删除">×</button>
-        ${this.onReorder ? '<div class="drag-handle" title="拖动排序">⋮⋮</div>' : ''}
+        ${this.onReorder ? '<div class="drag-handle" title="拖动排序">⋮⋮</div>' : ""}
       </div>
-    `).join('');
+    `,
+      )
+      .join("");
 
     this.bindItemEvents();
   }
@@ -123,7 +133,7 @@ export class ImagePreviewManager {
   clear(): void {
     const container = this.getContainer();
     if (container) {
-      container.innerHTML = '';
+      container.innerHTML = "";
     }
   }
 
@@ -136,13 +146,13 @@ export class ImagePreviewManager {
     if (!container) return;
 
     // 使用事件委托处理所有交互
-    container.addEventListener('click', (e) => {
+    container.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
 
       // 处理删除按钮点击
-      if (target.classList.contains('remove-image')) {
+      if (target.classList.contains("remove-image")) {
         e.stopPropagation();
-        const index = parseInt(target.dataset.index || '-1', 10);
+        const index = parseInt(target.dataset.index || "-1", 10);
         if (index >= 0 && this.onRemove) {
           this.onRemove(index);
         }
@@ -150,9 +160,9 @@ export class ImagePreviewManager {
       }
 
       // 处理图像点击
-      const previewItem = target.closest('.image-preview-item');
+      const previewItem = target.closest(".image-preview-item");
       if (previewItem && this.onClick) {
-        const index = parseInt((previewItem as HTMLElement).dataset.index || '-1', 10);
+        const index = parseInt((previewItem as HTMLElement).dataset.index || "-1", 10);
         if (index >= 0) {
           this.onClick(index);
         }
@@ -180,61 +190,61 @@ export class ImagePreviewManager {
    * @private
    */
   private bindDragEvents(container: HTMLElement): void {
-    container.addEventListener('dragstart', (e) => {
-      const item = (e.target as HTMLElement).closest('.image-preview-item');
+    container.addEventListener("dragstart", (e) => {
+      const item = (e.target as HTMLElement).closest(".image-preview-item");
       if (!item) return;
 
-      this.draggedIndex = parseInt((item as HTMLElement).dataset.index || '-1', 10);
-      item.classList.add('dragging');
+      this.draggedIndex = parseInt((item as HTMLElement).dataset.index || "-1", 10);
+      item.classList.add("dragging");
 
       if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.effectAllowed = "move";
       }
     });
 
-    container.addEventListener('dragend', (e) => {
-      const item = (e.target as HTMLElement).closest('.image-preview-item');
+    container.addEventListener("dragend", (e) => {
+      const item = (e.target as HTMLElement).closest(".image-preview-item");
       if (item) {
-        item.classList.remove('dragging');
+        item.classList.remove("dragging");
       }
 
       // 清除所有拖拽样式
-      container.querySelectorAll('.drag-over').forEach(el => {
-        el.classList.remove('drag-over');
+      container.querySelectorAll(".drag-over").forEach((el) => {
+        el.classList.remove("drag-over");
       });
 
       this.draggedIndex = null;
       this.dragOverIndex = null;
     });
 
-    container.addEventListener('dragover', (e) => {
+    container.addEventListener("dragover", (e) => {
       e.preventDefault();
 
       if (this.draggedIndex === null) return;
 
-      const targetItem = (e.target as HTMLElement).closest('.image-preview-item');
+      const targetItem = (e.target as HTMLElement).closest(".image-preview-item");
       if (!targetItem) return;
 
-      const targetIndex = parseInt((targetItem as HTMLElement).dataset.index || '-1', 10);
+      const targetIndex = parseInt((targetItem as HTMLElement).dataset.index || "-1", 10);
       if (targetIndex === this.draggedIndex) return;
 
       // 添加拖拽悬停样式
-      container.querySelectorAll('.drag-over').forEach(el => {
-        el.classList.remove('drag-over');
+      container.querySelectorAll(".drag-over").forEach((el) => {
+        el.classList.remove("drag-over");
       });
-      targetItem.classList.add('drag-over');
+      targetItem.classList.add("drag-over");
 
       this.dragOverIndex = targetIndex;
     });
 
-    container.addEventListener('dragleave', (e) => {
-      const targetItem = (e.target as HTMLElement).closest('.image-preview-item');
+    container.addEventListener("dragleave", (e) => {
+      const targetItem = (e.target as HTMLElement).closest(".image-preview-item");
       if (targetItem) {
-        targetItem.classList.remove('drag-over');
+        targetItem.classList.remove("drag-over");
       }
     });
 
-    container.addEventListener('drop', (e) => {
+    container.addEventListener("drop", (e) => {
       e.preventDefault();
 
       if (this.draggedIndex === null || this.dragOverIndex === null) return;
@@ -246,8 +256,8 @@ export class ImagePreviewManager {
       }
 
       // 清除样式
-      container.querySelectorAll('.drag-over').forEach(el => {
-        el.classList.remove('drag-over');
+      container.querySelectorAll(".drag-over").forEach((el) => {
+        el.classList.remove("drag-over");
       });
 
       this.draggedIndex = null;
@@ -266,7 +276,7 @@ export class ImagePreviewManager {
 
     const item = container.querySelector(`.image-preview-item[data-index="${index}"]`);
     if (item) {
-      const img = item.querySelector('img');
+      const img = item.querySelector("img");
       if (img) {
         img.src = `file://${HtmlUtils.escapeHtml(filePath)}`;
       }
@@ -297,10 +307,10 @@ export class ImagePreviewManager {
     const container = this.getContainer();
     if (!container) return;
 
-    const items = container.querySelectorAll('.image-preview-item');
+    const items = container.querySelectorAll(".image-preview-item");
     items.forEach((item, index) => {
       (item as HTMLElement).dataset.index = String(index);
-      const removeBtn = item.querySelector('.remove-image');
+      const removeBtn = item.querySelector(".remove-image");
       if (removeBtn) {
         (removeBtn as HTMLElement).dataset.index = String(index);
       }
@@ -314,7 +324,7 @@ export class ImagePreviewManager {
   getImageCount(): number {
     const container = this.getContainer();
     if (!container) return 0;
-    return container.querySelectorAll('.image-preview-item').length;
+    return container.querySelectorAll(".image-preview-item").length;
   }
 
   /**

@@ -87,22 +87,22 @@ export class ListNavigator<T = unknown> {
     const { first, prev, next, last } = this.navButtons;
 
     // 创建事件处理函数并保存引用
-    this.eventHandlers.first = () => this.navigateTo('first');
-    this.eventHandlers.prev = () => this.navigateTo('prev');
-    this.eventHandlers.next = () => this.navigateTo('next');
-    this.eventHandlers.last = () => this.navigateTo('last');
+    this.eventHandlers.first = () => this.navigateTo("first");
+    this.eventHandlers.prev = () => this.navigateTo("prev");
+    this.eventHandlers.next = () => this.navigateTo("next");
+    this.eventHandlers.last = () => this.navigateTo("last");
 
     if (first) {
-      first.addEventListener('click', this.eventHandlers.first);
+      first.addEventListener("click", this.eventHandlers.first);
     }
     if (prev) {
-      prev.addEventListener('click', this.eventHandlers.prev);
+      prev.addEventListener("click", this.eventHandlers.prev);
     }
     if (next) {
-      next.addEventListener('click', this.eventHandlers.next);
+      next.addEventListener("click", this.eventHandlers.next);
     }
     if (last) {
-      last.addEventListener('click', this.eventHandlers.last);
+      last.addEventListener("click", this.eventHandlers.last);
     }
   }
 
@@ -111,7 +111,7 @@ export class ListNavigator<T = unknown> {
    */
   private bindKeyboardEvents(): void {
     this.keydownHandler = (e: Event) => this.handleKeydown(e as KeyboardEvent);
-    this.targetElement.addEventListener('keydown', this.keydownHandler as EventListener);
+    this.targetElement.addEventListener("keydown", this.keydownHandler as EventListener);
   }
 
   /**
@@ -124,26 +124,29 @@ export class ListNavigator<T = unknown> {
       if (!this.shouldHandleKeyboard(e)) return;
     } else {
       // 默认：如果正在编辑输入框，不响应导航键
-      if (e.target instanceof HTMLElement &&
-          (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (
+        e.target instanceof HTMLElement &&
+        (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
+      )
+        return;
     }
 
     switch (e.key) {
-      case 'Home':
+      case "Home":
         e.preventDefault();
-        this.navigateTo('first');
+        this.navigateTo("first");
         break;
-      case 'ArrowLeft':
+      case "ArrowLeft":
         e.preventDefault();
-        this.navigateTo('prev');
+        this.navigateTo("prev");
         break;
-      case 'ArrowRight':
+      case "ArrowRight":
         e.preventDefault();
-        this.navigateTo('next');
+        this.navigateTo("next");
         break;
-      case 'End':
+      case "End":
         e.preventDefault();
-        this.navigateTo('last');
+        this.navigateTo("last");
         break;
     }
   }
@@ -157,22 +160,22 @@ export class ListNavigator<T = unknown> {
       const { first, prev, next, last } = this.navButtons;
 
       if (first && this.eventHandlers.first) {
-        first.removeEventListener('click', this.eventHandlers.first);
+        first.removeEventListener("click", this.eventHandlers.first);
       }
       if (prev && this.eventHandlers.prev) {
-        prev.removeEventListener('click', this.eventHandlers.prev);
+        prev.removeEventListener("click", this.eventHandlers.prev);
       }
       if (next && this.eventHandlers.next) {
-        next.removeEventListener('click', this.eventHandlers.next);
+        next.removeEventListener("click", this.eventHandlers.next);
       }
       if (last && this.eventHandlers.last) {
-        last.removeEventListener('click', this.eventHandlers.last);
+        last.removeEventListener("click", this.eventHandlers.last);
       }
     }
 
     // 移除键盘事件
     if (this.keydownHandler) {
-      this.targetElement.removeEventListener('keydown', this.keydownHandler as EventListener);
+      this.targetElement.removeEventListener("keydown", this.keydownHandler as EventListener);
       this.keydownHandler = null;
     }
 
@@ -184,7 +187,7 @@ export class ListNavigator<T = unknown> {
    * 导航到指定位置
    * @param direction - 方向 (first, prev, next, last)
    */
-  async navigateTo(direction: 'first' | 'prev' | 'next' | 'last'): Promise<void> {
+  async navigateTo(direction: "first" | "prev" | "next" | "last"): Promise<void> {
     // 先保存当前数据（如果有 onSave）
     if (this.onSave) {
       await this.onSave();
@@ -193,16 +196,16 @@ export class ListNavigator<T = unknown> {
     let newIndex = this.currentIndex;
 
     switch (direction) {
-      case 'first':
+      case "first":
         newIndex = 0;
         break;
-      case 'prev':
+      case "prev":
         newIndex = Math.max(0, this.currentIndex - 1);
         break;
-      case 'next':
+      case "next":
         newIndex = Math.min(this.items.length - 1, this.currentIndex + 1);
         break;
-      case 'last':
+      case "last":
         newIndex = this.items.length - 1;
         break;
     }
@@ -239,19 +242,19 @@ export class ListNavigator<T = unknown> {
     // 更新按钮禁用状态和样式
     if (first) {
       (first as HTMLButtonElement).disabled = isFirst || isEmpty;
-      first.classList.toggle('is-disabled', isFirst || isEmpty);
+      first.classList.toggle("is-disabled", isFirst || isEmpty);
     }
     if (prev) {
       (prev as HTMLButtonElement).disabled = isFirst || isEmpty;
-      prev.classList.toggle('is-disabled', isFirst || isEmpty);
+      prev.classList.toggle("is-disabled", isFirst || isEmpty);
     }
     if (next) {
       (next as HTMLButtonElement).disabled = isLast || isEmpty;
-      next.classList.toggle('is-disabled', isLast || isEmpty);
+      next.classList.toggle("is-disabled", isLast || isEmpty);
     }
     if (last) {
       (last as HTMLButtonElement).disabled = isLast || isEmpty;
-      last.classList.toggle('is-disabled', isLast || isEmpty);
+      last.classList.toggle("is-disabled", isLast || isEmpty);
     }
   }
 }

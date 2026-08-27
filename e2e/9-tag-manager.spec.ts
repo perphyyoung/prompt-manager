@@ -48,15 +48,9 @@ test.describe("标签管理功能", () => {
       await expect(modal).toHaveClass(/active/);
 
       // Verify toolbar elements exist
-      await expect(
-        page.locator(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`),
-      ).toBeVisible();
-      await expect(
-        page.locator(`#${Constants.Ids.ADD_IMAGE_TAG_IN_MANAGER_BTN}`),
-      ).toBeVisible();
-      await expect(
-        page.locator(`#${Constants.Ids.ADD_IMAGE_TAG_GROUP_BTN}`),
-      ).toBeVisible();
+      await expect(page.locator(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`)).toBeVisible();
+      await expect(page.locator(`#${Constants.Ids.ADD_IMAGE_TAG_IN_MANAGER_BTN}`)).toBeVisible();
+      await expect(page.locator(`#${Constants.Ids.ADD_IMAGE_TAG_GROUP_BTN}`)).toBeVisible();
 
       await closeImageTagManager(page);
 
@@ -72,16 +66,13 @@ test.describe("标签管理功能", () => {
       await createImageTagInManager(page, testTagName);
 
       // Verify tag appears in the list
-      const tagElement = page.locator(
-        `.tag-manager-item[data-tag="${testTagName}"]`,
-      );
+      const tagElement = page.locator(`.tag-manager-item[data-tag="${testTagName}"]`);
       await expect(tagElement).toBeVisible({ timeout: 1000 });
 
       // Verify toast message - 匹配 "成功创建 X 个标签"
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("成功创建")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("成功创建")`, {
+        timeout: 1000,
+      });
 
       await closeImageTagManager(page);
     });
@@ -131,10 +122,9 @@ test.describe("标签管理功能", () => {
       await expect(renamedTag).toBeVisible({ timeout: 1000 });
 
       // Verify toast message
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已重命名")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已重命名")`, {
+        timeout: 1000,
+      });
 
       await closeImageTagManager(page);
     });
@@ -148,9 +138,7 @@ test.describe("标签管理功能", () => {
       await createImageTagInManager(page, testTagName);
 
       // Click delete button on the tag
-      const tagItem = page.locator(
-        `.tag-manager-item[data-tag="${testTagName}"]`,
-      );
+      const tagItem = page.locator(`.tag-manager-item[data-tag="${testTagName}"]`);
       await expect(tagItem).toBeVisible({ timeout: 1000 });
 
       const deleteBtn = tagItem.locator(".tag-delete-btn");
@@ -179,10 +167,9 @@ test.describe("标签管理功能", () => {
       await expect(tagItem).not.toBeVisible({ timeout: 1000 });
 
       // Verify toast message - 匹配 "图像标签已删除" 或 "提示词标签已删除"
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已删除")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已删除")`, {
+        timeout: 1000,
+      });
 
       await closeImageTagManager(page);
     });
@@ -192,19 +179,13 @@ test.describe("标签管理功能", () => {
       await enterImageTagManager(page);
 
       // Change sort order
-      await page.selectOption(
-        `#${Constants.Ids.IMAGE_TAG_MANAGER_SORT_SELECT}`,
-        "name-asc",
-      );
+      await page.selectOption(`#${Constants.Ids.IMAGE_TAG_MANAGER_SORT_SELECT}`, "name-asc");
 
       // Toggle sort direction
       await page.click(`#${Constants.Ids.IMAGE_TAG_MANAGER_ORDER_BTN}`);
 
       // Change back to count sort
-      await page.selectOption(
-        `#${Constants.Ids.IMAGE_TAG_MANAGER_SORT_SELECT}`,
-        "count-desc",
-      );
+      await page.selectOption(`#${Constants.Ids.IMAGE_TAG_MANAGER_SORT_SELECT}`, "count-desc");
 
       await closeImageTagManager(page);
     });
@@ -224,10 +205,9 @@ test.describe("标签管理功能", () => {
       await expect(groupCard).toBeVisible({ timeout: 1000 });
 
       // Verify toast message
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签组已创建")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签组已创建")`, {
+        timeout: 1000,
+      });
 
       await closeImageTagManager(page);
     });
@@ -240,34 +220,26 @@ test.describe("标签管理功能", () => {
       const { groupId } = await createImageTagGroup(page, "img_group_edit");
 
       // Click edit button on the group
-      const groupCard = page.locator(
-        `.tag-group-card[data-group-id="${groupId}"]`,
-      );
+      const groupCard = page.locator(`.tag-group-card[data-group-id="${groupId}"]`);
       const editBtn = groupCard.locator(".tag-group-btn.edit");
       await editBtn.click();
 
       // Wait for edit modal
-      await page.waitForSelector(
-        `#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL}`,
-        { state: "visible", timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL}`, {
+        state: "visible",
+        timeout: 1000,
+      });
 
       // Rename the group
-      const newGroupName =
-        electronTest.generateE2ePrefixName("img_group_renamed");
-      await page.fill(
-        `#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_NAME}`,
-        newGroupName,
-      );
+      const newGroupName = electronTest.generateE2ePrefixName("img_group_renamed");
+      await page.fill(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_NAME}`, newGroupName);
       await page.click(`#${Constants.Ids.SAVE_IMAGE_TAG_GROUP_BTN}`);
 
       // Wait for update via API
       await page.waitForFunction(
         async (params: { id: number; name: string }) => {
           const groups = await window.electronAPI.getImageTagGroups();
-          const group = groups.find(
-            (g: { id: number; name: string }) => g.id === params.id,
-          );
+          const group = groups.find((g: { id: number; name: string }) => g.id === params.id);
           return group?.name === params.name;
         },
         { id: groupId, name: newGroupName },
@@ -275,16 +247,13 @@ test.describe("标签管理功能", () => {
       );
 
       // Verify new group name appears
-      const renamedGroup = page.locator(
-        `.tag-group-card[data-group-id="${groupId}"]`,
-      );
+      const renamedGroup = page.locator(`.tag-group-card[data-group-id="${groupId}"]`);
       await expect(renamedGroup).toContainText(newGroupName);
 
       // Verify toast message
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签组已更新")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签组已更新")`, {
+        timeout: 1000,
+      });
 
       await closeImageTagManager(page);
     });
@@ -297,9 +266,7 @@ test.describe("标签管理功能", () => {
       const { groupId } = await createImageTagGroup(page, "img_group_delete");
 
       // Click delete button on the group
-      const groupCard = page.locator(
-        `.tag-group-card[data-group-id="${groupId}"]`,
-      );
+      const groupCard = page.locator(`.tag-group-card[data-group-id="${groupId}"]`);
       const deleteBtn = groupCard.locator(".tag-group-btn.delete");
       await deleteBtn.click();
 
@@ -326,10 +293,9 @@ test.describe("标签管理功能", () => {
       await expect(groupCard).not.toBeVisible({ timeout: 1000 });
 
       // Verify toast message
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签组已删除")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签组已删除")`, {
+        timeout: 1000,
+      });
 
       await closeImageTagManager(page);
     });
@@ -343,27 +309,16 @@ test.describe("标签管理功能", () => {
       const testTagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const testTagName2 = electronTest.generateE2ePrefixName(searchKeyword);
       // CRITICAL: Create control group that does NOT match search keyword
-      const controlTagName = electronTest.generateE2ePrefixName(
-        "control_not_deleted",
-      );
-      await createImageTagsInManagerBatch(page, [
-        testTagName1,
-        testTagName2,
-        controlTagName,
-      ]);
+      const controlTagName = electronTest.generateE2ePrefixName("control_not_deleted");
+      await createImageTagsInManagerBatch(page, [testTagName1, testTagName2, controlTagName]);
 
       // Search for specific keyword (not just 'e2e')
-      await page.fill(
-        `#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`,
-        searchKeyword,
-      );
+      await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
       // Wait for search results to update - verify only matching tags are visible
       await page.waitForFunction(
         (params: { containerId: string; keyword: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
           return (
             items.length >= 2 &&
             Array.from(items).every((item) =>
@@ -406,10 +361,9 @@ test.describe("标签管理功能", () => {
       );
 
       // Verify toast message
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("已删除")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("已删除")`, {
+        timeout: 1000,
+      });
 
       // CRITICAL: Clear search first, then verify deleted tags don't exist in full list
       await page.click(`#${Constants.Ids.CLEAR_IMAGE_TAG_MANAGER_SEARCH_BTN}`);
@@ -429,12 +383,8 @@ test.describe("标签管理功能", () => {
       // CRITICAL: Verify control group still exists
       await page.waitForFunction(
         (params: { containerId: string; tagName: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
-          return Array.from(items).some(
-            (item) => item.getAttribute("data-tag") === params.tagName,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+          return Array.from(items).some((item) => item.getAttribute("data-tag") === params.tagName);
         },
         {
           containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS,
@@ -462,15 +412,9 @@ test.describe("标签管理功能", () => {
       await expect(modal).toHaveClass(/active/);
 
       // Verify toolbar elements exist
-      await expect(
-        page.locator(`#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`),
-      ).toBeVisible();
-      await expect(
-        page.locator(`#${Constants.Ids.ADD_PROMPT_TAG_IN_MANAGER_BTN}`),
-      ).toBeVisible();
-      await expect(
-        page.locator(`#${Constants.Ids.ADD_PROMPT_TAG_GROUP_BTN}`),
-      ).toBeVisible();
+      await expect(page.locator(`#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`)).toBeVisible();
+      await expect(page.locator(`#${Constants.Ids.ADD_PROMPT_TAG_IN_MANAGER_BTN}`)).toBeVisible();
+      await expect(page.locator(`#${Constants.Ids.ADD_PROMPT_TAG_GROUP_BTN}`)).toBeVisible();
 
       await closePromptTagManager(page);
 
@@ -486,16 +430,13 @@ test.describe("标签管理功能", () => {
       await createPromptTagInManager(page, testTagName);
 
       // Verify tag appears in the list
-      const tagElement = page.locator(
-        `.tag-manager-item[data-tag="${testTagName}"]`,
-      );
+      const tagElement = page.locator(`.tag-manager-item[data-tag="${testTagName}"]`);
       await expect(tagElement).toBeVisible({ timeout: 1000 });
 
       // Verify toast message - 匹配 "成功创建 X 个标签"
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("成功创建")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("成功创建")`, {
+        timeout: 1000,
+      });
 
       await closePromptTagManager(page);
     });
@@ -545,10 +486,9 @@ test.describe("标签管理功能", () => {
       await expect(renamedTag).toBeVisible({ timeout: 1000 });
 
       // Verify toast message
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已重命名")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已重命名")`, {
+        timeout: 1000,
+      });
 
       await closePromptTagManager(page);
     });
@@ -562,9 +502,7 @@ test.describe("标签管理功能", () => {
       await createPromptTagInManager(page, testTagName);
 
       // Click delete button on the tag
-      const tagItem = page.locator(
-        `.tag-manager-item[data-tag="${testTagName}"]`,
-      );
+      const tagItem = page.locator(`.tag-manager-item[data-tag="${testTagName}"]`);
       await expect(tagItem).toBeVisible({ timeout: 1000 });
 
       const deleteBtn = tagItem.locator(".tag-delete-btn");
@@ -593,10 +531,9 @@ test.describe("标签管理功能", () => {
       await expect(tagItem).not.toBeVisible({ timeout: 1000 });
 
       // Verify toast message
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已删除")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签已删除")`, {
+        timeout: 1000,
+      });
 
       await closePromptTagManager(page);
     });
@@ -606,19 +543,13 @@ test.describe("标签管理功能", () => {
       await enterPromptTagManager(page);
 
       // Change sort order
-      await page.selectOption(
-        `#${Constants.Ids.PROMPT_TAG_MANAGER_SORT_SELECT}`,
-        "name-asc",
-      );
+      await page.selectOption(`#${Constants.Ids.PROMPT_TAG_MANAGER_SORT_SELECT}`, "name-asc");
 
       // Toggle sort direction
       await page.click(`#${Constants.Ids.PROMPT_TAG_MANAGER_ORDER_BTN}`);
 
       // Change back to count sort
-      await page.selectOption(
-        `#${Constants.Ids.PROMPT_TAG_MANAGER_SORT_SELECT}`,
-        "count-desc",
-      );
+      await page.selectOption(`#${Constants.Ids.PROMPT_TAG_MANAGER_SORT_SELECT}`, "count-desc");
 
       await closePromptTagManager(page);
     });
@@ -638,10 +569,9 @@ test.describe("标签管理功能", () => {
       await expect(groupCard).toBeVisible({ timeout: 1000 });
 
       // Verify toast message
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签组已创建")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签组已创建")`, {
+        timeout: 1000,
+      });
 
       await closePromptTagManager(page);
     });
@@ -661,28 +591,21 @@ test.describe("标签管理功能", () => {
       await editBtn.click();
 
       // Wait for edit modal
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_MODAL}`,
-        { state: "visible", timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_MODAL}`, {
+        state: "visible",
+        timeout: 1000,
+      });
 
       // Rename the group
-      const newGroupName = electronTest.generateE2ePrefixName(
-        "prompt_group_renamed",
-      );
-      await page.fill(
-        `#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_NAME}`,
-        newGroupName,
-      );
+      const newGroupName = electronTest.generateE2ePrefixName("prompt_group_renamed");
+      await page.fill(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_NAME}`, newGroupName);
       await page.click(`#${Constants.Ids.SAVE_PROMPT_TAG_GROUP_BTN}`);
 
       // Wait for update via API
       await page.waitForFunction(
         async (params: { id: number; name: string }) => {
           const groups = await window.electronAPI.getPromptTagGroups();
-          const group = groups.find(
-            (g: { id: number; name: string }) => g.id === params.id,
-          );
+          const group = groups.find((g: { id: number; name: string }) => g.id === params.id);
           return group?.name === params.name;
         },
         { id: groupId, name: newGroupName },
@@ -696,10 +619,9 @@ test.describe("标签管理功能", () => {
       await expect(renamedGroup).toContainText(newGroupName);
 
       // Verify toast message
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签组已更新")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签组已更新")`, {
+        timeout: 1000,
+      });
 
       await closePromptTagManager(page);
     });
@@ -709,10 +631,7 @@ test.describe("标签管理功能", () => {
       await enterPromptTagManager(page);
 
       // Create a test group first
-      const { groupId } = await createPromptTagGroup(
-        page,
-        "prompt_group_delete",
-      );
+      const { groupId } = await createPromptTagGroup(page, "prompt_group_delete");
 
       // Click delete button on the group (限定在提示词标签组卡片容器内)
       const groupCard = page.locator(
@@ -744,10 +663,9 @@ test.describe("标签管理功能", () => {
       await expect(groupCard).not.toBeVisible({ timeout: 1000 });
 
       // Verify toast message
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("标签组已删除")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("标签组已删除")`, {
+        timeout: 1000,
+      });
 
       await closePromptTagManager(page);
     });
@@ -761,27 +679,16 @@ test.describe("标签管理功能", () => {
       const testTagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const testTagName2 = electronTest.generateE2ePrefixName(searchKeyword);
       // CRITICAL: Create control group that does NOT match search keyword
-      const controlTagName = electronTest.generateE2ePrefixName(
-        "control_not_deleted",
-      );
-      await createPromptTagsInManagerBatch(page, [
-        testTagName1,
-        testTagName2,
-        controlTagName,
-      ]);
+      const controlTagName = electronTest.generateE2ePrefixName("control_not_deleted");
+      await createPromptTagsInManagerBatch(page, [testTagName1, testTagName2, controlTagName]);
 
       // Search for specific keyword (not just 'e2e')
-      await page.fill(
-        `#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`,
-        searchKeyword,
-      );
+      await page.fill(`#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
       // Wait for search results to update - verify only matching tags are visible
       await page.waitForFunction(
         (params: { containerId: string; keyword: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
           return (
             items.length >= 2 &&
             Array.from(items).every((item) =>
@@ -824,10 +731,9 @@ test.describe("标签管理功能", () => {
       );
 
       // Verify toast message
-      await page.waitForSelector(
-        `#${Constants.Ids.TOAST_CONTAINER}:has-text("已删除")`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("已删除")`, {
+        timeout: 1000,
+      });
 
       // CRITICAL: Clear search first, then verify deleted tags don't exist in full list
       await page.click(`#${Constants.Ids.CLEAR_PROMPT_TAG_MANAGER_SEARCH_BTN}`);
@@ -847,12 +753,8 @@ test.describe("标签管理功能", () => {
       // CRITICAL: Verify control group still exists
       await page.waitForFunction(
         (params: { containerId: string; tagName: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
-          return Array.from(items).some(
-            (item) => item.getAttribute("data-tag") === params.tagName,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+          return Array.from(items).some((item) => item.getAttribute("data-tag") === params.tagName);
         },
         {
           containerId: Constants.Ids.PROMPT_TAG_GROUP_CARDS,

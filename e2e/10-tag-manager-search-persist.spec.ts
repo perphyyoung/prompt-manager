@@ -46,16 +46,11 @@ test.describe("标签管理器搜索状态保持功能", () => {
       // 批量创建3个标签，减少UI操作次数
       await createImageTagsInManagerBatch(page, [tagName1, tagName2, otherTagName]);
 
-      await page.fill(
-        `#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`,
-        searchKeyword,
-      );
+      await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
       await page.waitForFunction(
         (params: { containerId: string; keyword: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
           return (
             items.length >= 2 &&
             Array.from(items).every((item) =>
@@ -108,12 +103,8 @@ test.describe("标签管理器搜索状态保持功能", () => {
       await page.click(`#${Constants.Ids.CLEAR_IMAGE_TAG_MANAGER_SEARCH_BTN}`);
       await page.waitForFunction(
         (params: { containerId: string; tagName: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
-          return Array.from(items).some(
-            (item) => item.getAttribute("data-tag") === params.tagName,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+          return Array.from(items).some((item) => item.getAttribute("data-tag") === params.tagName);
         },
         {
           containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS,
@@ -138,23 +129,16 @@ test.describe("标签管理器搜索状态保持功能", () => {
       const searchKeyword = "persist_single_edit";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
-      const newTagName = electronTest.generateE2ePrefixName(
-        `${searchKeyword}_renamed`,
-      );
+      const newTagName = electronTest.generateE2ePrefixName(`${searchKeyword}_renamed`);
 
       // 批量创建2个标签，减少UI操作次数
       await createImageTagsInManagerBatch(page, [tagName1, tagName2]);
 
-      await page.fill(
-        `#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`,
-        searchKeyword,
-      );
+      await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
       await page.waitForFunction(
         (params: { containerId: string; keyword: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
           return (
             items.length >= 2 &&
             Array.from(items).every((item) =>
@@ -185,9 +169,7 @@ test.describe("标签管理器搜索状态保持功能", () => {
       await page.waitForFunction(
         async (params: { oldName: string; newName: string }) => {
           const tags = await window.electronAPI.getImageTags();
-          return (
-            !tags.includes(params.oldName) && tags.includes(params.newName)
-          );
+          return !tags.includes(params.oldName) && tags.includes(params.newName);
         },
         { oldName: tagName1, newName: newTagName },
         { timeout: 1000 },
@@ -203,12 +185,8 @@ test.describe("标签管理器搜索状态保持功能", () => {
       await page.click(`#${Constants.Ids.CLEAR_IMAGE_TAG_MANAGER_SEARCH_BTN}`);
       await page.waitForFunction(
         (params: { containerId: string; tagName: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
-          return Array.from(items).some(
-            (item) => item.getAttribute("data-tag") === params.tagName,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+          return Array.from(items).some((item) => item.getAttribute("data-tag") === params.tagName);
         },
         {
           containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS,
@@ -238,16 +216,11 @@ test.describe("标签管理器搜索状态保持功能", () => {
       // 批量创建3个标签，减少UI操作次数
       await createImageTagsInManagerBatch(page, [tagName1, tagName2, otherTagName]);
 
-      await page.fill(
-        `#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`,
-        searchKeyword,
-      );
+      await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
       await page.waitForFunction(
         (params: { containerId: string; keyword: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
           return (
             items.length >= 2 &&
             Array.from(items).every((item) =>
@@ -277,9 +250,9 @@ test.describe("标签管理器搜索状态保持功能", () => {
       }
 
       // 等待 UI 显示空状态（删除后搜索状态下应该无匹配标签）
-      await expect(
-        page.locator(`#${Constants.Ids.IMAGE_TAG_MANAGER_EMPTY}`),
-      ).toBeVisible({ timeout: 1000 });
+      await expect(page.locator(`#${Constants.Ids.IMAGE_TAG_MANAGER_EMPTY}`)).toBeVisible({
+        timeout: 1000,
+      });
 
       const searchInputValue = await page.inputValue(
         `#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`,
@@ -289,12 +262,8 @@ test.describe("标签管理器搜索状态保持功能", () => {
       await page.click(`#${Constants.Ids.CLEAR_IMAGE_TAG_MANAGER_SEARCH_BTN}`);
       await page.waitForFunction(
         (params: { containerId: string; tagName: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
-          return Array.from(items).some(
-            (item) => item.getAttribute("data-tag") === params.tagName,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+          return Array.from(items).some((item) => item.getAttribute("data-tag") === params.tagName);
         },
         {
           containerId: Constants.Ids.IMAGE_TAG_GROUP_CARDS,
@@ -311,9 +280,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
 
       await closeImageTagManager(page);
     });
-
-
-
   });
 
   test.describe("提示词标签管理 - 搜索状态保持", () => {
@@ -329,16 +295,11 @@ test.describe("标签管理器搜索状态保持功能", () => {
       // 批量创建3个标签，减少UI操作次数
       await createPromptTagsInManagerBatch(page, [tagName1, tagName2, otherTagName]);
 
-      await page.fill(
-        `#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`,
-        searchKeyword,
-      );
+      await page.fill(`#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
       await page.waitForFunction(
         (params: { containerId: string; keyword: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
           return (
             items.length >= 2 &&
             Array.from(items).every((item) =>
@@ -391,12 +352,8 @@ test.describe("标签管理器搜索状态保持功能", () => {
       await page.click(`#${Constants.Ids.CLEAR_PROMPT_TAG_MANAGER_SEARCH_BTN}`);
       await page.waitForFunction(
         (params: { containerId: string; tagName: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
-          return Array.from(items).some(
-            (item) => item.getAttribute("data-tag") === params.tagName,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+          return Array.from(items).some((item) => item.getAttribute("data-tag") === params.tagName);
         },
         {
           containerId: Constants.Ids.PROMPT_TAG_GROUP_CARDS,
@@ -412,7 +369,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
       ).toBeVisible({ timeout: 1000 });
 
       await closePromptTagManager(page);
-
     });
 
     test("搜索后单个编辑保持搜索状态", async ({ electronTest, page }) => {
@@ -422,23 +378,16 @@ test.describe("标签管理器搜索状态保持功能", () => {
       const searchKeyword = "persist_single_edit";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
-      const newTagName = electronTest.generateE2ePrefixName(
-        `${searchKeyword}_renamed`,
-      );
+      const newTagName = electronTest.generateE2ePrefixName(`${searchKeyword}_renamed`);
 
       // 批量创建2个标签，减少UI操作次数
       await createPromptTagsInManagerBatch(page, [tagName1, tagName2]);
 
-      await page.fill(
-        `#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`,
-        searchKeyword,
-      );
+      await page.fill(`#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
       await page.waitForFunction(
         (params: { containerId: string; keyword: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
           return (
             items.length >= 2 &&
             Array.from(items).every((item) =>
@@ -469,9 +418,7 @@ test.describe("标签管理器搜索状态保持功能", () => {
       await page.waitForFunction(
         async (params: { oldName: string; newName: string }) => {
           const tags = await window.electronAPI.getAllTags();
-          return (
-            !tags.includes(params.oldName) && tags.includes(params.newName)
-          );
+          return !tags.includes(params.oldName) && tags.includes(params.newName);
         },
         { oldName: tagName1, newName: newTagName },
         { timeout: 1000 },
@@ -487,12 +434,8 @@ test.describe("标签管理器搜索状态保持功能", () => {
       await page.click(`#${Constants.Ids.CLEAR_PROMPT_TAG_MANAGER_SEARCH_BTN}`);
       await page.waitForFunction(
         (params: { containerId: string; tagName: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
-          return Array.from(items).some(
-            (item) => item.getAttribute("data-tag") === params.tagName,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+          return Array.from(items).some((item) => item.getAttribute("data-tag") === params.tagName);
         },
         {
           containerId: Constants.Ids.PROMPT_TAG_GROUP_CARDS,
@@ -522,16 +465,11 @@ test.describe("标签管理器搜索状态保持功能", () => {
       // 批量创建3个标签，减少UI操作次数
       await createPromptTagsInManagerBatch(page, [tagName1, tagName2, otherTagName]);
 
-      await page.fill(
-        `#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`,
-        searchKeyword,
-      );
+      await page.fill(`#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
       await page.waitForFunction(
         (params: { containerId: string; keyword: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
           return (
             items.length >= 2 &&
             Array.from(items).every((item) =>
@@ -561,9 +499,9 @@ test.describe("标签管理器搜索状态保持功能", () => {
       }
 
       // 等待 UI 显示空状态（删除后搜索状态下应该无匹配标签）
-      await expect(
-        page.locator(`#${Constants.Ids.PROMPT_TAG_MANAGER_EMPTY}`),
-      ).toBeVisible({ timeout: 1000 });
+      await expect(page.locator(`#${Constants.Ids.PROMPT_TAG_MANAGER_EMPTY}`)).toBeVisible({
+        timeout: 1000,
+      });
 
       const searchInputValue = await page.inputValue(
         `#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`,
@@ -573,12 +511,8 @@ test.describe("标签管理器搜索状态保持功能", () => {
       await page.click(`#${Constants.Ids.CLEAR_PROMPT_TAG_MANAGER_SEARCH_BTN}`);
       await page.waitForFunction(
         (params: { containerId: string; tagName: string }) => {
-          const items = document.querySelectorAll(
-            `#${params.containerId} .tag-manager-item`,
-          );
-          return Array.from(items).some(
-            (item) => item.getAttribute("data-tag") === params.tagName,
-          );
+          const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
+          return Array.from(items).some((item) => item.getAttribute("data-tag") === params.tagName);
         },
         {
           containerId: Constants.Ids.PROMPT_TAG_GROUP_CARDS,
@@ -595,8 +529,5 @@ test.describe("标签管理器搜索状态保持功能", () => {
 
       await closePromptTagManager(page);
     });
-
-
-
   });
 });

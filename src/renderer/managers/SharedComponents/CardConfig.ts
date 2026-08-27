@@ -1,30 +1,24 @@
-import { ButtonFactory, ButtonConfig } from './ButtonFactory.ts';
-import { Constants } from '../../../constants.ts';
+import { ButtonFactory, ButtonConfig } from "./ButtonFactory.ts";
+import { Constants } from "../../../constants.ts";
 
 /**
  * 卡片类型枚举
  */
 export const CardType = {
-  PROMPT_MAIN: 'prompt-main',
-  IMAGE_MAIN: 'image-main',
+  PROMPT_MAIN: "prompt-main",
+  IMAGE_MAIN: "image-main",
   PROMPT_TRASH: Constants.TrashType.PROMPT,
-  IMAGE_TRASH: Constants.TrashType.IMAGE
+  IMAGE_TRASH: Constants.TrashType.IMAGE,
 } as const;
 
-export type CardTypeValue = typeof CardType[keyof typeof CardType];
+export type CardTypeValue = (typeof CardType)[keyof typeof CardType];
 
 /**
  * 主卡片按钮配置
  */
 const CARD_MAIN_BUTTONS = {
-  left: [
-    ButtonFactory.createCheckboxButton(),
-    ButtonFactory.createFavoriteButton()
-  ],
-  right: [
-    ButtonFactory.createCopyButton(),
-    ButtonFactory.createDeleteButton()
-  ]
+  left: [ButtonFactory.createCheckboxButton(), ButtonFactory.createFavoriteButton()],
+  right: [ButtonFactory.createCopyButton(), ButtonFactory.createDeleteButton()],
 };
 
 export interface CardFields {
@@ -75,33 +69,33 @@ export class CardConfig {
 
   constructor(options: CardConfigOptions) {
     this.type = options.type;
-    this.cssPrefix = options.cssPrefix || 'card';
+    this.cssPrefix = options.cssPrefix || "card";
     this.dataType = options.dataType;
     this.fields = {
-      id: options.fields?.id || 'id',
-      title: options.fields?.title || 'title',
-      content: options.fields?.content || 'content',
-      tags: options.fields?.tags || 'tags',
-      isFavorite: options.fields?.isFavorite || 'isFavorite',
-      updatedAt: options.fields?.updatedAt || 'updatedAt',
-      createdAt: options.fields?.createdAt || 'createdAt',
+      id: options.fields?.id || "id",
+      title: options.fields?.title || "title",
+      content: options.fields?.content || "content",
+      tags: options.fields?.tags || "tags",
+      isFavorite: options.fields?.isFavorite || "isFavorite",
+      updatedAt: options.fields?.updatedAt || "updatedAt",
+      createdAt: options.fields?.createdAt || "createdAt",
       thumbnail: options.fields?.thumbnail || null,
       deletedAt: options.fields?.deletedAt || null,
       fileName: options.fields?.fileName || null,
       fileSize: options.fields?.fileSize || null,
       width: options.fields?.width || null,
       height: options.fields?.height || null,
-      ...options.fields
+      ...options.fields,
     };
     this.buttons = {
       left: options.buttons?.left || [],
-      right: options.buttons?.right || []
+      right: options.buttons?.right || [],
     };
   }
 
   getValue(item: Record<string, unknown>, fieldName: keyof CardFields): unknown {
     const field = this.fields[fieldName];
-    if (typeof field === 'function') {
+    if (typeof field === "function") {
       return field(item);
     }
     return item[field as string];
@@ -109,133 +103,133 @@ export class CardConfig {
 
   getContentText(item: Record<string, unknown>): string {
     switch (this.dataType) {
-      case 'prompt':
+      case "prompt":
       case Constants.TrashType.PROMPT:
-        return String(this.getValue(item, 'content') || '');
-      case 'image':
+        return String(this.getValue(item, "content") || "");
+      case "image":
       case Constants.TrashType.IMAGE: {
         const itemWithRefs = item as { promptRefs?: PromptRef[] };
         const promptRef = itemWithRefs.promptRefs?.[0];
         if (promptRef) {
-          return promptRef.promptContent || promptRef.promptTitle || '未关联提示词';
+          return promptRef.promptContent || promptRef.promptTitle || "未关联提示词";
         }
-        return '未关联提示词';
+        return "未关联提示词";
       }
       default:
-        return '';
+        return "";
     }
   }
 
   getFooterInfo(item: Record<string, unknown>, sortBy: string): string {
-    if (this.dataType.startsWith('trash')) {
-      const deletedAt = this.getValue(item, 'deletedAt');
-      return `删除于 ${deletedAt || '-'}`;
+    if (this.dataType.startsWith("trash")) {
+      const deletedAt = this.getValue(item, "deletedAt");
+      return `删除于 ${deletedAt || "-"}`;
     }
 
     switch (sortBy) {
-      case 'updatedAt': {
-        const updatedAt = this.getValue(item, 'updatedAt');
-        return `更新于 ${updatedAt || '-'}`;
+      case "updatedAt": {
+        const updatedAt = this.getValue(item, "updatedAt");
+        return `更新于 ${updatedAt || "-"}`;
       }
-      case 'createdAt': {
-        const createdAt = this.getValue(item, 'createdAt');
-        return `创建于 ${createdAt || '-'}`;
+      case "createdAt": {
+        const createdAt = this.getValue(item, "createdAt");
+        return `创建于 ${createdAt || "-"}`;
       }
-      case 'title':
-        return String(this.getValue(item, 'title') || '无标题');
-      case 'fileSize': {
-        const fileSize = this.getValue(item, 'fileSize');
-        return fileSize ? this.formatFileSize(Number(fileSize)) : '';
+      case "title":
+        return String(this.getValue(item, "title") || "无标题");
+      case "fileSize": {
+        const fileSize = this.getValue(item, "fileSize");
+        return fileSize ? this.formatFileSize(Number(fileSize)) : "";
       }
-      case 'width':
-      case 'height': {
-        const width = this.getValue(item, 'width');
-        const height = this.getValue(item, 'height');
-        return `${width || '?'} x ${height || '?'}`;
+      case "width":
+      case "height": {
+        const width = this.getValue(item, "width");
+        const height = this.getValue(item, "height");
+        return `${width || "?"} x ${height || "?"}`;
       }
       default:
-        if (this.dataType === 'prompt') {
-          const defaultUpdatedAt = this.getValue(item, 'updatedAt');
-          return `更新于 ${defaultUpdatedAt || '-'}`;
+        if (this.dataType === "prompt") {
+          const defaultUpdatedAt = this.getValue(item, "updatedAt");
+          return `更新于 ${defaultUpdatedAt || "-"}`;
         }
-        return String(this.getValue(item, 'fileName') || this.getValue(item, 'title') || '');
+        return String(this.getValue(item, "fileName") || this.getValue(item, "title") || "");
     }
   }
 
   formatFileSize(bytes: number): string {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   }
 }
 
 export const PromptMainConfig = new CardConfig({
   type: CardType.PROMPT_MAIN,
-  cssPrefix: 'prompt-card',
-  dataType: 'prompt',
+  cssPrefix: "prompt-card",
+  dataType: "prompt",
   fields: {
-    id: 'id',
-    title: 'title',
-    content: 'content',
-    tags: 'tags',
-    isFavorite: 'isFavorite',
-    updatedAt: 'updatedAt',
-    createdAt: 'createdAt'
+    id: "id",
+    title: "title",
+    content: "content",
+    tags: "tags",
+    isFavorite: "isFavorite",
+    updatedAt: "updatedAt",
+    createdAt: "createdAt",
   },
-  buttons: CARD_MAIN_BUTTONS
+  buttons: CARD_MAIN_BUTTONS,
 });
 
 export const ImageMainConfig = new CardConfig({
   type: CardType.IMAGE_MAIN,
-  cssPrefix: 'image-card',
-  dataType: 'image',
+  cssPrefix: "image-card",
+  dataType: "image",
   fields: {
-    id: 'id',
-    tags: 'tags',
-    isFavorite: 'isFavorite',
-    updatedAt: 'updatedAt',
-    createdAt: 'createdAt',
-    fileName: 'fileName',
-    fileSize: 'fileSize',
-    width: 'width',
-    height: 'height',
-    thumbnail: 'thumbnailPath'
+    id: "id",
+    tags: "tags",
+    isFavorite: "isFavorite",
+    updatedAt: "updatedAt",
+    createdAt: "createdAt",
+    fileName: "fileName",
+    fileSize: "fileSize",
+    width: "width",
+    height: "height",
+    thumbnail: "thumbnailPath",
   },
-  buttons: CARD_MAIN_BUTTONS
+  buttons: CARD_MAIN_BUTTONS,
 });
 
 export const PromptTrashConfig = new CardConfig({
   type: CardType.PROMPT_TRASH,
-  cssPrefix: 'trash-card',
+  cssPrefix: "trash-card",
   dataType: Constants.TrashType.PROMPT,
   fields: {
-    id: 'id',
-    content: 'content',
-    tags: 'tags',
-    deletedAt: 'deletedAt',
+    id: "id",
+    content: "content",
+    tags: "tags",
+    deletedAt: "deletedAt",
     thumbnail: (item: Record<string, unknown>) => {
       const itemWithImages = item as { images?: Array<{ thumbnailPath?: string }> };
       return itemWithImages.images?.[0]?.thumbnailPath || null;
-    }
+    },
   },
   buttons: {
     left: [ButtonFactory.createRestoreButton()],
-    right: [ButtonFactory.createPermanentDeleteButton()]
-  }
+    right: [ButtonFactory.createPermanentDeleteButton()],
+  },
 });
 
 export const ImageTrashConfig = new CardConfig({
   type: CardType.IMAGE_TRASH,
-  cssPrefix: 'trash-card',
+  cssPrefix: "trash-card",
   dataType: Constants.TrashType.IMAGE,
   fields: {
-    id: 'id',
-    tags: 'tags',
-    deletedAt: 'deletedAt',
-    thumbnail: 'thumbnailPath'
+    id: "id",
+    tags: "tags",
+    deletedAt: "deletedAt",
+    thumbnail: "thumbnailPath",
   },
   buttons: {
     left: [ButtonFactory.createRestoreButton()],
-    right: [ButtonFactory.createPermanentDeleteButton()]
-  }
+    right: [ButtonFactory.createPermanentDeleteButton()],
+  },
 });

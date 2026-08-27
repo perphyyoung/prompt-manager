@@ -76,7 +76,10 @@ export class PromptApiFactory extends BaseTestDataFactory<IPrompt> {
   /**
    * 实现基类抽象方法：调用创建标签组 API
    */
-  protected async _createTagGroupApi(name: string, sortOrder: number): Promise<{ id: number; name: string; sortOrder: number } | null> {
+  protected async _createTagGroupApi(
+    name: string,
+    sortOrder: number,
+  ): Promise<{ id: number; name: string; sortOrder: number } | null> {
     return await this.page.evaluate(
       async (params: { name: string; sortOrder: number }) => {
         return await window.electronAPI.createPromptTagGroup(params.name, params.sortOrder);
@@ -100,10 +103,7 @@ export class PromptApiFactory extends BaseTestDataFactory<IPrompt> {
   /**
    * 创建带标签的提示词
    */
-  async createWithTags(
-    data: PromptCreateData,
-    tagNames: string[],
-  ): Promise<IPrompt> {
+  async createWithTags(data: PromptCreateData, tagNames: string[]): Promise<IPrompt> {
     const prompt = await this.create(data);
     await this._linkTagsToEntity(prompt.id, tagNames);
     return prompt;
@@ -112,10 +112,7 @@ export class PromptApiFactory extends BaseTestDataFactory<IPrompt> {
   /**
    * 创建带图像的提示词
    */
-  async createWithImages(
-    data: PromptCreateData,
-    imageIds: string[],
-  ): Promise<IPrompt> {
+  async createWithImages(data: PromptCreateData, imageIds: string[]): Promise<IPrompt> {
     const promptData: PromptCreateData = {
       ...data,
       images: imageIds.map((id) => ({ id })),
@@ -165,10 +162,7 @@ export class PromptApiFactory extends BaseTestDataFactory<IPrompt> {
   /**
    * 实现基类抽象方法：关联标签到提示词
    */
-  protected async _linkTagsToEntity(
-    promptId: string,
-    tagNames: string[],
-  ): Promise<void> {
+  protected async _linkTagsToEntity(promptId: string, tagNames: string[]): Promise<void> {
     await this.page.evaluate(
       async (params: { promptId: string; tags: string[] }) => {
         await window.electronAPI.addPromptTags(params.promptId, params.tags);

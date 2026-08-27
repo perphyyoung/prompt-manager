@@ -3,7 +3,7 @@
  * 标签相关的纯工具函数，无副作用
  */
 
-import type { TagName, TagGroup, TagGroupId, Tag } from './types.ts';
+import type { TagName, TagGroup, TagGroupId, Tag } from "./types.ts";
 
 /**
  * 解析标签输入（支持批量）
@@ -13,10 +13,10 @@ import type { TagName, TagGroup, TagGroupId, Tag } from './types.ts';
  */
 export function parseTagInput(input: string): TagName[] {
   return input
-    .replace(/^[，,]+|[，,]+$/g, '')
+    .replace(/^[，,]+|[，,]+$/g, "")
     .split(/[,，\s]+/)
-    .map(t => t.trim())
-    .filter(t => t);
+    .map((t) => t.trim())
+    .filter((t) => t);
 }
 
 /**
@@ -26,7 +26,7 @@ export function parseTagInput(input: string): TagName[] {
  * @returns 移除后的标签数组
  */
 export function diffTags(current: TagName[], removed: TagName[]): TagName[] {
-  return current.filter(t => !removed.includes(t));
+  return current.filter((t) => !removed.includes(t));
 }
 
 /**
@@ -57,18 +57,18 @@ export function hasTag(tags: TagName[], tag: TagName): boolean {
  */
 export function groupTagsByGroup(
   tags: TagName[],
-  groups: TagGroup[]
+  groups: TagGroup[],
 ): { grouped: Record<TagGroupId, TagName[]>; ungrouped: TagName[] } {
   const grouped: Record<TagGroupId, TagName[]> = {};
   const ungrouped: TagName[] = [];
 
   // 初始化分组
-  groups.forEach(group => {
+  groups.forEach((group) => {
     grouped[group.id] = [];
   });
 
   // 将标签分配到组
-  tags.forEach(tag => {
+  tags.forEach((tag) => {
     let isGrouped = false;
     for (const group of groups) {
       if (group.tags && group.tags.includes(tag)) {
@@ -93,24 +93,24 @@ export function groupTagsByGroup(
  */
 export function buildTagsWithGroupInfo(
   tags: TagName[],
-  groups: TagGroup[]
+  groups: TagGroup[],
 ): Array<{ name: TagName; groupId: TagGroupId | null; groupName: string; groupSortOrder: number }> {
-  const result = tags.map(tag => {
+  const result = tags.map((tag) => {
     for (const group of groups) {
       if (group.tags && group.tags.includes(tag)) {
         return {
           name: tag,
           groupId: group.id,
           groupName: group.name,
-          groupSortOrder: group.sortOrder || 0
+          groupSortOrder: group.sortOrder || 0,
         };
       }
     }
     return {
       name: tag,
       groupId: null,
-      groupName: '',
-      groupSortOrder: Infinity
+      groupName: "",
+      groupSortOrder: Infinity,
     };
   });
 
@@ -124,7 +124,7 @@ export function buildTagsWithGroupInfo(
  * @returns 不存在的标签（新标签）
  */
 export function filterNewTags(tags: TagName[], existing: TagName[]): TagName[] {
-  return tags.filter(tag => !existing.includes(tag));
+  return tags.filter((tag) => !existing.includes(tag));
 }
 
 /**
@@ -133,10 +133,7 @@ export function filterNewTags(tags: TagName[], existing: TagName[]): TagName[] {
  * @param counts - 标签计数映射
  * @returns 排序后的标签数组
  */
-export function sortTagsByCount(
-  tags: TagName[],
-  counts: Record<TagName, number>
-): TagName[] {
+export function sortTagsByCount(tags: TagName[], counts: Record<TagName, number>): TagName[] {
   return [...tags].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
 }
 
@@ -147,7 +144,7 @@ export function sortTagsByCount(
  * @returns 已存在的标签
  */
 export function filterExistingTags(tags: TagName[], existing: TagName[]): TagName[] {
-  return tags.filter(tag => existing.includes(tag));
+  return tags.filter((tag) => existing.includes(tag));
 }
 
 /**
@@ -156,10 +153,7 @@ export function filterExistingTags(tags: TagName[], existing: TagName[]): TagNam
  * @param groups - 标签组数组
  * @returns Tag 对象数组
  */
-export function toTagObjects(
-  tagNames: TagName[],
-  groups: TagGroup[]
-): Tag[] {
+export function toTagObjects(tagNames: TagName[], groups: TagGroup[]): Tag[] {
   const tagGroupMap = new Map<TagName, TagGroupId | null>();
 
   // 构建标签到组的映射
@@ -172,9 +166,9 @@ export function toTagObjects(
   }
 
   // 转换为 Tag 对象
-  return tagNames.map(name => ({
+  return tagNames.map((name) => ({
     name,
-    groupId: tagGroupMap.get(name) || null
+    groupId: tagGroupMap.get(name) || null,
   }));
 }
 
@@ -184,5 +178,5 @@ export function toTagObjects(
  * @returns 标签名数组
  */
 export function fromTagObjects(tags: Tag[]): TagName[] {
-  return tags.map(t => t.name);
+  return tags.map((t) => t.name);
 }

@@ -6,9 +6,7 @@
     "src/renderer/app.ts",
     "electron.vite.config.ts"
   ],
-  "project": [
-    "src/**/*.ts"
-  ],
+  "project": ["src/**/*.ts"],
   "ignore": [
     "**/*.test.ts",
     "**/*.spec.ts",

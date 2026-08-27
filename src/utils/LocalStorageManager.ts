@@ -1,4 +1,4 @@
-import { logger } from './Logger.ts';
+import { logger } from "./Logger.ts";
 /**
  * LocalStorage 管理器
  * 提供类型安全的 LocalStorage 访问 API
@@ -34,7 +34,7 @@ export class LocalStorageManager {
    * 批量注册配置项
    */
   registerConfigs<T>(configs: ConfigItem<T>[]): void {
-    configs.forEach(config => this.registerConfig(config));
+    configs.forEach((config) => this.registerConfig(config));
   }
 
   /**
@@ -55,19 +55,17 @@ export class LocalStorageManager {
         return config.defaultValue as T;
       }
 
-      const parsed: T = config.parser
-        ? config.parser(stored) as T
-        : stored as T;
+      const parsed: T = config.parser ? (config.parser(stored) as T) : (stored as T);
 
       // 验证值
       if (config.validator && !config.validator(parsed)) {
-        logger.warn('LocalStorageManager', `Invalid value for ${key}, using default`);
+        logger.warn("LocalStorageManager", `Invalid value for ${key}, using default`);
         return config.defaultValue as T;
       }
 
       return parsed;
     } catch (error) {
-      logger.error('LocalStorageManager', `Failed to get config ${key}:`, error);
+      logger.error("LocalStorageManager", `Failed to get config ${key}:`, error);
       return config.defaultValue as T;
     }
   }
@@ -90,13 +88,11 @@ export class LocalStorageManager {
     }
 
     try {
-      const serialized = config.serializer
-        ? config.serializer(value)
-        : String(value);
+      const serialized = config.serializer ? config.serializer(value) : String(value);
 
       localStorage.setItem(key, serialized);
     } catch (error) {
-      logger.error('LocalStorageManager', `Failed to set config ${key}:`, error);
+      logger.error("LocalStorageManager", `Failed to set config ${key}:`, error);
       throw error;
     }
   }

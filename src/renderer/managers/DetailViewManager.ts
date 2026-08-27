@@ -2,11 +2,8 @@ import { Constants, ElementId } from "../../constants.ts";
 import { ListNavigator } from "../../utils/index.ts";
 import { EditableTagList } from "../components/index.ts";
 import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
-import type {
-  IClosableElement,
-  IDetailTagManager,
-} from "../../types/entities.ts";
-import type { IApp } from '../app.types.ts';
+import type { IClosableElement, IDetailTagManager } from "../../types/entities.ts";
+import type { IApp } from "../app.types.ts";
 interface DetailViewManagerOptions {
   app: IApp;
   modalId: string;
@@ -129,10 +126,7 @@ export abstract class DetailViewManager<TItem extends DetailViewItem = DetailVie
       this.closeHandler = () => this.close();
       closeBtn.addEventListener("click", this.closeHandler);
     } else {
-      window.electronAPI.logError(
-        "DetailViewManager",
-        `closeBtn not found: ${this.closeBtnId}`,
-      );
+      window.electronAPI.logError("DetailViewManager", `closeBtn not found: ${this.closeBtnId}`);
     }
   }
 
@@ -192,17 +186,13 @@ export abstract class DetailViewManager<TItem extends DetailViewItem = DetailVie
    */
   private hideHoverTooltip(): void {
     // 隐藏图像提示词 tooltip
-    const imageTooltip = document.getElementById(
-      Constants.Ids.IMAGE_PROMPT_TOOLTIP,
-    );
+    const imageTooltip = document.getElementById(Constants.Ids.IMAGE_PROMPT_TOOLTIP);
     if (imageTooltip?.classList.contains("show")) {
       imageTooltip.classList.remove("show");
     }
 
     // 隐藏提示词预览 tooltip
-    const promptTooltip = document.getElementById(
-      Constants.Ids.PROMPT_PREVIEW_TOOLTIP,
-    );
+    const promptTooltip = document.getElementById(Constants.Ids.PROMPT_PREVIEW_TOOLTIP);
     if (promptTooltip?.classList.contains("show")) {
       promptTooltip.classList.remove("show");
     }
@@ -272,11 +262,7 @@ export abstract class DetailViewManager<TItem extends DetailViewItem = DetailVie
         break;
     }
 
-    if (
-      newIndex !== this.currentIndex &&
-      newIndex >= 0 &&
-      newIndex < this.itemsSnapshot.length
-    ) {
+    if (newIndex !== this.currentIndex && newIndex >= 0 && newIndex < this.itemsSnapshot.length) {
       this.currentIndex = newIndex;
       const targetItem = this.itemsSnapshot[newIndex];
 
@@ -334,9 +320,7 @@ export abstract class DetailViewManager<TItem extends DetailViewItem = DetailVie
   ): void {
     // 记录快照
     this.itemsSnapshot = [...items];
-    this.currentIndex = this.itemsSnapshot.findIndex((i) =>
-      this.app.isSameId(i.id, item.id)
-    );
+    this.currentIndex = this.itemsSnapshot.findIndex((i) => this.app.isSameId(i.id, item.id));
 
     // 填充导航按钮 SVGs
     this.fillNavButtonSVGs();
@@ -357,11 +341,8 @@ export abstract class DetailViewManager<TItem extends DetailViewItem = DetailVie
           const modal = document.getElementById(this.modalId);
           if (!modal || !modal.classList.contains("active")) return false;
           // 如果全屏查看器打开，不响应（让全屏查看器优先处理）
-          const fullscreenViewer = document.getElementById(
-            Constants.Ids.IMAGE_FULLSCREEN_VIEWER,
-          );
-          if (fullscreenViewer && fullscreenViewer.classList.contains("active"))
-            return false;
+          const fullscreenViewer = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER);
+          if (fullscreenViewer && fullscreenViewer.classList.contains("active")) return false;
           // 如果正在编辑输入框，不响应导航键
           if (
             (e.target as HTMLElement).tagName === "INPUT" ||
@@ -388,8 +369,7 @@ export abstract class DetailViewManager<TItem extends DetailViewItem = DetailVie
         `${prefix}${type.charAt(0).toUpperCase() + type.slice(1)}NavBtn`,
       );
       if (btn) {
-        btn.innerHTML =
-          Constants.ICONS.nav[type as "first" | "prev" | "next" | "last"];
+        btn.innerHTML = Constants.ICONS.nav[type as "first" | "prev" | "next" | "last"];
       }
     });
   }
@@ -428,12 +408,12 @@ export abstract class DetailViewManager<TItem extends DetailViewItem = DetailVie
     if (!btn) return;
 
     if (isFavorite) {
-      btn.classList.add('active');
-      btn.title = '取消收藏';
+      btn.classList.add("active");
+      btn.title = "取消收藏";
       btn.innerHTML = Constants.ICONS.favorite.filled;
     } else {
-      btn.classList.remove('active');
-      btn.title = '收藏';
+      btn.classList.remove("active");
+      btn.title = "收藏";
       btn.innerHTML = Constants.ICONS.favorite.outline;
     }
   }
@@ -483,10 +463,7 @@ export abstract class DetailViewManager<TItem extends DetailViewItem = DetailVie
    * @param detailTagManager - 详情界面标签管理器
    * @protected
    */
-  protected initDetailTagManager(
-    containerId: string,
-    detailTagManager: IDetailTagManager,
-  ): void {
+  protected initDetailTagManager(containerId: string, detailTagManager: IDetailTagManager): void {
     this.detailTagManager = detailTagManager;
 
     // 初始化标签渲染器
@@ -499,10 +476,7 @@ export abstract class DetailViewManager<TItem extends DetailViewItem = DetailVie
    * @param detailTagManager - 详情界面标签管理器
    * @protected
    */
-  protected initTagRenderer(
-    containerId: string,
-    detailTagManager: IDetailTagManager,
-  ): void {
+  protected initTagRenderer(containerId: string, detailTagManager: IDetailTagManager): void {
     // 清理旧的标签列表组件和事件监听器
     if (this.editableTagList) {
       this.editableTagList.destroy();
@@ -533,5 +507,4 @@ export abstract class DetailViewManager<TItem extends DetailViewItem = DetailVie
     if (!this.editableTagList) return;
     this.editableTagList.render();
   }
-
 }

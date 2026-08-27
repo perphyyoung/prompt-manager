@@ -1,11 +1,7 @@
 import { expect } from "@playwright/test";
 import { Constants } from "../src/constants.ts";
 import type { IImage, IPrompt } from "../src/preload/index.ts";
-import {
-  enterImageGridView,
-  enterPromptGridView,
-  test,
-} from "./electron-test.ts";
+import { enterImageGridView, enterPromptGridView, test } from "./electron-test.ts";
 
 /**
  * 主界面重构功能 E2E 测试
@@ -104,9 +100,7 @@ test.describe("主界面重构功能", () => {
       const copyBtn = targetCard.locator(".copy-btn");
       await copyBtn.click();
 
-      const toastVisible = await page
-        .locator(`#${Constants.Ids.TOAST_CONTAINER}`)
-        .isVisible();
+      const toastVisible = await page.locator(`#${Constants.Ids.TOAST_CONTAINER}`).isVisible();
       expect(toastVisible).toBe(true);
     });
 
@@ -114,19 +108,17 @@ test.describe("主界面重构功能", () => {
       await electronTest.logTestStart();
       await enterImageGridView(page);
 
-      const tagFilterSection = page.locator(
-        `#${Constants.Ids.IMAGE_TAG_FILTER_SECTION}`,
-      );
+      const tagFilterSection = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_SECTION}`);
       let isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) =>
         el.classList.contains("collapsed"),
       );
 
       if (isCollapsed) {
         await page.click(`#${Constants.Ids.IMAGE_TAG_FILTER_TOGGLE_BTN}`);
-        await page.waitForSelector(
-          `#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT}`,
-          { state: "visible", timeout: 1000 },
-        );
+        await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_FILTER_CONTENT}`, {
+          state: "visible",
+          timeout: 1000,
+        });
       }
 
       isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) =>
@@ -166,7 +158,6 @@ test.describe("主界面重构功能", () => {
       );
       expect(isCollapsed).toBe(false);
     });
-
   });
 
   test.describe("提示词面板功能", () => {
@@ -175,20 +166,13 @@ test.describe("主界面重构功能", () => {
 
       await enterPromptGridView(page);
 
-      const targetCard = page.locator(
-        `.prompt-card[data-id="${testPromptId}"]`,
-      );
+      const targetCard = page.locator(`.prompt-card[data-id="${testPromptId}"]`);
       await expect(targetCard).toBeVisible({ timeout: 1000 });
 
       const originalFavoriteStatus = await page.evaluate(
         async (params: { id: string }) => {
-          const prompts = await window.electronAPI.getPrompts(
-            "updatedAt",
-            "desc",
-          );
-          const prompt = prompts.find(
-            (p: IPrompt) => String(p.id) === params.id,
-          );
+          const prompts = await window.electronAPI.getPrompts("updatedAt", "desc");
+          const prompt = prompts.find((p: IPrompt) => String(p.id) === params.id);
           return !!prompt?.isFavorite;
         },
         { id: testPromptId },
@@ -200,13 +184,8 @@ test.describe("主界面重构功能", () => {
 
       const newFavoriteStatus = await page.evaluate(
         async (params: { id: string }) => {
-          const prompts = await window.electronAPI.getPrompts(
-            "updatedAt",
-            "desc",
-          );
-          const prompt = prompts.find(
-            (p: IPrompt) => String(p.id) === params.id,
-          );
+          const prompts = await window.electronAPI.getPrompts("updatedAt", "desc");
+          const prompt = prompts.find((p: IPrompt) => String(p.id) === params.id);
           return !!prompt?.isFavorite;
         },
         { id: testPromptId },
@@ -225,18 +204,14 @@ test.describe("主界面重构功能", () => {
 
       await enterPromptGridView(page);
 
-      const targetCard = page.locator(
-        `.prompt-card[data-id="${testPromptId}"]`,
-      );
+      const targetCard = page.locator(`.prompt-card[data-id="${testPromptId}"]`);
       await expect(targetCard).toBeVisible({ timeout: 1000 });
 
       await targetCard.hover();
       const copyBtn = targetCard.locator(".copy-btn");
       await copyBtn.click();
 
-      const toastVisible = await page
-        .locator(`#${Constants.Ids.TOAST_CONTAINER}`)
-        .isVisible();
+      const toastVisible = await page.locator(`#${Constants.Ids.TOAST_CONTAINER}`).isVisible();
       expect(toastVisible).toBe(true);
     });
 
@@ -244,19 +219,17 @@ test.describe("主界面重构功能", () => {
       await electronTest.logTestStart();
       await enterPromptGridView(page);
 
-      const tagFilterSection = page.locator(
-        `#${Constants.Ids.PROMPT_TAG_FILTER_SECTION}`,
-      );
+      const tagFilterSection = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_SECTION}`);
       let isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) =>
         el.classList.contains("collapsed"),
       );
 
       if (isCollapsed) {
         await page.click(`#${Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN}`);
-        await page.waitForSelector(
-          `#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`,
-          { state: "visible", timeout: 1000 },
-        );
+        await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`, {
+          state: "visible",
+          timeout: 1000,
+        });
       }
 
       isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) =>
@@ -270,10 +243,10 @@ test.describe("主界面重构功能", () => {
       expect(isContentVisible).toBe(true);
 
       await page.click(`#${Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN}`);
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`,
-        { state: "hidden", timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`, {
+        state: "hidden",
+        timeout: 1000,
+      });
 
       isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) =>
         el.classList.contains("collapsed"),
@@ -286,10 +259,10 @@ test.describe("主界面重构功能", () => {
       expect(isContentHidden).toBe(true);
 
       await page.click(`#${Constants.Ids.PROMPT_TAG_FILTER_TOGGLE_BTN}`);
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`,
-        { state: "visible", timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_FILTER_CONTENT}`, {
+        state: "visible",
+        timeout: 1000,
+      });
 
       isCollapsed = await tagFilterSection.evaluate((el: HTMLElement) =>
         el.classList.contains("collapsed"),

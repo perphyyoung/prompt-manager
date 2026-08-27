@@ -4,31 +4,57 @@
  * 检测可能调用不存在方法的代码
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 定义已知的类和方法映射
 const KNOWN_CLASSES = {
-  'TagRegistry': {
-    methods: ['refresh', 'render', 'addTag', 'deleteTag', 'updateTag', 'getTags', 'bindEvents', 'addTagInManager'],
-    file: 'renderer/managers/TagRegistry.js'
+  TagRegistry: {
+    methods: [
+      "refresh",
+      "render",
+      "addTag",
+      "deleteTag",
+      "updateTag",
+      "getTags",
+      "bindEvents",
+      "addTagInManager",
+    ],
+    file: "renderer/managers/TagRegistry.js",
   },
-  'ImageTagRegistry': {
-    methods: ['refresh', 'render', 'addTag', 'deleteTag', 'updateTag', 'getTags', 'bindEvents', 'addTagInManager'],
-    file: 'renderer/managers/ImageTagRegistry.js'
+  ImageTagRegistry: {
+    methods: [
+      "refresh",
+      "render",
+      "addTag",
+      "deleteTag",
+      "updateTag",
+      "getTags",
+      "bindEvents",
+      "addTagInManager",
+    ],
+    file: "renderer/managers/ImageTagRegistry.js",
   },
-  'TagService': {
-    methods: ['getTagGroups', 'createTagGroup', 'updateTagGroup', 'deleteTagGroup', 'createTag', 'updateTag', 'deleteTag'],
-    file: 'renderer/services/TagService.js'
+  TagService: {
+    methods: [
+      "getTagGroups",
+      "createTagGroup",
+      "updateTagGroup",
+      "deleteTagGroup",
+      "createTag",
+      "updateTag",
+      "deleteTag",
+    ],
+    file: "renderer/services/TagService.js",
   },
-  'TagSyncIpcService': {
-    methods: ['syncPromptTagsToImage', 'syncImageTagsToPrompt'],
-    file: 'renderer/services/TagSyncIpcService.js'
-  }
+  TagSyncIpcService: {
+    methods: ["syncPromptTagsToImage", "syncImageTagsToPrompt"],
+    file: "renderer/services/TagSyncIpcService.js",
+  },
 };
 
 // 问题记录
@@ -38,8 +64,8 @@ const issues = [];
  * 检查文件中的方法调用
  */
 function checkFile(filePath) {
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n');
+  const content = fs.readFileSync(filePath, "utf-8");
+  const lines = content.split("\n");
 
   lines.forEach((line, index) => {
     const lineNum = index + 1;
@@ -59,9 +85,9 @@ function checkFile(filePath) {
             file: filePath,
             line: lineNum,
             column: match.index + 1,
-            type: 'error',
+            type: "error",
             message: `类 ${classInfo.className} 可能没有方法 '${methodName}'`,
-            code: line.trim()
+            code: line.trim(),
           });
         }
       }
@@ -82,17 +108,17 @@ function checkFile(filePath) {
 function findClassByProperty(propertyName) {
   // 常见的属性名映射
   const propertyMappings = {
-    'tagRegistry': 'TagRegistry',
-    'imageTagRegistry': 'ImageTagRegistry',
-    'tagService': 'TagService',
-    'tagSyncService': 'TagSyncIpcService'
+    tagRegistry: "TagRegistry",
+    imageTagRegistry: "ImageTagRegistry",
+    tagService: "TagService",
+    tagSyncService: "TagSyncIpcService",
   };
 
   const className = propertyMappings[propertyName];
   if (className && KNOWN_CLASSES[className]) {
     return {
       className,
-      ...KNOWN_CLASSES[className]
+      ...KNOWN_CLASSES[className],
     };
   }
 
@@ -105,16 +131,16 @@ function findClassByProperty(propertyName) {
 function walkDir(dir, callback) {
   const files = fs.readdirSync(dir);
 
-  files.forEach(file => {
+  files.forEach((file) => {
     const filePath = path.join(dir, file);
     const stat = fs.statSync(filePath);
 
     if (stat.isDirectory()) {
       // 跳过 node_modules 和 tests
-      if (file !== 'node_modules' && file !== 'tests' && file !== 'scripts') {
+      if (file !== "node_modules" && file !== "tests" && file !== "scripts") {
         walkDir(filePath, callback);
       }
-    } else if (file.endsWith('.js')) {
+    } else if (file.endsWith(".js")) {
       callback(filePath);
     }
   });
@@ -124,14 +150,14 @@ function walkDir(dir, callback) {
  * 主函数
  */
 function main() {
-  console.log('🔍 开始检查方法调用...\n');
+  console.log("🔍 开始检查方法调用...\n");
 
   const targetDirs = [
-    path.join(__dirname, '..', 'renderer'),
-    path.join(__dirname, '..', 'main.js')
+    path.join(__dirname, "..", "renderer"),
+    path.join(__dirname, "..", "main.js"),
   ];
 
-  targetDirs.forEach(dir => {
+  targetDirs.forEach((dir) => {
     if (fs.existsSync(dir)) {
       const stat = fs.statSync(dir);
       if (stat.isDirectory()) {
@@ -144,16 +170,16 @@ function main() {
 
   // 输出结果
   if (issues.length === 0) {
-    console.log('✅ 没有发现潜在问题\n');
+    console.log("✅ 没有发现潜在问题\n");
     process.exit(0);
   } else {
     console.log(`❌ 发现 ${issues.length} 个潜在问题：\n`);
 
     issues.forEach((issue, index) => {
       console.log(`${index + 1}. ${issue.file}:${issue.line}:${issue.column}`);
-      console.log(`   ${issue.type === 'error' ? '🔴' : '🟡'} ${issue.message}`);
+      console.log(`   ${issue.type === "error" ? "🔴" : "🟡"} ${issue.message}`);
       console.log(`   代码: ${issue.code}`);
-      console.log('');
+      console.log("");
     });
 
     process.exit(1);

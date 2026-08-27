@@ -49,7 +49,7 @@ export class VirtualScroller {
   constructor(
     config: VirtualScrollerConfig,
     onWindowChange: (range: VisibleRange) => void,
-    bufferRows: number = DEFAULT_BUFFER_ROWS
+    bufferRows: number = DEFAULT_BUFFER_ROWS,
   ) {
     this.container = config.container;
     this.wrapper = config.wrapper;
@@ -98,7 +98,7 @@ export class VirtualScroller {
 
   /** 监听容器尺寸变化（列数随宽度变化时自动刷新窗口） */
   observeResize(): void {
-    if (this.resizeObserver || typeof ResizeObserver === 'undefined') return;
+    if (this.resizeObserver || typeof ResizeObserver === "undefined") return;
     this.resizeObserver = new ResizeObserver(() => {
       // 列数变化会改变总行数，需强制重算占位
       this.refresh(true);
@@ -110,7 +110,7 @@ export class VirtualScroller {
   destroy(): void {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
-    this.wrapper.style.height = '';
+    this.wrapper.style.height = "";
     this.totalCount = 0;
     this.lastRange = { start: -1, end: -1 };
   }
@@ -138,7 +138,7 @@ export class VirtualScroller {
 
     const range: VisibleRange = {
       start: startRow * columns,
-      end: Math.min(this.totalCount, endRow * columns)
+      end: Math.min(this.totalCount, endRow * columns),
     };
 
     if (range.start === this.lastRange.start && range.end === this.lastRange.end) {

@@ -95,7 +95,7 @@ export interface ITagGroup {
 // ==================== 对话框类型 ====================
 
 /** 对话框类型 */
-export type DialogType = 'info' | 'warning';
+export type DialogType = "info" | "warning";
 
 /** 对话框消息函数 */
 export type DialogMessageFunction = (data: IDialogContext) => string;

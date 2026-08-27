@@ -1,8 +1,8 @@
-import { Constants } from '../../constants.ts';
-import { ListNavigator, cacheManager, HtmlUtils } from '../../utils/index.ts';
-import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
-import { ErrorHandler } from '../renderer_utils/index.ts';
-import type { IClosableElement } from '../../types/entities.ts';
+import { Constants } from "../../constants.ts";
+import { ListNavigator, cacheManager, HtmlUtils } from "../../utils/index.ts";
+import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
+import { ErrorHandler } from "../renderer_utils/index.ts";
+import type { IClosableElement } from "../../types/entities.ts";
 
 interface ImageFullscreenManagerOptions {
   app: unknown;
@@ -64,11 +64,14 @@ export class ImageFullscreenManager {
    * @param images - 图像数组
    * @param startIndex - 起始图像索引
    */
-  async open(images: Array<{ id?: string; relativePath?: string; fileName?: string }>, startIndex: number): Promise<void> {
+  async open(
+    images: Array<{ id?: string; relativePath?: string; fileName?: string }>,
+    startIndex: number,
+  ): Promise<void> {
     const viewer = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER);
     if (!viewer) return;
 
-    this.viewerImages = this.buildViewerImages(images.filter(img => img.id));
+    this.viewerImages = this.buildViewerImages(images.filter((img) => img.id));
     this.viewerCurrentIndex = startIndex || 0;
 
     if (this.viewerImages.length === 0) return;
@@ -88,13 +91,15 @@ export class ImageFullscreenManager {
     await this.updateViewer();
 
     // 显示查看器
-    viewer.classList.add('active');
+    viewer.classList.add("active");
 
     // 压栈：进入全屏查看器上下文
     const stackEntry: IContextStackEntry = {
       id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER,
       state: { isBatchToolbarVisible: false },
-      close: () => { this.close(); }
+      close: () => {
+        this.close();
+      },
     };
     contextStack.push(stackEntry);
 
@@ -111,18 +116,18 @@ export class ImageFullscreenManager {
       }
     } catch (error) {
       ErrorHandler.handleError(
-        { module: 'ImageFullscreenManager.ts', operation: 'enter fullscreen' },
+        { module: "ImageFullscreenManager.ts", operation: "enter fullscreen" },
         error,
-        { showToast: false }
+        { showToast: false },
       );
     }
 
     // 重置提示文字动画
     const hint = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_HINT);
     if (hint) {
-      hint.classList.remove('fade-out');
+      hint.classList.remove("fade-out");
       setTimeout(() => {
-        hint.classList.add('fade-out');
+        hint.classList.add("fade-out");
       }, 1000);
     }
   }
@@ -132,12 +137,14 @@ export class ImageFullscreenManager {
    * @param images - 原始图像数组
    * @returns 格式化后的图像数组
    */
-  buildViewerImages(images: Array<{ id?: string; relativePath?: string; fileName?: string }>): ViewerImage[] {
-    return images.map(img => ({
+  buildViewerImages(
+    images: Array<{ id?: string; relativePath?: string; fileName?: string }>,
+  ): ViewerImage[] {
+    return images.map((img) => ({
       id: img.id,
       path: img.relativePath,
       relativePath: img.relativePath,
-      fileName: img.fileName
+      fileName: img.fileName,
     }));
   }
 
@@ -145,7 +152,9 @@ export class ImageFullscreenManager {
    * 更新查看器显示
    */
   async updateViewer(): Promise<void> {
-    const img = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_IMG) as HTMLImageElement | null;
+    const img = document.getElementById(
+      Constants.Ids.IMAGE_FULLSCREEN_VIEWER_IMG,
+    ) as HTMLImageElement | null;
     const counter = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_COUNTER);
 
     if (this.viewerImages.length === 0) return;
@@ -154,16 +163,20 @@ export class ImageFullscreenManager {
 
     // 检查是否有 relativePath
     if (!currentImage.relativePath) {
-      window.electronAPI?.logError?.('ImageFullscreenManager.ts', 'Image missing relativePath:', currentImage);
-      img!.src = '';
-      img!.alt = 'Image not found';
+      window.electronAPI?.logError?.(
+        "ImageFullscreenManager.ts",
+        "Image missing relativePath:",
+        currentImage,
+      );
+      img!.src = "";
+      img!.alt = "Image not found";
       return;
     }
 
     // 获取图像完整路径
     const imagePath = await window.electronAPI.getImagePath(currentImage.relativePath);
     img!.src = `file://${imagePath}`;
-    img!.alt = currentImage.fileName || '';
+    img!.alt = currentImage.fileName || "";
     if (currentImage.id) {
       img!.dataset.imageId = currentImage.id;
     }
@@ -171,7 +184,7 @@ export class ImageFullscreenManager {
     // 更新文件名和索引
     const fileNameEl = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_FILE_NAME);
     if (fileNameEl) {
-      fileNameEl.textContent = currentImage.fileName || '';
+      fileNameEl.textContent = currentImage.fileName || "";
     }
     if (counter) {
       counter.textContent = `${this.viewerCurrentIndex + 1} / ${this.viewerImages.length}`;
@@ -202,14 +215,18 @@ export class ImageFullscreenManager {
         }
       }
     } catch (error) {
-      window.electronAPI?.logError?.('ImageFullscreenManager.ts', 'Failed to load image tags:', error);
+      window.electronAPI?.logError?.(
+        "ImageFullscreenManager.ts",
+        "Failed to load image tags:",
+        error,
+      );
     }
 
     if (this.viewerImages[this.viewerCurrentIndex] !== image) return;
 
-    tagsEl.innerHTML = tags.map(tag =>
-      `<span class="tag-editable">${HtmlUtils.escapeHtml(tag)}</span>`
-    ).join('');
+    tagsEl.innerHTML = tags
+      .map((tag) => `<span class="tag-editable">${HtmlUtils.escapeHtml(tag)}</span>`)
+      .join("");
   }
 
   /**
@@ -252,20 +269,22 @@ export class ImageFullscreenManager {
     if (!wrapper) return;
 
     let isDragging = false;
-    let startX = 0, startY = 0;
-    let initialTranslateX = 0, initialTranslateY = 0;
+    let startX = 0,
+      startY = 0;
+    let initialTranslateX = 0,
+      initialTranslateY = 0;
 
-    wrapper.addEventListener('mousedown', (e) => {
+    wrapper.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return; // 只响应左键
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
       initialTranslateX = this.viewerTranslateX || 0;
       initialTranslateY = this.viewerTranslateY || 0;
-      wrapper.style.cursor = 'grabbing';
+      wrapper.style.cursor = "grabbing";
     });
 
-    document.addEventListener('mousemove', (e) => {
+    document.addEventListener("mousemove", (e) => {
       if (!isDragging) return;
       e.preventDefault();
 
@@ -278,15 +297,15 @@ export class ImageFullscreenManager {
       this.updateImageTransform();
     });
 
-    document.addEventListener('mouseup', () => {
+    document.addEventListener("mouseup", () => {
       if (isDragging) {
         isDragging = false;
-        wrapper.style.cursor = 'grab';
+        wrapper.style.cursor = "grab";
       }
     });
 
     // 双击重置
-    wrapper.addEventListener('dblclick', () => {
+    wrapper.addEventListener("dblclick", () => {
       this.viewerZoom = 1;
       this.viewerTranslateX = 0;
       this.viewerTranslateY = 0;
@@ -318,19 +337,27 @@ export class ImageFullscreenManager {
       },
       onClose: () => this.close(),
       navButtons: {
-        first: document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_FIRST_NAV_BTN) ?? undefined,
-        prev: document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_PREV_NAV_BTN) ?? undefined,
-        next: document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_NEXT_NAV_BTN) ?? undefined,
-        last: document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_LAST_NAV_BTN) ?? undefined
+        first:
+          document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_FIRST_NAV_BTN) ?? undefined,
+        prev:
+          document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_PREV_NAV_BTN) ?? undefined,
+        next:
+          document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_NEXT_NAV_BTN) ?? undefined,
+        last:
+          document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_LAST_NAV_BTN) ?? undefined,
       },
       targetElement: document,
       shouldHandleKeyboard: (e: KeyboardEvent) => {
         // 只在查看器打开时响应
-        if (!viewer.classList.contains('active')) return false;
+        if (!viewer.classList.contains("active")) return false;
         // 如果正在编辑输入框，不响应导航键
-        if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return false;
+        if (
+          (e.target as HTMLElement).tagName === "INPUT" ||
+          (e.target as HTMLElement).tagName === "TEXTAREA"
+        )
+          return false;
         return true;
-      }
+      },
     });
   }
 
@@ -345,13 +372,13 @@ export class ImageFullscreenManager {
     // 关闭按钮
     const closeBtn = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_CLOSE);
     if (closeBtn) {
-      closeBtn.addEventListener('click', () => this.close());
+      closeBtn.addEventListener("click", () => this.close());
     }
 
     // 点击遮罩关闭
     if (viewer) {
-      viewer.addEventListener('click', (e) => {
-        if ((e.target as HTMLElement).classList.contains('fullscreen-viewer-overlay')) {
+      viewer.addEventListener("click", (e) => {
+        if ((e.target as HTMLElement).classList.contains("fullscreen-viewer-overlay")) {
           this.close();
         }
       });
@@ -360,7 +387,9 @@ export class ImageFullscreenManager {
     // 滚轮缩放
     const wrapper = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER_WRAPPER);
     if (wrapper) {
-      wrapper.addEventListener('wheel', (e) => this.handleZoom(e as WheelEvent), { passive: false });
+      wrapper.addEventListener("wheel", (e) => this.handleZoom(e as WheelEvent), {
+        passive: false,
+      });
     }
 
     // 拖拽移动
@@ -375,7 +404,7 @@ export class ImageFullscreenManager {
   async close(): Promise<void> {
     const viewer = document.getElementById(Constants.Ids.IMAGE_FULLSCREEN_VIEWER);
     if (viewer) {
-      viewer.classList.remove('active');
+      viewer.classList.remove("active");
     }
 
     // 出栈：退出全屏查看器上下文
@@ -400,9 +429,9 @@ export class ImageFullscreenManager {
       }
     } catch (error) {
       ErrorHandler.handleError(
-        { module: 'ImageFullscreenManager.ts', operation: 'exit fullscreen' },
+        { module: "ImageFullscreenManager.ts", operation: "exit fullscreen" },
         error,
-        { showToast: false }
+        { showToast: false },
       );
     }
   }
@@ -412,10 +441,10 @@ export class ImageFullscreenManager {
    */
   fillNavButtonSVGs(): void {
     const navButtons = [
-      { id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER_FIRST_NAV_BTN, type: 'first' as const },
-      { id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER_PREV_NAV_BTN, type: 'prev' as const },
-      { id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER_NEXT_NAV_BTN, type: 'next' as const },
-      { id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER_LAST_NAV_BTN, type: 'last' as const }
+      { id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER_FIRST_NAV_BTN, type: "first" as const },
+      { id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER_PREV_NAV_BTN, type: "prev" as const },
+      { id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER_NEXT_NAV_BTN, type: "next" as const },
+      { id: Constants.Ids.IMAGE_FULLSCREEN_VIEWER_LAST_NAV_BTN, type: "last" as const },
     ];
 
     navButtons.forEach(({ id, type }) => {

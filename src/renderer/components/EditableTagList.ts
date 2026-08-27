@@ -1,5 +1,5 @@
-import { HtmlUtils } from '../../utils/index.ts';
-import { Constants } from '../../constants.ts';
+import { HtmlUtils } from "../../utils/index.ts";
+import { Constants } from "../../constants.ts";
 
 // 标签管理器接口（简化）
 interface TagManager {
@@ -45,18 +45,20 @@ export class EditableTagList {
     const container = document.getElementById(this.containerId);
     if (!container) return;
 
-    const tags = this.tagManager.getTags().filter(tag =>
-      !this.filterTags.includes(tag) && !Constants.ALL_SPECIAL_TAGS.includes(tag)
-    );
+    const tags = this.tagManager
+      .getTags()
+      .filter((tag) => !this.filterTags.includes(tag) && !Constants.ALL_SPECIAL_TAGS.includes(tag));
 
     if (tags.length > 0) {
-      container.innerHTML = tags.map(tag => {
-        const escapedTag = HtmlUtils.escapeHtml(tag);
-        return `<span class="tag-editable tag-removable" data-tag="${escapedTag}">
+      container.innerHTML = tags
+        .map((tag) => {
+          const escapedTag = HtmlUtils.escapeHtml(tag);
+          return `<span class="tag-editable tag-removable" data-tag="${escapedTag}">
           ${escapedTag}
           <span class="tag-remove-btn" title="删除标签">×</span>
         </span>`;
-      }).join('');
+        })
+        .join("");
     } else {
       container.innerHTML = '<span class="no-tags">无标签</span>';
     }
@@ -80,11 +82,11 @@ export class EditableTagList {
       const target = e.target as HTMLElement;
 
       // 处理删除按钮
-      const removeBtn = target.closest('.tag-remove-btn');
+      const removeBtn = target.closest(".tag-remove-btn");
       if (!removeBtn) return;
 
       e.stopPropagation();
-      const removableElement = removeBtn.closest('.tag-removable') as HTMLElement | null;
+      const removableElement = removeBtn.closest(".tag-removable") as HTMLElement | null;
       if (removableElement && this.onRemove) {
         const tagName = removableElement.dataset.tag;
         if (tagName) {
@@ -96,7 +98,7 @@ export class EditableTagList {
     // 使用新的容器元素绑定事件
     const newContainerForEvent = document.getElementById(this.containerId);
     if (newContainerForEvent) {
-      newContainerForEvent.addEventListener('click', this._clickHandler);
+      newContainerForEvent.addEventListener("click", this._clickHandler);
     }
     this._initialized = true;
   }
@@ -109,7 +111,7 @@ export class EditableTagList {
 
     const container = document.getElementById(this.containerId);
     if (container && this._clickHandler) {
-      container.removeEventListener('click', this._clickHandler);
+      container.removeEventListener("click", this._clickHandler);
     }
 
     this._clickHandler = undefined;

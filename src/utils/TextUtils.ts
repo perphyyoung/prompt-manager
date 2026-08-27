@@ -23,13 +23,13 @@ type ValidatorFn = () => ValidationResult;
  * @param fieldName - 字段名称（用于错误提示）
  * @returns 校验结果
  */
-export function validateNotEmpty(value: unknown, fieldName: string = '该字段'): ValidationResult {
+export function validateNotEmpty(value: unknown, fieldName: string = "该字段"): ValidationResult {
   if (value === null || value === undefined) {
     return { valid: false, error: `${fieldName}不能为空` };
   }
 
   const strValue = String(value).trim();
-  if (strValue === '') {
+  if (strValue === "") {
     return { valid: false, error: `${fieldName}不能为空` };
   }
 
@@ -50,16 +50,16 @@ export function validateNotEmpty(value: unknown, fieldName: string = '该字段'
 export function validateNotDuplicate<T>(
   value: T,
   existingList: T[] | null | undefined,
-  fieldName: string = '该字段',
+  fieldName: string = "该字段",
   compareFn: CompareFn<T> = (a, b) => a === b,
   excludeId: unknown = null,
-  getIdFn: GetIdFn<T> | null = null
+  getIdFn: GetIdFn<T> | null = null,
 ): ValidationResult {
   if (!Array.isArray(existingList)) {
     return { valid: true };
   }
 
-  const isDuplicate = existingList.some(item => {
+  const isDuplicate = existingList.some((item) => {
     // 如果提供了排除ID和获取ID函数，跳过该项
     if (excludeId !== null && getIdFn !== null) {
       const itemId = getIdFn(item);
@@ -91,7 +91,7 @@ export function validateLength(
   value: unknown,
   maxLength: number | null = null,
   minLength: number | null = null,
-  fieldName: string = '该字段'
+  fieldName: string = "该字段",
 ): ValidationResult {
   const strValue = String(value);
 
@@ -117,7 +117,7 @@ export function validateLength(
 export function validateNoInvalidChars(
   value: unknown,
   invalidPattern: RegExp = /[\\/:*?"<>|]/,
-  fieldName: string = '该字段'
+  fieldName: string = "该字段",
 ): ValidationResult {
   const strValue = String(value);
 
@@ -152,17 +152,13 @@ export function combineValidators(validators: ValidatorFn[]): ValidationResult {
  */
 export function validateFileName(fileName: unknown): ValidationResult {
   // 空值校验
-  const emptyResult = validateNotEmpty(fileName, '文件名');
+  const emptyResult = validateNotEmpty(fileName, "文件名");
   if (!emptyResult.valid) {
     return emptyResult;
   }
 
   // 非法字符校验（Windows 文件名非法字符）
-  const invalidCharsResult = validateNoInvalidChars(
-    fileName,
-    /[\\/:*?"<>|]/,
-    '文件名'
-  );
+  const invalidCharsResult = validateNoInvalidChars(fileName, /[\\/:*?"<>|]/, "文件名");
   if (!invalidCharsResult.valid) {
     return invalidCharsResult;
   }
@@ -179,13 +175,13 @@ export function validateFileName(fileName: unknown): ValidationResult {
  */
 export function validateTitle(title: unknown, maxLength: number = 255): ValidationResult {
   // 空值校验
-  const emptyResult = validateNotEmpty(title, '标题');
+  const emptyResult = validateNotEmpty(title, "标题");
   if (!emptyResult.valid) {
     return emptyResult;
   }
 
   // 长度校验
-  const lengthResult = validateLength(title, maxLength, null, '标题');
+  const lengthResult = validateLength(title, maxLength, null, "标题");
   if (!lengthResult.valid) {
     return lengthResult;
   }

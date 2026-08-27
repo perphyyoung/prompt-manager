@@ -1,10 +1,6 @@
 import { expect } from "@playwright/test";
 import { Constants } from "../src/constants.ts";
-import {
-  test,
-  enterPromptDetailView,
-  enterImageDetailView,
-} from "./electron-test.ts";
+import { test, enterPromptDetailView, enterImageDetailView } from "./electron-test.ts";
 
 /**
  * 测试详情界面标签输入框的各种添加方式
@@ -31,26 +27,18 @@ test.describe("详情界面标签输入方法", () => {
     await factory.createPromptFactory().createBatch(1, "detail_view");
 
     // 创建图像标签
-    sharedImageTagForClick =
-      electronTest.generateE2ePrefixName("existing_for_click");
-    sharedImageTagForTrigger =
-      electronTest.generateE2ePrefixName("existing_trigger");
+    sharedImageTagForClick = electronTest.generateE2ePrefixName("existing_for_click");
+    sharedImageTagForTrigger = electronTest.generateE2ePrefixName("existing_trigger");
     await factory.createImageFactory().createTag(sharedImageTagForClick);
     await factory.createImageFactory().createTag(sharedImageTagForTrigger);
-    sharedImageTagsForNav = await factory
-      .createImageFactory()
-      .createTags(3, "keyboard_nav");
+    sharedImageTagsForNav = await factory.createImageFactory().createTags(3, "keyboard_nav");
 
     // 创建提示词标签
-    sharedPromptTagForClick =
-      electronTest.generateE2ePrefixName("existing_for_click");
-    sharedPromptTagForTrigger =
-      electronTest.generateE2ePrefixName("existing_trigger");
+    sharedPromptTagForClick = electronTest.generateE2ePrefixName("existing_for_click");
+    sharedPromptTagForTrigger = electronTest.generateE2ePrefixName("existing_trigger");
     await factory.createPromptFactory().createTag(sharedPromptTagForClick);
     await factory.createPromptFactory().createTag(sharedPromptTagForTrigger);
-    sharedPromptTagsForNav = await factory
-      .createPromptFactory()
-      .createTags(3, "keyboard_nav");
+    sharedPromptTagsForNav = await factory.createPromptFactory().createTags(3, "keyboard_nav");
 
     await electronTest.refreshData();
   });
@@ -58,10 +46,7 @@ test.describe("详情界面标签输入方法", () => {
   /**
    * 在图像详情界面测试：直接回车添加单个标签（无下拉建议）
    */
-  test("图像详情界面 - 直接回车添加单个标签（无下拉建议）", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像详情界面 - 直接回车添加单个标签（无下拉建议）", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像详情界面
@@ -104,10 +89,7 @@ test.describe("详情界面标签输入方法", () => {
   /**
    * 在图像详情界面测试：点击下拉建议项添加标签
    */
-  test("图像详情界面 - 点击下拉建议项添加标签", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像详情界面 - 点击下拉建议项添加标签", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像详情界面
@@ -118,10 +100,10 @@ test.describe("详情界面标签输入方法", () => {
     await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, prefix);
 
     // 等待下拉框显示
-    await page.waitForSelector(
-      `#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}.active`,
-      { state: "visible", timeout: 1000 },
-    );
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}.active`, {
+      state: "visible",
+      timeout: 1000,
+    });
 
     // 点击下拉建议项
     await page.click(
@@ -136,19 +118,14 @@ test.describe("详情界面标签输入方法", () => {
     ).toBeVisible({ timeout: 1000 });
 
     // 验证输入框被清空
-    const inputValue = await page.inputValue(
-      `#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`,
-    );
+    const inputValue = await page.inputValue(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`);
     expect(inputValue).toBe("");
   });
 
   /**
    * 在图像详情界面测试：使用键盘导航选择下拉建议并回车添加
    */
-  test("图像详情界面 - 使用键盘导航选择下拉建议并回车添加", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像详情界面 - 使用键盘导航选择下拉建议并回车添加", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像详情界面
@@ -164,10 +141,10 @@ test.describe("详情界面标签输入方法", () => {
     await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, prefix);
 
     // 等待下拉框显示
-    await page.waitForSelector(
-      `#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}.active`,
-      { state: "visible", timeout: 2000 },
-    );
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}.active`, {
+      state: "visible",
+      timeout: 2000,
+    });
 
     // 获取下拉框中的第二个建议项
     const itemSelector = `#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE} .tag-autocomplete-item`;
@@ -190,19 +167,14 @@ test.describe("详情界面标签输入方法", () => {
     ).toBeVisible({ timeout: 2000 });
 
     // 验证输入框被清空
-    const inputValue = await page.inputValue(
-      `#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`,
-    );
+    const inputValue = await page.inputValue(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`);
     expect(inputValue).toBe("");
   });
 
   /**
    * 在图像详情界面测试：批量添加多个标签（使用空格分隔）
    */
-  test("图像详情界面 - 批量添加多个标签（使用空格分隔）", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像详情界面 - 批量添加多个标签（使用空格分隔）", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入图像详情界面
@@ -232,9 +204,7 @@ test.describe("详情界面标签输入方法", () => {
     ).toBeVisible({ timeout: 1000 });
 
     // 验证输入框被清空
-    const inputValueAfter = await page.inputValue(
-      `#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`,
-    );
+    const inputValueAfter = await page.inputValue(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`);
     expect(inputValueAfter).toBe("");
 
     // 通过 API 验证所有标签都已保存
@@ -262,32 +232,30 @@ test.describe("详情界面标签输入方法", () => {
     await enterImageDetailView(page);
 
     // 生成新标签名（使用相同前缀确保能触发下拉框）
-    const newTagName = electronTest.generateE2ePrefixName(
-      "existing_trigger_new",
-    );
+    const newTagName = electronTest.generateE2ePrefixName("existing_trigger_new");
 
     // 输入现有标签的前缀以触发下拉框
     const prefix = sharedImageTagForTrigger.slice(0, 10);
     await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, prefix);
 
     // 等待下拉框显示
-    await page.waitForSelector(
-      `#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}.active`,
-      { state: "visible", timeout: 1000 },
-    );
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}.active`, {
+      state: "visible",
+      timeout: 1000,
+    });
 
     // 按 Escape 清除选中状态
     await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "Escape");
-    
+
     // 输入新标签名（不匹配任何现有标签）
     await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, newTagName);
-    
+
     // 等待下拉框隐藏（因为没有匹配项）
-    await page.waitForSelector(
-      `#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}.active`,
-      { state: "hidden", timeout: 1000 },
-    );
-    
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}.active`, {
+      state: "hidden",
+      timeout: 1000,
+    });
+
     // 按回车 - 应该批量添加输入的内容
     await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "Enter");
 
@@ -299,19 +267,14 @@ test.describe("详情界面标签输入方法", () => {
     ).toBeVisible({ timeout: 1000 });
 
     // 验证输入框被清空
-    const inputValueAfter = await page.inputValue(
-      `#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`,
-    );
+    const inputValueAfter = await page.inputValue(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`);
     expect(inputValueAfter).toBe("");
   });
 
   /**
    * 在提示词详情界面测试：直接回车添加单个标签（无下拉建议）
    */
-  test("提示词详情界面 - 直接回车添加单个标签（无下拉建议）", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词详情界面 - 直接回车添加单个标签（无下拉建议）", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词详情界面
@@ -354,24 +317,21 @@ test.describe("详情界面标签输入方法", () => {
   /**
    * 在提示词详情界面测试：点击下拉建议项添加标签
    */
-  test("提示词详情界面 - 点击下拉建议项添加标签", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词详情界面 - 点击下拉建议项添加标签", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词详情界面
     await enterPromptDetailView(page);
-    
+
     // 输入标签名的前缀以触发自动完成
     const prefix = sharedPromptTagForClick.slice(0, 8);
     await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, prefix);
 
     // 等待下拉框显示
-    await page.waitForSelector(
-      `#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}.active`,
-      { state: "visible", timeout: 1000 },
-    );
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}.active`, {
+      state: "visible",
+      timeout: 1000,
+    });
 
     // 点击下拉建议项
     await page.click(
@@ -386,19 +346,14 @@ test.describe("详情界面标签输入方法", () => {
     ).toBeVisible({ timeout: 1000 });
 
     // 验证输入框被清空
-    const inputValue = await page.inputValue(
-      `#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`,
-    );
+    const inputValue = await page.inputValue(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`);
     expect(inputValue).toBe("");
   });
 
   /**
    * 在提示词详情界面测试：使用键盘导航选择下拉建议并回车添加
    */
-  test("提示词详情界面 - 使用键盘导航选择下拉建议并回车添加", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词详情界面 - 使用键盘导航选择下拉建议并回车添加", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词详情界面
@@ -409,10 +364,10 @@ test.describe("详情界面标签输入方法", () => {
     await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, prefix);
 
     // 等待下拉框显示
-    await page.waitForSelector(
-      `#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}.active`,
-      { state: "visible", timeout: 2000 },
-    );
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}.active`, {
+      state: "visible",
+      timeout: 2000,
+    });
 
     // 获取下拉框中的第二个建议项
     const promptItemSelector = `#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE} .tag-autocomplete-item`;
@@ -435,19 +390,14 @@ test.describe("详情界面标签输入方法", () => {
     ).toBeVisible({ timeout: 2000 });
 
     // 验证输入框被清空
-    const inputValue = await page.inputValue(
-      `#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`,
-    );
+    const inputValue = await page.inputValue(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`);
     expect(inputValue).toBe("");
   });
 
   /**
    * 在提示词详情界面测试：批量添加多个标签（使用逗号分隔）
    */
-  test("提示词详情界面 - 批量添加多个标签（使用逗号分隔）", async ({
-    electronTest,
-    page,
-  }) => {
+  test("提示词详情界面 - 批量添加多个标签（使用逗号分隔）", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 进入提示词详情界面
@@ -483,9 +433,7 @@ test.describe("详情界面标签输入方法", () => {
     ).toBeVisible({ timeout: 1000 });
 
     // 验证输入框被清空
-    const inputValueAfter = await page.inputValue(
-      `#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`,
-    );
+    const inputValueAfter = await page.inputValue(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`);
     expect(inputValueAfter).toBe("");
 
     // 通过 API 验证所有标签都已保存
@@ -513,19 +461,17 @@ test.describe("详情界面标签输入方法", () => {
     await enterPromptDetailView(page);
 
     // 生成新标签名（使用相同前缀确保能触发下拉框）
-    const newTagName = electronTest.generateE2ePrefixName(
-      "existing_trigger_new",
-    );
+    const newTagName = electronTest.generateE2ePrefixName("existing_trigger_new");
 
     // 输入现有标签的前缀以触发下拉框
     const prefix = sharedPromptTagForTrigger.slice(0, 10);
     await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, prefix);
 
     // 等待下拉框显示
-    await page.waitForSelector(
-      `#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}.active`,
-      { state: "visible", timeout: 1000 },
-    );
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}.active`, {
+      state: "visible",
+      timeout: 1000,
+    });
 
     // 按 Escape 清除选中状态
     await page.press(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, "Escape");
@@ -534,10 +480,10 @@ test.describe("详情界面标签输入方法", () => {
     await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, newTagName);
 
     // 等待下拉框隐藏（因为没有匹配项）
-    await page.waitForSelector(
-      `#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}.active`,
-      { state: "hidden", timeout: 1000 },
-    );
+    await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}.active`, {
+      state: "hidden",
+      timeout: 1000,
+    });
 
     // 按回车 - 应该批量添加输入的内容
     await page.press(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, "Enter");
@@ -550,9 +496,7 @@ test.describe("详情界面标签输入方法", () => {
     ).toBeVisible({ timeout: 1000 });
 
     // 验证输入框被清空
-    const inputValueAfter = await page.inputValue(
-      `#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`,
-    );
+    const inputValueAfter = await page.inputValue(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`);
     expect(inputValueAfter).toBe("");
   });
 });

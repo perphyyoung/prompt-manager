@@ -1,13 +1,13 @@
-import { Constants, ElementId } from '../../constants.ts';
-import { logger } from '../../utils/Logger.ts';
-import { DialogService, DialogConfig } from '../services/index.ts';
-import { ElectronDataClearApi } from '../services/ElectronDataClearApi.ts';
-import { DuplicatePreventionMixin } from '../../utils/index.ts';
-import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
-import { ErrorHandler } from '../renderer_utils/index.ts';
-import { progressDialog } from '../components/ProgressDialog.ts';
-import type { IClosableElement } from '../../types/entities.ts';
-import { localStorageManager } from '../configs/LocalStorageConfig.ts';
+import { Constants, ElementId } from "../../constants.ts";
+import { logger } from "../../utils/Logger.ts";
+import { DialogService, DialogConfig } from "../services/index.ts";
+import { ElectronDataClearApi } from "../services/ElectronDataClearApi.ts";
+import { DuplicatePreventionMixin } from "../../utils/index.ts";
+import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
+import { ErrorHandler } from "../renderer_utils/index.ts";
+import { progressDialog } from "../components/ProgressDialog.ts";
+import type { IClosableElement } from "../../types/entities.ts";
+import { localStorageManager } from "../configs/LocalStorageConfig.ts";
 
 /**
  * 数据清空 API 接口
@@ -66,7 +66,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     this.dataClearApi = options.dataClearApi || new ElectronDataClearApi();
 
     // 设置状态
-    this.currentTheme = 'light';
+    this.currentTheme = "light";
 
     // 绑定设置模态框事件
     this.bindSettingsEvents();
@@ -77,10 +77,14 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    */
   private bindSettingsEvents(): void {
     // 关闭按钮
-    document.getElementById(Constants.Ids.CLOSE_SETTINGS_MODAL)?.addEventListener('click', () => this.closeModal());
+    document
+      .getElementById(Constants.Ids.CLOSE_SETTINGS_MODAL)
+      ?.addEventListener("click", () => this.closeModal());
 
     // 设置按钮（打开模态框）
-    document.getElementById(Constants.Ids.SETTINGS_BTN)?.addEventListener('click', () => this.openModal());
+    document
+      .getElementById(Constants.Ids.SETTINGS_BTN)
+      ?.addEventListener("click", () => this.openModal());
   }
 
   /**
@@ -91,10 +95,10 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     try {
       const version = await window.electronAPI.getAppVersion();
       const el = document.getElementById(Constants.Ids.SETTINGS_VERSION);
-      if (el) el.textContent = Constants.APP_NAME + ' v' + version;
+      if (el) el.textContent = Constants.APP_NAME + " v" + version;
     } catch (error) {
       // 版本获取失败
-      logger.error('SettingsManager', '获取应用版本失败:', error);
+      logger.error("SettingsManager", "获取应用版本失败:", error);
     }
 
     // 获取当前数据路径
@@ -103,7 +107,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       const el = document.getElementById(Constants.Ids.CURRENT_DATA_PATH);
       if (el) el.textContent = dataPath;
     } catch (error) {
-      logger.error('SettingsManager', '获取数据路径失败:', error);
+      logger.error("SettingsManager", "获取数据路径失败:", error);
     }
 
     const modal = document.getElementById(Constants.Ids.SETTINGS_MODAL);
@@ -111,10 +115,12 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       const stackEntry: IContextStackEntry = {
         id: Constants.Ids.SETTINGS_MODAL,
         state: { isBatchToolbarVisible: false },
-        close: () => { this.closeModal(); }
+        close: () => {
+          this.closeModal();
+        },
       };
       contextStack.push(stackEntry);
-      modal.classList.add('active');
+      modal.classList.add("active");
       // 添加 close 方法供 ShortcutManager 调用
       (modal as IClosableElement).close = () => this.closeModal();
       this.isModalActive = true;
@@ -127,7 +133,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
   closeModal(): void {
     const modal = document.getElementById(Constants.Ids.SETTINGS_MODAL);
     if (modal) {
-      modal.classList.remove('active');
+      modal.classList.remove("active");
     }
     contextStack.pop(Constants.Ids.SETTINGS_MODAL as ElementId);
     this.isModalActive = false;
@@ -146,7 +152,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    */
   private openDataDirectory(): void {
     window.electronAPI.openDataDirectory().catch((error) => {
-      logger.error('Failed to open data directory:', error);
+      logger.error("Failed to open data directory:", error);
     });
   }
 
@@ -172,9 +178,13 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     this.setTheme(savedTheme, false);
 
     // 加载卡片文字颜色设置
-    const savedCardTextColor = localStorageManager.get<string>(Constants.LocalStorageKey.CARD_TEXT_COLOR);
+    const savedCardTextColor = localStorageManager.get<string>(
+      Constants.LocalStorageKey.CARD_TEXT_COLOR,
+    );
     this.applyCardTextColor(savedCardTextColor);
-    const picker = document.getElementById(Constants.Ids.CARD_TEXT_COLOR_PICKER) as HTMLInputElement | null;
+    const picker = document.getElementById(
+      Constants.Ids.CARD_TEXT_COLOR_PICKER,
+    ) as HTMLInputElement | null;
     if (picker) picker.value = savedCardTextColor;
 
     // 先加载自定义字体列表（注入 @font-face）
@@ -185,7 +195,9 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     this.setFontFamily(savedFont, false);
 
     // 加载字体大小设置
-    const savedFontSize = localStorageManager.get<number>(Constants.LocalStorageKey.FONT_SIZE_SCALE);
+    const savedFontSize = localStorageManager.get<number>(
+      Constants.LocalStorageKey.FONT_SIZE_SCALE,
+    );
     this.setFontSizeScale(savedFontSize, false);
 
     // 加载视图模式到 app
@@ -199,32 +211,44 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    */
   private bindEvents(): void {
     // 清空数据
-    document.getElementById(Constants.Ids.CLEAR_ALL_DATA_BTN)?.addEventListener('click', () => this.clearAllData());
+    document
+      .getElementById(Constants.Ids.CLEAR_ALL_DATA_BTN)
+      ?.addEventListener("click", () => this.clearAllData());
 
     // 重建全部缩略图
-    document.getElementById(Constants.Ids.REBUILD_THUMBNAILS_BTN)?.addEventListener('click', () => this.rebuildThumbnails());
+    document
+      .getElementById(Constants.Ids.REBUILD_THUMBNAILS_BTN)
+      ?.addEventListener("click", () => this.rebuildThumbnails());
 
     // 视图模式
-    const viewModeToggle = document.getElementById(Constants.Ids.VIEW_MODE_TOGGLE) as HTMLInputElement | null;
+    const viewModeToggle = document.getElementById(
+      Constants.Ids.VIEW_MODE_TOGGLE,
+    ) as HTMLInputElement | null;
     if (viewModeToggle) {
       // 初始化状态：safe = 选中(绿色), nsfw = 未选中(灰色)
       viewModeToggle.checked = this.app?.viewMode === Constants.ViewMode.SAFE;
-      viewModeToggle.addEventListener('change', () => {
+      viewModeToggle.addEventListener("change", () => {
         const newMode = viewModeToggle.checked ? Constants.ViewMode.SAFE : Constants.ViewMode.NSFW;
         this.handleViewModeChange(newMode);
       });
     }
 
     // 主题切换
-    document.getElementById(Constants.Ids.SETTINGS_THEME_TOGGLE)?.addEventListener('click', () => this.toggleTheme());
+    document
+      .getElementById(Constants.Ids.SETTINGS_THEME_TOGGLE)
+      ?.addEventListener("click", () => this.toggleTheme());
 
     // 打开数据目录
-    document.getElementById(Constants.Ids.OPEN_DATA_DIR_BTN)?.addEventListener('click', () => this.openDataDirectory());
+    document
+      .getElementById(Constants.Ids.OPEN_DATA_DIR_BTN)
+      ?.addEventListener("click", () => this.openDataDirectory());
 
     // 卡片文字颜色选择器
-    const cardTextColorPicker = document.getElementById(Constants.Ids.CARD_TEXT_COLOR_PICKER) as HTMLInputElement | null;
+    const cardTextColorPicker = document.getElementById(
+      Constants.Ids.CARD_TEXT_COLOR_PICKER,
+    ) as HTMLInputElement | null;
     if (cardTextColorPicker) {
-      cardTextColorPicker.addEventListener('change', (e) => {
+      cardTextColorPicker.addEventListener("change", (e) => {
         const color = (e.target as HTMLInputElement).value;
         localStorageManager.set(Constants.LocalStorageKey.CARD_TEXT_COLOR, color);
         this.applyCardTextColor(color);
@@ -232,21 +256,31 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     }
 
     // 自定义字体文件选择
-    document.getElementById(Constants.Ids.SELECT_FONT_FILE_BTN)?.addEventListener('click', () => this.selectCustomFont());
+    document
+      .getElementById(Constants.Ids.SELECT_FONT_FILE_BTN)
+      ?.addEventListener("click", () => this.selectCustomFont());
 
     // 导出孤儿文件
-    document.getElementById(Constants.Ids.EXPORT_ORPHAN_FILES_BTN)?.addEventListener('click', () => this.exportOrphanFiles());
+    document
+      .getElementById(Constants.Ids.EXPORT_ORPHAN_FILES_BTN)
+      ?.addEventListener("click", () => this.exportOrphanFiles());
 
     // 完整备份导出
-    document.getElementById(Constants.Ids.EXPORT_FULL_BACKUP_BTN)?.addEventListener('click', () => this.exportFullBackup());
+    document
+      .getElementById(Constants.Ids.EXPORT_FULL_BACKUP_BTN)
+      ?.addEventListener("click", () => this.exportFullBackup());
 
     // 完整备份导入
-    document.getElementById(Constants.Ids.IMPORT_FULL_BACKUP_BTN)?.addEventListener('click', () => this.importFullBackup());
+    document
+      .getElementById(Constants.Ids.IMPORT_FULL_BACKUP_BTN)
+      ?.addEventListener("click", () => this.importFullBackup());
 
     // 绑定自定义字体下拉框事件
-    const customFontSelect = document.getElementById(Constants.Ids.CUSTOM_FONT_SELECT) as HTMLSelectElement | null;
+    const customFontSelect = document.getElementById(
+      Constants.Ids.CUSTOM_FONT_SELECT,
+    ) as HTMLSelectElement | null;
     if (customFontSelect) {
-      customFontSelect.addEventListener('change', () => {
+      customFontSelect.addEventListener("change", () => {
         if (customFontSelect.value) {
           this.setFontFamily(customFontSelect.value, true);
         }
@@ -263,11 +297,11 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       const savedScale = this.getFontSizeScale();
       fontSizeValue.textContent = `${Math.round(savedScale * 100)}%`;
 
-      fontSizeDecrease.addEventListener('click', () => {
+      fontSizeDecrease.addEventListener("click", () => {
         this.adjustFontSize(-Constants.FontSize.STEP, fontSizeValue);
       });
 
-      fontSizeIncrease.addEventListener('click', () => {
+      fontSizeIncrease.addEventListener("click", () => {
         this.adjustFontSize(Constants.FontSize.STEP, fontSizeValue);
       });
     }
@@ -284,7 +318,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
 
       const { fontName, filePath } = result;
       if (!fontName || !filePath) {
-        this.app.showToast?.('字体信息不完整', 'error');
+        this.app.showToast?.("字体信息不完整", "error");
         return;
       }
 
@@ -297,12 +331,12 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       // 刷新已导入字体列表
       await this.loadCustomFonts();
 
-      this.app.showToast?.(`字体 "${fontName}" 已导入并应用`, 'success');
+      this.app.showToast?.(`字体 "${fontName}" 已导入并应用`, "success");
     } catch (error) {
       ErrorHandler.handleError(
-        { module: 'SettingsManager.ts', operation: 'select custom font' },
+        { module: "SettingsManager.ts", operation: "select custom font" },
         error,
-        { userMessage: '导入字体失败' }
+        { userMessage: "导入字体失败" },
       );
     }
   }
@@ -319,32 +353,32 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     if (document.getElementById(styleId)) return;
 
     // 根据文件扩展名判断字体格式
-    const ext = filePath.split('.').pop()?.toLowerCase();
-    let format = 'truetype';
+    const ext = filePath.split(".").pop()?.toLowerCase();
+    let format = "truetype";
     switch (ext) {
-      case 'otf':
-        format = 'opentype';
+      case "otf":
+        format = "opentype";
         break;
-      case 'woff':
-        format = 'woff';
+      case "woff":
+        format = "woff";
         break;
-      case 'woff2':
-        format = 'woff2';
+      case "woff2":
+        format = "woff2";
         break;
-      case 'ttc':
-        format = 'collection';
+      case "ttc":
+        format = "collection";
         break;
       default:
-        format = 'truetype';
+        format = "truetype";
     }
 
     // 创建 style 元素
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.id = styleId;
     style.textContent = `
       @font-face {
         font-family: '${fontName}';
-        src: url('file://${filePath.replace(/\\/g, '/')}') format('${format}');
+        src: url('file://${filePath.replace(/\\/g, "/")}') format('${format}');
         font-weight: normal;
         font-style: normal;
         font-display: swap;
@@ -360,7 +394,9 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
   private async loadCustomFonts(): Promise<void> {
     try {
       const fonts = await window.electronAPI.getInstalledFonts();
-      const customFontSelect = document.getElementById(Constants.Ids.CUSTOM_FONT_SELECT) as HTMLSelectElement | null;
+      const customFontSelect = document.getElementById(
+        Constants.Ids.CUSTOM_FONT_SELECT,
+      ) as HTMLSelectElement | null;
 
       if (!customFontSelect) return;
 
@@ -373,10 +409,12 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       const savedFont = localStorageManager.get<string>(Constants.LocalStorageKey.FONT_FAMILY);
 
       // 生成下拉框选项
-      const options = fonts.map((font: { fontName: string }) => {
-        const isSelected = font.fontName === savedFont ? 'selected' : '';
-        return `<option value="${font.fontName}" ${isSelected}>${font.fontName}</option>`;
-      }).join('');
+      const options = fonts
+        .map((font: { fontName: string }) => {
+          const isSelected = font.fontName === savedFont ? "selected" : "";
+          return `<option value="${font.fontName}" ${isSelected}>${font.fontName}</option>`;
+        })
+        .join("");
 
       // 更新下拉框
       customFontSelect.innerHTML = options || '<option value="">无已导入字体</option>';
@@ -390,9 +428,9 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       }
     } catch (error) {
       ErrorHandler.handleError(
-        { module: 'SettingsManager.ts', operation: 'load custom fonts' },
+        { module: "SettingsManager.ts", operation: "load custom fonts" },
         error,
-        { showToast: false }
+        { showToast: false },
       );
     }
   }
@@ -407,18 +445,23 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     this.rebuildingThumbnails = true;
 
     const progressCallback = (progress: { current: number; total: number; fileName: string }) => {
-      const percent = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
-      progressDialog.updateProgress(percent, `正在重建缩略图... (${progress.current}/${progress.total})`, progress.fileName || '');
+      const percent =
+        progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
+      progressDialog.updateProgress(
+        percent,
+        `正在重建缩略图... (${progress.current}/${progress.total})`,
+        progress.fileName || "",
+      );
     };
     window.electronAPI.onRebuildThumbnailsProgress(progressCallback);
-    progressDialog.show({ title: '正在重建缩略图...', status: '准备中...' });
+    progressDialog.show({ title: "正在重建缩略图...", status: "准备中..." });
 
     try {
       const result = await window.electronAPI.rebuildThumbnails();
       progressDialog.complete(`重建完成：成功 ${result.regenerated} 张，失败 ${result.failed} 张`);
     } catch (error) {
-      window.electronAPI.logError('SettingsManager.ts', 'Failed to rebuild thumbnails:', error);
-      progressDialog.error('重建缩略图失败');
+      window.electronAPI.logError("SettingsManager.ts", "Failed to rebuild thumbnails:", error);
+      progressDialog.error("重建缩略图失败");
     } finally {
       window.electronAPI.offRebuildThumbnailsProgress(progressCallback);
       this.rebuildingThumbnails = false;
@@ -429,20 +472,26 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    * 清空所有数据
    */
   async clearAllData(): Promise<void> {
-    const result = await this.executeWithPrevention('clearAllData', async () => {
-      const confirmed = await DialogService.showConfirmDialogByConfig(DialogConfig.CLEAR_ALL_DATA);
+    const result = await this.executeWithPrevention(
+      "clearAllData",
+      async () => {
+        const confirmed = await DialogService.showConfirmDialogByConfig(
+          DialogConfig.CLEAR_ALL_DATA,
+        );
 
-      if (!confirmed) return { success: false };
+        if (!confirmed) return { success: false };
 
-      const renamedPath = await this.dataClearApi.clearAllData();
+        const renamedPath = await this.dataClearApi.clearAllData();
 
-      this.app.showToast?.('数据已清空，正在重启...', 'success');
+        this.app.showToast?.("数据已清空，正在重启...", "success");
 
-      setTimeout(() => {
-        this.app.relaunchApp?.(renamedPath);
-      }, 1000);
-      return { success: true };
-    }, { errorMessage: '正在清空数据中...' });
+        setTimeout(() => {
+          this.app.relaunchApp?.(renamedPath);
+        }, 1000);
+        return { success: true };
+      },
+      { errorMessage: "正在清空数据中..." },
+    );
 
     if (result === undefined) {
       // 操作正在进行中
@@ -466,7 +515,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     // 更新 app 的 viewMode
     this.app.viewMode = mode;
 
-    this.app.showToast?.(mode === 'safe' ? '已切换到安全模式' : '已切换到 NSFW 模式', 'info');
+    this.app.showToast?.(mode === "safe" ? "已切换到安全模式" : "已切换到 NSFW 模式", "info");
 
     // 更新面板管理器
     if (this.app.promptPanelManager) {
@@ -491,8 +540,8 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    */
   toggleTheme(theme: string | null = null, showToast: boolean = true): void {
     const html = document.documentElement;
-    const currentTheme = html.getAttribute('data-theme') || 'light';
-    const newTheme = theme || (currentTheme === 'light' ? 'dark' : 'light');
+    const currentTheme = html.getAttribute("data-theme") || "light";
+    const newTheme = theme || (currentTheme === "light" ? "dark" : "light");
 
     this.setTheme(newTheme, showToast);
   }
@@ -505,20 +554,18 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
   setTheme(theme: string, showToast: boolean = true): void {
     const html = document.documentElement;
 
-    html.setAttribute('data-theme', theme);
+    html.setAttribute("data-theme", theme);
     localStorageManager.set(Constants.LocalStorageKey.THEME, theme);
     this.currentTheme = theme;
 
     // 更新主题切换按钮文本
     const themeToggle = document.getElementById(Constants.Ids.SETTINGS_THEME_TOGGLE);
     if (themeToggle) {
-      themeToggle.innerHTML = theme === 'dark'
-        ? '<span>☀️</span> 明亮'
-        : '<span>🌙</span> 暗黑';
+      themeToggle.innerHTML = theme === "dark" ? "<span>☀️</span> 明亮" : "<span>🌙</span> 暗黑";
     }
 
     if (showToast) {
-      this.app.showToast?.(theme === 'dark' ? '已切换到黑暗模式' : '已切换到明亮模式', 'success');
+      this.app.showToast?.(theme === "dark" ? "已切换到黑暗模式" : "已切换到明亮模式", "success");
     }
   }
 
@@ -527,7 +574,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    * @param color - 颜色值
    */
   applyCardTextColor(color: string): void {
-    document.documentElement.style.setProperty('--card-text-color', color);
+    document.documentElement.style.setProperty("--card-text-color", color);
   }
 
   /**
@@ -539,11 +586,11 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     const root = document.documentElement;
     // 添加回退字体栈，确保自定义字体加载失败时有备用字体
     const fontStack = `${fontFamily}, ${Constants.FontFamily.FALLBACK}`;
-    root.style.setProperty('--font-family', fontStack);
+    root.style.setProperty("--font-family", fontStack);
     localStorageManager.set(Constants.LocalStorageKey.FONT_FAMILY, fontFamily);
 
     if (showToast) {
-      this.app.showToast?.(`字体已切换为：${fontFamily}`, 'success');
+      this.app.showToast?.(`字体已切换为：${fontFamily}`, "success");
     }
   }
 
@@ -563,10 +610,10 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
   setFontSizeScale(scale: number, showToast: boolean = true): void {
     const clampedScale = Math.max(Constants.FontSize.MIN, Math.min(Constants.FontSize.MAX, scale));
     const root = document.documentElement;
-    root.style.setProperty('--font-size-scale', String(clampedScale));
+    root.style.setProperty("--font-size-scale", String(clampedScale));
 
     if (showToast) {
-      this.app.showToast?.(`字体大小已调整为 ${Math.round(clampedScale * 100)}%`, 'success');
+      this.app.showToast?.(`字体大小已调整为 ${Math.round(clampedScale * 100)}%`, "success");
     }
   }
 
@@ -588,10 +635,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     const currentScale = this.getFontSizeScale();
     const newScale = Math.max(
       Constants.FontSize.MIN,
-      Math.min(
-        Constants.FontSize.MAX,
-        Math.round((currentScale + delta) * 10) / 10
-      )
+      Math.min(Constants.FontSize.MAX, Math.round((currentScale + delta) * 10) / 10),
     );
     if (newScale !== currentScale) {
       this.setFontSizeScale(newScale);
@@ -608,7 +652,9 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     await this.handleViewModeChange(mode);
 
     // 更新选择框
-    const viewModeSelect = document.getElementById(Constants.Ids.VIEW_MODE_SELECT) as HTMLSelectElement | null;
+    const viewModeSelect = document.getElementById(
+      Constants.Ids.VIEW_MODE_SELECT,
+    ) as HTMLSelectElement | null;
     if (viewModeSelect) {
       viewModeSelect.value = mode;
     }
@@ -623,9 +669,9 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       await this.app.importExportManager?.exportOrphanFiles();
     } catch (error) {
       ErrorHandler.handleError(
-        { module: 'SettingsManager.ts', operation: 'export orphan files' },
+        { module: "SettingsManager.ts", operation: "export orphan files" },
         error,
-        { showToast: false }
+        { showToast: false },
       );
     }
   }
@@ -639,9 +685,9 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       await this.app.importExportManager?.exportFullBackup();
     } catch (error) {
       ErrorHandler.handleError(
-        { module: 'SettingsManager.ts', operation: 'export full backup' },
+        { module: "SettingsManager.ts", operation: "export full backup" },
         error,
-        { showToast: false }
+        { showToast: false },
       );
     }
   }
@@ -654,9 +700,9 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     try {
       // 显示确认对话框
       const confirmed = await DialogService.showConfirmDialogByConfig({
-        title: '确认导入备份',
-        message: '导入备份将替换当前所有数据。建议在导入前导出当前数据的备份。是否继续？',
-        type: 'warning'
+        title: "确认导入备份",
+        message: "导入备份将替换当前所有数据。建议在导入前导出当前数据的备份。是否继续？",
+        type: "warning",
       });
 
       if (!confirmed) {
@@ -666,9 +712,9 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       await this.app.importExportManager?.importFullBackup();
     } catch (error) {
       ErrorHandler.handleError(
-        { module: 'SettingsManager.ts', operation: 'import full backup' },
+        { module: "SettingsManager.ts", operation: "import full backup" },
         error,
-        { showToast: false }
+        { showToast: false },
       );
     }
   }

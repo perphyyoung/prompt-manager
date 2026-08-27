@@ -5,16 +5,16 @@
 
 export default {
   meta: {
-    type: 'problem',
+    type: "problem",
     docs: {
-      description: '禁止动态 import()，强制使用静态 import 声明',
-      category: 'Best Practices',
-      recommended: true
+      description: "禁止动态 import()，强制使用静态 import 声明",
+      category: "Best Practices",
+      recommended: true,
     },
     schema: [],
     messages: {
-      noDynamicImport: '禁止使用动态 import()，请使用静态 import 声明'
-    }
+      noDynamicImport: "禁止使用动态 import()，请使用静态 import 声明",
+    },
   },
 
   create(context) {
@@ -22,9 +22,9 @@ export default {
       ImportExpression(node) {
         context.report({
           node,
-          messageId: 'noDynamicImport'
+          messageId: "noDynamicImport",
         });
-      }
+      },
     };
-  }
+  },
 };

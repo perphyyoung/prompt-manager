@@ -3,11 +3,11 @@
  * 提供标签输入的自动完成、键盘导航等功能
  */
 
-import type { ElementId } from '../../constants.ts';
-import { TagService } from './TagService.ts';
+import type { ElementId } from "../../constants.ts";
+import { TagService } from "./TagService.ts";
 
 // Symbol 标记，用于防止重复绑定
-const AUTOCOMPLETE_INSTANCE = Symbol('autocompleteInstance');
+const AUTOCOMPLETE_INSTANCE = Symbol("autocompleteInstance");
 
 declare global {
   interface HTMLElement {
@@ -22,7 +22,7 @@ interface TagAutocompleteOptions {
   onSelect?: (tagName: string) => Promise<boolean> | boolean;
   onBatchAdd?: (tagNames: string[]) => Promise<boolean> | boolean;
   containerSelector?: string;
-  type: 'image' | 'prompt';
+  type: "image" | "prompt";
   excludeTags?: string[];
 }
 
@@ -32,7 +32,7 @@ export class TagAutocomplete {
   private onSelect?: (tagName: string) => Promise<boolean> | boolean;
   private onBatchAdd?: (tagNames: string[]) => Promise<boolean> | boolean;
   private containerSelector?: string;
-  private type: 'image' | 'prompt';
+  private type: "image" | "prompt";
   private excludeTags?: string[];
   private tagService: TagService;
 
@@ -67,7 +67,10 @@ export class TagAutocomplete {
     this.dropdown = document.getElementById(this.dropdownId);
 
     if (!this.input || !this.dropdown) {
-      window.electronAPI.logError('TagAutocomplete', `init 失败: 未找到元素 - inputId=${this.inputId}, dropdownId=${this.dropdownId}`);
+      window.electronAPI.logError(
+        "TagAutocomplete",
+        `init 失败: 未找到元素 - inputId=${this.inputId}, dropdownId=${this.dropdownId}`,
+      );
       return;
     }
 
@@ -89,19 +92,19 @@ export class TagAutocomplete {
    */
   destroy(): void {
     if (this.inputHandler && this.input) {
-      this.input.removeEventListener('input', this.inputHandler);
+      this.input.removeEventListener("input", this.inputHandler);
       this.inputHandler = null;
     }
     if (this.keydownHandler && this.input) {
-      this.input.removeEventListener('keydown', this.keydownHandler);
+      this.input.removeEventListener("keydown", this.keydownHandler);
       this.keydownHandler = null;
     }
     if (this.blurHandler && this.input) {
-      this.input.removeEventListener('blur', this.blurHandler);
+      this.input.removeEventListener("blur", this.blurHandler);
       this.blurHandler = null;
     }
     if (this.focusHandler && this.input) {
-      this.input.removeEventListener('focus', this.focusHandler);
+      this.input.removeEventListener("focus", this.focusHandler);
       this.focusHandler = null;
     }
     if (this.blurHideTimer !== null) {
@@ -109,7 +112,7 @@ export class TagAutocomplete {
       this.blurHideTimer = null;
     }
     if (this.clickOutsideHandler) {
-      document.removeEventListener('click', this.clickOutsideHandler);
+      document.removeEventListener("click", this.clickOutsideHandler);
       this.clickOutsideHandler = null;
     }
   }
@@ -123,11 +126,11 @@ export class TagAutocomplete {
 
     // 输入事件处理（自动完成）
     this.inputHandler = () => this.handleInput();
-    this.input.addEventListener('input', this.inputHandler);
+    this.input.addEventListener("input", this.inputHandler);
 
     // 键盘事件处理
     this.keydownHandler = (e: KeyboardEvent) => this.handleKeydown(e);
-    this.input.addEventListener('keydown', this.keydownHandler);
+    this.input.addEventListener("keydown", this.keydownHandler);
 
     // 失去焦点时隐藏下拉框
     // 延迟 200ms 是为了给"点击下拉建议项"留出mousedown→click的时间窗口；
@@ -144,7 +147,7 @@ export class TagAutocomplete {
         }
       }, 200);
     };
-    this.input.addEventListener('blur', this.blurHandler);
+    this.input.addEventListener("blur", this.blurHandler);
 
     // 重新聚焦/继续输入时撤销未到期的失焦隐藏
     this.focusHandler = () => {
@@ -153,7 +156,7 @@ export class TagAutocomplete {
         this.blurHideTimer = null;
       }
     };
-    this.input.addEventListener('focus', this.focusHandler);
+    this.input.addEventListener("focus", this.focusHandler);
 
     // 点击外部关闭
     if (this.containerSelector) {
@@ -162,7 +165,7 @@ export class TagAutocomplete {
           this.hideDropdown();
         }
       };
-      document.addEventListener('click', this.clickOutsideHandler);
+      document.addEventListener("click", this.clickOutsideHandler);
     }
   }
 
@@ -200,7 +203,7 @@ export class TagAutocomplete {
 
       this.renderDropdown(suggestions);
     } catch (error) {
-      window.electronAPI?.logError('TagAutocomplete', 'Failed to get suggestions:', error);
+      window.electronAPI?.logError("TagAutocomplete", "Failed to get suggestions:", error);
     }
   }
 
@@ -216,33 +219,35 @@ export class TagAutocomplete {
     // 高亮匹配部分
     const highlightMatch = (text: string, query: string): string => {
       if (!query) return text;
-      const regex = new RegExp(`(${query})`, 'gi');
-      return text.replace(regex, '<strong>$1</strong>');
+      const regex = new RegExp(`(${query})`, "gi");
+      return text.replace(regex, "<strong>$1</strong>");
     };
 
     this.dropdown.innerHTML = suggestions
-      .map((tag) => `
+      .map(
+        (tag) => `
         <div class="tag-autocomplete-item" data-tag="${tag}">
           ${highlightMatch(tag, inputValue)}
         </div>
-      `)
-      .join('');
+      `,
+      )
+      .join("");
 
     // 使用 fixed 定位，脱离 overflow 裁剪，相对视口定位在输入框下方
     const inputRect = this.input.getBoundingClientRect();
-    this.dropdown.style.position = 'fixed';
+    this.dropdown.style.position = "fixed";
     this.dropdown.style.top = `${inputRect.bottom}px`;
     this.dropdown.style.left = `${inputRect.left}px`;
     this.dropdown.style.width = `${inputRect.width}px`;
     const availableHeight = window.innerHeight - inputRect.bottom - 16;
     this.dropdown.style.maxHeight = `${Math.max(Math.min(availableHeight, 200), 60)}px`;
-    this.dropdown.style.zIndex = '10000';
+    this.dropdown.style.zIndex = "10000";
 
-    this.dropdown.classList.add('active');
+    this.dropdown.classList.add("active");
 
     // 绑定点击事件
-    this.dropdown.querySelectorAll('.tag-autocomplete-item').forEach(item => {
-      item.addEventListener('click', () => {
+    this.dropdown.querySelectorAll(".tag-autocomplete-item").forEach((item) => {
+      item.addEventListener("click", () => {
         const tag = (item as HTMLElement).dataset.tag;
         if (tag) {
           this.selectTag(tag);
@@ -257,8 +262,8 @@ export class TagAutocomplete {
    */
   private handleKeydown(e: KeyboardEvent): void {
     // Escape键：如果下拉框激活，关闭它并阻止传播；否则允许传播到ShortcutManager
-    if (e.key === 'Escape') {
-      const isDropdownActive = this.dropdown?.classList.contains('active');
+    if (e.key === "Escape") {
+      const isDropdownActive = this.dropdown?.classList.contains("active");
       if (isDropdownActive) {
         // 下拉框激活时，关闭它并阻止事件传播
         e.stopImmediatePropagation();
@@ -271,19 +276,19 @@ export class TagAutocomplete {
     }
 
     // 下拉框激活时处理导航
-    if (this.dropdown?.classList.contains('active')) {
-      const items = this.dropdown.querySelectorAll('.tag-autocomplete-item');
-      const activeItem = this.dropdown.querySelector('.tag-autocomplete-item.active');
+    if (this.dropdown?.classList.contains("active")) {
+      const items = this.dropdown.querySelectorAll(".tag-autocomplete-item");
+      const activeItem = this.dropdown.querySelector(".tag-autocomplete-item.active");
       let currentIndex = Array.from(items).indexOf(activeItem as Element);
 
       switch (e.key) {
-        case 'ArrowDown':
+        case "ArrowDown":
           e.preventDefault();
           e.stopPropagation();
           currentIndex = Math.min(currentIndex + 1, items.length - 1);
           this.setActiveItem(currentIndex);
           return;
-        case 'ArrowUp':
+        case "ArrowUp":
           e.preventDefault();
           e.stopPropagation();
           currentIndex = Math.max(currentIndex - 1, 0);
@@ -292,11 +297,13 @@ export class TagAutocomplete {
       }
     }
 
-  // 回车：有选中候选时填入输入框再提交，否则直接提交输入文本
-    if (e.key === 'Enter' && this.input?.value.trim()) {
+    // 回车：有选中候选时填入输入框再提交，否则直接提交输入文本
+    if (e.key === "Enter" && this.input?.value.trim()) {
       // 如果有活跃的候选项，将其填入输入框
-      if (this.dropdown?.classList.contains('active')) {
-        const activeItem = this.dropdown.querySelector('.tag-autocomplete-item.active') as HTMLElement | null;
+      if (this.dropdown?.classList.contains("active")) {
+        const activeItem = this.dropdown.querySelector(
+          ".tag-autocomplete-item.active",
+        ) as HTMLElement | null;
         if (activeItem) {
           const tag = activeItem.dataset.tag;
           if (tag) {
@@ -320,9 +327,9 @@ export class TagAutocomplete {
   private setActiveItem(index: number): void {
     if (!this.dropdown) return;
 
-    const items = this.dropdown.querySelectorAll('.tag-autocomplete-item');
+    const items = this.dropdown.querySelectorAll(".tag-autocomplete-item");
     items.forEach((item, i) => {
-      item.classList.toggle('active', i === index);
+      item.classList.toggle("active", i === index);
     });
   }
 
@@ -337,7 +344,7 @@ export class TagAutocomplete {
     if (this.onSelect) {
       const result = await this.onSelect(tag);
       if (result !== false) {
-        this.input.value = '';
+        this.input.value = "";
         this.hideDropdown();
       }
       return;
@@ -347,7 +354,7 @@ export class TagAutocomplete {
     if (this.onBatchAdd) {
       const result = await this.onBatchAdd([tag]);
       if (result !== false) {
-        this.input.value = '';
+        this.input.value = "";
         this.hideDropdown();
       }
       return;
@@ -372,7 +379,7 @@ export class TagAutocomplete {
     const result = await this.onBatchAdd?.(tags);
 
     if (result !== false) {
-      this.input.value = '';
+      this.input.value = "";
       this.hideDropdown();
     }
   }
@@ -383,7 +390,7 @@ export class TagAutocomplete {
    */
   private hideDropdown(): void {
     if (this.dropdown) {
-      this.dropdown.classList.remove('active');
+      this.dropdown.classList.remove("active");
     }
   }
 }

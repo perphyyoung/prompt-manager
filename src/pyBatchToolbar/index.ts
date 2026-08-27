@@ -20,7 +20,7 @@ export type {
   ToolbarState,
   BatchToolbarOptions,
   CreateToolbarOptions,
-} from './types.ts';
+} from "./types.ts";
 
 // 预设配置
 export {
@@ -29,7 +29,7 @@ export {
   PRESET_CONFIGS,
   getPresetConfig,
   getAllPresetConfigs,
-} from './presets.ts';
+} from "./presets.ts";
 
 // 工具函数
 export {
@@ -38,4 +38,4 @@ export {
   filterVisibleButtons,
   generateToolbarId,
   isValidContext,
-} from './utils.ts';
+} from "./utils.ts";

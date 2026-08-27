@@ -1,4 +1,4 @@
-import { Constants, ElementId } from '../../constants.ts';
+import { Constants, ElementId } from "../../constants.ts";
 
 /**
  * 上下文栈条目接口
@@ -43,7 +43,7 @@ export class ContextStackManager {
    * @returns 格式化的堆栈ID列表字符串
    */
   private getStackIdsString(): string {
-    return this.stack.map(e => e.id).join(', ');
+    return this.stack.map((e) => e.id).join(", ");
   }
 
   /**
@@ -51,29 +51,39 @@ export class ContextStackManager {
    * @param entry - 栈条目
    */
   push(entry: IContextStackEntry): void {
-    const titleStr = entry.title || '';
+    const titleStr = entry.title || "";
     const newId = `${entry.id}${titleStr}`;
 
     // 检查是否已在栈顶
     const currentTop = this.stack[this.stack.length - 1];
     if (currentTop?.id === entry.id) {
-      window.electronAPI.logWarn('ContextStackManager', `push ${newId} skipped, stack=[${this.getStackIdsString()}]`);
+      window.electronAPI.logWarn(
+        "ContextStackManager",
+        `push ${newId} skipped, stack=[${this.getStackIdsString()}]`,
+      );
       return;
     }
 
     // 关闭当前栈顶（如果有批量工具栏显示）
     // 但确认对话框、输入对话框和选择对话框弹出时不关闭批量工具栏
-    const isDialog = entry.id === Constants.Ids.CONFIRM_MODAL ||
-                     entry.id === Constants.Ids.INPUT_MODAL ||
-                     entry.id === Constants.Ids.SELECT_MODAL;
+    const isDialog =
+      entry.id === Constants.Ids.CONFIRM_MODAL ||
+      entry.id === Constants.Ids.INPUT_MODAL ||
+      entry.id === Constants.Ids.SELECT_MODAL;
     if (currentTop?.state.isBatchToolbarVisible && !isDialog) {
-      window.electronAPI.logInfo('ContextStackManager', `close before push ${currentTop.id} for ${newId}`);
+      window.electronAPI.logInfo(
+        "ContextStackManager",
+        `close before push ${currentTop.id} for ${newId}`,
+      );
       currentTop.close();
       currentTop.state.isBatchToolbarVisible = false;
     }
 
     this.stack.push(entry);
-    window.electronAPI.logInfo('ContextStackManager', `push ${newId}, stack=[${this.getStackIdsString()}]`);
+    window.electronAPI.logInfo(
+      "ContextStackManager",
+      `push ${newId}, stack=[${this.getStackIdsString()}]`,
+    );
   }
 
   /**
@@ -83,21 +93,29 @@ export class ContextStackManager {
    */
   pop(expectedId: ElementId): boolean {
     if (this.stack.length === 0) {
-      window.electronAPI.logWarn('ContextStackManager', `pop ${expectedId}: skipped (stack is empty)`);
+      window.electronAPI.logWarn(
+        "ContextStackManager",
+        `pop ${expectedId}: skipped (stack is empty)`,
+      );
       return false;
     }
 
     const top = this.stack[this.stack.length - 1];
     if (top.id !== expectedId) {
-      window.electronAPI.logError('ContextStackManager',
-        `pop: mismatch! expected=${expectedId}, actual=${top.id}, stack=[${this.getStackIdsString()}]`);
+      window.electronAPI.logError(
+        "ContextStackManager",
+        `pop: mismatch! expected=${expectedId}, actual=${top.id}, stack=[${this.getStackIdsString()}]`,
+      );
       return false;
     }
 
     const popped = this.stack.pop();
-    const titleStr = popped?.title || '';
+    const titleStr = popped?.title || "";
     const newId = `${popped?.id}${titleStr}`;
-    window.electronAPI.logInfo('ContextStackManager', `pop: ${newId}, stack=[${this.getStackIdsString()}]`);
+    window.electronAPI.logInfo(
+      "ContextStackManager",
+      `pop: ${newId}, stack=[${this.getStackIdsString()}]`,
+    );
 
     return true;
   }
@@ -131,14 +149,14 @@ export class ContextStackManager {
    * @returns ID 列表
    */
   getStackIds(): ElementId[] {
-    return this.stack.map(e => e.id);
+    return this.stack.map((e) => e.id);
   }
 
   /**
    * 重置堆栈
    */
   reset(): void {
-    window.electronAPI.logInfo('ContextStackManager', `reset stack`);
+    window.electronAPI.logInfo("ContextStackManager", `reset stack`);
     this.stack = [];
   }
 
@@ -148,7 +166,7 @@ export class ContextStackManager {
    * @returns 是否在堆栈中
    */
   contains(id: ElementId): boolean {
-    return this.stack.some(entry => entry.id === id);
+    return this.stack.some((entry) => entry.id === id);
   }
 
   /**

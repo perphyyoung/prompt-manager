@@ -5,7 +5,7 @@
  * 错误处理：抛出异常，由调用方处理日志
  */
 
-import { cacheManager } from '../utils/CacheManager.ts';
+import { cacheManager } from "../utils/CacheManager.ts";
 import type {
   TagName,
   TagGroup,
@@ -14,14 +14,11 @@ import type {
   TagOperationResult,
   TagDeleteResult,
   TagCreateOptions,
-  TagWithGroup
-} from './types.ts';
-import {
-  TagExistsError,
-  InvalidTagNameError
-} from './types.ts';
-import * as utils from './utils.ts';
-import { createDataAccess } from './dataAccess.ts';
+  TagWithGroup,
+} from "./types.ts";
+import { TagExistsError, InvalidTagNameError } from "./types.ts";
+import * as utils from "./utils.ts";
+import { createDataAccess } from "./dataAccess.ts";
 
 // ========== 缓存操作 ==========
 
@@ -38,12 +35,12 @@ function getFromCache<T>(key: string): T | null {
   if (!cache) {
     return null;
   }
-  return cache.get('data')?.data || null;
+  return cache.get("data")?.data || null;
 }
 
 function setCache<T>(key: string, data: T): void {
   const cache = cacheManager.createCache(key, 10);
-  cache.set('data', { data, time: Date.now() });
+  cache.set("data", { data, time: Date.now() });
 }
 
 function clearCache(key: string): void {
@@ -95,13 +92,13 @@ export async function getTags(type: DataType): Promise<TagName[]> {
 export async function createTags(
   type: DataType,
   tags: TagName[],
-  options: TagCreateOptions = {}
+  options: TagCreateOptions = {},
 ): Promise<TagOperationResult> {
   const result: TagOperationResult = {
     success: true,
     created: [],
     skipped: [],
-    errors: []
+    errors: [],
   };
 
   const existingTags = await getTags(type);
@@ -110,7 +107,7 @@ export async function createTags(
   for (const tag of tags) {
     const trimmedTag = tag.trim();
     if (!trimmedTag) {
-      throw new InvalidTagNameError(tag, '标签名不能为空');
+      throw new InvalidTagNameError(tag, "标签名不能为空");
     }
 
     // 检查已存在
@@ -148,14 +145,10 @@ export async function createTags(
  * @param newName - 新标签名
  * @throws 新标签已存在或数据库操作失败时抛出异常
  */
-export async function renameTag(
-  type: DataType,
-  oldName: TagName,
-  newName: TagName
-): Promise<void> {
+export async function renameTag(type: DataType, oldName: TagName, newName: TagName): Promise<void> {
   const trimmedNewName = newName.trim();
   if (!trimmedNewName) {
-    throw new InvalidTagNameError(newName, '新标签名不能为空');
+    throw new InvalidTagNameError(newName, "新标签名不能为空");
   }
 
   const existingTags = await getTags(type);
@@ -176,13 +169,10 @@ export async function renameTag(
  * @param tags - 要删除的标签列表
  * @returns 删除结果（批量操作，不抛出异常，返回错误列表）
  */
-export async function deleteTags(
-  type: DataType,
-  tags: TagName[]
-): Promise<TagDeleteResult> {
+export async function deleteTags(type: DataType, tags: TagName[]): Promise<TagDeleteResult> {
   const result: TagDeleteResult = {
     deleted: 0,
-    errors: []
+    errors: [],
   };
 
   const dataAccess = createDataAccess(type);
@@ -208,8 +198,8 @@ export async function deleteTags(
     } catch (error) {
       result.errors.push({
         tag: trimmedTag,
-        error: error instanceof Error ? error.message : '删除失败',
-        code: 'INVALID'
+        error: error instanceof Error ? error.message : "删除失败",
+        code: "INVALID",
       });
     }
   }
@@ -232,7 +222,7 @@ export async function deleteTags(
 export async function assignTagToGroup(
   type: DataType,
   tag: TagName,
-  groupId: TagGroupId | null
+  groupId: TagGroupId | null,
 ): Promise<void> {
   const dataAccess = createDataAccess(type);
   await dataAccess.assignTagToGroup(tag, groupId);
@@ -247,10 +237,7 @@ export async function assignTagToGroup(
  * @returns 项目ID列表
  * @throws 数据库操作失败时抛出异常
  */
-export async function getItemsByTag(
-  type: DataType,
-  tag: TagName
-): Promise<string[]> {
+export async function getItemsByTag(type: DataType, tag: TagName): Promise<string[]> {
   const dataAccess = createDataAccess(type);
   return await dataAccess.getItemsByTag(tag);
 }
@@ -284,10 +271,7 @@ export async function getTagGroups(type: DataType): Promise<TagGroup[]> {
  * @throws 数据库操作失败时抛出异常
  */
 export async function getTagsWithGroupInfo(type: DataType): Promise<TagWithGroup[]> {
-  const [tags, groups] = await Promise.all([
-    getTags(type),
-    getTagGroups(type)
-  ]);
+  const [tags, groups] = await Promise.all([getTags(type), getTagGroups(type)]);
 
   return utils.buildTagsWithGroupInfo(tags, groups);
 }
@@ -303,11 +287,11 @@ export async function getTagsWithGroupInfo(type: DataType): Promise<TagWithGroup
 export async function createTagGroup(
   type: DataType,
   name: string,
-  sortOrder: number
+  sortOrder: number,
 ): Promise<TagGroup> {
   const trimmedName = name.trim();
   if (!trimmedName) {
-    throw new Error('标签组名称不能为空');
+    throw new Error("标签组名称不能为空");
   }
 
   const dataAccess = createDataAccess(type);
@@ -327,7 +311,7 @@ export async function createTagGroup(
 export async function updateTagGroup(
   type: DataType,
   id: TagGroupId,
-  attrs: Partial<TagGroup>
+  attrs: Partial<TagGroup>,
 ): Promise<void> {
   const dataAccess = createDataAccess(type);
   await dataAccess.updateTagGroup(id, attrs);
@@ -341,10 +325,7 @@ export async function updateTagGroup(
  * @param id - 组ID
  * @throws 数据库操作失败时抛出异常
  */
-export async function deleteTagGroup(
-  type: DataType,
-  id: TagGroupId
-): Promise<void> {
+export async function deleteTagGroup(type: DataType, id: TagGroupId): Promise<void> {
   const dataAccess = createDataAccess(type);
   await dataAccess.deleteTagGroup(id);
 

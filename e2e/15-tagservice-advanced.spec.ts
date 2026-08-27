@@ -98,10 +98,7 @@ test.describe("TagService 高级功能测试", () => {
       expect(imageAfter?.updatedAt).not.toBe(updatedAtBefore);
     });
 
-    test("提示词详情界面 - 删除已关联的标签", async ({
-      electronTest,
-      page,
-    }) => {
+    test("提示词详情界面 - 删除已关联的标签", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
       // 1. 进入提示词详情界面
@@ -109,10 +106,7 @@ test.describe("TagService 高级功能测试", () => {
 
       // 2. 创建一个测试标签并添加到当前提示词（使用 UI，因为测试目标是删除而非创建）
       const testTagName = electronTest.generateE2ePrefixName("prompt_unlink");
-      await page.fill(
-        `#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`,
-        testTagName,
-      );
+      await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, testTagName);
       await page.press(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, "Enter");
 
       // 等待标签添加成功
@@ -212,8 +206,7 @@ test.describe("TagService 高级功能测试", () => {
       const promptFactory = factory.createPromptFactory();
 
       // 1. 创建一个测试标签（使用 API 工厂，因为测试目标是存在检查而非创建）
-      const existingTagName =
-        electronTest.generateE2ePrefixName("prompt_exists");
+      const existingTagName = electronTest.generateE2ePrefixName("prompt_exists");
       await promptFactory.createTag(existingTagName);
 
       await electronTest.refreshData();
@@ -228,9 +221,7 @@ test.describe("TagService 高级功能测试", () => {
       expect(existsResult).toBe(true);
 
       // 3. 检查一个不存在的标签
-      const nonExistentTag = electronTest.generateE2ePrefixName(
-        "prompt_non_existent",
-      );
+      const nonExistentTag = electronTest.generateE2ePrefixName("prompt_non_existent");
       const notExistsResult = await page.evaluate(async (tagName: string) => {
         const tags = await window.electronAPI.getAllTags();
         return tags.includes(tagName);
@@ -252,16 +243,23 @@ test.describe("TagService 高级功能测试", () => {
       const imageFactory = factory.createImageFactory();
 
       // 1. 创建标签组并在其中添加标签（使用 API 工厂，因为测试目标是获取组内标签而非创建）
-      const { group, tagName: tagName1 } = await imageFactory.createTagInGroup("测试组", "in_group_1", false);
+      const { group, tagName: tagName1 } = await imageFactory.createTagInGroup(
+        "测试组",
+        "in_group_1",
+        false,
+      );
       const groupId = group.id;
 
       // 2. 再创建一个标签并分配到同一组
       const tagName2 = electronTest.generateE2ePrefixName("in_group_2");
       await imageFactory.createTag(tagName2);
       // 使用 page.evaluate 直接调用 API 将标签分配到组
-      await page.evaluate(async (params: { tag: string; groupId: number }) => {
-        await window.electronAPI.assignImageTagToBelongGroup(params.tag, params.groupId);
-      }, { tag: tagName2, groupId });
+      await page.evaluate(
+        async (params: { tag: string; groupId: number }) => {
+          await window.electronAPI.assignImageTagToBelongGroup(params.tag, params.groupId);
+        },
+        { tag: tagName2, groupId },
+      );
 
       await electronTest.refreshData();
       await enterImageTagManager(page);
@@ -287,16 +285,23 @@ test.describe("TagService 高级功能测试", () => {
       const promptFactory = factory.createPromptFactory();
 
       // 1. 创建标签组并在其中添加标签（使用 API 工厂，因为测试目标是获取组内标签而非创建）
-      const { group, tagName: tagName1 } = await promptFactory.createTagInGroup("提示词测试组", "prompt_in_group_1", false);
+      const { group, tagName: tagName1 } = await promptFactory.createTagInGroup(
+        "提示词测试组",
+        "prompt_in_group_1",
+        false,
+      );
       const groupId = group.id;
 
       // 2. 再创建一个标签并分配到同一组
       const tagName2 = electronTest.generateE2ePrefixName("prompt_in_group_2");
       await promptFactory.createTag(tagName2);
       // 使用 page.evaluate 直接调用 API 将标签分配到组
-      await page.evaluate(async (params: { tag: string; groupId: number }) => {
-        await window.electronAPI.assignPromptTagToBelongGroup(params.tag, params.groupId);
-      }, { tag: tagName2, groupId });
+      await page.evaluate(
+        async (params: { tag: string; groupId: number }) => {
+          await window.electronAPI.assignPromptTagToBelongGroup(params.tag, params.groupId);
+        },
+        { tag: tagName2, groupId },
+      );
 
       await electronTest.refreshData();
       await enterPromptTagManager(page);
@@ -327,10 +332,7 @@ test.describe("TagService 高级功能测试", () => {
       // 测试用例：空格分隔（使用 UI，因为测试目标是输入解析）
       const tag1 = electronTest.generateE2ePrefixName("space");
       const tag2 = electronTest.generateE2ePrefixName("space");
-      await page.fill(
-        `#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`,
-        `${tag1} ${tag2}`,
-      );
+      await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, `${tag1} ${tag2}`);
       await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "Enter");
 
       // 验证两个标签都被添加
@@ -346,10 +348,7 @@ test.describe("TagService 高级功能测试", () => {
       ).toBeVisible({ timeout: 1000 });
     });
 
-    test("提示词标签 - 解析多种分隔符的输入", async ({
-      electronTest,
-      page,
-    }) => {
+    test("提示词标签 - 解析多种分隔符的输入", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
       await enterPromptDetailView(page);
@@ -357,10 +356,7 @@ test.describe("TagService 高级功能测试", () => {
       // 测试用例：英文逗号分隔（使用 UI，因为测试目标是输入解析）
       const tag1 = electronTest.generateE2ePrefixName("comma1");
       const tag2 = electronTest.generateE2ePrefixName("comma2");
-      await page.fill(
-        `#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`,
-        `${tag1},${tag2}`,
-      );
+      await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, `${tag1},${tag2}`);
       await page.press(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, "Enter");
 
       // 验证两个标签都被添加
@@ -384,10 +380,7 @@ test.describe("TagService 高级功能测试", () => {
       // 测试用例：中文逗号分隔（使用 UI，因为测试目标是输入解析）
       const tag1 = electronTest.generateE2ePrefixName("cncomma1");
       const tag2 = electronTest.generateE2ePrefixName("cncomma2");
-      await page.fill(
-        `#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`,
-        `${tag1}，${tag2}`,
-      );
+      await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, `${tag1}，${tag2}`);
       await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "Enter");
 
       // 验证两个标签都被添加
@@ -411,10 +404,7 @@ test.describe("TagService 高级功能测试", () => {
       // 测试用例：中文逗号分隔（使用 UI，因为测试目标是输入解析）
       const tag1 = electronTest.generateE2ePrefixName("cncomma1");
       const tag2 = electronTest.generateE2ePrefixName("cncomma2");
-      await page.fill(
-        `#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`,
-        `${tag1}，${tag2}`,
-      );
+      await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, `${tag1}，${tag2}`);
       await page.press(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, "Enter");
 
       // 验证两个标签都被添加
@@ -434,10 +424,7 @@ test.describe("TagService 高级功能测试", () => {
   // ========== updated_at 更新验证测试 ==========
 
   test.describe("updated_at 字段更新验证", () => {
-    test("图像 - 添加标签时 updated_at 更新", async ({
-      electronTest,
-      page,
-    }) => {
+    test("图像 - 添加标签时 updated_at 更新", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
       // 1. 进入图像详情界面
@@ -478,10 +465,7 @@ test.describe("TagService 高级功能测试", () => {
       );
     });
 
-    test("提示词 - 添加标签时 updated_at 更新", async ({
-      electronTest,
-      page,
-    }) => {
+    test("提示词 - 添加标签时 updated_at 更新", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
       // 1. 进入提示词详情界面
@@ -503,12 +487,8 @@ test.describe("TagService 高级功能测试", () => {
       );
 
       // 4. 添加新标签（使用 UI，因为测试目标是 updated_at 更新）
-      const testTagName =
-        electronTest.generateE2ePrefixName("prompt_updated_at");
-      await page.fill(
-        `#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`,
-        testTagName,
-      );
+      const testTagName = electronTest.generateE2ePrefixName("prompt_updated_at");
+      await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, testTagName);
       await page.press(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, "Enter");
 
       // 等待标签添加成功
@@ -526,10 +506,7 @@ test.describe("TagService 高级功能测试", () => {
       );
     });
 
-    test("图像 - 批量添加标签时 updated_at 更新", async ({
-      electronTest,
-      page,
-    }) => {
+    test("图像 - 批量添加标签时 updated_at 更新", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
       // 1. 进入图像详情界面
@@ -554,10 +531,7 @@ test.describe("TagService 高级功能测试", () => {
       const tag1 = electronTest.generateE2ePrefixName("batch1");
       const tag2 = electronTest.generateE2ePrefixName("batch2");
       const tag3 = electronTest.generateE2ePrefixName("batch3");
-      await page.fill(
-        `#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`,
-        `${tag1} ${tag2} ${tag3}`,
-      );
+      await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, `${tag1} ${tag2} ${tag3}`);
       await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "Enter");
 
       // 等待所有标签添加成功
@@ -577,10 +551,7 @@ test.describe("TagService 高级功能测试", () => {
       expect(imageAfter?.tags).toContain(tag3);
     });
 
-    test("提示词 - 批量添加标签时 updated_at 更新", async ({
-      electronTest,
-      page,
-    }) => {
+    test("提示词 - 批量添加标签时 updated_at 更新", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
       // 1. 进入提示词详情界面
@@ -604,10 +575,7 @@ test.describe("TagService 高级功能测试", () => {
       // 4. 批量添加多个标签（逗号分隔）（使用 UI，因为测试目标是 updated_at 更新）
       const tag1 = electronTest.generateE2ePrefixName("pbatch1");
       const tag2 = electronTest.generateE2ePrefixName("pbatch2");
-      await page.fill(
-        `#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`,
-        `${tag1},${tag2}`,
-      );
+      await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, `${tag1},${tag2}`);
       await page.press(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, "Enter");
 
       // 等待所有标签添加成功

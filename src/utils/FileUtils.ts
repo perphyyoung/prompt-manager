@@ -3,8 +3,8 @@
  * 提供统一的文件/目录复制功能
  */
 
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from "fs";
+import path from "path";
 
 /**
  * 复制文件
@@ -69,7 +69,7 @@ interface CopyResult {
 export async function copyDirectoryWithProgress(
   source: string,
   target: string,
-  options: CopyDirectoryWithProgressOptions = {}
+  options: CopyDirectoryWithProgressOptions = {},
 ): Promise<CopyResult> {
   const { onProgress } = options;
 

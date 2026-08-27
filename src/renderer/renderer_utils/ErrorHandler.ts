@@ -1,4 +1,4 @@
-import { logger } from '../../utils/Logger.ts';
+import { logger } from "../../utils/Logger.ts";
 /**
  * 错误处理工具类
  * 统一处理错误消息提取、日志记录和用户提示
@@ -8,7 +8,7 @@ export interface ErrorHandlerOptions {
   showToast?: boolean;
   logError?: boolean;
   userMessage?: string;
-  toastType?: 'error' | 'warning' | 'info' | 'success';
+  toastType?: "error" | "warning" | "info" | "success";
   app?: { showToast?: (message: string, type: string) => void } | null;
 }
 
@@ -21,18 +21,14 @@ export class ErrorHandler {
   static handleError(
     context: ErrorContext,
     error: unknown,
-    options: ErrorHandlerOptions = {}
+    options: ErrorHandlerOptions = {},
   ): void {
-    const {
-      showToast = true,
-      logError = true,
-      userMessage,
-      toastType = 'error',
-      app
-    } = options;
+    const { showToast = true, logError = true, userMessage, toastType = "error", app } = options;
 
     const errorMessage = ErrorHandler.extractErrorMessage(error);
-    const fullMessage = userMessage ? `${userMessage}: ${errorMessage}` : `${context.operation}失败: ${errorMessage}`;
+    const fullMessage = userMessage
+      ? `${userMessage}: ${errorMessage}`
+      : `${context.operation}失败: ${errorMessage}`;
 
     if (logError && window.electronAPI?.logError) {
       window.electronAPI.logError(context.module, `Failed to ${context.operation}:`, error);
@@ -50,10 +46,10 @@ export class ErrorHandler {
     if (error instanceof Error) {
       return error.message;
     }
-    if (typeof error === 'string') {
+    if (typeof error === "string") {
       return error;
     }
-    return '未知错误';
+    return "未知错误";
   }
 
   static async handleAsyncError<T>(
@@ -63,16 +59,16 @@ export class ErrorHandler {
       showToast?: boolean;
       logError?: boolean;
       userMessage?: string;
-      toastType?: 'error' | 'warning' | 'info' | 'success';
+      toastType?: "error" | "warning" | "info" | "success";
       defaultValue?: T;
-    } = {}
+    } = {},
   ): Promise<T | undefined> {
     const {
       showToast = true,
       logError = true,
       userMessage,
-      toastType = 'error',
-      defaultValue
+      toastType = "error",
+      defaultValue,
     } = options;
 
     try {
@@ -82,7 +78,7 @@ export class ErrorHandler {
         showToast,
         logError,
         userMessage,
-        toastType
+        toastType,
       });
       return defaultValue;
     }
@@ -91,13 +87,17 @@ export class ErrorHandler {
   static handleWithToast(
     error: unknown,
     message: string,
-    toastType: 'error' | 'warning' | 'info' | 'success' = 'error',
-    logDetails?: { module: string; operation: string }
+    toastType: "error" | "warning" | "info" | "success" = "error",
+    logDetails?: { module: string; operation: string },
   ): void {
     const errorMessage = ErrorHandler.extractErrorMessage(error);
 
     if (logDetails) {
-      window.electronAPI?.logError?.(logDetails.module, `Failed to ${logDetails.operation}:`, error);
+      window.electronAPI?.logError?.(
+        logDetails.module,
+        `Failed to ${logDetails.operation}:`,
+        error,
+      );
     }
 
     window.app?.showToast?.(`${message}: ${errorMessage}`, toastType);

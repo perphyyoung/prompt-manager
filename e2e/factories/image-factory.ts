@@ -28,10 +28,7 @@ export class ImageApiFactory extends BaseTestDataFactory<IImage> {
 
     const result = await this.page.evaluate(
       async (params: { path: string; fileName: string }) => {
-        return await window.electronAPI.saveImageFile(
-          params.path,
-          params.fileName,
-        );
+        return await window.electronAPI.saveImageFile(params.path, params.fileName);
       },
       { path: tempPath, fileName },
     );
@@ -86,7 +83,10 @@ export class ImageApiFactory extends BaseTestDataFactory<IImage> {
   /**
    * 实现基类抽象方法：调用创建标签组 API
    */
-  protected async _createTagGroupApi(name: string, sortOrder: number): Promise<{ id: number; name: string; sortOrder: number } | null> {
+  protected async _createTagGroupApi(
+    name: string,
+    sortOrder: number,
+  ): Promise<{ id: number; name: string; sortOrder: number } | null> {
     return await this.page.evaluate(
       async (params: { name: string; sortOrder: number }) => {
         return await window.electronAPI.createImageTagGroup(params.name, params.sortOrder);
@@ -110,10 +110,7 @@ export class ImageApiFactory extends BaseTestDataFactory<IImage> {
   /**
    * 创建带标签的图像
    */
-  async createWithTags(
-    data: ImageCreateData,
-    tagNames: string[],
-  ): Promise<IImage> {
+  async createWithTags(data: ImageCreateData, tagNames: string[]): Promise<IImage> {
     const image = await this.create(data);
     await this._linkTagsToEntity(image.id, tagNames);
     return image;
@@ -148,10 +145,7 @@ export class ImageApiFactory extends BaseTestDataFactory<IImage> {
   /**
    * 直接创建提示词（通过 API，不依赖提示词工厂）
    */
-  private async _createPromptDirect(
-    label: string,
-    imageId: string,
-  ): Promise<IPrompt> {
+  private async _createPromptDirect(label: string, imageId: string): Promise<IPrompt> {
     const title = this.generateName(label);
     const prompt = await this.page.evaluate(
       async (params: { title: string; imageId: string }) => {
@@ -180,10 +174,7 @@ export class ImageApiFactory extends BaseTestDataFactory<IImage> {
   /**
    * 实现基类抽象方法：关联标签到图像
    */
-  protected async _linkTagsToEntity(
-    imageId: string,
-    tagNames: string[],
-  ): Promise<void> {
+  protected async _linkTagsToEntity(imageId: string, tagNames: string[]): Promise<void> {
     await this.page.evaluate(
       async (params: { imageId: string; tags: string[] }) => {
         await window.electronAPI.addImageTags(params.imageId, params.tags);

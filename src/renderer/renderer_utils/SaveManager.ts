@@ -1,14 +1,17 @@
-import { Constants } from '../../constants.ts';
-import { logger } from '../../utils/Logger.ts';
-import { SaveStrategy } from './SaveStrategy.ts';
+import { Constants } from "../../constants.ts";
+import { logger } from "../../utils/Logger.ts";
+import { SaveStrategy } from "./SaveStrategy.ts";
 
 interface FieldConfig {
   fieldId?: string;
-  saveMode?: 'debounce' | 'immediate' | 'manual';
+  saveMode?: "debounce" | "immediate" | "manual";
   delay?: number;
   elementId?: string;
   getValue?: (element: HTMLElement) => unknown;
-  validate?: (value: unknown, fieldId: string) => Promise<{ valid: boolean; error?: string }> | { valid: boolean; error?: string };
+  validate?: (
+    value: unknown,
+    fieldId: string,
+  ) => Promise<{ valid: boolean; error?: string }> | { valid: boolean; error?: string };
   beforeSave?: (value: unknown) => Promise<unknown> | unknown;
   onChange?: (value: unknown) => void | Promise<void>;
   autoResize?: boolean;
@@ -62,7 +65,7 @@ export class SaveManager {
    */
   registerField(fieldId: string, config: FieldConfig = {} as FieldConfig): void {
     const {
-      saveMode = 'debounce',
+      saveMode = "debounce",
       delay = 800,
       elementId,
       getValue,
@@ -70,7 +73,7 @@ export class SaveManager {
       beforeSave,
       onChange,
       autoResize,
-      statusId
+      statusId,
     } = config;
 
     // 获取初始值
@@ -88,7 +91,7 @@ export class SaveManager {
       beforeSave,
       onChange,
       autoResize,
-      statusId
+      statusId,
     });
 
     // 初始化值
@@ -109,20 +112,20 @@ export class SaveManager {
     const listeners: Array<{ event: string; fn: EventListener }> = [];
 
     // 自动调整高度
-    if (autoResize && element.tagName === 'TEXTAREA') {
+    if (autoResize && element.tagName === "TEXTAREA") {
       const autoResizeFn = () => {
         const textarea = element as HTMLTextAreaElement;
-        textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
+        textarea.style.height = "auto";
+        textarea.style.height = textarea.scrollHeight + "px";
       };
-      element.addEventListener('input', autoResizeFn);
-      listeners.push({ event: 'input', fn: autoResizeFn });
+      element.addEventListener("input", autoResizeFn);
+      listeners.push({ event: "input", fn: autoResizeFn });
       autoResizeFn();
     }
 
     // 根据保存模式绑定事件
     switch (saveMode) {
-      case 'debounce': {
+      case "debounce": {
         const inputFn = () => {
           const newValue = this.getFieldValue(element, getValue);
           this.handleFieldChange(fieldId, newValue);
@@ -130,13 +133,13 @@ export class SaveManager {
         const blurFn = () => {
           this.saveField(fieldId, this.getFieldValue(element, getValue));
         };
-        element.addEventListener('input', inputFn);
-        element.addEventListener('blur', blurFn);
-        listeners.push({ event: 'input', fn: inputFn }, { event: 'blur', fn: blurFn });
+        element.addEventListener("input", inputFn);
+        element.addEventListener("blur", blurFn);
+        listeners.push({ event: "input", fn: inputFn }, { event: "blur", fn: blurFn });
         break;
       }
 
-      case 'immediate': {
+      case "immediate": {
         const changeFn = async () => {
           const newValue = this.getFieldValue(element, getValue);
           this.currentValues.set(fieldId, newValue);
@@ -145,12 +148,12 @@ export class SaveManager {
             onChange(newValue);
           }
         };
-        element.addEventListener('change', changeFn);
-        listeners.push({ event: 'change', fn: changeFn });
+        element.addEventListener("change", changeFn);
+        listeners.push({ event: "change", fn: changeFn });
         break;
       }
 
-      case 'manual':
+      case "manual":
       default:
         // 手动保存模式，只触发 onChange 回调
         if (onChange) {
@@ -158,8 +161,8 @@ export class SaveManager {
             const newValue = this.getFieldValue(element, getValue);
             onChange(newValue);
           };
-          element.addEventListener('change', changeFn);
-          listeners.push({ event: 'change', fn: changeFn });
+          element.addEventListener("change", changeFn);
+          listeners.push({ event: "change", fn: changeFn });
         }
         break;
     }
@@ -189,7 +192,7 @@ export class SaveManager {
     this.currentValues.set(fieldId, value);
 
     // 防抖保存
-    if (field.saveMode === 'debounce') {
+    if (field.saveMode === "debounce") {
       this.debounceSave(fieldId, value, field.delay || 800);
     }
   }
@@ -247,12 +250,12 @@ export class SaveManager {
    * 保存单个字段
    */
   async saveField(fieldId: string, value: unknown, itemId?: string): Promise<SaveResult> {
-    if (this.isSaving) return { success: false, reason: 'saving_in_progress' };
+    if (this.isSaving) return { success: false, reason: "saving_in_progress" };
 
     const field = this.fields.get(fieldId);
     if (!field) {
-      logger.warn('SaveManager', `Field ${fieldId} not registered, skipping save`);
-      return { success: false, fieldId, error: 'Field not registered' };
+      logger.warn("SaveManager", `Field ${fieldId} not registered, skipping save`);
+      return { success: false, fieldId, error: "Field not registered" };
     }
 
     const statusEl = field.statusId ? document.getElementById(field.statusId) : null;
@@ -274,19 +277,19 @@ export class SaveManager {
       if (field.validate) {
         const validationResult = await field.validate(finalValue, fieldId);
         if (!validationResult.valid) {
-          throw new Error(validationResult.error || 'Validation failed');
+          throw new Error(validationResult.error || "Validation failed");
         }
       }
 
       // 执行保存
-      const result = await this.strategy.save(itemId || this.itemId || '', fieldId, finalValue);
+      const result = await this.strategy.save(itemId || this.itemId || "", fieldId, finalValue);
 
       if (result.success) {
         // 更新原始值
         this.setOriginal(fieldId, finalValue);
 
         // 显示成功状态
-        this.setStatus(statusEl, 'success');
+        this.setStatus(statusEl, "success");
 
         // 执行 onChange 回调
         if (field.onChange) {
@@ -301,8 +304,8 @@ export class SaveManager {
 
       return { success: true, fieldId, value: finalValue };
     } catch (error) {
-      logger.error('SaveManager', `Failed to save ${fieldId}:`, error);
-      this.setStatus(statusEl, 'error', (error as Error).message);
+      logger.error("SaveManager", `Failed to save ${fieldId}:`, error);
+      this.setStatus(statusEl, "error", (error as Error).message);
       return { success: false, fieldId, error: (error as Error).message };
     } finally {
       this.isSaving = false;
@@ -321,12 +324,14 @@ export class SaveManager {
   /**
    * 保存所有变更的字段
    */
-  async saveAll(itemId?: string): Promise<{ success: boolean; message?: string; results?: SaveResult[] }> {
+  async saveAll(
+    itemId?: string,
+  ): Promise<{ success: boolean; message?: string; results?: SaveResult[] }> {
     const changes = this.getChanges();
     const changedFieldIds = Object.keys(changes);
 
     if (changedFieldIds.length === 0) {
-      return { success: true, message: 'No changes to save' };
+      return { success: true, message: "No changes to save" };
     }
 
     const results: SaveResult[] = [];
@@ -347,20 +352,20 @@ export class SaveManager {
   /**
    * 设置状态显示
    */
-  private setStatus(element: HTMLElement | null, status: 'success' | 'error', message = ''): void {
+  private setStatus(element: HTMLElement | null, status: "success" | "error", message = ""): void {
     if (!element) return;
 
     element.className = `save-status save-status-${status}`;
 
     switch (status) {
-      case 'success':
+      case "success":
         element.textContent = Constants.STATUS_SAVED;
         setTimeout(() => {
-          element.className = 'save-status';
-          element.textContent = '';
+          element.className = "save-status";
+          element.textContent = "";
         }, 1000);
         break;
-      case 'error':
+      case "error":
         element.textContent = message || Constants.STATUS_SAVE_FAILED;
         break;
     }

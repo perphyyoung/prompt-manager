@@ -3,9 +3,9 @@
  * 测试导入导出功能的完整备份和恢复
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ImportExportManager } from '../../../src/renderer/managers/ImportExportManager';
-import { progressDialog } from '../../../src/renderer/components/ProgressDialog';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { ImportExportManager } from "../../../src/renderer/managers/ImportExportManager";
+import { progressDialog } from "../../../src/renderer/components/ProgressDialog";
 
 // 模拟 PromptManager
 const createMockApp = () => ({
@@ -21,7 +21,7 @@ const mockOnBackupProgress = vi.fn();
 const mockOffBackupProgress = vi.fn();
 
 // 模拟 ProgressDialog 模块
-vi.mock('../../../src/renderer/components/ProgressDialog', () => ({
+vi.mock("../../../src/renderer/components/ProgressDialog", () => ({
   progressDialog: {
     show: vi.fn(),
     hide: vi.fn(),
@@ -52,9 +52,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('ImportExportManager', () => {
-  describe('exportFullBackup', () => {
-    it('应该成功导出完整备份', async () => {
+describe("ImportExportManager", () => {
+  describe("exportFullBackup", () => {
+    it("应该成功导出完整备份", async () => {
       const mockApp = createMockApp();
       const manager = new ImportExportManager({ app: mockApp as any });
 
@@ -69,7 +69,7 @@ describe('ImportExportManager', () => {
 
       mockExportFullBackup.mockResolvedValue({
         success: true,
-        filePath: 'D:/backup/prompt-manager-backup-20260327.zip',
+        filePath: "D:/backup/prompt-manager-backup-20260327.zip",
         stats: mockStats,
       });
 
@@ -78,19 +78,17 @@ describe('ImportExportManager', () => {
       expect(result).toBe(true);
       expect(mockExportFullBackup).toHaveBeenCalledTimes(1);
       expect(progressDialog.show).toHaveBeenCalledWith({
-        title: '正在创建备份...',
-        status: '准备中...',
+        title: "正在创建备份...",
+        status: "准备中...",
         onCancel: expect.any(Function),
       });
       expect(mockOnBackupProgress).toHaveBeenCalled();
-      expect(progressDialog.complete).toHaveBeenCalledWith(
-        expect.stringContaining('备份成功')
-      );
+      expect(progressDialog.complete).toHaveBeenCalledWith(expect.stringContaining("备份成功"));
       // 验证导出成功后不自动重启
       expect(mockRelaunchApp).not.toHaveBeenCalled();
     });
 
-    it('应该处理用户取消导出', async () => {
+    it("应该处理用户取消导出", async () => {
       const mockApp = createMockApp();
       const manager = new ImportExportManager({ app: mockApp as any });
 
@@ -103,23 +101,21 @@ describe('ImportExportManager', () => {
       expect(progressDialog.complete).not.toHaveBeenCalled();
     });
 
-    it('应该处理导出失败', async () => {
+    it("应该处理导出失败", async () => {
       const mockApp = createMockApp();
       const manager = new ImportExportManager({ app: mockApp as any });
 
-      mockExportFullBackup.mockRejectedValue(new Error('磁盘空间不足'));
+      mockExportFullBackup.mockRejectedValue(new Error("磁盘空间不足"));
 
       const result = await manager.exportFullBackup();
 
       expect(result).toBe(false);
-      expect(progressDialog.error).toHaveBeenCalledWith(
-        '备份失败：磁盘空间不足'
-      );
+      expect(progressDialog.error).toHaveBeenCalledWith("备份失败：磁盘空间不足");
       expect(mockLogError).toHaveBeenCalled();
       expect(mockOffBackupProgress).toHaveBeenCalled();
     });
 
-    it('应该防止重复导出', async () => {
+    it("应该防止重复导出", async () => {
       const mockApp = createMockApp();
       const manager = new ImportExportManager({ app: mockApp as any });
 
@@ -130,24 +126,21 @@ describe('ImportExportManager', () => {
       const result = await manager.exportFullBackup();
 
       expect(result).toBe(false);
-      expect(mockApp.showToast).toHaveBeenCalledWith(
-        '备份正在进行中，请稍候',
-        'warning'
-      );
+      expect(mockApp.showToast).toHaveBeenCalledWith("备份正在进行中，请稍候", "warning");
       expect(mockExportFullBackup).not.toHaveBeenCalled();
     });
   });
 
-  describe('importFullBackup', () => {
-    it('应该成功导入完整备份', async () => {
+  describe("importFullBackup", () => {
+    it("应该成功导入完整备份", async () => {
       const mockApp = createMockApp();
       const manager = new ImportExportManager({ app: mockApp as any });
 
       const mockManifest = {
-        version: '1.0.0',
-        appName: 'prompt-manager',
-        appVersion: '1.0.0',
-        exportedAt: '2026-03-27T10:00:00.000Z',
+        version: "1.0.0",
+        appName: "prompt-manager",
+        appVersion: "1.0.0",
+        exportedAt: "2026-03-27T10:00:00.000Z",
         dataVersion: 1,
         contents: {
           database: true,
@@ -161,7 +154,7 @@ describe('ImportExportManager', () => {
       mockImportFullBackup.mockResolvedValue({
         success: true,
         manifest: mockManifest,
-        oldDataDir: 'D:/data/py-data_20260327-143022',
+        oldDataDir: "D:/data/py-data_20260327-143022",
       });
 
       const result = await manager.importFullBackup();
@@ -169,15 +162,13 @@ describe('ImportExportManager', () => {
       expect(result).toBe(true);
       expect(mockImportFullBackup).toHaveBeenCalledTimes(1);
       expect(progressDialog.show).toHaveBeenCalledWith({
-        title: '正在导入备份...',
-        status: '准备中...',
+        title: "正在导入备份...",
+        status: "准备中...",
         onCancel: expect.any(Function),
         onComplete: expect.any(Function),
       });
       expect(mockOnBackupProgress).toHaveBeenCalled();
-      expect(progressDialog.complete).toHaveBeenCalledWith(
-        expect.stringContaining('导入成功')
-      );
+      expect(progressDialog.complete).toHaveBeenCalledWith(expect.stringContaining("导入成功"));
 
       // 验证重启应用尚未被调用（需要用户点击关闭按钮触发 onComplete）
       expect(mockRelaunchApp).not.toHaveBeenCalled();
@@ -191,7 +182,7 @@ describe('ImportExportManager', () => {
       expect(mockRelaunchApp).toHaveBeenCalledTimes(1);
     });
 
-    it('应该处理用户取消导入', async () => {
+    it("应该处理用户取消导入", async () => {
       const mockApp = createMockApp();
       const manager = new ImportExportManager({ app: mockApp as any });
 
@@ -204,23 +195,21 @@ describe('ImportExportManager', () => {
       expect(progressDialog.complete).not.toHaveBeenCalled();
     });
 
-    it('应该处理导入失败', async () => {
+    it("应该处理导入失败", async () => {
       const mockApp = createMockApp();
       const manager = new ImportExportManager({ app: mockApp as any });
 
-      mockImportFullBackup.mockRejectedValue(new Error('备份文件损坏'));
+      mockImportFullBackup.mockRejectedValue(new Error("备份文件损坏"));
 
       const result = await manager.importFullBackup();
 
       expect(result).toBe(false);
-      expect(progressDialog.error).toHaveBeenCalledWith(
-        '导入失败：备份文件损坏'
-      );
+      expect(progressDialog.error).toHaveBeenCalledWith("导入失败：备份文件损坏");
       expect(mockLogError).toHaveBeenCalled();
       expect(mockOffBackupProgress).toHaveBeenCalled();
     });
 
-    it('应该防止重复导入', async () => {
+    it("应该防止重复导入", async () => {
       const mockApp = createMockApp();
       const manager = new ImportExportManager({ app: mockApp as any });
 
@@ -231,33 +220,30 @@ describe('ImportExportManager', () => {
       const result = await manager.importFullBackup();
 
       expect(result).toBe(false);
-      expect(mockApp.showToast).toHaveBeenCalledWith(
-        '操作正在进行中，请稍候',
-        'warning'
-      );
+      expect(mockApp.showToast).toHaveBeenCalledWith("操作正在进行中，请稍候", "warning");
       expect(mockImportFullBackup).not.toHaveBeenCalled();
     });
 
-    it('应该处理版本不兼容错误', async () => {
+    it("应该处理版本不兼容错误", async () => {
       const mockApp = createMockApp();
       const manager = new ImportExportManager({ app: mockApp as any });
 
       mockImportFullBackup.mockRejectedValue(
-        new Error('版本不兼容：备份版本 2.0.0，当前版本 1.0.0')
+        new Error("版本不兼容：备份版本 2.0.0，当前版本 1.0.0"),
       );
 
       const result = await manager.importFullBackup();
 
       expect(result).toBe(false);
       expect(progressDialog.error).toHaveBeenCalledWith(
-        '导入失败：版本不兼容：备份版本 2.0.0，当前版本 1.0.0'
+        "导入失败：版本不兼容：备份版本 2.0.0，当前版本 1.0.0",
       );
       expect(mockLogError).toHaveBeenCalled();
     });
   });
 
-  describe('getIsExporting', () => {
-    it('应该返回正确的导出状态', async () => {
+  describe("getIsExporting", () => {
+    it("应该返回正确的导出状态", async () => {
       const mockApp = createMockApp();
       const manager = new ImportExportManager({ app: mockApp as any });
 

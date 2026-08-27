@@ -7,7 +7,7 @@
  */
 export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
-  delay: number
+  delay: number,
 ): (...args: Parameters<T>) => void {
   let timeoutId: number | null = null;
 
@@ -28,7 +28,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
  * @returns 防抖后的函数
  */
 export function rafDebounce<T extends (...args: unknown[]) => unknown>(
-  fn: T
+  fn: T,
 ): (...args: Parameters<T>) => void {
   let rafId: number | null = null;
 
@@ -51,7 +51,7 @@ export function rafDebounce<T extends (...args: unknown[]) => unknown>(
  */
 export function throttle<T extends (...args: unknown[]) => unknown>(
   fn: T,
-  interval: number
+  interval: number,
 ): (...args: Parameters<T>) => void {
   let lastTime = 0;
 
@@ -79,7 +79,7 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
  */
 export function immediateDebounce<A extends unknown[], R>(
   fn: (...args: A) => R,
-  interval: number = 300
+  interval: number = 300,
 ): (...args: A) => R | undefined {
   let lastExecutionTime = 0;
   let isExecuting = false;

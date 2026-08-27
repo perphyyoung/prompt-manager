@@ -79,12 +79,12 @@ class EventBus {
     if (!this.events.has(event)) return;
 
     const count = this.events.get(event)!.size;
-    window.electronAPI.logInfo('EventBus', `emit "${event}", subscribers: ${count}`);
-    this.events.get(event)!.forEach(callback => {
+    window.electronAPI.logInfo("EventBus", `emit "${event}", subscribers: ${count}`);
+    this.events.get(event)!.forEach((callback) => {
       try {
         callback(data);
       } catch (error) {
-        window.electronAPI?.logError?.('EventBus', `Error in event handler for "${event}":`, error);
+        window.electronAPI?.logError?.("EventBus", `Error in event handler for "${event}":`, error);
       }
     });
   }

@@ -3,8 +3,8 @@
  * 所有标签相关的验证逻辑，纯函数，无副作用
  */
 
-import { Constants } from '../constants.ts';
-import type { TagName, DataType, ValidationResult, ErrorCode } from './types.ts';
+import { Constants } from "../constants.ts";
+import type { TagName, DataType, ValidationResult, ErrorCode } from "./types.ts";
 
 /**
  * 验证标签是否可以创建
@@ -17,7 +17,7 @@ import type { TagName, DataType, ValidationResult, ErrorCode } from './types.ts'
 export function validateTagCreate(
   tag: TagName,
   existingTags: TagName[],
-  reservedTags: TagName[]
+  reservedTags: TagName[],
 ): ValidationResult {
   const trimmedTag = tag.trim();
 
@@ -25,8 +25,8 @@ export function validateTagCreate(
   if (!trimmedTag) {
     return {
       valid: false,
-      error: '标签名称不能为空',
-      code: 'INVALID' as ErrorCode
+      error: "标签名称不能为空",
+      code: "INVALID" as ErrorCode,
     };
   }
 
@@ -35,7 +35,7 @@ export function validateTagCreate(
     return {
       valid: false,
       error: `"${trimmedTag}" 是系统保留标签，不能使用`,
-      code: 'RESERVED' as ErrorCode
+      code: "RESERVED" as ErrorCode,
     };
   }
 
@@ -43,8 +43,8 @@ export function validateTagCreate(
   if (existingTags.includes(trimmedTag)) {
     return {
       valid: false,
-      error: '标签已存在',
-      code: 'EXISTS' as ErrorCode
+      error: "标签已存在",
+      code: "EXISTS" as ErrorCode,
     };
   }
 
@@ -57,25 +57,22 @@ export function validateTagCreate(
  * @param existingTags - 已存在的标签列表
  * @returns 验证结果
  */
-export function validateTagDelete(
-  tag: TagName,
-  existingTags: TagName[]
-): ValidationResult {
+export function validateTagDelete(tag: TagName, existingTags: TagName[]): ValidationResult {
   const trimmedTag = tag.trim();
 
   if (!trimmedTag) {
     return {
       valid: false,
-      error: '标签名称不能为空',
-      code: 'INVALID' as ErrorCode
+      error: "标签名称不能为空",
+      code: "INVALID" as ErrorCode,
     };
   }
 
   if (!existingTags.includes(trimmedTag)) {
     return {
       valid: false,
-      error: '标签不存在',
-      code: 'NOT_FOUND' as ErrorCode
+      error: "标签不存在",
+      code: "NOT_FOUND" as ErrorCode,
     };
   }
 
@@ -92,7 +89,7 @@ export function validateTagDelete(
 export function validateTagRename(
   oldName: TagName,
   newName: TagName,
-  existingTags: TagName[]
+  existingTags: TagName[],
 ): ValidationResult {
   const trimmedOld = oldName.trim();
   const trimmedNew = newName.trim();
@@ -100,40 +97,40 @@ export function validateTagRename(
   if (!trimmedOld) {
     return {
       valid: false,
-      error: '原标签名称不能为空',
-      code: 'INVALID' as ErrorCode
+      error: "原标签名称不能为空",
+      code: "INVALID" as ErrorCode,
     };
   }
 
   if (!trimmedNew) {
     return {
       valid: false,
-      error: '新标签名称不能为空',
-      code: 'INVALID' as ErrorCode
+      error: "新标签名称不能为空",
+      code: "INVALID" as ErrorCode,
     };
   }
 
   if (trimmedOld === trimmedNew) {
     return {
       valid: false,
-      error: '新标签名称与原名称相同',
-      code: 'INVALID' as ErrorCode
+      error: "新标签名称与原名称相同",
+      code: "INVALID" as ErrorCode,
     };
   }
 
   if (!existingTags.includes(trimmedOld)) {
     return {
       valid: false,
-      error: '原标签不存在',
-      code: 'NOT_FOUND' as ErrorCode
+      error: "原标签不存在",
+      code: "NOT_FOUND" as ErrorCode,
     };
   }
 
   if (existingTags.includes(trimmedNew)) {
     return {
       valid: false,
-      error: '新标签名称已存在',
-      code: 'EXISTS' as ErrorCode
+      error: "新标签名称已存在",
+      code: "EXISTS" as ErrorCode,
     };
   }
 
@@ -151,8 +148,8 @@ export function validateGroupName(name: string): ValidationResult {
   if (!trimmedName) {
     return {
       valid: false,
-      error: '组名称不能为空',
-      code: 'INVALID' as ErrorCode
+      error: "组名称不能为空",
+      code: "INVALID" as ErrorCode,
     };
   }
 
@@ -165,9 +162,7 @@ export function validateGroupName(name: string): ValidationResult {
  * @returns 保留标签列表
  */
 export function getReservedTags(type: DataType): TagName[] {
-  return type === 'prompt'
-    ? [...Constants.PROMPT_SPECIAL_TAGS]
-    : [...Constants.IMAGE_SPECIAL_TAGS];
+  return type === "prompt" ? [...Constants.PROMPT_SPECIAL_TAGS] : [...Constants.IMAGE_SPECIAL_TAGS];
 }
 
 /**

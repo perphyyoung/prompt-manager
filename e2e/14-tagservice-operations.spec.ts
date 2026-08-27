@@ -1,12 +1,12 @@
-import { expect } from '@playwright/test';
+import { expect } from "@playwright/test";
 import {
   test,
   enterImageTagManager,
   enterPromptTagManager,
   closeImageTagManager,
   closePromptTagManager,
-} from './electron-test.ts';
-import { Constants } from '../src/constants.ts';
+} from "./electron-test.ts";
+import { Constants } from "../src/constants.ts";
 
 /**
  * TagService 操作 E2E 测试
@@ -19,19 +19,19 @@ import { Constants } from '../src/constants.ts';
  * 4. 标签搜索（自动完成）
  * 5. 批量标签操作
  */
-test.describe('TagService 操作测试', () => {
+test.describe("TagService 操作测试", () => {
   // ========== 标签组管理测试 ==========
 
-  test.describe('标签组管理', () => {
-    test('图像标签组 - 创建、编辑、删除完整流程', async ({ electronTest, page }) => {
+  test.describe("标签组管理", () => {
+    test("图像标签组 - 创建、编辑、删除完整流程", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // 1. 创建标签组（使用 UI，因为测试目标是 UI 创建流程）
-      const groupName = electronTest.generateE2ePrefixName('test_group');
+      const groupName = electronTest.generateE2ePrefixName("test_group");
       await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_GROUP_BTN}`);
       await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
       await page.fill(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_NAME}`, groupName);
@@ -51,7 +51,7 @@ test.describe('TagService 操作测试', () => {
 
       // 等待模态框关闭
       await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL}`, {
-        state: 'hidden',
+        state: "hidden",
         timeout: 1000,
       });
 
@@ -62,12 +62,12 @@ test.describe('TagService 操作测试', () => {
       await expect(groupElement).toBeVisible({ timeout: 1000 });
 
       // 2. 编辑标签组名称（使用 UI）
-      const newGroupName = electronTest.generateE2ePrefixName('group_renamed');
-      await groupElement.locator('.tag-group-btn.edit').click();
+      const newGroupName = electronTest.generateE2ePrefixName("group_renamed");
+      await groupElement.locator(".tag-group-btn.edit").click();
 
       // 等待编辑对话框
       await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
 
@@ -94,11 +94,11 @@ test.describe('TagService 操作测试', () => {
       await expect(renamedGroup).toContainText(newGroupName);
 
       // 3. 删除标签组（使用 UI）
-      await renamedGroup.locator('.tag-group-btn.delete').click();
+      await renamedGroup.locator(".tag-group-btn.delete").click();
 
       // 确认删除
       await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
       await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
@@ -120,15 +120,15 @@ test.describe('TagService 操作测试', () => {
       await closeImageTagManager(page);
     });
 
-    test('提示词标签组 - 创建、编辑、删除完整流程', async ({ electronTest, page }) => {
+    test("提示词标签组 - 创建、编辑、删除完整流程", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // 1. 创建标签组（使用 UI，因为测试目标是 UI 创建流程）
-      const groupName = electronTest.generateE2ePrefixName('prompt_test_group');
+      const groupName = electronTest.generateE2ePrefixName("prompt_test_group");
       await page.click(`#${Constants.Ids.ADD_PROMPT_TAG_GROUP_BTN}`);
       await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_MODAL}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
       await page.fill(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_NAME}`, groupName);
@@ -148,7 +148,7 @@ test.describe('TagService 操作测试', () => {
 
       // 等待模态框关闭
       await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_MODAL}`, {
-        state: 'hidden',
+        state: "hidden",
         timeout: 1000,
       });
 
@@ -159,12 +159,12 @@ test.describe('TagService 操作测试', () => {
       await expect(groupElement).toBeVisible({ timeout: 1000 });
 
       // 2. 编辑标签组名称（使用 UI）
-      const newGroupName = electronTest.generateE2ePrefixName('prompt_group_renamed');
-      await groupElement.locator('.tag-group-btn.edit').click();
+      const newGroupName = electronTest.generateE2ePrefixName("prompt_group_renamed");
+      await groupElement.locator(".tag-group-btn.edit").click();
 
       // 等待编辑对话框
       await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_MODAL}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
 
@@ -191,11 +191,11 @@ test.describe('TagService 操作测试', () => {
       await expect(renamedGroup).toContainText(newGroupName);
 
       // 3. 删除标签组（使用 UI）
-      await renamedGroup.locator('.tag-group-btn.delete').click();
+      await renamedGroup.locator(".tag-group-btn.delete").click();
 
       // 确认删除
       await page.waitForSelector(`#${Constants.Ids.CONFIRM_MODAL}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
       await page.click(`#${Constants.Ids.CONFIRM_OK_BTN}`);
@@ -220,16 +220,16 @@ test.describe('TagService 操作测试', () => {
 
   // ========== 标签分配到组测试 ==========
 
-  test.describe('标签分配到组', () => {
-    test('图像标签 - 创建并分配到组', async ({ electronTest, page }) => {
+  test.describe("标签分配到组", () => {
+    test("图像标签 - 创建并分配到组", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // 1. 创建标签组（使用 UI，因为测试目标是 UI 创建流程）
-      const groupName = electronTest.generateE2ePrefixName('assign_test_group');
+      const groupName = electronTest.generateE2ePrefixName("assign_test_group");
       await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_GROUP_BTN}`);
       await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
       await page.fill(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_NAME}`, groupName);
@@ -249,15 +249,15 @@ test.describe('TagService 操作测试', () => {
 
       // 等待模态框关闭
       await page.waitForSelector(`#${Constants.Ids.IMAGE_TAG_GROUP_EDIT_MODAL}`, {
-        state: 'hidden',
+        state: "hidden",
         timeout: 1000,
       });
 
       // 2. 创建标签并指定组（使用 UI）
-      const tagName = electronTest.generateE2ePrefixName('tag_with_group');
+      const tagName = electronTest.generateE2ePrefixName("tag_with_group");
       await page.click(`#${Constants.Ids.ADD_IMAGE_TAG_IN_MANAGER_BTN}`);
       await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
 
@@ -298,15 +298,15 @@ test.describe('TagService 操作测试', () => {
       await closeImageTagManager(page);
     });
 
-    test('提示词标签 - 创建并分配到组', async ({ electronTest, page }) => {
+    test("提示词标签 - 创建并分配到组", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // 1. 创建标签组（使用 UI，因为测试目标是 UI 创建流程）
-      const groupName = electronTest.generateE2ePrefixName('prompt_assign_group');
+      const groupName = electronTest.generateE2ePrefixName("prompt_assign_group");
       await page.click(`#${Constants.Ids.ADD_PROMPT_TAG_GROUP_BTN}`);
       await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_MODAL}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
       await page.fill(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_NAME}`, groupName);
@@ -326,15 +326,15 @@ test.describe('TagService 操作测试', () => {
 
       // 等待模态框关闭
       await page.waitForSelector(`#${Constants.Ids.PROMPT_TAG_GROUP_EDIT_MODAL}`, {
-        state: 'hidden',
+        state: "hidden",
         timeout: 1000,
       });
 
       // 2. 创建标签并指定组（使用 UI）
-      const tagName = electronTest.generateE2ePrefixName('prompt_tag_with_group');
+      const tagName = electronTest.generateE2ePrefixName("prompt_tag_with_group");
       await page.click(`#${Constants.Ids.ADD_PROMPT_TAG_IN_MANAGER_BTN}`);
       await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
 
@@ -378,15 +378,15 @@ test.describe('TagService 操作测试', () => {
 
   // ========== 标签重命名测试 ==========
 
-  test.describe('标签重命名', () => {
-    test('图像标签 - 重命名标签', async ({ electronTest, page }) => {
+  test.describe("标签重命名", () => {
+    test("图像标签 - 重命名标签", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
       const factory = electronTest.getApiFactory();
       const imageFactory = factory.createImageFactory();
 
       // 1. 创建标签（使用 API 工厂，因为测试目标是重命名而非创建）
-      const originalTagName = electronTest.generateE2ePrefixName('original');
+      const originalTagName = electronTest.generateE2ePrefixName("original");
       await imageFactory.createTag(originalTagName);
 
       await electronTest.refreshData();
@@ -399,16 +399,16 @@ test.describe('TagService 操作测试', () => {
       await expect(tagElement).toBeVisible({ timeout: 1000 });
 
       // 2. 重命名标签（点击编辑按钮，使用 UI）
-      const newTagName = electronTest.generateE2ePrefixName('renamed');
-      await tagElement.locator('.tag-edit-btn').click();
+      const newTagName = electronTest.generateE2ePrefixName("renamed");
+      await tagElement.locator(".tag-edit-btn").click();
 
       // 等待重命名对话框显示
       await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
       await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
 
@@ -448,14 +448,14 @@ test.describe('TagService 操作测试', () => {
       await closeImageTagManager(page);
     });
 
-    test('提示词标签 - 重命名标签', async ({ electronTest, page }) => {
+    test("提示词标签 - 重命名标签", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
       const factory = electronTest.getApiFactory();
       const promptFactory = factory.createPromptFactory();
 
       // 1. 创建标签（使用 API 工厂，因为测试目标是重命名而非创建）
-      const originalTagName = electronTest.generateE2ePrefixName('prompt_original');
+      const originalTagName = electronTest.generateE2ePrefixName("prompt_original");
       await promptFactory.createTag(originalTagName);
 
       await electronTest.refreshData();
@@ -468,16 +468,16 @@ test.describe('TagService 操作测试', () => {
       await expect(tagElement).toBeVisible({ timeout: 1000 });
 
       // 2. 重命名标签（点击编辑按钮，使用 UI）
-      const newTagName = electronTest.generateE2ePrefixName('prompt_renamed');
-      await tagElement.locator('.tag-edit-btn').click();
+      const newTagName = electronTest.generateE2ePrefixName("prompt_renamed");
+      await tagElement.locator(".tag-edit-btn").click();
 
       // 等待重命名对话框显示
       await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
       await page.waitForSelector(`#${Constants.Ids.INPUT_MODAL_FIELD}`, {
-        state: 'visible',
+        state: "visible",
         timeout: 1000,
       });
 
@@ -520,16 +520,16 @@ test.describe('TagService 操作测试', () => {
 
   // ========== 标签搜索功能测试 ==========
 
-  test.describe('标签搜索功能', () => {
-    test('图像标签管理器 - 搜索标签', async ({ electronTest, page }) => {
+  test.describe("标签搜索功能", () => {
+    test("图像标签管理器 - 搜索标签", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
       const factory = electronTest.getApiFactory();
       const imageFactory = factory.createImageFactory();
 
       // 创建测试标签（使用 API 工厂，因为测试目标是搜索而非创建）
-      const searchTagName = electronTest.generateE2ePrefixName('search_test');
-      const otherTagName = electronTest.generateE2ePrefixName('other_tag');
+      const searchTagName = electronTest.generateE2ePrefixName("search_test");
+      const otherTagName = electronTest.generateE2ePrefixName("other_tag");
       await imageFactory.createTag(searchTagName);
       await imageFactory.createTag(otherTagName);
 
@@ -537,17 +537,17 @@ test.describe('TagService 操作测试', () => {
       await enterImageTagManager(page);
 
       // 搜索特定标签
-      await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, 'search_test');
+      await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, "search_test");
 
       // 验证搜索结果
       await page.waitForFunction(
         (params: { containerId: string; tagName: string; otherTag: string }) => {
           const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
           const hasTargetTag = Array.from(items).some((item) =>
-            item.getAttribute('data-tag')?.includes('search_test'),
+            item.getAttribute("data-tag")?.includes("search_test"),
           );
           const hasOtherTag = Array.from(items).some(
-            (item) => item.getAttribute('data-tag') === params.otherTag,
+            (item) => item.getAttribute("data-tag") === params.otherTag,
           );
           return hasTargetTag && !hasOtherTag;
         },
@@ -577,15 +577,15 @@ test.describe('TagService 操作测试', () => {
       await closeImageTagManager(page);
     });
 
-    test('提示词标签管理器 - 搜索标签', async ({ electronTest, page }) => {
+    test("提示词标签管理器 - 搜索标签", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
 
       const factory = electronTest.getApiFactory();
       const promptFactory = factory.createPromptFactory();
 
       // 创建测试标签（使用 API 工厂，因为测试目标是搜索而非创建）
-      const searchTagName = electronTest.generateE2ePrefixName('prompt_search');
-      const otherTagName = electronTest.generateE2ePrefixName('prompt_other');
+      const searchTagName = electronTest.generateE2ePrefixName("prompt_search");
+      const otherTagName = electronTest.generateE2ePrefixName("prompt_other");
       await promptFactory.createTag(searchTagName);
       await promptFactory.createTag(otherTagName);
 
@@ -593,17 +593,17 @@ test.describe('TagService 操作测试', () => {
       await enterPromptTagManager(page);
 
       // 搜索特定标签
-      await page.fill(`#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`, 'prompt_search');
+      await page.fill(`#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`, "prompt_search");
 
       // 验证搜索结果
       await page.waitForFunction(
         (params: { containerId: string; tagName: string; otherTag: string }) => {
           const items = document.querySelectorAll(`#${params.containerId} .tag-manager-item`);
           const hasTargetTag = Array.from(items).some((item) =>
-            item.getAttribute('data-tag')?.includes('prompt_search'),
+            item.getAttribute("data-tag")?.includes("prompt_search"),
           );
           const hasOtherTag = Array.from(items).some(
-            (item) => item.getAttribute('data-tag') === params.otherTag,
+            (item) => item.getAttribute("data-tag") === params.otherTag,
           );
           return hasTargetTag && !hasOtherTag;
         },
@@ -633,6 +633,4 @@ test.describe('TagService 操作测试', () => {
       await closePromptTagManager(page);
     });
   });
-
-
 });

@@ -1,5 +1,5 @@
-import { vi, MockedFunction } from 'vitest';
-import { IElectronAPI } from '../../src/preload/index';
+import { vi, MockedFunction } from "vitest";
+import { IElectronAPI } from "../../src/preload/index";
 
 type MockedElectronAPI = {
   [K in keyof IElectronAPI]: IElectronAPI[K] extends (...args: infer A) => infer R
@@ -16,12 +16,12 @@ export const createMockElectronAPI = (): Partial<MockedElectronAPI> => ({
   addImageTags: vi.fn(),
   getPromptById: vi.fn(),
   getImageById: vi.fn(),
-  logError: vi.fn()
+  logError: vi.fn(),
 });
 
 export const resetMockElectronAPI = (): void => {
   Object.values(window.electronAPI).forEach((fn) => {
-    if (typeof fn === 'function' && 'mockClear' in fn && typeof fn.mockClear === 'function') {
+    if (typeof fn === "function" && "mockClear" in fn && typeof fn.mockClear === "function") {
       fn.mockClear();
     }
   });

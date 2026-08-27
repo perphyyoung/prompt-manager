@@ -75,7 +75,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
    * @param prompt - 提示词对象
    * @param options - 选项
    */
-  async open(prompt : IPrompt, options: IOpenOptions = {}): Promise<void> {
+  async open(prompt: IPrompt, options: IOpenOptions = {}): Promise<void> {
     const modal = document.getElementById(this.modalId);
     if (!modal) {
       window.electronAPI.logError("PromptDetailManager.ts", "Prompt detail modal not found");
@@ -102,31 +102,21 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
       }
 
       this.currentItem = latestPrompt;
-
       this.fillFormData(latestPrompt);
-
       this.setSafeState(latestPrompt.isSafe === 1);
-
       this.updateFavoriteBtnUI(!!latestPrompt.isFavorite);
-
       await this.loadImages(latestPrompt);
-
       this.initTagManager(latestPrompt);
-
       this.initSaveManager(latestPrompt);
-
       await this.initNavigatorForPrompt(latestPrompt, options);
-
       this.showModal();
 
       // 监听图像变更事件，刷新图像预览标签
       this.subscribeToImagesChanged();
-
       this.bindImageUploadEvents();
 
       // 设置图像右键菜单回调
       this.initImageContextMenu();
-
       this.autoResizeAllTextareas();
     } catch (error) {
       ErrorHandler.handleError(
@@ -142,7 +132,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
    * @param prompt - 提示词对象
    * @private
    */
-  private fillFormData(prompt : IPrompt): void {
+  private fillFormData(prompt: IPrompt): void {
     const idInput = document.getElementById(
       Constants.Ids.PROMPT_DETAIL_ID,
     ) as HTMLInputElement | null;
@@ -195,7 +185,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
    * @param prompt - 提示词对象
    * @private
    */
-  private async loadImages(prompt : IPrompt): Promise<void> {
+  private async loadImages(prompt: IPrompt): Promise<void> {
     // 清空 currentImages 缓存
     this.app.promptRefImagesCache.clear();
 
@@ -222,27 +212,24 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
    * @param prompt - 提示词对象
    * @private
    */
-  private initTagManager(prompt : IPrompt): void {
+  private initTagManager(prompt: IPrompt): void {
     this.currentTags = [...(prompt.tags || [])];
 
     // 标签增删逻辑与图像详情同构，统一由 DetailTagController 提供
     const detailTagManager: IDetailTagManager = createDetailTagController({
-      type: 'prompt',
-      moduleLabel: 'PromptDetailManager.ts',
+      type: "prompt",
+      moduleLabel: "PromptDetailManager.ts",
       getCurrentItemId: () => this.currentItem?.id,
       getTags: () => this.currentTags,
       commitTags: (tags) => {
         this.currentTags = tags;
       },
       notifyChanged: () => this.app.eventBus.emit(Events.PROMPTS_CHANGED),
-      showToast: (message, type) => this.app.showToast(message, type)
+      showToast: (message, type) => this.app.showToast(message, type),
     });
 
     // 使用基类的标签管理功能
-    this.initDetailTagManager(
-      Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER,
-      detailTagManager,
-    );
+    this.initDetailTagManager(Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER, detailTagManager);
 
     // 触发渲染
     detailTagManager.onRender?.();
@@ -355,7 +342,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
    * @param prompt - 提示词对象
    * @private
    */
-  private initSaveManager(prompt : IPrompt): void {
+  private initSaveManager(prompt: IPrompt): void {
     // 清理旧的
     if (this.promptSaveManager) {
       this.promptSaveManager.destroy();
@@ -474,7 +461,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
         const boolValue = Boolean(value);
         // 更新 currentItem 的收藏状态
         if (this.currentItem) {
-          (this.currentItem).isFavorite = boolValue ? 1 : 0;
+          this.currentItem.isFavorite = boolValue ? 1 : 0;
         }
         this.updateFavoriteBtnUI(boolValue);
         this.app.showToast(boolValue ? "已收藏" : "已取消收藏", "success");
@@ -615,10 +602,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
    * @param options - 选项
    * @private
    */
-  private async initNavigatorForPrompt(
-    prompt : IPrompt,
-    options: IOpenOptions = {},
-  ): Promise<void> {
+  private async initNavigatorForPrompt(prompt: IPrompt, options: IOpenOptions = {}): Promise<void> {
     // 如果导航器已存在，先销毁旧的事件监听器
     if (this.navigator) {
       this.navigator.destroy();
@@ -628,7 +612,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
     const items =
       options.filteredList && options.filteredList.length > 0 ? [...options.filteredList] : [];
 
-    const onNavigate = async (targetPrompt : IPrompt) => {
+    const onNavigate = async (targetPrompt: IPrompt) => {
       // 使用 targetPrompt，因为它来自快照，已经包含所需的图像信息
       // 但需要确保图像数据是最新的，从缓存中同步
       const latestPrompt = cacheManager.getCachedPrompt(targetPrompt.id);
@@ -820,12 +804,12 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
                 try {
                   const result = await window.electronAPI.replaceImage(imageId);
                   if (result.canceled) return;
-                  if (result.reason === 'same_image') {
-                    this.app.showToast('选择的图像与当前图像相同', 'info');
+                  if (result.reason === "same_image") {
+                    this.app.showToast("选择的图像与当前图像相同", "info");
                     return;
                   }
                   if (result.success) {
-                    this.app.showToast('图像已替换', 'success');
+                    this.app.showToast("图像已替换", "success");
                     // 重新加载当前提示词，更新图像关联缓存
                     const currentPrompt = this.currentItem;
                     // 刷新新图像缓存（包含最新的更新时间），确保图像主界面按最近更新排序正确
@@ -840,7 +824,8 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
                     }
                     if (relatedPromptIds.length > 0) {
                       // 批量获取，避免循环内逐条 IPC
-                      const updatedPrompts = await window.electronAPI.getPromptsByIds(relatedPromptIds);
+                      const updatedPrompts =
+                        await window.electronAPI.getPromptsByIds(relatedPromptIds);
                       for (const updatedPrompt of updatedPrompts) {
                         cacheManager.cachePrompt(updatedPrompt);
                       }
@@ -860,11 +845,11 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
                   }
                 } catch (error) {
                   window.electronAPI.logError(
-                    'PromptDetailManager.ts',
-                    'Failed to replace image:',
+                    "PromptDetailManager.ts",
+                    "Failed to replace image:",
                     error,
                   );
-                  this.app.showToast('替换图像失败', 'error');
+                  this.app.showToast("替换图像失败", "error");
                 }
               },
             },
@@ -1094,28 +1079,32 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
 
     // 获取所有图像的完整路径并渲染
     const previews = await Promise.all(
-      validImages.map(async (imgRef: {
-        id: string;
-        relativePath?: string;
-        thumbnailPath?: string;
-        tags?: string[];
-        fileName?: string;
-      }, index: number) => {
-        const cached = cacheManager.getCachedImage(imgRef.id);
-        const fetched = allImages?.find((i: { id?: string }) => i.id === imgRef.id);
-        // 兜底使用 imgRef 自身：其来自 prompt.images，含 relativePath/thumbnailPath，
-        // 避免因 getImageCache 未命中（多图仅缓存了首图）而丢弃其余图像
-        const img = cached || fetched || imgRef;
-        if (!img) return "";
-        const imgPath = (img.relativePath || img.thumbnailPath) as string | undefined;
-        if (!imgPath) return "";
-        const imagePath = await window.electronAPI.getImagePath(imgPath);
-        const isFromDetailJump = this.app.isFromDetailJump;
+      validImages.map(
+        async (
+          imgRef: {
+            id: string;
+            relativePath?: string;
+            thumbnailPath?: string;
+            tags?: string[];
+            fileName?: string;
+          },
+          index: number,
+        ) => {
+          const cached = cacheManager.getCachedImage(imgRef.id);
+          const fetched = allImages?.find((i: { id?: string }) => i.id === imgRef.id);
+          // 兜底使用 imgRef 自身：其来自 prompt.images，含 relativePath/thumbnailPath，
+          // 避免因 getImageCache 未命中（多图仅缓存了首图）而丢弃其余图像
+          const img = cached || fetched || imgRef;
+          if (!img) return "";
+          const imgPath = (img.relativePath || img.thumbnailPath) as string | undefined;
+          if (!imgPath) return "";
+          const imagePath = await window.electronAPI.getImagePath(imgPath);
+          const isFromDetailJump = this.app.isFromDetailJump;
 
-        // 生成标签 HTML（使用展示标签样式）
-        const tagsHtml = this.generateTagsHtml(img.tags, "tag-display", "tag-display-empty");
+          // 生成标签 HTML（使用展示标签样式）
+          const tagsHtml = this.generateTagsHtml(img.tags, "tag-display", "tag-display-empty");
 
-        return `
+          return `
           <div class="image-preview-item" data-index="${index}" data-image-id="${img.id}">
             <img src="file://${imagePath}" alt="${img.fileName}">
             <div class="image-preview-tags">
@@ -1130,7 +1119,8 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
             <button type="button" class="remove-image" data-index="${index}" title="删除">×</button>
           </div>
         `;
-      }),
+        },
+      ),
     );
 
     container.innerHTML = previews.filter((p) => p).join("");
@@ -1162,7 +1152,11 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
           try {
             image = await window.electronAPI.getImageById(imageId);
           } catch (error) {
-            window.electronAPI.logError('PromptDetailManager.ts', 'Failed to fetch image by id:', error);
+            window.electronAPI.logError(
+              "PromptDetailManager.ts",
+              "Failed to fetch image by id:",
+              error,
+            );
           }
         }
         if (image) {

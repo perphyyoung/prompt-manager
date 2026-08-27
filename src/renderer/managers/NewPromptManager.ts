@@ -1,9 +1,9 @@
-import { DialogService, DialogConfig, DelaySaveStrategy } from '../services/index.ts';
-import { ImagePreviewManager } from './ImagePreviewManager.ts';
-import { cacheManager, DuplicatePreventionMixin } from '../../utils/index.ts';
-import { ErrorHandler } from '../renderer_utils/index.ts';
-import { IImage } from '../../types/entities.ts';
-import { Constants, Events } from '../../constants.ts';
+import { DialogService, DialogConfig, DelaySaveStrategy } from "../services/index.ts";
+import { ImagePreviewManager } from "./ImagePreviewManager.ts";
+import { cacheManager, DuplicatePreventionMixin } from "../../utils/index.ts";
+import { ErrorHandler } from "../renderer_utils/index.ts";
+import { IImage } from "../../types/entities.ts";
+import { Constants, Events } from "../../constants.ts";
 
 /**
  * App 类型定义
@@ -64,10 +64,15 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
   constructor(options: INewPromptManagerOptions) {
     super();
     this.app = options.app;
-    this.strategy = new DelaySaveStrategy(this.app as unknown as { eventBus: { emit: (event: string) => void }; [key: string]: unknown });
+    this.strategy = new DelaySaveStrategy(
+      this.app as unknown as {
+        eventBus: { emit: (event: string) => void };
+        [key: string]: unknown;
+      },
+    );
     this.previewManager = new ImagePreviewManager({
       containerId: Constants.Ids.NEW_PROMPT_IMAGE_PREVIEW_LIST,
-      onRemove: (index: number) => this.handleRemoveImage(index)
+      onRemove: (index: number) => this.handleRemoveImage(index),
     });
     // 绑定事件委托（只需执行一次）
     this.previewManager.bindEvents();
@@ -99,16 +104,18 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
       this.strategy.clear(); // 清理之前的状态
 
       // 初始化表单
-      const contentInput = document.getElementById(Constants.Ids.NEW_PROMPT_CONTENT) as HTMLTextAreaElement | null;
+      const contentInput = document.getElementById(
+        Constants.Ids.NEW_PROMPT_CONTENT,
+      ) as HTMLTextAreaElement | null;
       if (contentInput) {
-        contentInput.value = '';
+        contentInput.value = "";
       }
       this.previewManager.clear();
 
       // 显示页面
       const page = document.getElementById(Constants.Ids.NEW_PROMPT_PAGE);
       if (page) {
-        page.classList.add('active');
+        page.classList.add("active");
       }
 
       // 渲染预填充图像（如果有）
@@ -125,12 +132,11 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
       if (contentInput) {
         contentInput.focus();
       }
-
     } catch (error) {
       ErrorHandler.handleError(
-        { module: 'NewPromptManager.ts', operation: 'open new prompt page' },
+        { module: "NewPromptManager.ts", operation: "open new prompt page" },
         error,
-        { userMessage: 'Failed to open new prompt page' }
+        { userMessage: "Failed to open new prompt page" },
       );
     }
   }
@@ -148,65 +154,71 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
       this.strategy.clear();
     } else {
       // 使用防重复提交机制执行保存
-      const result = await this.executeWithPrevention('close', async () => {
-        // 完成时保存图像并创建提示词
-        const contentInput = document.getElementById(Constants.Ids.NEW_PROMPT_CONTENT) as HTMLTextAreaElement | null;
-        const content = contentInput?.value.trim();
-        if (!content) {
-          this.app.showToast('提示词内容不能为空', 'error');
-          return { success: false };
-        }
-
-        // 检查是否有新上传的图像需要保存
-        const filePaths = this.strategy.getFilePaths();
-        let newImages: IImage[] = [];
-        if (filePaths.length > 0) {
-          // 保存新上传的图像到数据目录
-          const result = await this.strategy.confirm('new-prompt') as IImageSelectionResult;
-          if (!result.success) {
-            this.app.showToast(result.message || '保存图像失败', 'error');
+      const result = await this.executeWithPrevention(
+        "close",
+        async () => {
+          // 完成时保存图像并创建提示词
+          const contentInput = document.getElementById(
+            Constants.Ids.NEW_PROMPT_CONTENT,
+          ) as HTMLTextAreaElement | null;
+          const content = contentInput?.value.trim();
+          if (!content) {
+            this.app.showToast("提示词内容不能为空", "error");
             return { success: false };
           }
-          newImages = result.images || [];
-        }
 
-        try {
-          // 合并预填充图像和新保存图像
-          const allImages = [...(this.prefillImages || []), ...newImages];
-          await window.electronAPI.addPrompt({
-            tags: [],
-            content: content,
-            images: allImages,
-            isSafe: 1
-          });
-
-          this.app.showToast('提示词创建成功');
-
-          // 更新关联图像的缓存（因为数据库已更新 updated_at 和关联关系）
-          // 批量获取，避免循环内逐条 IPC
-          const ids = allImages.map(image => image.id).filter((id): id is string => !!id);
-          if (ids.length > 0) {
-            const updatedImages = await window.electronAPI.getImagesByIds(ids);
-            if (updatedImages.length > 0) {
-              cacheManager.cacheImagesAppend(updatedImages);
+          // 检查是否有新上传的图像需要保存
+          const filePaths = this.strategy.getFilePaths();
+          let newImages: IImage[] = [];
+          if (filePaths.length > 0) {
+            // 保存新上传的图像到数据目录
+            const result = (await this.strategy.confirm("new-prompt")) as IImageSelectionResult;
+            if (!result.success) {
+              this.app.showToast(result.message || "保存图像失败", "error");
+              return { success: false };
             }
+            newImages = result.images || [];
           }
 
-          // 按需刷新：有图像时刷新图像列表，始终刷新提示词列表
-          if (allImages.length > 0) {
-            this.app.eventBus.emit(Events.IMAGES_CHANGED);
+          try {
+            // 合并预填充图像和新保存图像
+            const allImages = [...(this.prefillImages || []), ...newImages];
+            await window.electronAPI.addPrompt({
+              tags: [],
+              content: content,
+              images: allImages,
+              isSafe: 1,
+            });
+
+            this.app.showToast("提示词创建成功");
+
+            // 更新关联图像的缓存（因为数据库已更新 updated_at 和关联关系）
+            // 批量获取，避免循环内逐条 IPC
+            const ids = allImages.map((image) => image.id).filter((id): id is string => !!id);
+            if (ids.length > 0) {
+              const updatedImages = await window.electronAPI.getImagesByIds(ids);
+              if (updatedImages.length > 0) {
+                cacheManager.cacheImagesAppend(updatedImages);
+              }
+            }
+
+            // 按需刷新：有图像时刷新图像列表，始终刷新提示词列表
+            if (allImages.length > 0) {
+              this.app.eventBus.emit(Events.IMAGES_CHANGED);
+            }
+            this.app.eventBus.emit(Events.PROMPTS_CHANGED);
+            return { success: true };
+          } catch (error) {
+            ErrorHandler.handleError(
+              { module: "NewPromptManager.ts", operation: "create prompt" },
+              error,
+              { userMessage: "Failed to create prompt" },
+            );
+            return { success: false };
           }
-          this.app.eventBus.emit(Events.PROMPTS_CHANGED);
-          return { success: true };
-        } catch (error) {
-          ErrorHandler.handleError(
-            { module: 'NewPromptManager.ts', operation: 'create prompt' },
-            error,
-            { userMessage: 'Failed to create prompt' }
-          );
-          return { success: false };
-        }
-      }, { errorMessage: '正在保存提示词中...' }); // 上一次保存尚未结束时再次点击
+        },
+        { errorMessage: "正在保存提示词中..." },
+      ); // 上一次保存尚未结束时再次点击
 
       // 如果防重复提交机制返回 undefined，说明操作正在进行中
       if (result === undefined) {
@@ -220,7 +232,7 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
     }
 
     if (modal) {
-      modal.classList.remove('active');
+      modal.classList.remove("active");
     }
 
     // 调用关闭回调（如果有）
@@ -269,7 +281,7 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
     // 检查是否是预填充图像（通过检查 previewManager 中对应索引的元素是否有 data-saved 属性）
     const container = this.previewManager.getContainer();
     const previewItem = container?.querySelector(`.image-preview-item[data-index="${index}"]`);
-    const isSavedImage = previewItem?.hasAttribute('data-saved');
+    const isSavedImage = previewItem?.hasAttribute("data-saved");
 
     if (isSavedImage) {
       // 预填充图像直接从列表移除，不需要确认，不删除数据库
@@ -277,7 +289,9 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
       this.previewManager.renderSavedImages(this.prefillImages);
     } else {
       // 新上传的图像需要确认
-      const confirmed = await DialogService.showConfirmDialogByConfig(DialogConfig.REMOVE_NEW_IMAGE);
+      const confirmed = await DialogService.showConfirmDialogByConfig(
+        DialogConfig.REMOVE_NEW_IMAGE,
+      );
       if (!confirmed) return;
 
       const result = this.strategy.removeFile(index);
@@ -296,18 +310,20 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
     const closeBtn = document.getElementById(Constants.Ids.CLOSE_NEW_PROMPT_PAGE);
 
     if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => this.close(false));
+      cancelBtn.addEventListener("click", () => this.close(false));
     }
     if (doneBtn) {
-      doneBtn.addEventListener('click', () => this.close(true));
+      doneBtn.addEventListener("click", () => this.close(true));
     }
     if (closeBtn) {
-      closeBtn.addEventListener('click', () => this.close(false));
+      closeBtn.addEventListener("click", () => this.close(false));
     }
 
-    const contentInput = document.getElementById(Constants.Ids.NEW_PROMPT_CONTENT) as HTMLTextAreaElement | null;
+    const contentInput = document.getElementById(
+      Constants.Ids.NEW_PROMPT_CONTENT,
+    ) as HTMLTextAreaElement | null;
     if (contentInput) {
-      contentInput.addEventListener('input', () => {
+      contentInput.addEventListener("input", () => {
         this.app.autoResizeTextarea(contentInput);
       });
     }
@@ -315,19 +331,19 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
     // 图像上传区域点击
     const uploadArea = document.getElementById(Constants.Ids.NEW_PROMPT_IMAGE_UPLOAD_AREA);
     if (uploadArea) {
-      uploadArea.addEventListener('click', async (e) => {
-        if ((e.target as HTMLElement).closest('.remove-image')) return;
+      uploadArea.addEventListener("click", async (e) => {
+        if ((e.target as HTMLElement).closest(".remove-image")) return;
         await this.handleSelectImages();
       });
 
       // 禁止拖拽上传
-      uploadArea.addEventListener('dragover', (e) => {
+      uploadArea.addEventListener("dragover", (e) => {
         e.preventDefault();
         if (e.dataTransfer) {
-          e.dataTransfer.dropEffect = 'none';
+          e.dataTransfer.dropEffect = "none";
         }
       });
-      uploadArea.addEventListener('drop', (e) => {
+      uploadArea.addEventListener("drop", (e) => {
         e.preventDefault();
       });
     }
@@ -344,6 +360,6 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
     this.strategy.clear();
     this.eventsBound = false;
     // 重置防重复提交状态
-    this.resetPreventionState('close');
+    this.resetPreventionState("close");
   }
 }

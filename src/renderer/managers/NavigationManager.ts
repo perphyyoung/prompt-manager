@@ -3,10 +3,10 @@
  * 负责处理面板切换和导航逻辑
  */
 
-import { logger } from '../../utils/Logger.ts';
-import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
-import { Constants } from '../../constants.ts';
-import { localStorageManager } from '../configs/LocalStorageConfig.ts';
+import { logger } from "../../utils/Logger.ts";
+import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
+import { Constants } from "../../constants.ts";
+import { localStorageManager } from "../configs/LocalStorageConfig.ts";
 
 // 面板配置接口
 interface IPanelConfig {
@@ -53,8 +53,8 @@ export class NavigationManager {
 
   constructor(options: INavigationManagerOptions = { app: {} as IApp }) {
     this.app = options.app;
-    this.storageKey = options.storageKey || 'currentPanel';
-    this.defaultPanel = options.defaultPanel || 'prompt';
+    this.storageKey = options.storageKey || "currentPanel";
+    this.defaultPanel = options.defaultPanel || "prompt";
 
     this.currentPanel = this.defaultPanel;
     this.panels = new Map<string, IPanelConfig>();
@@ -80,26 +80,26 @@ export class NavigationManager {
    * @private
    */
   private registerPanels(): void {
-    this.panels.set('prompt', {
+    this.panels.set("prompt", {
       id: Constants.Ids.PROMPT_PANEL,
       buttonId: Constants.Ids.PROMPT_MANAGER_BTN,
-      name: 'prompt',
+      name: "prompt",
       onShow: async () => {
         if (this.app.promptPanelManager) {
           await this.app.promptPanelManager.ensureRendered();
         }
-      }
+      },
     });
 
-    this.panels.set('image', {
+    this.panels.set("image", {
       id: Constants.Ids.IMAGE_PANEL,
       buttonId: Constants.Ids.IMAGE_MANAGER_BTN,
-      name: 'image',
+      name: "image",
       onShow: async () => {
         if (this.app.imagePanelManager) {
           await this.app.imagePanelManager.ensureRendered();
         }
-      }
+      },
     });
   }
 
@@ -109,8 +109,12 @@ export class NavigationManager {
    */
   private bindEvents(): void {
     // 导航按钮事件
-    document.getElementById(Constants.Ids.PROMPT_MANAGER_BTN)?.addEventListener('click', () => this.switchTo('prompt'));
-    document.getElementById(Constants.Ids.IMAGE_MANAGER_BTN)?.addEventListener('click', () => this.switchTo('image'));
+    document
+      .getElementById(Constants.Ids.PROMPT_MANAGER_BTN)
+      ?.addEventListener("click", () => this.switchTo("prompt"));
+    document
+      .getElementById(Constants.Ids.IMAGE_MANAGER_BTN)
+      ?.addEventListener("click", () => this.switchTo("image"));
 
     // 侧边栏事件
     this.bindSidebarEvents();
@@ -125,18 +129,20 @@ export class NavigationManager {
     const sidebar = document.getElementById(Constants.Ids.SIDEBAR);
     if (!toggleSidebarBtn || !sidebar) return;
 
-    toggleSidebarBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('collapsed');
-      const isCollapsed = sidebar.classList.contains('collapsed');
-      toggleSidebarBtn.title = isCollapsed ? '展开侧边栏' : '收起侧边栏';
+    toggleSidebarBtn.addEventListener("click", () => {
+      sidebar.classList.toggle("collapsed");
+      const isCollapsed = sidebar.classList.contains("collapsed");
+      toggleSidebarBtn.title = isCollapsed ? "展开侧边栏" : "收起侧边栏";
       localStorageManager.set(Constants.LocalStorageKey.SIDEBAR_COLLAPSED, isCollapsed);
     });
 
     // 恢复侧边栏状态
-    const isCollapsed = localStorageManager.get<boolean>(Constants.LocalStorageKey.SIDEBAR_COLLAPSED);
+    const isCollapsed = localStorageManager.get<boolean>(
+      Constants.LocalStorageKey.SIDEBAR_COLLAPSED,
+    );
     if (isCollapsed) {
-      sidebar.classList.add('collapsed');
-      toggleSidebarBtn.title = '展开侧边栏';
+      sidebar.classList.add("collapsed");
+      toggleSidebarBtn.title = "展开侧边栏";
     }
   }
 
@@ -147,7 +153,7 @@ export class NavigationManager {
    */
   switchTo(panelName: string, force = false): void {
     if (!this.panels.has(panelName)) {
-      logger.warn('NavigationManager', `Unknown panel: ${panelName}`);
+      logger.warn("NavigationManager", `Unknown panel: ${panelName}`);
       return;
     }
 
@@ -162,14 +168,14 @@ export class NavigationManager {
 
     // 隐藏所有面板
     this.panels.forEach((panel) => {
-      const element = document.getElementById(panel.id || '');
-      const button = document.getElementById(panel.buttonId || '');
+      const element = document.getElementById(panel.id || "");
+      const button = document.getElementById(panel.buttonId || "");
 
       if (element) {
-        element.style.display = 'none';
+        element.style.display = "none";
       }
       if (button) {
-        button.classList.remove('active');
+        button.classList.remove("active");
       }
     });
 
@@ -177,14 +183,14 @@ export class NavigationManager {
     const targetPanel = this.panels.get(panelName);
     if (!targetPanel) return;
 
-    const targetElement = document.getElementById(targetPanel.id || '');
-    const targetButton = document.getElementById(targetPanel.buttonId || '');
+    const targetElement = document.getElementById(targetPanel.id || "");
+    const targetButton = document.getElementById(targetPanel.buttonId || "");
 
     if (targetElement) {
-      targetElement.style.display = 'flex';
+      targetElement.style.display = "flex";
     }
     if (targetButton) {
-      targetButton.classList.add('active');
+      targetButton.classList.add("active");
     }
 
     // 执行面板显示回调
@@ -197,11 +203,13 @@ export class NavigationManager {
 
     // 更新上下文堆栈
     contextStack.reset();
-    const panelId = panelName === 'prompt' ? Constants.Ids.PROMPT_PANEL : Constants.Ids.IMAGE_PANEL;
+    const panelId = panelName === "prompt" ? Constants.Ids.PROMPT_PANEL : Constants.Ids.IMAGE_PANEL;
     const stackEntry: IContextStackEntry = {
       id: panelId,
       state: { isBatchToolbarVisible: false },
-      close: () => { /* 面板级别不需要关闭 */ }
+      close: () => {
+        /* 面板级别不需要关闭 */
+      },
     };
     contextStack.push(stackEntry);
 
@@ -218,14 +226,14 @@ export class NavigationManager {
    * 切换到提示词管理器
    */
   switchToPromptManager(): void {
-    this.switchTo('prompt');
+    this.switchTo("prompt");
   }
 
   /**
    * 切换到图像管理器
    */
   switchToImageManager(): void {
-    this.switchTo('image');
+    this.switchTo("image");
   }
 
   /**
@@ -268,7 +276,7 @@ export class NavigationManager {
   registerPanel(name: string, config: IPanelConfig): void {
     this.panels.set(name, {
       ...config,
-      name
+      name,
     });
   }
 

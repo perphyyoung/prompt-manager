@@ -100,7 +100,7 @@ export abstract class BaseEventStrategy implements IEventStrategy {
       }
 
       // 只更新选中状态的 UI，不重新加载数据
-      itemEl.classList.toggle('is-selected', isChecked);
+      itemEl.classList.toggle("is-selected", isChecked);
     };
 
     container.addEventListener("click", clickHandler);
@@ -120,10 +120,7 @@ export abstract class BaseEventStrategy implements IEventStrategy {
   /**
    * 初始化复选框状态
    */
-  private initCheckboxState(
-    container: HTMLElement,
-    context: EventContext,
-  ): void {
+  private initCheckboxState(container: HTMLElement, context: EventContext): void {
     container.querySelectorAll(this.getCheckboxSelector()).forEach((checkbox) => {
       const itemEl = checkbox.closest("[data-id]");
       if (!itemEl) return;

@@ -1,6 +1,6 @@
-import type { LRUCache } from '../utils/LRUCache.ts';
-import type { IPrompt, IImage } from '../types/entities.ts';
-import type { DialogService } from './services/DialogService.ts';
+import type { LRUCache } from "../utils/LRUCache.ts";
+import type { IPrompt, IImage } from "../types/entities.ts";
+import type { DialogService } from "./services/DialogService.ts";
 
 // 重新导出类型
 export type { IPrompt, IImage };
@@ -39,8 +39,6 @@ export interface IInputResult {
   value: string;
   confirmed: boolean;
 }
-
-
 
 /**
  * 缓存管理器接口
@@ -178,11 +176,14 @@ export interface IShortcutManager {
  * Hover Tooltip 管理器接口
  */
 export interface IHoverTooltipManager {
-  bind(selector: string, options: {
-    getContent: (element: Element) => string;
-    getImageId: (element: Element) => string | null;
-    delay: number;
-  }): void;
+  bind(
+    selector: string,
+    options: {
+      getContent: (element: Element) => string;
+      getImageId: (element: Element) => string | null;
+      delay: number;
+    },
+  ): void;
 }
 
 /**
@@ -194,7 +195,7 @@ export interface IApp {
   imagePanelManager: IPanelManager | null;
 
   // 缓存
-  cacheManager: ICacheManager;  
+  cacheManager: ICacheManager;
   promptRefImagesCache: LRUCache;
 
   // 其他管理器（在 init 后可用）
@@ -242,7 +243,10 @@ export interface IApp {
   closeStatisticsModal(): void;
   openEditPromptModal(prompt: IPrompt, options?: unknown): Promise<void>;
   openImageDetailModal(image: IImage, options?: unknown): Promise<void>;
-  openFullscreen(images: Array<{ id?: string; relativePath?: string; fileName?: string }>, index: number): Promise<void>;
+  openFullscreen(
+    images: Array<{ id?: string; relativePath?: string; fileName?: string }>,
+    index: number,
+  ): Promise<void>;
   findPromptById(id: string): unknown | null;
   findImageById(id: string, allImages?: Array<{ id: string }> | null): { id: string } | null;
   generateUniqueTimestamp(): string;

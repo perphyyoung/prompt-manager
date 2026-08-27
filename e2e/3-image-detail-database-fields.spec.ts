@@ -1,10 +1,6 @@
 import { expect } from "@playwright/test";
 import { Constants } from "../src/constants.ts";
-import {
-  test,
-  enterImageDetailView,
-  getImageFromDatabase,
-} from "./electron-test.ts";
+import { test, enterImageDetailView, getImageFromDatabase } from "./electron-test.ts";
 import type { IImage } from "../src/preload/index.ts";
 
 /**
@@ -44,9 +40,7 @@ test.describe("图像详情界面数据库字段读取", () => {
     expect(dbImage).toBeTruthy();
 
     // 验证文件名输入框显示正确
-    const fileNameInput = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_FILE_NAME}`,
-    );
+    const fileNameInput = page.locator(`#${Constants.Ids.IMAGE_DETAIL_FILE_NAME}`);
     await expect(fileNameInput).toBeVisible();
     const displayedFileName = await fileNameInput.inputValue();
     expect(displayedFileName).toBe(dbImage!.fileName);
@@ -74,10 +68,7 @@ test.describe("图像详情界面数据库字段读取", () => {
     }
   });
 
-  test("图像尺寸 (width/height) 字段正确显示", async ({
-    electronTest,
-    page,
-  }) => {
+  test("图像尺寸 (width/height) 字段正确显示", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
     const { firstImageId } = await enterImageDetailView(page);
 
@@ -86,9 +77,7 @@ test.describe("图像详情界面数据库字段读取", () => {
     expect(dbImage).toBeTruthy();
 
     // 验证图像尺寸显示正确
-    const dimensionsEl = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_DIMENSIONS}`,
-    );
+    const dimensionsEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_DIMENSIONS}`);
     await expect(dimensionsEl).toBeVisible();
     const displayedDimensions = await dimensionsEl.textContent();
 
@@ -111,9 +100,7 @@ test.describe("图像详情界面数据库字段读取", () => {
     expect(dbImage).toBeTruthy();
 
     // 验证上传时间显示正确
-    const createdAtEl = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_CREATED_AT}`,
-    );
+    const createdAtEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_CREATED_AT}`);
     await expect(createdAtEl).toBeVisible();
     const displayedCreatedAt = await createdAtEl.textContent();
 
@@ -135,9 +122,7 @@ test.describe("图像详情界面数据库字段读取", () => {
     expect(dbImage).toBeTruthy();
 
     // 验证更新时间显示正确
-    const updatedAtEl = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_UPDATED_AT}`,
-    );
+    const updatedAtEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_UPDATED_AT}`);
     await expect(updatedAtEl).toBeVisible();
     const displayedUpdatedAt = await updatedAtEl.textContent();
 
@@ -176,9 +161,7 @@ test.describe("图像详情界面数据库字段读取", () => {
     expect(dbImage).toBeTruthy();
 
     // 验证标签容器存在
-    const tagsContainer = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER}`,
-    );
+    const tagsContainer = page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER}`);
     await expect(tagsContainer).toBeVisible();
 
     // 获取显示的标签（使用更精确的选择器，只获取标签文本部分）
@@ -186,14 +169,12 @@ test.describe("图像详情界面数据库字段读取", () => {
       const container = document.getElementById(containerId);
       if (!container) return [];
       // 只获取标签文本，排除删除按钮
-      return Array.from(container.querySelectorAll(".tag-editable")).map(
-        (el) => {
-          // 获取标签文本内容，去除删除按钮的文本
-          const text = el.textContent || "";
-          // 去除末尾的 '×' 和空白字符
-          return text.replace(/[\s×]+$/, "").trim();
-        },
-      );
+      return Array.from(container.querySelectorAll(".tag-editable")).map((el) => {
+        // 获取标签文本内容，去除删除按钮的文本
+        const text = el.textContent || "";
+        // 去除末尾的 '×' 和空白字符
+        return text.replace(/[\s×]+$/, "").trim();
+      });
     }, Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER);
 
     // 验证标签数量匹配
@@ -217,15 +198,11 @@ test.describe("图像详情界面数据库字段读取", () => {
     expect(dbImage).toBeTruthy();
 
     // 验证安全状态开关存在（checkbox 被 CSS 隐藏，需要定位到父级 label）
-    const safeToggleLabel = page.locator(
-      `label:has(#${Constants.Ids.IMAGE_DETAIL_SAFE_TOGGLE})`,
-    );
+    const safeToggleLabel = page.locator(`label:has(#${Constants.Ids.IMAGE_DETAIL_SAFE_TOGGLE})`);
     await expect(safeToggleLabel).toBeVisible();
 
     // 验证开关状态与数据库一致
-    const safeToggle = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_SAFE_TOGGLE}`,
-    );
+    const safeToggle = page.locator(`#${Constants.Ids.IMAGE_DETAIL_SAFE_TOGGLE}`);
     const isChecked = await safeToggle.isChecked();
     const expectedSafe = dbImage!.isSafe === 1;
     expect(isChecked).toBe(expectedSafe);
@@ -259,27 +236,19 @@ test.describe("图像详情界面数据库字段读取", () => {
     expect(dbImage).toBeTruthy();
 
     // 验证提示词标题区域
-    const promptTitleEl = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_PROMPT_TITLE}`,
-    );
+    const promptTitleEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_PROMPT_TITLE}`);
     await expect(promptTitleEl).toBeVisible();
 
     // 验证提示词内容区域
-    const promptContentEl = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_PROMPT_CONTENT}`,
-    );
+    const promptContentEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_PROMPT_CONTENT}`);
     await expect(promptContentEl).toBeVisible();
 
     // 验证提示词翻译区域
-    const promptTranslateEl = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_PROMPT_TRANSLATE}`,
-    );
+    const promptTranslateEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_PROMPT_TRANSLATE}`);
     await expect(promptTranslateEl).toBeVisible();
 
     // 验证提示词备注区域
-    const promptNoteEl = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_PROMPT_NOTE}`,
-    );
+    const promptNoteEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_PROMPT_NOTE}`);
     await expect(promptNoteEl).toBeVisible();
 
     // 验证提示词标签区域
@@ -304,12 +273,9 @@ test.describe("图像详情界面数据库字段读取", () => {
       // 注意：IPrompt 中使用的是 contentTranslate 字段
       const promptTranslateText = await promptTranslateEl.textContent();
       const translateContent =
-        (firstPrompt as any).contentTranslate ||
-        firstPrompt.promptContentTranslate;
+        (firstPrompt as any).contentTranslate || firstPrompt.promptContentTranslate;
       // 确保转换为字符串进行比较
-      const expectedTranslate = translateContent
-        ? String(translateContent)
-        : "-";
+      const expectedTranslate = translateContent ? String(translateContent) : "-";
       expect(promptTranslateText).toBe(expectedTranslate);
     } else {
       // 没有关联提示词时，应该显示 '-'
@@ -349,51 +315,49 @@ test.describe("图像详情界面数据库字段读取", () => {
     expect(dbImage).toBeTruthy();
 
     // 收集所有界面显示的值
-    const uiValues = await page.evaluate((params) => {
-      const getValue = (id: string): string => {
-        const el = document.getElementById(id);
-        if (!el) return "";
-        if (
-          el instanceof HTMLInputElement ||
-          el instanceof HTMLTextAreaElement
-        ) {
-          return el.value;
-        }
-        return el.textContent || "";
-      };
+    const uiValues = await page.evaluate(
+      (params) => {
+        const getValue = (id: string): string => {
+          const el = document.getElementById(id);
+          if (!el) return "";
+          if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+            return el.value;
+          }
+          return el.textContent || "";
+        };
 
-      const getTags = (): string[] => {
-        const container = document.getElementById(params.containerId);
-        if (!container) return [];
-        return Array.from(container.querySelectorAll(".tag-editable")).map(
-          (el) => {
+        const getTags = (): string[] => {
+          const container = document.getElementById(params.containerId);
+          if (!container) return [];
+          return Array.from(container.querySelectorAll(".tag-editable")).map((el) => {
             // 去除末尾的 '×' 和空白字符
             const text = el.textContent || "";
             return text.replace(/[\s×]+$/, "").trim();
-          },
-        );
-      };
+          });
+        };
 
-      return {
-        fileName: getValue(params.ids.fileName),
-        note: getValue(params.ids.note),
-        fileSize: getValue(params.ids.fileSize),
-        dimensions: getValue(params.ids.dimensions),
-        createdAt: getValue(params.ids.createdAt),
-        updatedAt: getValue(params.ids.updatedAt),
-        tags: getTags(),
-      };
-    }, {
-      containerId: Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER,
-      ids: {
-        fileName: Constants.Ids.IMAGE_DETAIL_FILE_NAME,
-        note: Constants.Ids.IMAGE_DETAIL_NOTE,
-        fileSize: Constants.Ids.IMAGE_DETAIL_FILE_SIZE,
-        dimensions: Constants.Ids.IMAGE_DETAIL_DIMENSIONS,
-        createdAt: Constants.Ids.IMAGE_DETAIL_CREATED_AT,
-        updatedAt: Constants.Ids.IMAGE_DETAIL_UPDATED_AT,
-      }
-    });
+        return {
+          fileName: getValue(params.ids.fileName),
+          note: getValue(params.ids.note),
+          fileSize: getValue(params.ids.fileSize),
+          dimensions: getValue(params.ids.dimensions),
+          createdAt: getValue(params.ids.createdAt),
+          updatedAt: getValue(params.ids.updatedAt),
+          tags: getTags(),
+        };
+      },
+      {
+        containerId: Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER,
+        ids: {
+          fileName: Constants.Ids.IMAGE_DETAIL_FILE_NAME,
+          note: Constants.Ids.IMAGE_DETAIL_NOTE,
+          fileSize: Constants.Ids.IMAGE_DETAIL_FILE_SIZE,
+          dimensions: Constants.Ids.IMAGE_DETAIL_DIMENSIONS,
+          createdAt: Constants.Ids.IMAGE_DETAIL_CREATED_AT,
+          updatedAt: Constants.Ids.IMAGE_DETAIL_UPDATED_AT,
+        },
+      },
+    );
 
     // 验证所有字段一致性（不包含 isSafe，因为它是特殊标签）
     expect(uiValues.fileName).toBe(dbImage!.fileName || "");
@@ -422,11 +386,9 @@ test.describe("图像详情界面数据库字段读取", () => {
 
     // 创建带关联提示词的图像
     const factory = electronTest.getApiFactory();
-    const result = await factory.createImageFactory().createWithPromptCount(
-      "detail_prompt",
-      1,
-      "test_prompt",
-    );
+    const result = await factory
+      .createImageFactory()
+      .createWithPromptCount("detail_prompt", 1, "test_prompt");
 
     const imageId = result.image.id;
     const promptId = result.prompts[0].id;
@@ -482,34 +444,26 @@ test.describe("图像详情界面数据库字段读取", () => {
     const firstPrompt = dbImage!.promptRefs![0];
 
     // 验证提示词标题显示（不为"-"）
-    const promptTitleEl = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_PROMPT_TITLE}`,
-    );
+    const promptTitleEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_PROMPT_TITLE}`);
     await expect(promptTitleEl).toBeVisible();
     const promptTitleText = await promptTitleEl.textContent();
     expect(promptTitleText).not.toBe("-");
 
     // 验证提示词内容显示
-    const promptContentEl = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_PROMPT_CONTENT}`,
-    );
+    const promptContentEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_PROMPT_CONTENT}`);
     await expect(promptContentEl).toBeVisible();
     const promptContentText = await promptContentEl.textContent();
     expect(promptContentText).toBe(firstPrompt.promptContent || "");
 
     // 验证提示词翻译区域显示
-    const promptTranslateEl = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_PROMPT_TRANSLATE}`,
-    );
+    const promptTranslateEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_PROMPT_TRANSLATE}`);
     await expect(promptTranslateEl).toBeVisible();
     const promptTranslateText = await promptTranslateEl.textContent();
     // 翻译内容可能是实际值或"-"
     expect(promptTranslateText).toBeTruthy();
 
     // 验证提示词备注区域显示
-    const promptNoteEl = page.locator(
-      `#${Constants.Ids.IMAGE_DETAIL_PROMPT_NOTE}`,
-    );
+    const promptNoteEl = page.locator(`#${Constants.Ids.IMAGE_DETAIL_PROMPT_NOTE}`);
     await expect(promptNoteEl).toBeVisible();
 
     // 验证提示词标签区域存在

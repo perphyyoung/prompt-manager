@@ -3,8 +3,8 @@
  * 清理无用文件以减小包体积
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 /**
  * 递归删除目录
@@ -31,9 +31,9 @@ function removeDir(dirPath) {
  * @param {string} appDir - 应用目录
  */
 function cleanupSharp(appDir) {
-  const sharpVendor = path.join(appDir, 'node_modules', 'sharp', 'vendor');
+  const sharpVendor = path.join(appDir, "node_modules", "sharp", "vendor");
   if (!fs.existsSync(sharpVendor)) {
-    console.log('[beforePack] Sharp vendor directory not found, skipping cleanup');
+    console.log("[beforePack] Sharp vendor directory not found, skipping cleanup");
     return;
   }
 
@@ -47,7 +47,7 @@ function cleanupSharp(appDir) {
     const fullPath = path.join(sharpVendor, dirName);
 
     // 删除非 Windows 平台目录 (darwin, linux)
-    if (dirName.includes('darwin') || dirName.includes('linux')) {
+    if (dirName.includes("darwin") || dirName.includes("linux")) {
       removeDir(fullPath);
       console.log(`[beforePack] Removed platform binary: ${dirName}`);
       removedCount++;
@@ -74,10 +74,10 @@ function cleanupSharp(appDir) {
 function matchPattern(filePath, pattern) {
   // 简单的 glob 匹配实现
   const regex = pattern
-    .replace(/\*\*/g, '<<<DOUBLESTAR>>>')
-    .replace(/\*/g, '[^/\\]*')
-    .replace(/<<<DOUBLESTAR>>>/g, '.*')
-    .replace(/\?/g, '.');
+    .replace(/\*\*/g, "<<<DOUBLESTAR>>>")
+    .replace(/\*/g, "[^/\\]*")
+    .replace(/<<<DOUBLESTAR>>>/g, ".*")
+    .replace(/\?/g, ".");
   return new RegExp(regex).test(filePath);
 }
 
@@ -139,34 +139,31 @@ function removeFilesByPatterns(dir, patterns, baseDir) {
 function cleanupDevFiles(appDir) {
   // 需要删除的文件模式
   const filePatterns = [
-    '**/*.d.ts',           // TypeScript 类型定义
-    '**/*.map',            // Source map
-    '**/*.md',             // Markdown 文档
-    '**/.github/**/*',     // GitHub 配置
-    '**/.gitignore',       // Git 忽略文件
-    '**/.npmignore',       // NPM 忽略文件
-    '**/test/**/*',        // 测试文件
-    '**/tests/**/*',
-    '**/__tests__/**/*',
-    '**/docs/**/*',        // 文档
-    '**/examples/**/*',    // 示例
-    '**/benchmark/**/*',   // 基准测试
-    '**/.eslintrc*',       // ESLint 配置
-    '**/.prettierrc*',     // Prettier 配置
-    '**/tsconfig.json',    // TypeScript 配置
-    '**/jest.config.*',    // Jest 配置
-    '**/vitest.config.*',  // Vitest 配置
-    '**/*.test.js',        // 测试文件
-    '**/*.test.ts',
-    '**/*.spec.js',
-    '**/*.spec.ts'
+    "**/*.d.ts", // TypeScript 类型定义
+    "**/*.map", // Source map
+    "**/*.md", // Markdown 文档
+    "**/.github/**/*", // GitHub 配置
+    "**/.gitignore", // Git 忽略文件
+    "**/.npmignore", // NPM 忽略文件
+    "**/test/**/*", // 测试文件
+    "**/tests/**/*",
+    "**/__tests__/**/*",
+    "**/docs/**/*", // 文档
+    "**/examples/**/*", // 示例
+    "**/benchmark/**/*", // 基准测试
+    "**/.eslintrc*", // ESLint 配置
+    "**/.prettierrc*", // Prettier 配置
+    "**/tsconfig.json", // TypeScript 配置
+    "**/jest.config.*", // Jest 配置
+    "**/vitest.config.*", // Vitest 配置
+    "**/*.test.js", // 测试文件
+    "**/*.test.ts",
+    "**/*.spec.js",
+    "**/*.spec.ts",
   ];
 
   // 特定大文件/目录清理
-  const specificPaths = [
-    'node_modules/electron/dist',
-    'node_modules/@types'
-  ];
+  const specificPaths = ["node_modules/electron/dist", "node_modules/@types"];
 
   // 清理特定目录
   for (const specificPath of specificPaths) {
@@ -183,12 +180,10 @@ function cleanupDevFiles(appDir) {
 /**
  * 主函数
  */
-exports.default = async function(context) {
+exports.default = async function (context) {
   // 尝试多种方式获取应用目录
-  const appDir = context.packager?.appDir ||
-                 context.packager?.projectDir ||
-                 context.appDir ||
-                 process.cwd();
+  const appDir =
+    context.packager?.appDir || context.packager?.projectDir || context.appDir || process.cwd();
 
   try {
     // 清理 Sharp 多平台二进制
@@ -197,7 +192,7 @@ exports.default = async function(context) {
     // 清理开发文件
     cleanupDevFiles(appDir);
   } catch (error) {
-    console.error('[beforePack] Error during optimization:', error);
+    console.error("[beforePack] Error during optimization:", error);
     // 不中断打包流程
   }
 };

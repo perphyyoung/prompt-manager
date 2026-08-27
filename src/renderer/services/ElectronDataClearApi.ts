@@ -1,5 +1,5 @@
-import { DataClearApi } from './DataClearApi.ts';
-import { DataClearIpcService } from './DataClearIpcService.ts';
+import { DataClearApi } from "./DataClearApi.ts";
+import { DataClearIpcService } from "./DataClearIpcService.ts";
 
 /**
  * Electron IPC 实现的数据清空 API

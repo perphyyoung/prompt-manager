@@ -1,4 +1,4 @@
-import { ImageUploadService } from './ImageUploadService.ts';
+import { ImageUploadService } from "./ImageUploadService.ts";
 
 // 进度回调函数类型
 type ProgressCallback = (current: number, total: number) => void;
@@ -13,7 +13,7 @@ interface FileInfo {
 interface ImageInfo {
   id: string;
   isDuplicate?: boolean;
-  duplicateType?: 'restored_from_trash' | 'existing';
+  duplicateType?: "restored_from_trash" | "existing";
   [key: string]: unknown;
 }
 
@@ -96,14 +96,14 @@ export class DelaySaveStrategy extends UploadStrategy {
    */
   async selectFiles(filePaths: string[]): Promise<UploadResult> {
     if (!filePaths || filePaths.length === 0) {
-      return { success: false, message: 'No files selected' };
+      return { success: false, message: "No files selected" };
     }
 
     this.selectedFilePaths = [...this.selectedFilePaths, ...filePaths];
     return {
       success: true,
       filePaths: [...this.selectedFilePaths],
-      count: this.selectedFilePaths.length
+      count: this.selectedFilePaths.length,
     };
   }
 
@@ -113,20 +113,20 @@ export class DelaySaveStrategy extends UploadStrategy {
    * @param onProgress - 进度回调 (current, total) => void
    * @returns 保存结果
    */
-  async confirm(source = 'upload', onProgress?: ProgressCallback): Promise<UploadResult> {
+  async confirm(source = "upload", onProgress?: ProgressCallback): Promise<UploadResult> {
     if (this.selectedFilePaths.length === 0) {
-      return { success: false, message: 'No files to save' };
+      return { success: false, message: "No files to save" };
     }
 
-    const fileInfos: FileInfo[] = this.selectedFilePaths.map(path => ({
+    const fileInfos: FileInfo[] = this.selectedFilePaths.map((path) => ({
       path,
-      name: path.split(/[\\/]/).pop() || ''
+      name: path.split(/[\\/]/).pop() || "",
     }));
 
     try {
       const results = await this.imageUploadService.uploadBatch(fileInfos, {
         source,
-        onProgress
+        onProgress,
       });
 
       this.savedImages = results;
@@ -135,11 +135,11 @@ export class DelaySaveStrategy extends UploadStrategy {
       return {
         success: true,
         images: results as ImageInfo[],
-        count: results.length
+        count: results.length,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.app.showToast?.(`保存失败: ${message}`, 'error');
+      this.app.showToast?.(`保存失败: ${message}`, "error");
       return { success: false, message };
     }
   }
@@ -154,7 +154,7 @@ export class DelaySaveStrategy extends UploadStrategy {
       this.selectedFilePaths.splice(index, 1);
       return { success: true, filePaths: [...this.selectedFilePaths] };
     }
-    return { success: false, message: 'Invalid index' };
+    return { success: false, message: "Invalid index" };
   }
 
   /**
@@ -200,14 +200,14 @@ export class DirectSaveStrategy extends UploadStrategy {
    * @param source - 来源标识
    * @returns 处理结果
    */
-  async selectFiles(filePaths: string[], source = 'upload'): Promise<UploadResult> {
+  async selectFiles(filePaths: string[], source = "upload"): Promise<UploadResult> {
     if (!filePaths || filePaths.length === 0) {
-      return { success: false, message: 'No files selected' };
+      return { success: false, message: "No files selected" };
     }
 
-    const fileInfos: FileInfo[] = filePaths.map(path => ({
+    const fileInfos: FileInfo[] = filePaths.map((path) => ({
       path,
-      name: path.split(/[\\/]/).pop() || ''
+      name: path.split(/[\\/]/).pop() || "",
     }));
 
     try {
@@ -219,11 +219,11 @@ export class DirectSaveStrategy extends UploadStrategy {
       return {
         success: true,
         images: results as ImageInfo[],
-        count: results.length
+        count: results.length,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.app.showToast?.(`保存失败: ${message}`, 'error');
+      this.app.showToast?.(`保存失败: ${message}`, "error");
       return { success: false, message };
     }
   }
@@ -245,7 +245,7 @@ export class DirectSaveStrategy extends UploadStrategy {
         return { success: false, message };
       }
     }
-    return { success: false, message: 'Invalid index' };
+    return { success: false, message: "Invalid index" };
   }
 
   /**

@@ -3,8 +3,8 @@
  * 统一处理标签创建与项目关联的复合操作
  */
 
-import type { DataType, TagOperationResult, TagCreateOptions } from './types.ts';
-import { createTags } from './operations.ts';
+import type { DataType, TagOperationResult, TagCreateOptions } from "./types.ts";
+import { createTags } from "./operations.ts";
 
 /** 关联选项 */
 export interface LinkTagsOptions {
@@ -31,17 +31,17 @@ export interface LinkTagsResult extends TagOperationResult {
 /**
  * 添加标签并可选关联到项目
  * 核心函数：统一处理所有标签添加场景
- * 
+ *
  * @param options - 关联选项
  * @returns 操作结果
- * 
+ *
  * @example
  * // 仅创建标签
  * await linkTags({ tagNames: ['tag1'], type: 'image' });
- * 
+ *
  * // 创建并关联到单个项目
  * await linkTags({ tagNames: ['tag1'], type: 'image', itemId: '123' });
- * 
+ *
  * // 创建并关联到多个项目
  * await linkTags({ tagNames: ['tag1'], type: 'image', itemIds: ['1', '2', '3'] });
  */
@@ -64,14 +64,14 @@ export async function linkTags(options: LinkTagsOptions): Promise<LinkTagsResult
   return {
     ...createResult,
     linkedToItem: linkResult.linked,
-    linkedItemCount: linkResult.count
+    linkedItemCount: linkResult.count,
   };
 }
 
 /**
  * 批量添加标签到多个项目
  * 用于多选工具栏批量添加场景
- * 
+ *
  * @param tagNames - 标签名数组
  * @param type - 数据类型
  * @param itemIds - 项目ID数组
@@ -82,25 +82,25 @@ export async function addTagsToItems(
   tagNames: string[],
   type: DataType,
   itemIds: string[],
-  createOptions?: TagCreateOptions
+  createOptions?: TagCreateOptions,
 ): Promise<LinkTagsResult> {
   return linkTags({
     tagNames,
     type,
     itemIds,
-    createOptions
+    createOptions,
   });
 }
 
 /**
  * 解析并添加标签（支持分隔符）
  * 用于输入框批量添加场景，支持逗号、空格等分隔符
- * 
+ *
  * @param input - 输入字符串
  * @param type - 数据类型
  * @param itemId - 项目ID（可选）
  * @returns 操作结果
- * 
+ *
  * @example
  * // 支持多种分隔符：逗号、中文逗号、空格
  * await parseAndAddTags('tag1,tag2，tag3 tag4', 'image', '123');
@@ -108,7 +108,7 @@ export async function addTagsToItems(
 export async function parseAndAddTags(
   input: string,
   type: DataType,
-  itemId?: string
+  itemId?: string,
 ): Promise<LinkTagsResult> {
   const tagNames = parseTagInput(input);
   return linkTags({ tagNames, type, itemId });
@@ -121,9 +121,7 @@ export async function parseAndAddTags(
  */
 function normalizeTagNames(tagNames: string | string[]): string[] {
   const names = Array.isArray(tagNames) ? tagNames : [tagNames];
-  return names
-    .map(n => n.trim())
-    .filter(n => n.length > 0);
+  return names.map((n) => n.trim()).filter((n) => n.length > 0);
 }
 
 /**
@@ -133,8 +131,8 @@ function parseTagInput(input: string): string[] {
   // 支持：英文逗号、中文逗号、空格、换行
   return input
     .split(/[,，\s\n]+/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 }
 
 /**
@@ -144,7 +142,7 @@ async function linkToItems(
   type: DataType,
   tagNames: string[],
   itemId?: string,
-  itemIds?: string[]
+  itemIds?: string[],
 ): Promise<{ linked: boolean; count: number }> {
   if (tagNames.length === 0) {
     return { linked: false, count: 0 };
@@ -164,7 +162,7 @@ async function linkToItems(
 
   // 集合级批量关联：单次 IPC + 主进程事务内集合 SQL，
   // 替代逐项目循环（万级全选场景下从 N 次 IPC 降为 1 次）
-  if (type === 'image') {
+  if (type === "image") {
     await window.electronAPI.addImageTagsBatch(uniqueIds, tagNames);
   } else {
     await window.electronAPI.addPromptTagsBatch(uniqueIds, tagNames);
@@ -183,6 +181,6 @@ function createEmptyResult(): LinkTagsResult {
     skipped: [],
     errors: [],
     linkedToItem: false,
-    linkedItemCount: 0
+    linkedItemCount: 0,
   };
 }

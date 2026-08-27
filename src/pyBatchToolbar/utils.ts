@@ -2,7 +2,7 @@
  * pyBatchToolbar 工具函数
  */
 
-import type { ToolbarButtonConfig } from './types.ts';
+import type { ToolbarButtonConfig } from "./types.ts";
 
 /**
  * 排序按钮配置数组
@@ -21,19 +21,19 @@ export function sortButtons(buttons: ToolbarButtonConfig[]): ToolbarButtonConfig
  */
 export function mergeButtonConfigs(
   base: ToolbarButtonConfig[],
-  overrides: Partial<ToolbarButtonConfig>[]
+  overrides: Partial<ToolbarButtonConfig>[],
 ): ToolbarButtonConfig[] {
   const result = [...base];
-  
-  overrides.forEach(override => {
-    const index = result.findIndex(b => b.action === override.action);
+
+  overrides.forEach((override) => {
+    const index = result.findIndex((b) => b.action === override.action);
     if (index >= 0) {
       result[index] = { ...result[index], ...override };
     } else if (override.action) {
       result.push(override as ToolbarButtonConfig);
     }
   });
-  
+
   return sortButtons(result);
 }
 
@@ -43,7 +43,7 @@ export function mergeButtonConfigs(
  * @returns 可见的按钮数组
  */
 export function filterVisibleButtons(buttons: ToolbarButtonConfig[]): ToolbarButtonConfig[] {
-  return buttons.filter(btn => btn.visible !== false);
+  return buttons.filter((btn) => btn.visible !== false);
 }
 
 /**
@@ -61,9 +61,6 @@ export function generateToolbarId(context: string): string {
  * @returns 是否有效
  */
 export function isValidContext(context: string): boolean {
-  const validContexts = [
-    'promptMain',
-    'imageMain'
-  ];
+  const validContexts = ["promptMain", "imageMain"];
   return validContexts.includes(context);
 }

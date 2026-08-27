@@ -30,9 +30,7 @@ test.describe("Esc 键快捷键功能", () => {
         timeout: 1000,
       });
 
-      const statisticsModal = page.locator(
-        `#${Constants.Ids.STATISTICS_MODAL}`,
-      );
+      const statisticsModal = page.locator(`#${Constants.Ids.STATISTICS_MODAL}`);
       await expect(statisticsModal).toHaveClass(/active/);
 
       await page.keyboard.press("Escape");
@@ -52,9 +50,7 @@ test.describe("Esc 键快捷键功能", () => {
         timeout: 1000,
       });
 
-      const statisticsModal = page.locator(
-        `#${Constants.Ids.STATISTICS_MODAL}`,
-      );
+      const statisticsModal = page.locator(`#${Constants.Ids.STATISTICS_MODAL}`);
       await expect(statisticsModal).toHaveClass(/active/);
 
       await page.keyboard.press("Escape");
@@ -127,10 +123,7 @@ test.describe("Esc 键快捷键功能", () => {
       await expect(detailModal).not.toHaveClass(/active/);
     });
 
-    test("提示词面板 - Esc 关闭提示词详情视图", async ({
-      electronTest,
-      page,
-    }) => {
+    test("提示词面板 - Esc 关闭提示词详情视图", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterPromptGridView(page);
       await openPromptDetail(page);
@@ -156,24 +149,18 @@ test.describe("Esc 键快捷键功能", () => {
       const firstCard = page.locator(".image-card").first();
       await firstCard.hover();
       await firstCard.locator(".card-checkbox").click();
-      await page.waitForSelector(
-        `#${Constants.Ids.IMAGE_GRID}.selection-mode`,
-        {
-          timeout: 1000,
-        },
-      );
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID}.selection-mode`, {
+        timeout: 1000,
+      });
 
       const batchToolbar = page.locator(".batch-toolbar.visible");
       await expect(batchToolbar).toBeVisible();
 
       await page.keyboard.press("Escape");
-      await page.waitForSelector(
-        `#${Constants.Ids.IMAGE_GRID}.selection-mode`,
-        {
-          state: "detached",
-          timeout: 1000,
-        },
-      );
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID}.selection-mode`, {
+        state: "detached",
+        timeout: 1000,
+      });
 
       await expect(batchToolbar).not.toBeVisible();
 
@@ -191,24 +178,18 @@ test.describe("Esc 键快捷键功能", () => {
       const firstCard = page.locator(".prompt-card").first();
       await firstCard.hover();
       await firstCard.locator(".card-checkbox").click();
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_GRID}.selection-mode`,
-        {
-          timeout: 1000,
-        },
-      );
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_GRID}.selection-mode`, {
+        timeout: 1000,
+      });
 
       const batchToolbar = page.locator(".batch-toolbar.visible");
       await expect(batchToolbar).toBeVisible();
 
       await page.keyboard.press("Escape");
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_GRID}.selection-mode`,
-        {
-          state: "detached",
-          timeout: 1000,
-        },
-      );
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_GRID}.selection-mode`, {
+        state: "detached",
+        timeout: 1000,
+      });
 
       await expect(batchToolbar).not.toBeVisible();
 
@@ -301,10 +282,7 @@ test.describe("Esc 键快捷键功能", () => {
       expect(trashModalHidden).toBe(true);
     });
 
-    test("提示词回收站 - Esc 关闭回收站视图", async ({
-      electronTest,
-      page,
-    }) => {
+    test("提示词回收站 - Esc 关闭回收站视图", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterPromptGridView(page);
       await page.click(`#${Constants.Ids.PROMPT_TRASH_BTN}`);
@@ -350,16 +328,11 @@ test.describe("Esc 键快捷键功能", () => {
 
     const image = page.locator(`#${Constants.Ids.IMAGE_DETAIL_IMG}`);
     await image.dblclick();
-    await page.waitForSelector(
-      `#${Constants.Ids.IMAGE_FULLSCREEN_VIEWER}.active`,
-      {
-        timeout: 1000,
-      },
-    );
+    await page.waitForSelector(`#${Constants.Ids.IMAGE_FULLSCREEN_VIEWER}.active`, {
+      timeout: 1000,
+    });
 
-    const fullscreenViewer = page.locator(
-      `#${Constants.Ids.IMAGE_FULLSCREEN_VIEWER}`,
-    );
+    const fullscreenViewer = page.locator(`#${Constants.Ids.IMAGE_FULLSCREEN_VIEWER}`);
     await expect(fullscreenViewer).toHaveClass(/active/);
 
     await page.keyboard.press("Escape");
@@ -377,10 +350,7 @@ test.describe("Esc 键快捷键功能", () => {
   // ==================== 自动完成功能测试（同时测试图像和提示词）====================
 
   test.describe("Esc 关闭标签自动完成下拉", () => {
-    test("图像详情 - Esc 关闭标签自动完成下拉", async ({
-      electronTest,
-      page,
-    }) => {
+    test("图像详情 - Esc 关闭标签自动完成下拉", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterImageGridView(page);
       await openImageDetail(page);
@@ -390,14 +360,11 @@ test.describe("Esc 键快捷键功能", () => {
       await tagInput.click();
       await tagInput.fill("e2e");
 
-      await page.waitForSelector(
-        `#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}.active`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}.active`, {
+        timeout: 1000,
+      });
 
-      const autocompleteDropdown = page.locator(
-        `#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}`,
-      );
+      const autocompleteDropdown = page.locator(`#${Constants.Ids.IMAGE_DETAIL_TAG_AUTOCOMPLETE}`);
       const isVisible = await autocompleteDropdown.evaluate((el: HTMLElement) =>
         el.classList.contains("active"),
       );
@@ -429,28 +396,20 @@ test.describe("Esc 键快捷键功能", () => {
       });
     });
 
-    test("提示词详情 - Esc 关闭标签自动完成下拉", async ({
-      electronTest,
-      page,
-    }) => {
+    test("提示词详情 - Esc 关闭标签自动完成下拉", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
       await enterPromptGridView(page);
       await openPromptDetail(page);
 
-      const tagInput = page.locator(
-        `#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`,
-      );
+      const tagInput = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`);
       await tagInput.click();
       await tagInput.fill("e2e");
 
-      await page.waitForSelector(
-        `#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}.active`,
-        { timeout: 1000 },
-      );
+      await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}.active`, {
+        timeout: 1000,
+      });
 
-      const autocompleteDropdown = page.locator(
-        `#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}`,
-      );
+      const autocompleteDropdown = page.locator(`#${Constants.Ids.PROMPT_DETAIL_TAG_AUTOCOMPLETE}`);
       const isVisible = await autocompleteDropdown.evaluate((el: HTMLElement) =>
         el.classList.contains("active"),
       );

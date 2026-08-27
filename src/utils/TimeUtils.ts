@@ -11,7 +11,7 @@
  * // 返回: "2026/3/20 20:34:56"
  */
 export function localTime(): string {
-  return new Date().toLocaleString('zh-CN');
+  return new Date().toLocaleString("zh-CN");
 }
 
 /**
@@ -34,10 +34,10 @@ export function dbTime(): string {
  * // 返回: "2026/3/20 20:34:56"
  */
 export function formatDbTimeToLocal(isoTime: string | undefined | null): string {
-  if (!isoTime) return isoTime || '';
+  if (!isoTime) return isoTime || "";
   const date = new Date(isoTime);
   if (isNaN(date.getTime())) return isoTime;
-  return date.toLocaleString('zh-CN');
+  return date.toLocaleString("zh-CN");
 }
 
 /**
@@ -51,11 +51,11 @@ export function getFormattedLocalTimeToSecond(): string {
   const d = new Date();
 
   const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  const seconds = String(d.getSeconds()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const seconds = String(d.getSeconds()).padStart(2, "0");
 
   return `${year}${month}${day}${hours}${minutes}${seconds}`;
 }
@@ -70,8 +70,8 @@ export function getFormattedLocalTimeToSecond(): string {
 export function getFormattedLocalDate(): string {
   const d = new Date();
   const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   return `${year}${month}${day}`;
 }
 
@@ -85,7 +85,7 @@ export function getFormattedLocalDate(): string {
 export function getFormattedYearMonth(): string {
   const d = new Date();
   const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, "0");
   return `${year}${month}`;
 }
 
@@ -110,7 +110,7 @@ const TimeUtils = {
   getFormattedLocalTimeToSecond,
   getFormattedLocalDate,
   getFormattedYearMonth,
-  timeToTimestamp
+  timeToTimestamp,
 };
 
 export default TimeUtils;

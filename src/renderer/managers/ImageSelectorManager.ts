@@ -1,7 +1,7 @@
-import { HtmlUtils } from '../../utils/index.ts';
-import { Constants } from '../../constants.ts';
-import { IImage } from '../../types/entities.ts';
-import type { IApp } from '../app.types.ts';
+import { HtmlUtils } from "../../utils/index.ts";
+import { Constants } from "../../constants.ts";
+import { IImage } from "../../types/entities.ts";
+import type { IApp } from "../app.types.ts";
 
 /**
  * ImageSelectorManager 构造选项
@@ -50,8 +50,10 @@ export class ImageSelectorManager {
     this.onConfirm = null;
 
     // 排序状态（独立于主界面的排序设置）
-    this.sortBy = localStorage.getItem(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_BY) || 'updatedAt';
-    this.sortOrder = localStorage.getItem(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_ORDER) || 'desc';
+    this.sortBy =
+      localStorage.getItem(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_BY) || "updatedAt";
+    this.sortOrder =
+      localStorage.getItem(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_ORDER) || "desc";
   }
 
   /**
@@ -61,25 +63,31 @@ export class ImageSelectorManager {
   async open(options: IOpenOptions = {}): Promise<void> {
     const modal = document.getElementById(Constants.Ids.IMAGE_SELECTOR_MODAL);
     if (modal) {
-      modal.classList.add('active');
+      modal.classList.add("active");
     }
 
     // 初始化选择状态
     this.selectedImages = [];
     this.onConfirm = options.onConfirm || null;
-    const confirmBtn = document.getElementById(Constants.Ids.CONFIRM_IMAGE_SELECTOR_BTN) as HTMLButtonElement | null;
+    const confirmBtn = document.getElementById(
+      Constants.Ids.CONFIRM_IMAGE_SELECTOR_BTN,
+    ) as HTMLButtonElement | null;
     if (confirmBtn) {
       confirmBtn.disabled = true;
     }
 
     // 重置搜索和筛选状态
-    const searchInput = document.getElementById(Constants.Ids.IMAGE_SELECTOR_SEARCH_INPUT) as HTMLInputElement | null;
-    const tagFilter = document.getElementById(Constants.Ids.IMAGE_SELECTOR_TAG_FILTER) as HTMLSelectElement | null;
+    const searchInput = document.getElementById(
+      Constants.Ids.IMAGE_SELECTOR_SEARCH_INPUT,
+    ) as HTMLInputElement | null;
+    const tagFilter = document.getElementById(
+      Constants.Ids.IMAGE_SELECTOR_TAG_FILTER,
+    ) as HTMLSelectElement | null;
     if (searchInput) {
-      searchInput.value = '';
+      searchInput.value = "";
       searchInput.focus();
     }
-    if (tagFilter) tagFilter.value = '';
+    if (tagFilter) tagFilter.value = "";
 
     // 加载图像列表
     await this.renderGrid();
@@ -95,7 +103,7 @@ export class ImageSelectorManager {
   close(): void {
     const modal = document.getElementById(Constants.Ids.IMAGE_SELECTOR_MODAL);
     if (modal) {
-      modal.classList.remove('active');
+      modal.classList.remove("active");
     }
     this.selectedImages = [];
     this.onConfirm = null;
@@ -114,8 +122,12 @@ export class ImageSelectorManager {
     const grid = document.getElementById(Constants.Ids.IMAGE_SELECTOR_GRID);
     const emptyState = document.getElementById(Constants.Ids.IMAGE_SELECTOR_EMPTY);
     const infoEl = document.getElementById(Constants.Ids.IMAGE_SELECTOR_INFO);
-    const searchInput = document.getElementById(Constants.Ids.IMAGE_SELECTOR_SEARCH_INPUT) as HTMLInputElement | null;
-    const tagFilter = document.getElementById(Constants.Ids.IMAGE_SELECTOR_TAG_FILTER) as HTMLSelectElement | null;
+    const searchInput = document.getElementById(
+      Constants.Ids.IMAGE_SELECTOR_SEARCH_INPUT,
+    ) as HTMLInputElement | null;
+    const tagFilter = document.getElementById(
+      Constants.Ids.IMAGE_SELECTOR_TAG_FILTER,
+    ) as HTMLSelectElement | null;
 
     if (!grid || !emptyState) return;
 
@@ -123,14 +135,14 @@ export class ImageSelectorManager {
       const searchTerm = searchInput?.value?.trim();
       const selectedTag = tagFilter?.value;
 
-      const options: import('../../main/database-types.js').GetImagesPaginatedOptions = {
-        sortBy: this.sortBy || 'updatedAt',
-        sortOrder: this.sortOrder === 'asc' ? 'asc' : 'desc',
+      const options: import("../../main/database-types.js").GetImagesPaginatedOptions = {
+        sortBy: this.sortBy || "updatedAt",
+        sortOrder: this.sortOrder === "asc" ? "asc" : "desc",
         searchQuery: searchTerm || undefined,
         tagNames: selectedTag ? [selectedTag] : undefined,
-        isSafe: this.app.viewMode === 'safe' ? true : undefined,
+        isSafe: this.app.viewMode === "safe" ? true : undefined,
         limit: this.pageSize,
-        offset: 0
+        offset: 0,
       };
 
       const page = await window.electronAPI.getImagesPaginated(options);
@@ -139,40 +151,48 @@ export class ImageSelectorManager {
       this.updateInfoText(infoEl, images.length, page.totalCount, searchTerm, selectedTag);
 
       if (images.length === 0) {
-        grid.innerHTML = '';
-        grid.style.display = 'none';
-        emptyState.style.display = 'block';
-        if (infoEl) infoEl.style.display = 'none';
+        grid.innerHTML = "";
+        grid.style.display = "none";
+        emptyState.style.display = "block";
+        if (infoEl) infoEl.style.display = "none";
         return;
       }
 
-      grid.style.display = 'grid';
-      emptyState.style.display = 'none';
-      if (infoEl) infoEl.style.display = 'block';
+      grid.style.display = "grid";
+      emptyState.style.display = "none";
+      if (infoEl) infoEl.style.display = "block";
 
       // 批量获取所有图像的完整路径（单次 IPC 调用）
-      const relativePaths = images.map(img => img.relativePath || '');
+      const relativePaths = images.map((img) => img.relativePath || "");
       const fullPaths = await window.electronAPI.getImagesPaths(relativePaths);
       const imageItems = images.map((image, index) => ({ ...image, fullPath: fullPaths[index] }));
 
-      grid.innerHTML = imageItems.map(image => `
-        <div class="image-selector-item" data-image-id="${image.id}" data-image-path="${HtmlUtils.escapeHtml(image.relativePath || '')}">
+      grid.innerHTML = imageItems
+        .map(
+          (image) => `
+        <div class="image-selector-item" data-image-id="${image.id}" data-image-path="${HtmlUtils.escapeHtml(image.relativePath || "")}">
           <img src="file://${HtmlUtils.escapeHtml(image.fullPath)}" alt="${HtmlUtils.escapeHtml(image.fileName)}" loading="lazy">
         </div>
-      `).join('');
+      `,
+        )
+        .join("");
 
       // 绑定点击事件
-      grid.querySelectorAll('.image-selector-item').forEach(item => {
-        item.addEventListener('click', () => {
+      grid.querySelectorAll(".image-selector-item").forEach((item) => {
+        item.addEventListener("click", () => {
           // 单选模式
-          grid.querySelectorAll('.image-selector-item').forEach(i => i.classList.remove('selected'));
-          item.classList.add('selected');
+          grid
+            .querySelectorAll(".image-selector-item")
+            .forEach((i) => i.classList.remove("selected"));
+          item.classList.add("selected");
 
           const imageId = (item as HTMLElement).dataset.imageId;
           const imagePath = (item as HTMLElement).dataset.imagePath;
           if (imageId && imagePath) {
             this.selectedImages = [{ id: imageId, path: imagePath }];
-            const confirmBtn = document.getElementById(Constants.Ids.CONFIRM_IMAGE_SELECTOR_BTN) as HTMLButtonElement | null;
+            const confirmBtn = document.getElementById(
+              Constants.Ids.CONFIRM_IMAGE_SELECTOR_BTN,
+            ) as HTMLButtonElement | null;
             if (confirmBtn) {
               confirmBtn.disabled = false;
             }
@@ -180,9 +200,13 @@ export class ImageSelectorManager {
         });
       });
     } catch (error) {
-      window.electronAPI.logError('ImageSelectorManager.ts', 'Failed to render image selector:', error);
+      window.electronAPI.logError(
+        "ImageSelectorManager.ts",
+        "Failed to render image selector:",
+        error,
+      );
       grid.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">加载失败</p>';
-      if (infoEl) infoEl.style.display = 'none';
+      if (infoEl) infoEl.style.display = "none";
     }
   }
 
@@ -194,7 +218,7 @@ export class ImageSelectorManager {
     displayedCount: number,
     totalCount: number,
     searchTerm?: string,
-    selectedTag?: string
+    selectedTag?: string,
   ): void {
     if (!infoEl) return;
 
@@ -210,15 +234,27 @@ export class ImageSelectorManager {
    * 渲染图像选择器标签筛选器
    */
   async renderTagFilters(): Promise<void> {
-    const tagFilter = document.getElementById(Constants.Ids.IMAGE_SELECTOR_TAG_FILTER) as HTMLSelectElement | null;
+    const tagFilter = document.getElementById(
+      Constants.Ids.IMAGE_SELECTOR_TAG_FILTER,
+    ) as HTMLSelectElement | null;
     if (!tagFilter) return;
 
     try {
       const tags: string[] = await window.electronAPI.getImageTags();
-      tagFilter.innerHTML = '<option value="">所有标签</option>' +
-        tags.map(tag => `<option value="${HtmlUtils.escapeHtml(tag)}">${HtmlUtils.escapeHtml(tag)}</option>`).join('');
+      tagFilter.innerHTML =
+        '<option value="">所有标签</option>' +
+        tags
+          .map(
+            (tag) =>
+              `<option value="${HtmlUtils.escapeHtml(tag)}">${HtmlUtils.escapeHtml(tag)}</option>`,
+          )
+          .join("");
     } catch (error) {
-      window.electronAPI.logError('ImageSelectorManager.ts', 'Failed to render image selector tag filters:', error);
+      window.electronAPI.logError(
+        "ImageSelectorManager.ts",
+        "Failed to render image selector tag filters:",
+        error,
+      );
     }
   }
 
@@ -231,14 +267,22 @@ export class ImageSelectorManager {
     this.eventsBound = true;
 
     // 关闭按钮
-    document.getElementById(Constants.Ids.CLOSE_IMAGE_SELECTOR_MODAL)?.addEventListener('click', () => this.close());
-    document.getElementById(Constants.Ids.CANCEL_IMAGE_SELECTOR_BTN)?.addEventListener('click', () => this.close());
+    document
+      .getElementById(Constants.Ids.CLOSE_IMAGE_SELECTOR_MODAL)
+      ?.addEventListener("click", () => this.close());
+    document
+      .getElementById(Constants.Ids.CANCEL_IMAGE_SELECTOR_BTN)
+      ?.addEventListener("click", () => this.close());
 
     // 搜索输入
-    const searchInput = document.getElementById(Constants.Ids.IMAGE_SELECTOR_SEARCH_INPUT) as HTMLInputElement | null;
-    const clearImageSelectorSearchBtn = document.getElementById(Constants.Ids.CLEAR_IMAGE_SELECTOR_SEARCH_BTN);
+    const searchInput = document.getElementById(
+      Constants.Ids.IMAGE_SELECTOR_SEARCH_INPUT,
+    ) as HTMLInputElement | null;
+    const clearImageSelectorSearchBtn = document.getElementById(
+      Constants.Ids.CLEAR_IMAGE_SELECTOR_SEARCH_BTN,
+    );
     if (searchInput) {
-      searchInput.addEventListener('input', () => {
+      searchInput.addEventListener("input", () => {
         // 防抖处理搜索输入
         if (this.searchDebounceTimer) {
           clearTimeout(this.searchDebounceTimer);
@@ -250,18 +294,18 @@ export class ImageSelectorManager {
 
         // 显示/隐藏清空按钮（立即响应）
         if (clearImageSelectorSearchBtn) {
-          clearImageSelectorSearchBtn.style.display = searchInput.value ? 'flex' : 'none';
+          clearImageSelectorSearchBtn.style.display = searchInput.value ? "flex" : "none";
         }
       });
     }
     // 清空选择图像搜索按钮
     if (clearImageSelectorSearchBtn) {
-      clearImageSelectorSearchBtn.addEventListener('click', () => {
+      clearImageSelectorSearchBtn.addEventListener("click", () => {
         if (searchInput) {
-          searchInput.value = '';
+          searchInput.value = "";
         }
         this.renderGrid();
-        clearImageSelectorSearchBtn.style.display = 'none';
+        clearImageSelectorSearchBtn.style.display = "none";
         if (searchInput) {
           searchInput.focus();
         }
@@ -271,17 +315,19 @@ export class ImageSelectorManager {
     // 标签筛选
     const tagFilter = document.getElementById(Constants.Ids.IMAGE_SELECTOR_TAG_FILTER);
     if (tagFilter) {
-      tagFilter.addEventListener('change', () => {
+      tagFilter.addEventListener("change", () => {
         this.renderGrid();
       });
     }
 
     // 排序选择（使用独立的状态）
-    const sortSelect = document.getElementById(Constants.Ids.IMAGE_SELECTOR_SORT_SELECT) as HTMLSelectElement | null;
+    const sortSelect = document.getElementById(
+      Constants.Ids.IMAGE_SELECTOR_SORT_SELECT,
+    ) as HTMLSelectElement | null;
     if (sortSelect) {
       sortSelect.value = `${this.sortBy}-${this.sortOrder}`;
-      sortSelect.addEventListener('change', (e) => {
-        const [sortBy, sortOrder] = (e.target as HTMLSelectElement).value.split('-');
+      sortSelect.addEventListener("change", (e) => {
+        const [sortBy, sortOrder] = (e.target as HTMLSelectElement).value.split("-");
         this.sortBy = sortBy;
         this.sortOrder = sortOrder;
         localStorage.setItem(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_BY, sortBy);
@@ -293,8 +339,8 @@ export class ImageSelectorManager {
     // 排序逆序按钮（使用独立的状态）
     const sortReverseBtn = document.getElementById(Constants.Ids.IMAGE_SELECTOR_SORT_REVERSE_BTN);
     if (sortReverseBtn) {
-      sortReverseBtn.addEventListener('click', () => {
-        this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+      sortReverseBtn.addEventListener("click", () => {
+        this.sortOrder = this.sortOrder === "asc" ? "desc" : "asc";
         localStorage.setItem(Constants.LocalStorageKey.IMAGE_SELECTOR_SORT_ORDER, this.sortOrder);
         if (sortSelect) {
           sortSelect.value = `${this.sortBy}-${this.sortOrder}`;
@@ -304,15 +350,18 @@ export class ImageSelectorManager {
     }
 
     // 确认选择
-    document.getElementById(Constants.Ids.CONFIRM_IMAGE_SELECTOR_BTN)?.addEventListener('click', () => {
-      this.confirmSelection();
-    });
+    document
+      .getElementById(Constants.Ids.CONFIRM_IMAGE_SELECTOR_BTN)
+      ?.addEventListener("click", () => {
+        this.confirmSelection();
+      });
 
     // 点击外部关闭
     const modal = document.getElementById(Constants.Ids.IMAGE_SELECTOR_MODAL);
     if (modal) {
-      modal.addEventListener('click', (e) => {
-        if (this.app.isSameId((e.target as HTMLElement).id, Constants.Ids.IMAGE_SELECTOR_MODAL)) this.close();
+      modal.addEventListener("click", (e) => {
+        if (this.app.isSameId((e.target as HTMLElement).id, Constants.Ids.IMAGE_SELECTOR_MODAL))
+          this.close();
       });
     }
   }
@@ -332,7 +381,7 @@ export class ImageSelectorManager {
         await this.onConfirm(image);
       }
     } catch (error) {
-      window.electronAPI.logError('ImageSelectorManager.ts', 'Failed to get image details:', error);
+      window.electronAPI.logError("ImageSelectorManager.ts", "Failed to get image details:", error);
     }
 
     this.close();

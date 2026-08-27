@@ -63,10 +63,16 @@ describe("BaseTestDataFactory", () => {
     async createTag(): Promise<void> {}
 
     protected async _linkTagsToEntity(): Promise<void> {}
-    protected async _getTagGroups(): Promise<Array<{ id: number; name: string; sortOrder: number }>> {
+    protected async _getTagGroups(): Promise<
+      Array<{ id: number; name: string; sortOrder: number }>
+    > {
       return [];
     }
-    protected async _createTagGroupApi(): Promise<{ id: number; name: string; sortOrder: number } | null> {
+    protected async _createTagGroupApi(): Promise<{
+      id: number;
+      name: string;
+      sortOrder: number;
+    } | null> {
       return null;
     }
     protected async _assignTagToGroup(): Promise<void> {}
@@ -98,7 +104,14 @@ describe("BaseTestDataFactory", () => {
 
 describe("PromptApiFactory", () => {
   it("create 应调用 addPrompt API 并返回结果", async () => {
-    const promptResult = { id: "123", title: "test", content: "content", isDeleted: false, tags: [], images: [] } as IPrompt;
+    const promptResult = {
+      id: "123",
+      title: "test",
+      content: "content",
+      isDeleted: false,
+      tags: [],
+      images: [],
+    } as IPrompt;
     const addPrompt = vi.fn(() => Promise.resolve(promptResult));
     setupMockApi({ addPrompt });
 
@@ -112,7 +125,14 @@ describe("PromptApiFactory", () => {
 
   it("create 使用自定义 title 时应直接使用该 title", async () => {
     let capturedData: any;
-    const promptResult = { id: "123", title: "my_title", content: "content", isDeleted: false, tags: [], images: [] } as IPrompt;
+    const promptResult = {
+      id: "123",
+      title: "my_title",
+      content: "content",
+      isDeleted: false,
+      tags: [],
+      images: [],
+    } as IPrompt;
     const addPrompt = vi.fn((data: any) => {
       capturedData = data;
       return Promise.resolve(promptResult);
@@ -185,16 +205,20 @@ describe("PromptApiFactory", () => {
 
     const page = createMockPage();
     const factory = new PromptApiFactory(page as any);
-    await factory.createWithImages(
-      { label: "test" },
-      ["img1", "img2"],
-    );
+    await factory.createWithImages({ label: "test" }, ["img1", "img2"]);
 
     expect(capturedData.images).toEqual([{ id: "img1" }, { id: "img2" }]);
   });
 
   it("createWithTags 应调用 addPromptTags", async () => {
-    const promptResult = { id: "123", title: "test", content: "content", isDeleted: false, tags: [], images: [] } as IPrompt;
+    const promptResult = {
+      id: "123",
+      title: "test",
+      content: "content",
+      isDeleted: false,
+      tags: [],
+      images: [],
+    } as IPrompt;
     const addPrompt = vi.fn(() => Promise.resolve(promptResult));
     const addPromptTags = vi.fn(() => Promise.resolve(undefined));
     setupMockApi({ addPrompt, addPromptTags });
@@ -223,10 +247,12 @@ describe("PromptApiFactory", () => {
   });
 
   it("createTagGroup isTop=true 时应查询现有组并取最小 sortOrder - 1", async () => {
-    const getPromptTagGroups = vi.fn(() => Promise.resolve([
-      { id: 1, name: "group1", sortOrder: 2 },
-      { id: 2, name: "group2", sortOrder: 5 },
-    ]));
+    const getPromptTagGroups = vi.fn(() =>
+      Promise.resolve([
+        { id: 1, name: "group1", sortOrder: 2 },
+        { id: 2, name: "group2", sortOrder: 5 },
+      ]),
+    );
     const groupResult = { id: 3, name: "top_group", sortOrder: 1 };
     const createPromptTagGroup = vi.fn((name: string, sortOrder: number) => {
       expect(sortOrder).toBe(1); // min(2, 5) - 1 = 1
@@ -293,9 +319,9 @@ describe("PromptApiFactory", () => {
   });
 
   it("createTagInGroup isTop=true 时应创建首位组", async () => {
-    const getPromptTagGroups = vi.fn(() => Promise.resolve([
-      { id: 1, name: "group1", sortOrder: 2 },
-    ]));
+    const getPromptTagGroups = vi.fn(() =>
+      Promise.resolve([{ id: 1, name: "group1", sortOrder: 2 }]),
+    );
     const addPromptTag = vi.fn(() => Promise.resolve(undefined));
     const groupResult = { id: 2, name: "top_group", sortOrder: 1 };
     const createPromptTagGroup = vi.fn((name: string, sortOrder: number) => {
@@ -303,7 +329,12 @@ describe("PromptApiFactory", () => {
       return Promise.resolve({ ...groupResult, sortOrder });
     });
     const assignPromptTagToBelongGroup = vi.fn(() => Promise.resolve(undefined));
-    setupMockApi({ getPromptTagGroups, addPromptTag, createPromptTagGroup, assignPromptTagToBelongGroup });
+    setupMockApi({
+      getPromptTagGroups,
+      addPromptTag,
+      createPromptTagGroup,
+      assignPromptTagToBelongGroup,
+    });
 
     vi.spyOn(global.Date, "now").mockReturnValue(1718307600000);
 
@@ -319,7 +350,9 @@ describe("PromptApiFactory", () => {
 describe("ImageApiFactory", () => {
   it("create 应调用 saveImageFile API", async () => {
     const saveImageFile = vi.fn(() => Promise.resolve({ id: "456" }));
-    const getImageById = vi.fn(() => Promise.resolve({ id: "456", fileName: "test.png" } as IImage));
+    const getImageById = vi.fn(() =>
+      Promise.resolve({ id: "456", fileName: "test.png" } as IImage),
+    );
     setupMockApi({ saveImageFile, getImageById });
 
     const page = createMockPage();
@@ -362,7 +395,9 @@ describe("ImageApiFactory", () => {
 
   it("createWithTags 应调用 addImageTags", async () => {
     const saveImageFile = vi.fn(() => Promise.resolve({ id: "456" }));
-    const getImageById = vi.fn(() => Promise.resolve({ id: "456", fileName: "test.png" } as IImage));
+    const getImageById = vi.fn(() =>
+      Promise.resolve({ id: "456", fileName: "test.png" } as IImage),
+    );
     const addImageTags = vi.fn(() => Promise.resolve(undefined));
     setupMockApi({ saveImageFile, getImageById, addImageTags });
 
@@ -378,7 +413,9 @@ describe("ImageApiFactory", () => {
   it("createWithPromptCount 应创建图像并关联指定数量的提示词", async () => {
     const saveImageFile = vi.fn(() => Promise.resolve({ id: "img1" }));
     const getImageById = vi.fn(() => Promise.resolve({ id: "img1" } as IImage));
-    const addPrompt = vi.fn((data: any) => Promise.resolve({ id: "prompt1", ...data, isDeleted: false } as IPrompt));
+    const addPrompt = vi.fn((data: any) =>
+      Promise.resolve({ id: "prompt1", ...data, isDeleted: false } as IPrompt),
+    );
     setupMockApi({ saveImageFile, getImageById, addPrompt });
 
     const page = createMockPage();
@@ -425,10 +462,12 @@ describe("ImageApiFactory", () => {
   });
 
   it("createTagGroup isTop=true 时应查询现有组并取最小 sortOrder - 1", async () => {
-    const getImageTagGroups = vi.fn(() => Promise.resolve([
-      { id: 1, name: "group1", sortOrder: 3 },
-      { id: 2, name: "group2", sortOrder: 7 },
-    ]));
+    const getImageTagGroups = vi.fn(() =>
+      Promise.resolve([
+        { id: 1, name: "group1", sortOrder: 3 },
+        { id: 2, name: "group2", sortOrder: 7 },
+      ]),
+    );
     const groupResult = { id: 3, name: "top_group", sortOrder: 2 };
     const createImageTagGroup = vi.fn((name: string, sortOrder: number) => {
       expect(sortOrder).toBe(2); // min(3, 7) - 1 = 2
@@ -499,9 +538,9 @@ describe("ImageApiFactory", () => {
   });
 
   it("createTagInGroup isTop=true 时应创建首位组", async () => {
-    const getImageTagGroups = vi.fn(() => Promise.resolve([
-      { id: 1, name: "group1", sortOrder: 2 },
-    ]));
+    const getImageTagGroups = vi.fn(() =>
+      Promise.resolve([{ id: 1, name: "group1", sortOrder: 2 }]),
+    );
     const addImageTag = vi.fn(() => Promise.resolve(undefined));
     const groupResult = { id: 2, name: "top_group", sortOrder: 1 };
     const createImageTagGroup = vi.fn((name: string, sortOrder: number) => {
@@ -509,7 +548,12 @@ describe("ImageApiFactory", () => {
       return Promise.resolve({ ...groupResult, sortOrder });
     });
     const assignImageTagToBelongGroup = vi.fn(() => Promise.resolve(undefined));
-    setupMockApi({ getImageTagGroups, addImageTag, createImageTagGroup, assignImageTagToBelongGroup });
+    setupMockApi({
+      getImageTagGroups,
+      addImageTag,
+      createImageTagGroup,
+      assignImageTagToBelongGroup,
+    });
 
     vi.spyOn(global.Date, "now").mockReturnValue(1718307600000);
 
@@ -567,9 +611,7 @@ describe("ElectronTestHelper.getApiFactory", () => {
   it("未启动时应抛出异常", () => {
     const helper = new ElectronTestHelper();
 
-    expect(() => helper.getApiFactory()).toThrow(
-      "Electron app not launched, call launch() first",
-    );
+    expect(() => helper.getApiFactory()).toThrow("Electron app not launched, call launch() first");
   });
 
   it("已启动后应返回 ApiTestFactory 实例", () => {

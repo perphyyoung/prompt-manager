@@ -1,12 +1,16 @@
-import { DialogService, DialogConfig } from '../services/index.ts';
-import type { IDialogContext, IClosableElement } from '../../types/entities.ts';
-import { UnifiedCardRenderer, PromptTrashConfig, ImageTrashConfig } from './SharedComponents/index.ts';
-import { Constants, ElementId, Events } from '../../constants.ts';
-import { PromptTrashHandler, ImageTrashHandler } from './handlers/index.ts';
-import { cacheManager } from '../../utils/index.ts';
-import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
-import type { TrashHandler, TrashItem } from './handlers/TrashHandler.ts';
-import type { IApp, IEventBus, IPanelManager } from '../app.types.ts';
+import { DialogService, DialogConfig } from "../services/index.ts";
+import type { IDialogContext, IClosableElement } from "../../types/entities.ts";
+import {
+  UnifiedCardRenderer,
+  PromptTrashConfig,
+  ImageTrashConfig,
+} from "./SharedComponents/index.ts";
+import { Constants, ElementId, Events } from "../../constants.ts";
+import { PromptTrashHandler, ImageTrashHandler } from "./handlers/index.ts";
+import { cacheManager } from "../../utils/index.ts";
+import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
+import type { TrashHandler, TrashItem } from "./handlers/TrashHandler.ts";
+import type { IApp, IEventBus, IPanelManager } from "../app.types.ts";
 
 /**
  * 回收站类型
@@ -44,14 +48,14 @@ export class TrashManager {
   private static readonly MODAL_CONFIG: Record<TrashType, ITrashModalConfig> = {
     [Constants.TrashType.PROMPT]: {
       modalId: Constants.Ids.PROMPT_TRASH_MODAL,
-      name: 'promptTrashModal',
-      elementId: Constants.Ids.PROMPT_TRASH_MODAL
+      name: "promptTrashModal",
+      elementId: Constants.Ids.PROMPT_TRASH_MODAL,
     },
     [Constants.TrashType.IMAGE]: {
       modalId: Constants.Ids.IMAGE_TRASH_MODAL,
-      name: 'imageTrashModal',
-      elementId: Constants.Ids.IMAGE_TRASH_MODAL
-    }
+      name: "imageTrashModal",
+      elementId: Constants.Ids.IMAGE_TRASH_MODAL,
+    },
   };
 
   readonly promptHandler: PromptTrashHandler;
@@ -89,15 +93,15 @@ export class TrashManager {
       if (!this.currentHandler) return;
 
       const items = await this.currentHandler.loadItems();
-      this.trashItems = items.map(item => ({
+      this.trashItems = items.map((item) => ({
         ...item,
-        type: this.currentHandler!.type
+        type: this.currentHandler!.type,
       }));
 
       await this.renderTrashList();
     } catch (error) {
-      window.electronAPI.logError('TrashManager.js', 'Failed to load trash:', error);
-      this.app.showToast('加载回收站失败', 'error');
+      window.electronAPI.logError("TrashManager.js", "Failed to load trash:", error);
+      this.app.showToast("加载回收站失败", "error");
     }
   }
 
@@ -106,30 +110,38 @@ export class TrashManager {
    */
   private bindEvents(): void {
     // 提示词回收站
-    document.getElementById(Constants.Ids.PROMPT_TRASH_BTN)?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.PROMPT_TRASH_BTN)?.addEventListener("click", () => {
       this.open(this.promptHandler);
     });
-    document.getElementById(Constants.Ids.CLOSE_PROMPT_TRASH_MODAL)?.addEventListener('click', () => {
-      this.close();
-    });
-    document.getElementById(Constants.Ids.RESTORE_ALL_PROMPT_TRASH_BTN)?.addEventListener('click', () => {
-      this.restoreAll();
-    });
-    document.getElementById(Constants.Ids.EMPTY_PROMPT_TRASH_BTN)?.addEventListener('click', () => {
+    document
+      .getElementById(Constants.Ids.CLOSE_PROMPT_TRASH_MODAL)
+      ?.addEventListener("click", () => {
+        this.close();
+      });
+    document
+      .getElementById(Constants.Ids.RESTORE_ALL_PROMPT_TRASH_BTN)
+      ?.addEventListener("click", () => {
+        this.restoreAll();
+      });
+    document.getElementById(Constants.Ids.EMPTY_PROMPT_TRASH_BTN)?.addEventListener("click", () => {
       this.confirmClearTrash();
     });
 
     // 图像回收站
-    document.getElementById(Constants.Ids.IMAGE_TRASH_BTN)?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.IMAGE_TRASH_BTN)?.addEventListener("click", () => {
       this.open(this.imageHandler);
     });
-    document.getElementById(Constants.Ids.CLOSE_IMAGE_TRASH_MODAL)?.addEventListener('click', () => {
-      this.close();
-    });
-    document.getElementById(Constants.Ids.RESTORE_ALL_IMAGE_TRASH_BTN)?.addEventListener('click', () => {
-      this.restoreAll();
-    });
-    document.getElementById(Constants.Ids.EMPTY_IMAGE_TRASH_BTN)?.addEventListener('click', () => {
+    document
+      .getElementById(Constants.Ids.CLOSE_IMAGE_TRASH_MODAL)
+      ?.addEventListener("click", () => {
+        this.close();
+      });
+    document
+      .getElementById(Constants.Ids.RESTORE_ALL_IMAGE_TRASH_BTN)
+      ?.addEventListener("click", () => {
+        this.restoreAll();
+      });
+    document.getElementById(Constants.Ids.EMPTY_IMAGE_TRASH_BTN)?.addEventListener("click", () => {
       this.confirmClearTrash();
     });
   }
@@ -156,7 +168,7 @@ export class TrashManager {
       return;
     }
 
-    const html = this.trashItems.map(item => this.renderTrashItem(item)).join('');
+    const html = this.trashItems.map((item) => this.renderTrashItem(item)).join("");
     container.innerHTML = html;
     this.bindTrashItemEventsForContainer(container);
     this.loadCardBackgroundsForContainer(container);
@@ -171,8 +183,8 @@ export class TrashManager {
     const config = item.type === Constants.TrashType.IMAGE ? ImageTrashConfig : PromptTrashConfig;
     return UnifiedCardRenderer.render(config, item, {
       icons: Constants.ICONS,
-      sortBy: '',
-      app: this.app
+      sortBy: "",
+      app: this.app,
     });
   }
 
@@ -181,13 +193,13 @@ export class TrashManager {
    * @param container - 容器元素
    */
   private bindTrashItemEventsForContainer(container: HTMLElement): void {
-    const items = container.querySelectorAll<HTMLElement>('.trash-card');
+    const items = container.querySelectorAll<HTMLElement>(".trash-card");
 
-    items.forEach(item => {
+    items.forEach((item) => {
       // 恢复按钮
       const restoreBtn = item.querySelector('[data-action="restore"]');
       if (restoreBtn) {
-        restoreBtn.addEventListener('click', async (e) => {
+        restoreBtn.addEventListener("click", async (e) => {
           e.stopPropagation();
           const itemId = item.dataset.id;
           if (itemId) await this.restoreItem(itemId);
@@ -197,7 +209,7 @@ export class TrashManager {
       // 删除按钮
       const deleteBtn = item.querySelector('[data-action="permanentDelete"]');
       if (deleteBtn) {
-        deleteBtn.addEventListener('click', async (e) => {
+        deleteBtn.addEventListener("click", async (e) => {
           e.stopPropagation();
           const itemId = item.dataset.id;
           if (itemId) await this.permanentlyDeleteItem(itemId);
@@ -212,7 +224,7 @@ export class TrashManager {
    * @param container - 容器元素
    */
   private async loadCardBackgroundsForContainer(container: HTMLElement): Promise<void> {
-    const cards = container.querySelectorAll<HTMLElement>('.trash-card');
+    const cards = container.querySelectorAll<HTMLElement>(".trash-card");
 
     // 收集路径信息：优先读路径缓存
     const cardInfoList: Array<{ card: HTMLElement; fullPath: string }> = [];
@@ -221,22 +233,22 @@ export class TrashManager {
 
     for (const card of cards) {
       const itemId = card.dataset.id;
-      const item = this.trashItems.find(i => String(i.id) === String(itemId));
+      const item = this.trashItems.find((i) => String(i.id) === String(itemId));
       if (!item) continue;
 
       const imagePath = this.currentHandler!.getThumbnailPath(item);
       if (!imagePath) continue;
 
       // 尝试从路径缓存读取
-      if (itemId && cacheManager.getImagePath(itemId, 'thumbnail')) {
-        const fullPath = cacheManager.getImagePath(itemId, 'thumbnail')!;
+      if (itemId && cacheManager.getImagePath(itemId, "thumbnail")) {
+        const fullPath = cacheManager.getImagePath(itemId, "thumbnail")!;
         cardInfoList.push({ card, fullPath });
         continue;
       }
 
-      uncachedIds.push(itemId || '');
+      uncachedIds.push(itemId || "");
       uncachedPaths.push(imagePath);
-      cardInfoList.push({ card, fullPath: '' });
+      cardInfoList.push({ card, fullPath: "" });
     }
 
     if (cardInfoList.length === 0) return;
@@ -261,19 +273,23 @@ export class TrashManager {
           }
         }
         if (entries.length > 0) {
-          cacheManager.setImagePaths(entries, 'thumbnail');
+          cacheManager.setImagePaths(entries, "thumbnail");
         }
       } catch (error) {
-        window.electronAPI.logError('TrashManager.js', 'Failed to load trash card backgrounds (fallback):', error);
+        window.electronAPI.logError(
+          "TrashManager.js",
+          "Failed to load trash card backgrounds (fallback):",
+          error,
+        );
       }
     }
 
     // 应用所有背景图
     for (const info of cardInfoList) {
       if (!info.fullPath) continue;
-      const bgElement = info.card.querySelector<HTMLElement>('.trash-card-bg, .card__bg');
+      const bgElement = info.card.querySelector<HTMLElement>(".trash-card-bg, .card__bg");
       if (bgElement) {
-        bgElement.style.backgroundImage = `url('file://${info.fullPath.replace(/\\/g, '/')}')`;
+        bgElement.style.backgroundImage = `url('file://${info.fullPath.replace(/\\/g, "/")}')`;
       }
     }
   }
@@ -317,10 +333,9 @@ export class TrashManager {
    * 类型守卫：检查是否为面板管理器
    */
   private isPanelManager(obj: unknown): obj is IPanelManager {
-    return obj !== null &&
-      typeof obj === 'object' &&
-      'renderView' in obj &&
-      'renderTagFilters' in obj;
+    return (
+      obj !== null && typeof obj === "object" && "renderView" in obj && "renderTagFilters" in obj
+    );
   }
 
   /**
@@ -333,16 +348,16 @@ export class TrashManager {
     try {
       await this.currentHandler.restoreItem(itemId);
       this.updateCacheAfterOperation(itemId);
-      this.app.showToast('已恢复', 'success');
+      this.app.showToast("已恢复", "success");
       await this.loadTrash();
       this.refreshMainPanel();
 
-      if (this.app.currentPanel === 'statistics') {
+      if (this.app.currentPanel === "statistics") {
         await this.app.renderStatistics();
       }
     } catch (error) {
-      window.electronAPI.logError('TrashManager.js', 'Failed to restore item:', error);
-      this.app.showToast('恢复失败', 'error');
+      window.electronAPI.logError("TrashManager.js", "Failed to restore item:", error);
+      this.app.showToast("恢复失败", "error");
     }
   }
 
@@ -354,7 +369,7 @@ export class TrashManager {
 
     try {
       if (this.trashItems.length === 0) {
-        this.app.showToast('回收站已为空', 'info');
+        this.app.showToast("回收站已为空", "info");
         return;
       }
 
@@ -364,21 +379,24 @@ export class TrashManager {
       const cacheManager = this.app?.cacheManager;
       if (cacheManager) {
         for (const item of this.trashItems) {
-          cacheManager.updateCachedItem(item.id, this.currentHandler.type,
-            this.currentHandler.getCacheUpdateData());
+          cacheManager.updateCachedItem(
+            item.id,
+            this.currentHandler.type,
+            this.currentHandler.getCacheUpdateData(),
+          );
         }
       }
 
-      this.app.showToast(`已恢复 ${this.trashItems.length} 个项目`, 'success');
+      this.app.showToast(`已恢复 ${this.trashItems.length} 个项目`, "success");
       await this.loadTrash();
       this.refreshMainPanel();
 
-      if (this.app.currentPanel === 'statistics') {
+      if (this.app.currentPanel === "statistics") {
         await this.app.renderStatistics();
       }
     } catch (error) {
-      window.electronAPI.logError('TrashManager.js', 'Failed to restore all items:', error);
-      this.app.showToast('恢复失败', 'error');
+      window.electronAPI.logError("TrashManager.js", "Failed to restore all items:", error);
+      this.app.showToast("恢复失败", "error");
     }
   }
 
@@ -392,24 +410,24 @@ export class TrashManager {
     const data: IDialogContext = { type: this.currentHandler.type };
     const confirmed = await DialogService.showConfirmDialogByConfig(
       DialogConfig.PERMANENT_DELETE,
-      data
+      data,
     );
 
     if (!confirmed) return;
 
     try {
       await this.currentHandler.deleteItem(itemId);
-      this.app.showToast('已永久删除', 'success');
+      this.app.showToast("已永久删除", "success");
       await this.loadTrash();
       this.removeFromCache(itemId);
       this.refreshMainPanel();
 
-      if (this.app.currentPanel === 'statistics') {
+      if (this.app.currentPanel === "statistics") {
         await this.app.renderStatistics();
       }
     } catch (error) {
-      window.electronAPI.logError('TrashManager.js', 'Failed to permanently delete item:', error);
-      this.app.showToast('删除失败', 'error');
+      window.electronAPI.logError("TrashManager.js", "Failed to permanently delete item:", error);
+      this.app.showToast("删除失败", "error");
     }
   }
 
@@ -420,10 +438,7 @@ export class TrashManager {
     if (!this.currentHandler) return;
 
     const data: IDialogContext = { type: this.currentHandler.type };
-    DialogService.showConfirmDialogByConfig(
-      DialogConfig.EMPTY_TRASH,
-      data
-    ).then(confirmed => {
+    DialogService.showConfirmDialogByConfig(DialogConfig.EMPTY_TRASH, data).then((confirmed) => {
       if (confirmed) this.clearTrash();
     });
   }
@@ -436,12 +451,12 @@ export class TrashManager {
 
     try {
       await this.currentHandler.clearAllItems();
-      this.app.showToast('回收站已清空', 'success');
+      this.app.showToast("回收站已清空", "success");
       this.app.eventBus.emit(this.currentHandler.eventName);
       await this.loadTrash();
     } catch (error) {
-      window.electronAPI.logError('TrashManager.js', 'Failed to clear trash:', error);
-      this.app.showToast('清空失败', 'error');
+      window.electronAPI.logError("TrashManager.js", "Failed to clear trash:", error);
+      this.app.showToast("清空失败", "error");
     }
   }
 
@@ -453,8 +468,11 @@ export class TrashManager {
     const cacheManager = this.app?.cacheManager;
     if (!cacheManager || !this.currentHandler) return;
 
-    cacheManager.updateCachedItem(itemId, this.currentHandler.type,
-      this.currentHandler.getCacheUpdateData());
+    cacheManager.updateCachedItem(
+      itemId,
+      this.currentHandler.type,
+      this.currentHandler.getCacheUpdateData(),
+    );
   }
 
   /**
@@ -486,7 +504,7 @@ export class TrashManager {
 
     const modal = document.getElementById(config.modalId);
     if (modal) {
-      modal.style.display = 'none';
+      modal.style.display = "none";
     }
     contextStack.pop(config.elementId);
     this.activeModals.delete(type);
@@ -508,10 +526,12 @@ export class TrashManager {
       const stackEntry: IContextStackEntry = {
         id: config.elementId as ElementId,
         state: { isBatchToolbarVisible: false },
-        close: () => { this.close(); }
+        close: () => {
+          this.close();
+        },
       };
       contextStack.push(stackEntry);
-      modal.style.display = 'flex';
+      modal.style.display = "flex";
       (modal as IClosableElement).close = () => this.close();
       this.activeModals.add(type);
     }

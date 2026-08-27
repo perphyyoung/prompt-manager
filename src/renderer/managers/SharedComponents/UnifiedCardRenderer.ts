@@ -1,7 +1,7 @@
-import { TagUI } from '../TagUI.ts';
-import { HtmlUtils } from '../../../utils/index.ts';
-import { BUTTON_ICON_MAP, Icons } from './ButtonFactory.ts';
-import { CardConfig } from './CardConfig.ts';
+import { TagUI } from "../TagUI.ts";
+import { HtmlUtils } from "../../../utils/index.ts";
+import { BUTTON_ICON_MAP, Icons } from "./ButtonFactory.ts";
+import { CardConfig } from "./CardConfig.ts";
 
 export interface CardRenderContext {
   icons: Icons;
@@ -32,19 +32,27 @@ export class UnifiedCardRenderer {
    * @param context - 上下文
    * @returns HTML字符串
    */
-  static render(config: CardConfig, item: Record<string, unknown>, context: CardRenderContext): string {
+  static render(
+    config: CardConfig,
+    item: Record<string, unknown>,
+    context: CardRenderContext,
+  ): string {
     const { icons, sortBy, selectedIds, index } = context;
     const prefix = config.cssPrefix;
 
     const footerInfo = config.getFooterInfo(item, sortBy);
 
     const data: CardData = {
-      id: config.getValue(item, 'id'),
-      content: config.getContentText(item) || '',
-      tags: TagUI.generateTagsHtml(config.getValue(item, 'tags') as string[], 'tag-display', 'tag-display-empty'),
+      id: config.getValue(item, "id"),
+      content: config.getContentText(item) || "",
+      tags: TagUI.generateTagsHtml(
+        config.getValue(item, "tags") as string[],
+        "tag-display",
+        "tag-display-empty",
+      ),
       footerInfo: footerInfo,
-      isFavorite: config.getValue(item, 'isFavorite'),
-      thumbnail: config.getValue(item, 'thumbnail')
+      isFavorite: config.getValue(item, "isFavorite"),
+      thumbnail: config.getValue(item, "thumbnail"),
     };
 
     const isSelected = selectedIds?.has(String(data.id)) || false;
@@ -52,23 +60,24 @@ export class UnifiedCardRenderer {
     const leftButtonsHtml = this.generateButtons(config.buttons.left, data, icons, isSelected);
     const rightButtonsHtml = this.generateButtons(config.buttons.right, data, icons, isSelected);
 
-    let className = data.isFavorite
-      ? `${prefix} is-favorite`
-      : prefix;
-    
+    let className = data.isFavorite ? `${prefix} is-favorite` : prefix;
+
     if (isSelected) {
-      className += ' is-selected';
+      className += " is-selected";
     }
     // 回收站卡片不在这里设置背景图，由 loadCardBackgroundsForContainer 异步加载
-    const bgStyle = '';
+    const bgStyle = "";
 
     // 获取第一个关联图像的 ID（用于 hover 预览）
     const itemWithImages = item as { images?: Array<{ id?: string } | string> };
-    const firstImageId = itemWithImages.images && itemWithImages.images.length > 0
-      ? (typeof itemWithImages.images[0] === 'object' ? (itemWithImages.images[0] as { id?: string }).id : itemWithImages.images[0])
-      : '';
-    const firstImageAttr = firstImageId ? ` data-first-image="${firstImageId}"` : '';
-    const indexAttr = index !== undefined ? ` data-index="${index}"` : '';
+    const firstImageId =
+      itemWithImages.images && itemWithImages.images.length > 0
+        ? typeof itemWithImages.images[0] === "object"
+          ? (itemWithImages.images[0] as { id?: string }).id
+          : itemWithImages.images[0]
+        : "";
+    const firstImageAttr = firstImageId ? ` data-first-image="${firstImageId}"` : "";
+    const indexAttr = index !== undefined ? ` data-index="${index}"` : "";
 
     return `
       <div class="${className}" data-id="${data.id}" data-type="${config.dataType}" data-index="${index}"${firstImageAttr}${indexAttr}>
@@ -92,41 +101,43 @@ export class UnifiedCardRenderer {
     buttonConfigs: Array<{ type: string; action: string; title: string; className?: string }>,
     data: CardData,
     icons: Icons,
-    isSelected?: boolean
+    isSelected?: boolean,
   ): string {
-    return buttonConfigs.map(btn => {
-      // 复选框特殊处理
-      if (btn.type === 'checkbox') {
-        return `
+    return buttonConfigs
+      .map((btn) => {
+        // 复选框特殊处理
+        if (btn.type === "checkbox") {
+          return `
           <input type="checkbox"
                  class="card-checkbox"
                  data-action="${btn.action}"
                  data-id="${data.id}"
                  title="${btn.title}"
-                 ${isSelected ? 'checked' : ''}>
+                 ${isSelected ? "checked" : ""}>
         `;
-      }
+        }
 
-      const isActive = btn.type === 'favorite' && !!data.isFavorite;
-      const iconSvg = this.getIconSvg(btn.type, icons, isActive);
+        const isActive = btn.type === "favorite" && !!data.isFavorite;
+        const iconSvg = this.getIconSvg(btn.type, icons, isActive);
 
-      const classes = ['card-btn', `${btn.type}-btn`];
-      if (btn.className) classes.push(btn.className);
-      if (isActive) classes.push('active');
+        const classes = ["card-btn", `${btn.type}-btn`];
+        if (btn.className) classes.push(btn.className);
+        if (isActive) classes.push("active");
 
-      return `
-        <button class="${classes.join(' ')}"
+        return `
+        <button class="${classes.join(" ")}"
                 data-action="${btn.action}"
                 data-id="${data.id}"
                 title="${btn.title}">
           ${iconSvg}
         </button>
       `;
-    }).join('');
+      })
+      .join("");
   }
 
   static getIconSvg(type: string, icons: Icons, isActive?: boolean): string {
     const iconGetter = BUTTON_ICON_MAP[type];
-    return iconGetter ? iconGetter(icons, isActive) : '';
+    return iconGetter ? iconGetter(icons, isActive) : "";
   }
 }

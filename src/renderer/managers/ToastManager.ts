@@ -3,7 +3,7 @@
  * 负责管理提示消息的显示和隐藏
  */
 
-import { Constants } from '../../constants';
+import { Constants } from "../../constants";
 
 interface ToastOptions {
   duration?: number;
@@ -50,13 +50,13 @@ export class ToastManager {
     let container = document.getElementById(this.containerId);
 
     if (!container) {
-      container = document.createElement('div');
+      container = document.createElement("div");
       container.id = this.containerId;
-      container.className = 'toast';
+      container.className = "toast";
 
-      const message = document.createElement('span');
+      const message = document.createElement("span");
       message.id = this.messageId;
-      message.className = 'toast-message';
+      message.className = "toast-message";
 
       container.appendChild(message);
       document.body.appendChild(container);
@@ -66,7 +66,7 @@ export class ToastManager {
   /**
    * 显示提示消息
    */
-  show(message: string, type = 'info', duration: number | null = null): void {
+  show(message: string, type = "info", duration: number | null = null): void {
     const toast = document.getElementById(this.containerId);
     const toastMessage = document.getElementById(this.messageId);
 
@@ -80,7 +80,7 @@ export class ToastManager {
 
     toast.className = `toast toast-${type}`;
     toastMessage.textContent = message;
-    toast.classList.add('show');
+    toast.classList.add("show");
 
     this.isShowing = true;
 
@@ -98,7 +98,7 @@ export class ToastManager {
   hide(): void {
     const toast = document.getElementById(this.containerId);
     if (toast) {
-      toast.classList.remove('show');
+      toast.classList.remove("show");
     }
     this.isShowing = false;
 
@@ -115,34 +115,34 @@ export class ToastManager {
    * 显示成功消息
    */
   success(message: string, duration?: number): void {
-    this.show(message, 'success', duration ?? null);
+    this.show(message, "success", duration ?? null);
   }
 
   /**
    * 显示错误消息
    */
   error(message: string, duration?: number): void {
-    this.show(message, 'error', duration ?? null);
+    this.show(message, "error", duration ?? null);
   }
 
   /**
    * 显示信息消息
    */
   info(message: string, duration?: number): void {
-    this.show(message, 'info', duration ?? null);
+    this.show(message, "info", duration ?? null);
   }
 
   /**
    * 显示警告消息
    */
   warning(message: string, duration?: number): void {
-    this.show(message, 'warning', duration ?? null);
+    this.show(message, "warning", duration ?? null);
   }
 
   /**
    * 将消息添加到队列
    */
-  queue(message: string, type = 'info', duration: number | null = null): void {
+  queue(message: string, type = "info", duration: number | null = null): void {
     if (this.isShowing) {
       this.messageQueue.push({ message, type, duration });
     } else {

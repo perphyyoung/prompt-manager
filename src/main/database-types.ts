@@ -332,7 +332,7 @@ export interface GetImagesOptions {
  */
 export interface GetImagesPaginatedOptions {
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   searchQuery?: string;
   tagNames?: string[];
   specialTags?: string[];
@@ -387,7 +387,7 @@ export interface ImageCleanupInfo {
  */
 export interface GetPromptsPaginatedOptions {
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   searchQuery?: string;
   tagNames?: string[];
   specialTags?: string[];
@@ -434,7 +434,7 @@ export interface PromptSpecialTagCounts {
  */
 export interface QueryOptions {
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 // ==================== 结果类型 ====================

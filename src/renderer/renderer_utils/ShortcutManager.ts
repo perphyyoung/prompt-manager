@@ -3,10 +3,10 @@
  * 提供全局快捷键支持，包括编辑导航、保存等操作
  */
 
-import { logger } from '../../utils/Logger.ts';
-import { contextStack } from '../managers/ContextStackManager.ts';
-import { Constants } from '../../constants.ts';
-import type { IClosableElement } from '../../types/entities.ts';
+import { logger } from "../../utils/Logger.ts";
+import { contextStack } from "../managers/ContextStackManager.ts";
+import { Constants } from "../../constants.ts";
+import type { IClosableElement } from "../../types/entities.ts";
 
 interface ShortcutInfo {
   action: string;
@@ -22,7 +22,11 @@ interface ShortcutManagerOptions {
     saveAndClosePromptDetail?: () => Promise<void>;
     saveAndCloseImageDetail?: () => Promise<void>;
     refreshData?: () => Promise<void>;
-    promptPanelManager?: { viewModeType: string; renderView: () => void | Promise<void>; selectAllVisibleItems?: () => void } | null;
+    promptPanelManager?: {
+      viewModeType: string;
+      renderView: () => void | Promise<void>;
+      selectAllVisibleItems?: () => void;
+    } | null;
     imagePanelManager?: { selectAllVisibleItems?: () => void } | null;
     trashManager?: { loadTrash: () => Promise<void> } | null;
     currentPanel?: string;
@@ -30,7 +34,7 @@ interface ShortcutManagerOptions {
 }
 
 export class ShortcutManager {
-  private app: ShortcutManagerOptions['app'];
+  private app: ShortcutManagerOptions["app"];
   private shortcuts: Map<string, ShortcutInfo> = new Map();
   private enabled = true;
   private isBound = false;
@@ -45,36 +49,36 @@ export class ShortcutManager {
    */
   initDefaultShortcuts(): void {
     // 编辑导航
-    this.register('Ctrl+ArrowLeft', 'editorPrev', '上一个项目');
-    this.register('Ctrl+ArrowRight', 'editorNext', '下一个项目');
-    this.register('Ctrl+ArrowUp', 'editorFirst', '第一个项目');
-    this.register('Ctrl+ArrowDown', 'editorLast', '最后一个项目');
+    this.register("Ctrl+ArrowLeft", "editorPrev", "上一个项目");
+    this.register("Ctrl+ArrowRight", "editorNext", "下一个项目");
+    this.register("Ctrl+ArrowUp", "editorFirst", "第一个项目");
+    this.register("Ctrl+ArrowDown", "editorLast", "最后一个项目");
 
     // 保存操作
-    this.register('Ctrl+S', 'save', '保存');
-    this.register('Ctrl+Shift+S', 'saveAndClose', '保存并关闭');
+    this.register("Ctrl+S", "save", "保存");
+    this.register("Ctrl+Shift+S", "saveAndClose", "保存并关闭");
 
     // 搜索
-    this.register('Ctrl+F', 'focusSearch', '聚焦搜索框');
+    this.register("Ctrl+F", "focusSearch", "聚焦搜索框");
 
     // 标签管理
-    this.register('Ctrl+T', 'toggleTags', '切换标签面板');
+    this.register("Ctrl+T", "toggleTags", "切换标签面板");
 
     // 回收站
-    this.register('Ctrl+Shift+Delete', 'openTrash', '打开回收站');
+    this.register("Ctrl+Shift+Delete", "openTrash", "打开回收站");
 
     // 刷新
-    this.register('F5', 'refresh', '刷新数据');
+    this.register("F5", "refresh", "刷新数据");
 
     // 面板切换
-    this.register('Ctrl+I', 'switchToImagePanel', '切换到图像主界面');
-    this.register('Ctrl+P', 'switchToPromptPanel', '切换到提示词主界面');
+    this.register("Ctrl+I", "switchToImagePanel", "切换到图像主界面");
+    this.register("Ctrl+P", "switchToPromptPanel", "切换到提示词主界面");
   }
 
   /**
    * 注册快捷键
    */
-  register(keyCombo: string, action: string, description = ''): void {
+  register(keyCombo: string, action: string, description = ""): void {
     this.shortcuts.set(keyCombo.toLowerCase(), { action, description });
   }
 
@@ -107,17 +111,17 @@ export class ShortcutManager {
       return;
     }
 
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener("keydown", (e) => {
       if (!this.enabled) return;
 
       // Escape 键处理 - 基于上下文堆栈
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         this.handleEscape(e);
         return;
       }
 
       // Ctrl+A 处理 - 基于上下文堆栈
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
         this.handleSelectAll(e);
         return;
       }
@@ -142,7 +146,7 @@ export class ShortcutManager {
     const id = contextStack.peekId();
 
     if (!id) {
-      window.electronAPI.logWarn('ShortcutManager', 'No element in stack');
+      window.electronAPI.logWarn("ShortcutManager", "No element in stack");
       return;
     }
 
@@ -153,15 +157,15 @@ export class ShortcutManager {
 
     const element = document.getElementById(id) as IClosableElement;
     if (!element) {
-      window.electronAPI.logError('ShortcutManager', `Element not found: ${id}`);
+      window.electronAPI.logError("ShortcutManager", `Element not found: ${id}`);
       return;
     }
 
-    if (typeof element.close === 'function') {
+    if (typeof element.close === "function") {
       element.close();
       e.preventDefault();
     } else {
-      window.electronAPI.logError('ShortcutManager', `No close method for: ${id}`);
+      window.electronAPI.logError("ShortcutManager", `No close method for: ${id}`);
     }
   }
 
@@ -195,7 +199,7 @@ export class ShortcutManager {
 
     // 其他界面：调用 ctrla 方法，由界面自己决定是否处理
     const element = document.getElementById(id);
-    if (element && typeof (element as any).ctrla === 'function') {
+    if (element && typeof (element as any).ctrla === "function") {
       const handled = (element as any).ctrla();
       // 只有界面处理了（返回 true 或 undefined）才阻止默认行为
       if (handled !== false) {
@@ -209,10 +213,10 @@ export class ShortcutManager {
    */
   private isTextInputElement(element: HTMLElement): boolean {
     const tagName = element.tagName;
-    if (tagName === 'TEXTAREA') return true;
-    if (tagName === 'INPUT') {
+    if (tagName === "TEXTAREA") return true;
+    if (tagName === "INPUT") {
       const inputType = (element as HTMLInputElement).type;
-      return ['text', 'search', 'url', 'email', 'password', 'number'].includes(inputType);
+      return ["text", "search", "url", "email", "password", "number"].includes(inputType);
     }
     return element.isContentEditable;
   }
@@ -223,14 +227,14 @@ export class ShortcutManager {
   getKeyCombo(e: KeyboardEvent): string {
     const parts: string[] = [];
 
-    if (e.ctrlKey) parts.push('Ctrl');
-    if (e.metaKey) parts.push('Ctrl'); // Mac 上 Command 键
-    if (e.shiftKey) parts.push('Shift');
-    if (e.altKey) parts.push('Alt');
+    if (e.ctrlKey) parts.push("Ctrl");
+    if (e.metaKey) parts.push("Ctrl"); // Mac 上 Command 键
+    if (e.shiftKey) parts.push("Shift");
+    if (e.altKey) parts.push("Alt");
 
     parts.push(e.key);
 
-    return parts.join('+');
+    return parts.join("+");
   }
 
   /**
@@ -240,60 +244,60 @@ export class ShortcutManager {
     try {
       switch (action) {
         // 编辑导航
-        case 'editorPrev':
-          this.navigateEditor('prev');
+        case "editorPrev":
+          this.navigateEditor("prev");
           break;
-        case 'editorNext':
-          this.navigateEditor('next');
+        case "editorNext":
+          this.navigateEditor("next");
           break;
-        case 'editorFirst':
-          this.navigateEditor('first');
+        case "editorFirst":
+          this.navigateEditor("first");
           break;
-        case 'editorLast':
-          this.navigateEditor('last');
+        case "editorLast":
+          this.navigateEditor("last");
           break;
 
         // 保存操作
-        case 'save':
+        case "save":
           this.saveCurrent();
           break;
-        case 'saveAndClose':
+        case "saveAndClose":
           this.saveAndClose();
           break;
 
         // 搜索
-        case 'focusSearch':
+        case "focusSearch":
           this.focusSearch();
           break;
 
         // 标签管理
-        case 'toggleTags':
+        case "toggleTags":
           this.toggleTagsPanel();
           break;
 
         // 回收站
-        case 'openTrash':
+        case "openTrash":
           this.openTrash();
           break;
 
         // 刷新
-        case 'refresh':
+        case "refresh":
           this.refreshData();
           break;
 
         // 面板切换
-        case 'switchToImagePanel':
+        case "switchToImagePanel":
           this.switchToImagePanel();
           break;
-        case 'switchToPromptPanel':
+        case "switchToPromptPanel":
           this.switchToPromptPanel();
           break;
 
         default:
-          logger.warn('ShortcutManager', `Unknown action: ${action}`);
+          logger.warn("ShortcutManager", `Unknown action: ${action}`);
       }
     } catch (error) {
-      logger.error('ShortcutManager', `Shortcut action failed: ${action}`, error);
+      logger.error("ShortcutManager", `Shortcut action failed: ${action}`, error);
     }
   }
 
@@ -301,7 +305,9 @@ export class ShortcutManager {
    * 导航编辑器
    */
   navigateEditor(direction: string): void {
-    const promptDetailModal = document.querySelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`);
+    const promptDetailModal = document.querySelector(
+      `#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`,
+    );
     const imageDetailModal = document.querySelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`);
 
     if (promptDetailModal) {
@@ -319,7 +325,9 @@ export class ShortcutManager {
    * 保存当前内容
    */
   async saveCurrent(): Promise<void> {
-    const promptDetailModal = document.querySelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`);
+    const promptDetailModal = document.querySelector(
+      `#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`,
+    );
     const imageDetailModal = document.querySelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`);
 
     if (promptDetailModal && this.app.savePromptWithoutClosing) {
@@ -333,7 +341,9 @@ export class ShortcutManager {
    * 保存并关闭
    */
   async saveAndClose(): Promise<void> {
-    const promptDetailModal = document.querySelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`);
+    const promptDetailModal = document.querySelector(
+      `#${Constants.Ids.PROMPT_DETAIL_MODAL}.active`,
+    );
     const imageDetailModal = document.querySelector(`#${Constants.Ids.IMAGE_DETAIL_MODAL}.active`);
 
     if (promptDetailModal && this.app.saveAndClosePromptDetail) {
@@ -347,9 +357,11 @@ export class ShortcutManager {
    * 聚焦搜索框
    */
   focusSearch(): void {
-    const activePanel = document.querySelector('.panel.active');
+    const activePanel = document.querySelector(".panel.active");
     if (activePanel) {
-      const searchInput = activePanel.querySelector('input[type="search"]') as HTMLInputElement | null;
+      const searchInput = activePanel.querySelector(
+        'input[type="search"]',
+      ) as HTMLInputElement | null;
       if (searchInput) {
         searchInput.focus();
         searchInput.select();
@@ -363,8 +375,8 @@ export class ShortcutManager {
   toggleTagsPanel(): void {
     const tagsPanel = document.getElementById(Constants.Ids.TAGS_PANEL);
     if (tagsPanel) {
-      const isVisible = tagsPanel.style.display !== 'none';
-      tagsPanel.style.display = isVisible ? 'none' : 'block';
+      const isVisible = tagsPanel.style.display !== "none";
+      tagsPanel.style.display = isVisible ? "none" : "block";
     }
   }
 
@@ -374,7 +386,7 @@ export class ShortcutManager {
   openTrash(): void {
     const trashPanel = document.getElementById(Constants.Ids.TRASH_PANEL);
     if (trashPanel) {
-      trashPanel.classList.add('active');
+      trashPanel.classList.add("active");
       if (this.app.trashManager) {
         this.app.trashManager.loadTrash();
       }
@@ -444,7 +456,7 @@ export class ShortcutManager {
         break;
       }
 
-      if (typeof element.close === 'function') {
+      if (typeof element.close === "function") {
         element.close();
         iterations++;
         // 给 DOM 更新一点时间
@@ -462,7 +474,7 @@ export class ShortcutManager {
   getShortcuts(): Array<{ keyCombo: string; action: string; description: string }> {
     return Array.from(this.shortcuts.entries()).map(([key, value]) => ({
       keyCombo: key,
-      ...value
+      ...value,
     }));
   }
 
@@ -471,16 +483,19 @@ export class ShortcutManager {
    */
   showHelp(): string {
     const shortcuts = this.getShortcuts();
-    const helpContent = shortcuts.map(s =>
-      `<div class="shortcut-item">
+    const helpContent = shortcuts
+      .map(
+        (s) =>
+          `<div class="shortcut-item">
         <kbd>${s.keyCombo}</kbd>
         <span>${s.description}</span>
-      </div>`
-    ).join('');
+      </div>`,
+      )
+      .join("");
 
-    logger.info('ShortcutManager', '快捷键列表:');
-    shortcuts.forEach(s => {
-      logger.info('ShortcutManager', `${s.keyCombo}: ${s.description}`);
+    logger.info("ShortcutManager", "快捷键列表:");
+    shortcuts.forEach((s) => {
+      logger.info("ShortcutManager", `${s.keyCombo}: ${s.description}`);
     });
 
     return helpContent;

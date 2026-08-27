@@ -1,1 +1,1 @@
-export { EditableTagList } from './EditableTagList.ts';
+export { EditableTagList } from "./EditableTagList.ts";

@@ -3,9 +3,9 @@
  * 标签组库的统一入口，提供便捷方法
  */
 
-import * as operations from './operations.ts';
-import * as validation from './validation.ts';
-import * as utils from './utils.ts';
+import * as operations from "./operations.ts";
+import * as validation from "./validation.ts";
+import * as utils from "./utils.ts";
 import type {
   TagName,
   TagGroup,
@@ -15,13 +15,9 @@ import type {
   TagDeleteResult,
   TagCreateOptions,
   TagQueryOptions,
-  Tag
-} from './types.ts';
-import {
-  TagExistsError,
-  InvalidTagNameError,
-  TagNotFoundError
-} from './types.ts';
+  Tag,
+} from "./types.ts";
+import { TagExistsError, InvalidTagNameError, TagNotFoundError } from "./types.ts";
 
 /**
  * PyTagGroups 标签组库
@@ -56,7 +52,10 @@ export class PyTagGroups {
    * @param options - 创建选项
    * @returns 操作结果
    */
-  async create(input: TagName | TagName[], options: TagCreateOptions = {}): Promise<TagOperationResult> {
+  async create(
+    input: TagName | TagName[],
+    options: TagCreateOptions = {},
+  ): Promise<TagOperationResult> {
     const tags = Array.isArray(input) ? input : [input];
     const reservedTags = validation.getReservedTags(this.type);
     const existingTags = await operations.getTags(this.type);
@@ -65,7 +64,7 @@ export class PyTagGroups {
       success: true,
       created: [],
       skipped: [],
-      errors: []
+      errors: [],
     };
 
     for (const tag of tags) {
@@ -73,20 +72,16 @@ export class PyTagGroups {
       if (!trimmedTag) continue;
 
       // 验证
-      const validationResult = validation.validateTagCreate(
-        trimmedTag,
-        existingTags,
-        reservedTags
-      );
+      const validationResult = validation.validateTagCreate(trimmedTag, existingTags, reservedTags);
 
       if (!validationResult.valid) {
-        if (validationResult.code === 'EXISTS') {
+        if (validationResult.code === "EXISTS") {
           result.skipped.push(trimmedTag);
         } else {
           result.errors.push({
             tag: trimmedTag,
             error: validationResult.error!,
-            code: validationResult.code!
+            code: validationResult.code!,
           });
         }
         continue;
@@ -95,15 +90,15 @@ export class PyTagGroups {
       // 创建
       try {
         await operations.createTags(this.type, [trimmedTag], {
-          defaultGroupId: options.defaultGroupId
+          defaultGroupId: options.defaultGroupId,
         });
         result.created.push(trimmedTag);
         existingTags.push(trimmedTag);
       } catch (error) {
         result.errors.push({
           tag: trimmedTag,
-          error: error instanceof Error ? error.message : '创建失败',
-          code: 'INVALID'
+          error: error instanceof Error ? error.message : "创建失败",
+          code: "INVALID",
         });
       }
     }
@@ -128,15 +123,12 @@ export class PyTagGroups {
    * @param sortBy - 排序方式
    * @returns 排序后的标签数组
    */
-  private async sortTags(
-    tags: TagName[],
-    sortBy?: TagQueryOptions['sortBy']
-  ): Promise<TagName[]> {
+  private async sortTags(tags: TagName[], sortBy?: TagQueryOptions["sortBy"]): Promise<TagName[]> {
     switch (sortBy) {
-      case 'name':
+      case "name":
         return [...tags].sort((a, b) => a.localeCompare(b));
 
-      case 'count': {
+      case "count": {
         const counts = await this.getTagCounts();
         return utils.sortTagsByCount(tags, counts);
       }
@@ -174,9 +166,8 @@ export class PyTagGroups {
 
     if (!lowerPrefix) return [];
 
-    return allTags.filter(tag =>
-      tag.toLowerCase().startsWith(lowerPrefix) &&
-      (!exclude || !exclude.includes(tag))
+    return allTags.filter(
+      (tag) => tag.toLowerCase().startsWith(lowerPrefix) && (!exclude || !exclude.includes(tag)),
     );
   }
 
@@ -195,12 +186,12 @@ export class PyTagGroups {
     if (!validationResult.valid) {
       // 根据错误码抛出自定义异常
       switch (validationResult.code) {
-        case 'NOT_FOUND':
+        case "NOT_FOUND":
           throw new TagNotFoundError(oldName.trim());
-        case 'EXISTS':
+        case "EXISTS":
           throw new TagExistsError(newName.trim());
-        case 'INVALID':
-          throw new InvalidTagNameError(newName.trim(), validationResult.error || '标签名无效');
+        case "INVALID":
+          throw new InvalidTagNameError(newName.trim(), validationResult.error || "标签名无效");
         default:
           throw new Error(validationResult.error);
       }
@@ -236,7 +227,7 @@ export class PyTagGroups {
   async getTagsWithGroups(): Promise<Tag[]> {
     const [tags, groups] = await Promise.all([
       operations.getTags(this.type),
-      operations.getTagGroups(this.type)
+      operations.getTagGroups(this.type),
     ]);
 
     return utils.toTagObjects(tags, groups);
@@ -257,9 +248,7 @@ export class PyTagGroups {
     }
 
     const groups = await operations.getTagGroups(this.type);
-    const maxOrder = groups.length > 0
-      ? Math.max(...groups.map(g => g.sortOrder))
-      : 0;
+    const maxOrder = groups.length > 0 ? Math.max(...groups.map((g) => g.sortOrder)) : 0;
 
     return operations.createTagGroup(this.type, name.trim(), sortOrder ?? maxOrder + 1);
   }
@@ -312,7 +301,7 @@ export class PyTagGroups {
    */
   async getTagsByGroup(groupId: TagGroupId): Promise<TagName[]> {
     const groups = await operations.getTagGroups(this.type);
-    const group = groups.find(g => g.id === groupId);
+    const group = groups.find((g) => g.id === groupId);
     return group?.tags || [];
   }
 
@@ -327,7 +316,7 @@ export class PyTagGroups {
     return utils.parseTagInput(input);
   }
 
-/**
+  /**
    * 计算标签差集
    * @param current - 当前标签数组
    * @param removed - 要移除的标签数组
@@ -342,7 +331,9 @@ export class PyTagGroups {
    * @param tags - 标签数组
    * @returns 分组结果
    */
-  async groupByGroup(tags: TagName[]): Promise<{ grouped: Record<TagGroupId, TagName[]>; ungrouped: TagName[] }> {
+  async groupByGroup(
+    tags: TagName[],
+  ): Promise<{ grouped: Record<TagGroupId, TagName[]>; ungrouped: TagName[] }> {
     const groups = await operations.getTagGroups(this.type);
     return utils.groupTagsByGroup(tags, groups);
   }

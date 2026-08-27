@@ -3,10 +3,10 @@
  * 负责统计数据的计算和渲染
  */
 
-import { contextStack, IContextStackEntry } from './ContextStackManager.ts';
-import { Constants } from '../../constants.ts';
-import type { IApp } from '../app.types.ts';
-import type { IClosableElement } from '../../types/entities.ts';
+import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
+import { Constants } from "../../constants.ts";
+import type { IApp } from "../app.types.ts";
+import type { IClosableElement } from "../../types/entities.ts";
 
 export interface IStatistics {
   // 提示词统计
@@ -39,17 +39,19 @@ export class StatisticsManager {
    */
   private bindStatsEvents(): void {
     // 统计按钮
-    document.getElementById(Constants.Ids.STATISTICS_BTN)?.addEventListener('click', () => {
+    document.getElementById(Constants.Ids.STATISTICS_BTN)?.addEventListener("click", () => {
       this.openStatisticsModal();
     });
 
     // 关闭按钮
-    document.getElementById(Constants.Ids.CLOSE_STATISTICS_MODAL)?.addEventListener('click', () => this.closeStatisticsModal());
+    document
+      .getElementById(Constants.Ids.CLOSE_STATISTICS_MODAL)
+      ?.addEventListener("click", () => this.closeStatisticsModal());
 
     // 点击背景关闭
     const statisticsModal = document.getElementById(Constants.Ids.STATISTICS_MODAL);
     if (statisticsModal) {
-      statisticsModal.addEventListener('click', (e) => {
+      statisticsModal.addEventListener("click", (e) => {
         if (e.target === statisticsModal) {
           this.closeStatisticsModal();
         }
@@ -68,10 +70,12 @@ export class StatisticsManager {
       const stackEntry: IContextStackEntry = {
         id: Constants.Ids.STATISTICS_MODAL,
         state: { isBatchToolbarVisible: false },
-        close: () => { this.closeStatisticsModal(); }
+        close: () => {
+          this.closeStatisticsModal();
+        },
       };
       contextStack.push(stackEntry);
-      modal.classList.add('active');
+      modal.classList.add("active");
       // 添加 close 方法供 ShortcutManager 调用
       (modal as IClosableElement).close = () => this.closeStatisticsModal();
     }
@@ -83,7 +87,7 @@ export class StatisticsManager {
   closeStatisticsModal(): void {
     const modal = document.getElementById(Constants.Ids.STATISTICS_MODAL);
     if (modal) {
-      modal.classList.remove('active');
+      modal.classList.remove("active");
     }
     // 出栈：退出统计视图上下文
     contextStack.pop(Constants.Ids.STATISTICS_MODAL);
@@ -97,7 +101,7 @@ export class StatisticsManager {
       const data = await this.calculateStatistics();
       this.updateDOM(data);
     } catch (error) {
-      window.electronAPI.logError('StatisticsManager', 'Failed to render statistics:', error);
+      window.electronAPI.logError("StatisticsManager", "Failed to render statistics:", error);
     }
   }
 
@@ -107,15 +111,21 @@ export class StatisticsManager {
    * 避免把全量提示词/图像经 IPC 拉进渲染进程做 JS 计数
    */
   async calculateStatistics(): Promise<IStatistics> {
-    const isSafeMode = this.app.viewMode === 'safe';
+    const isSafeMode = this.app.viewMode === "safe";
     const [stats, promptTagGroups, imageTagGroups] = await Promise.all([
       window.electronAPI.getStatistics(isSafeMode),
       window.electronAPI.getPromptTagGroups(),
-      window.electronAPI.getImageTagGroups()
+      window.electronAPI.getImageTagGroups(),
     ]);
 
-    const totalPromptTags = promptTagGroups.reduce((sum, group) => sum + (group.tags ? group.tags.length : 0), 0);
-    const totalImageTags = imageTagGroups.reduce((sum, group) => sum + (group.tags ? group.tags.length : 0), 0);
+    const totalPromptTags = promptTagGroups.reduce(
+      (sum, group) => sum + (group.tags ? group.tags.length : 0),
+      0,
+    );
+    const totalImageTags = imageTagGroups.reduce(
+      (sum, group) => sum + (group.tags ? group.tags.length : 0),
+      0,
+    );
 
     return {
       totalPrompts: stats.totalPrompts,
@@ -129,7 +139,7 @@ export class StatisticsManager {
       favoriteImages: stats.favoriteImages,
       referencedImages: stats.referencedImages,
       imageTagGroups: imageTagGroups.length,
-      totalImageTags
+      totalImageTags,
     };
   }
 

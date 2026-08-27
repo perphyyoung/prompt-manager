@@ -9,10 +9,7 @@ import {
   type ToolbarContext,
 } from "../pyBatchToolbar/index.ts";
 import { sortButtons } from "../pyBatchToolbar/utils.ts";
-import {
-  contextStack,
-  IContextStackEntry,
-} from "../renderer/managers/ContextStackManager.ts";
+import { contextStack, IContextStackEntry } from "../renderer/managers/ContextStackManager.ts";
 import { DialogService } from "../renderer/services/index.ts";
 import { ElementId } from "../constants.ts";
 import type { IDialogTemplate } from "../types/entities.ts";
@@ -106,10 +103,7 @@ export class BatchToolbarMiddle {
    * @param businessConfig - 业务配置
    */
   initAll(businessConfig: BatchBusinessConfig): void {
-    const contexts: ToolbarContext[] = [
-      "promptMain",
-      "imageMain",
-    ];
+    const contexts: ToolbarContext[] = ["promptMain", "imageMain"];
 
     contexts.forEach((context) => this.init(context, businessConfig));
   }
@@ -119,10 +113,7 @@ export class BatchToolbarMiddle {
    * @param context - 工具栏上下文
    * @param callback - 选择状态变化时的回调函数
    */
-  registerSelectionChangeCallback(
-    context: ToolbarContext,
-    callback: () => void,
-  ): void {
+  registerSelectionChangeCallback(context: ToolbarContext, callback: () => void): void {
     const state = this.states.get(context);
     if (!state) return;
 
@@ -248,11 +239,7 @@ export class BatchToolbarMiddle {
    * @param action - 动作标识
    * @param handler - 处理器函数
    */
-  registerActionHandler(
-    context: ToolbarContext,
-    action: string,
-    handler: ActionHandler,
-  ): void {
+  registerActionHandler(context: ToolbarContext, action: string, handler: ActionHandler): void {
     const state = this.states.get(context);
     if (state) {
       state.actionHandlers.set(action, handler);
@@ -288,9 +275,7 @@ export class BatchToolbarMiddle {
       /** 确认对话框配置 */
       confirmConfig: IDialogTemplate;
       /** 执行删除的异步函数 */
-      execute: (
-        ids: string[],
-      ) => Promise<{ success: boolean; deleted: number }>;
+      execute: (ids: string[]) => Promise<{ success: boolean; deleted: number }>;
       /** 删除成功后的刷新回调 */
       onRefresh: () => Promise<void>;
       /** Toast 回调 */
@@ -303,10 +288,9 @@ export class BatchToolbarMiddle {
     if (selectedIds.length === 0) return;
 
     // 确认对话框
-    const confirmed = await DialogService.showConfirmDialogByConfig(
-      options.confirmConfig,
-      { count: selectedIds.length },
-    );
+    const confirmed = await DialogService.showConfirmDialogByConfig(options.confirmConfig, {
+      count: selectedIds.length,
+    });
     if (!confirmed) return;
 
     try {
@@ -324,11 +308,7 @@ export class BatchToolbarMiddle {
         : `${selectedIds.length} 个项目已删除`;
       options.showToast(message, "success");
     } catch (error) {
-      window.electronAPI.logError(
-        "BatchToolbarMiddle.ts",
-        "Failed to batch delete",
-        error,
-      );
+      window.electronAPI.logError("BatchToolbarMiddle.ts", "Failed to batch delete", error);
       options.showToast("批量删除失败", "error");
     }
   }
@@ -346,9 +326,7 @@ export class BatchToolbarMiddle {
       /** 确认对话框配置 */
       confirmConfig: IDialogTemplate;
       /** 执行删除的异步函数 */
-      execute: (
-        tagNames: string[],
-      ) => Promise<{ success: boolean; deleted: number }>;
+      execute: (tagNames: string[]) => Promise<{ success: boolean; deleted: number }>;
       /** 删除成功后的刷新回调 */
       onRefresh: () => Promise<void>;
       /** Toast 回调 */
@@ -361,10 +339,9 @@ export class BatchToolbarMiddle {
     if (selectedTags.size === 0) return;
 
     // 确认对话框
-    const confirmed = await DialogService.showConfirmDialogByConfig(
-      options.confirmConfig,
-      { count: selectedTags.size },
-    );
+    const confirmed = await DialogService.showConfirmDialogByConfig(options.confirmConfig, {
+      count: selectedTags.size,
+    });
     if (!confirmed) return;
 
     try {
@@ -382,11 +359,7 @@ export class BatchToolbarMiddle {
         : `${selectedTags.size} 个标签已删除`;
       options.showToast(message, "success");
     } catch (error) {
-      window.electronAPI.logError(
-        "BatchToolbarMiddle.ts",
-        "Failed to batch delete tags",
-        error,
-      );
+      window.electronAPI.logError("BatchToolbarMiddle.ts", "Failed to batch delete tags", error);
       options.showToast("批量删除失败", "error");
     }
   }
@@ -397,11 +370,7 @@ export class BatchToolbarMiddle {
    * @param ids - 项目 ID 数组
    * @param tagNames - 标签名数组
    */
-  async batchAddTag(
-    context: ToolbarContext,
-    ids: string[],
-    tagNames: string[],
-  ): Promise<void> {
+  async batchAddTag(context: ToolbarContext, ids: string[], tagNames: string[]): Promise<void> {
     const config = this.states.get(context)?.businessConfig.addTag;
     if (!config) {
       throw new Error(`未配置 ${context} 的批量添加标签业务逻辑`);
@@ -415,10 +384,7 @@ export class BatchToolbarMiddle {
    * @param context - 工具栏上下文
    * @param ids - 项目 ID 数组
    */
-  async batchFavorite(
-    context: ToolbarContext,
-    ids: string[],
-  ): Promise<void> {
+  async batchFavorite(context: ToolbarContext, ids: string[]): Promise<void> {
     const config = this.states.get(context)?.businessConfig.favorite;
     if (!config) {
       throw new Error(`未配置 ${context} 的批量收藏业务逻辑`);
@@ -441,11 +407,7 @@ export class BatchToolbarMiddle {
    * @param count - 计数（仅在显示时使用）
    * @param onClose - 关闭时的回调函数（必需）
    */
-  toggle(
-    context: ToolbarContext,
-    count: number = 0,
-    onClose: () => void,
-  ): void {
+  toggle(context: ToolbarContext, count: number = 0, onClose: () => void): void {
     const state = this.states.get(context);
     if (!state) return;
 
@@ -462,9 +424,7 @@ export class BatchToolbarMiddle {
    */
   getState(
     context: ToolbarContext,
-  ):
-    | { isVisible: boolean; count: number; context: ToolbarContext }
-    | undefined {
+  ): { isVisible: boolean; count: number; context: ToolbarContext } | undefined {
     const state = this.states.get(context);
     if (!state) return undefined;
 
@@ -501,9 +461,7 @@ export class BatchToolbarMiddle {
     const toolbar = document.getElementById(state.config.id);
     if (!toolbar) return;
 
-    const actionsDiv = toolbar.querySelector(
-      ".batch-toolbar-actions, .batch-tag-toolbar-actions",
-    );
+    const actionsDiv = toolbar.querySelector(".batch-toolbar-actions, .batch-tag-toolbar-actions");
     if (!actionsDiv) return;
 
     // 清空现有按钮
@@ -679,11 +637,7 @@ export class BatchToolbarMiddle {
    * @param id - 项目 ID
    * @param index - 项目索引
    */
-  addSelectionWithIndex(
-    context: ToolbarContext,
-    id: string,
-    index: number,
-  ): void {
+  addSelectionWithIndex(context: ToolbarContext, id: string, index: number): void {
     const state = this.states.get(context);
     if (!state) return;
 
@@ -834,10 +788,7 @@ export class BatchToolbarMiddle {
    * @param context - 工具栏上下文
    * @param config - 工具栏配置
    */
-  private createToolbarElement(
-    context: ToolbarContext,
-    config: BatchToolbarConfig,
-  ): HTMLElement {
+  private createToolbarElement(context: ToolbarContext, config: BatchToolbarConfig): HTMLElement {
     // 先检查是否已存在
     let toolbar = document.getElementById(config.id);
     if (toolbar) {
@@ -884,9 +835,7 @@ export class BatchToolbarMiddle {
     toolbar.appendChild(content);
 
     // 插入到容器
-    const container = document.querySelector(
-      config.containerSelector || "body",
-    );
+    const container = document.querySelector(config.containerSelector || "body");
     if (container) {
       container.appendChild(toolbar);
     } else {
@@ -941,10 +890,7 @@ export class BatchToolbarMiddle {
    * @param context - 工具栏上下文
    * @param action - 动作标识
    */
-  private async handleAction(
-    context: ToolbarContext,
-    action: string,
-  ): Promise<void> {
+  private async handleAction(context: ToolbarContext, action: string): Promise<void> {
     const state = this.states.get(context);
     if (!state) return;
 
@@ -974,7 +920,4 @@ export class BatchToolbarMiddle {
 export const batchToolbarMiddle = BatchToolbarMiddle.getInstance();
 
 // 重新导出类型
-export type {
-  ToolbarContext,
-  BatchToolbarConfig,
-} from "../pyBatchToolbar/index.ts";
+export type { ToolbarContext, BatchToolbarConfig } from "../pyBatchToolbar/index.ts";

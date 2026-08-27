@@ -7,30 +7,38 @@
  * 规范参见 .trae/skills/py-pm-log/SKILL.md
  */
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+type LogLevel = "debug" | "info" | "warn" | "error";
 
 function emit(level: LogLevel, component: string, message: string, data?: unknown): void {
-  const api = typeof window !== 'undefined' ? window.electronAPI : undefined;
+  const api = typeof window !== "undefined" ? window.electronAPI : undefined;
 
-  const methodName = level === 'debug' ? 'logDebug'
-    : level === 'info' ? 'logInfo'
-    : level === 'warn' ? 'logWarn'
-    : 'logError';
+  const methodName =
+    level === "debug"
+      ? "logDebug"
+      : level === "info"
+        ? "logInfo"
+        : level === "warn"
+          ? "logWarn"
+          : "logError";
   const method = api?.[methodName];
 
-  if (typeof method === 'function') {
+  if (typeof method === "function") {
     method(component, message, data);
     return;
   }
 
   // 回退：electronAPI 缺失或缺少对应日志方法的环境（vitest 等）
-  const fn = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
-  fn(`[${component}] ${message}`, data !== undefined ? data : '');
+  const fn = level === "error" ? console.error : level === "warn" ? console.warn : console.log;
+  fn(`[${component}] ${message}`, data !== undefined ? data : "");
 }
 
 export const logger = {
-  debug: (component: string, message: string, data?: unknown) => emit('debug', component, message, data),
-  info: (component: string, message: string, data?: unknown) => emit('info', component, message, data),
-  warn: (component: string, message: string, data?: unknown) => emit('warn', component, message, data),
-  error: (component: string, message: string, data?: unknown) => emit('error', component, message, data)
+  debug: (component: string, message: string, data?: unknown) =>
+    emit("debug", component, message, data),
+  info: (component: string, message: string, data?: unknown) =>
+    emit("info", component, message, data),
+  warn: (component: string, message: string, data?: unknown) =>
+    emit("warn", component, message, data),
+  error: (component: string, message: string, data?: unknown) =>
+    emit("error", component, message, data),
 };
