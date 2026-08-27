@@ -460,22 +460,3 @@ export interface Statistics {
   favoriteImages: number;
   referencedImages: number;
 }
-
-/**
- * 未引用图像
- */
-export interface UnreferencedImage {
-  id: string;
-  fileName: string;
-  storedName: string;
-  relativePath: string;
-  thumbnailPath: string | null;
-  width: number | null;
-  height: number | null;
-  isSafe: number;
-  note: string;
-  isDeleted: boolean;
-  deletedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}

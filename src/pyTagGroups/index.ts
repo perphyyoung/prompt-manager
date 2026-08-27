@@ -82,6 +82,6 @@ export type { TagDataAccess } from "./dataAccess.ts";
 export { ElectronTagDataAccess, createDataAccess } from "./dataAccess.ts";
 
 // 项目标签关联服务
-export { linkTags, addTagsToItems, parseAndAddTags } from "./itemTagService.ts";
+export { linkTags } from "./itemTagService.ts";
 
 export type { LinkTagsOptions, LinkTagsResult } from "./itemTagService.ts";

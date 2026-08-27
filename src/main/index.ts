@@ -33,7 +33,7 @@ import { spawn } from "child_process";
 import * as db from "./database.js";
 import { generatePromptId, generateImageId } from "../utils/idGenerator.js";
 import { getFormattedLocalTimeToSecond, getFormattedYearMonth, localTime } from "../utils/index.js";
-import { logInfo, logDebug, logError, logWarn, initLogger } from "./logger.js";
+import { logInfo, logDebug, logError, logWarn, initLogger } from "./mainLogger.js";
 import { Constants } from "../constants.ts";
 import { copyDirectoryWithProgress } from "../utils/FileUtils.js";
 

@@ -16,7 +16,6 @@ import {
   linkTags,
   parseTagInput,
   TagGroup,
-  Tag,
   PyTagGroups,
 } from "../../pyTagGroups/index.ts";
 import { createDataAccess } from "../../pyTagGroups/dataAccess.ts";
@@ -259,16 +258,6 @@ export class TagService {
    */
   async getTagGroups(type: DataType): Promise<TagGroup[]> {
     return getTagGroups(type);
-  }
-
-  /**
-   * 获取带组信息的标签
-   * @param type - 数据类型
-   * @returns 标签列表
-   */
-  async getTagsWithGroupInfo(type: DataType): Promise<Tag[]> {
-    const pyTagGroups = PyTagGroups.getInstance(type);
-    return pyTagGroups.getTagsWithGroups();
   }
 
   /**

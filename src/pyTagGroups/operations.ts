@@ -14,10 +14,8 @@ import type {
   TagOperationResult,
   TagDeleteResult,
   TagCreateOptions,
-  TagWithGroup,
 } from "./types.ts";
 import { TagExistsError, InvalidTagNameError } from "./types.ts";
-import * as utils from "./utils.ts";
 import { createDataAccess } from "./dataAccess.ts";
 
 // ========== 缓存操作 ==========
@@ -262,18 +260,6 @@ export async function getTagGroups(type: DataType): Promise<TagGroup[]> {
 
   setCache(cacheKey, data);
   return data;
-}
-
-/**
- * 获取所有标签（以 Tag 对象形式）
- * @param type - 数据类型
- * @returns Tag 对象数组
- * @throws 数据库操作失败时抛出异常
- */
-export async function getTagsWithGroupInfo(type: DataType): Promise<TagWithGroup[]> {
-  const [tags, groups] = await Promise.all([getTags(type), getTagGroups(type)]);
-
-  return utils.buildTagsWithGroupInfo(tags, groups);
 }
 
 /**

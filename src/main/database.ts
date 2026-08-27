@@ -7,7 +7,7 @@
 import sqlite3 from "sqlite3";
 import path from "path";
 import { promises as fs } from "fs";
-import { logError, logWarn, logDebug } from "./logger.js";
+import { logError, logWarn, logDebug } from "./mainLogger.js";
 import { getFormattedLocalTimeToSecond, dbTime, formatDbTimeToLocal } from "../utils/index.js";
 import {
   DatabaseError,
@@ -48,7 +48,6 @@ import type {
   PromptSpecialTagCounts,
   RunResult,
   Statistics,
-  UnreferencedImage,
   ImageFilePaths,
   ImageCleanupInfo,
 } from "./database-types.js";
@@ -3112,34 +3111,6 @@ async function getPromptImages(promptId: string): Promise<PromptImage[]> {
   }));
 }
 
-/**
- * 获取未被引用的图像
- */
-async function getUnreferencedImages(): Promise<UnreferencedImage[]> {
-  const sql = `
-    SELECT i.*
-    FROM images i
-    LEFT JOIN prompt_image_relations pir ON i.id = pir.image_id
-    WHERE pir.prompt_id IS NULL
-  `;
-  const rows = await all<ImageRow>(sql);
-  return rows.map((row) => ({
-    id: row.id,
-    fileName: row.file_name,
-    storedName: row.stored_name,
-    relativePath: row.relative_path,
-    thumbnailPath: row.thumbnail_path,
-    width: row.width,
-    height: row.height,
-    isSafe: row.is_safe === 1 ? 1 : 0, // 严格限制为 0 或 1，其他值视为 0
-    note: row.note,
-    isDeleted: row.is_deleted === 1,
-    deletedAt: row.deleted_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }));
-}
-
 // ==================== 图像标签管理 ====================
 
 /**
@@ -3428,20 +3399,6 @@ async function getStatistics(isSafeOnly: boolean): Promise<Statistics> {
 // ==================== 清空所有数据 ====================
 
 /**
- * 重命名数据目录
- * @param dataDir - 当前数据目录路径
- * @returns 新目录路径（带时间后缀）
- */
-async function renameDataDirectory(dataDir: string): Promise<string> {
-  const timestamp = getFormattedLocalTimeToSecond();
-  const parentDir = path.dirname(dataDir);
-  const dirName = path.basename(dataDir);
-  const newPath = path.join(parentDir, `${dirName}_${timestamp}`);
-  await fs.rename(dataDir, newPath);
-  return newPath;
-}
-
-/**
  * 清空所有数据
  * 重命名当前数据目录并创建新的空数据目录，应用将重启
  * 旧数据目录保留，可手动备份或删除
@@ -3589,7 +3546,6 @@ export {
   addPromptImages,
   addImagePrompts,
   getPromptImages,
-  getUnreferencedImages,
   updateImage,
   updateImagesBatch,
   // 图像标签组操作
@@ -3612,7 +3568,6 @@ export {
   // 共享标签
   getAllTags,
   // 数据清理
-  renameDataDirectory,
   clearAllData,
   // 统计
   getStatistics,

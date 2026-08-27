@@ -68,52 +68,6 @@ export async function linkTags(options: LinkTagsOptions): Promise<LinkTagsResult
   };
 }
 
-/**
- * 批量添加标签到多个项目
- * 用于多选工具栏批量添加场景
- *
- * @param tagNames - 标签名数组
- * @param type - 数据类型
- * @param itemIds - 项目ID数组
- * @param createOptions - 创建选项
- * @returns 操作结果
- */
-export async function addTagsToItems(
-  tagNames: string[],
-  type: DataType,
-  itemIds: string[],
-  createOptions?: TagCreateOptions,
-): Promise<LinkTagsResult> {
-  return linkTags({
-    tagNames,
-    type,
-    itemIds,
-    createOptions,
-  });
-}
-
-/**
- * 解析并添加标签（支持分隔符）
- * 用于输入框批量添加场景，支持逗号、空格等分隔符
- *
- * @param input - 输入字符串
- * @param type - 数据类型
- * @param itemId - 项目ID（可选）
- * @returns 操作结果
- *
- * @example
- * // 支持多种分隔符：逗号、中文逗号、空格
- * await parseAndAddTags('tag1,tag2，tag3 tag4', 'image', '123');
- */
-export async function parseAndAddTags(
-  input: string,
-  type: DataType,
-  itemId?: string,
-): Promise<LinkTagsResult> {
-  const tagNames = parseTagInput(input);
-  return linkTags({ tagNames, type, itemId });
-}
-
 // ========== 辅助函数 ==========
 
 /**
@@ -122,17 +76,6 @@ export async function parseAndAddTags(
 function normalizeTagNames(tagNames: string | string[]): string[] {
   const names = Array.isArray(tagNames) ? tagNames : [tagNames];
   return names.map((n) => n.trim()).filter((n) => n.length > 0);
-}
-
-/**
- * 解析标签输入（支持多种分隔符）
- */
-function parseTagInput(input: string): string[] {
-  // 支持：英文逗号、中文逗号、空格、换行
-  return input
-    .split(/[,，\s\n]+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
 }
 
 /**
