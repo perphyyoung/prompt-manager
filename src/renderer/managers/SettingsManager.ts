@@ -645,22 +645,6 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
   }
 
   /**
-   * 设置视图模式
-   * @param mode - 视图模式
-   */
-  async setViewMode(mode: string): Promise<void> {
-    await this.handleViewModeChange(mode);
-
-    // 更新选择框
-    const viewModeSelect = document.getElementById(
-      Constants.Ids.VIEW_MODE_SELECT,
-    ) as HTMLSelectElement | null;
-    if (viewModeSelect) {
-      viewModeSelect.value = mode;
-    }
-  }
-
-  /**
    * 导出孤儿文件
    * @private
    */

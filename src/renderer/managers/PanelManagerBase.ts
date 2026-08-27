@@ -61,12 +61,10 @@ interface ICopyContentResult {
 interface IUIConfig {
   // 选择器
   cardSelector: string;
-  listItemSelector: string;
   cardBgSelector: string;
 
   // 容器 ID
   gridContainerId: string;
-  listContainerId: string;
 
   // 拖拽相关
   dragSource: string;
@@ -90,10 +88,10 @@ interface IUIConfig {
   // 获取本地保存位置路径（用于右键菜单）
   getOpenLocationPath(item: IPanelItem): string | null;
 
-  // 列表项显示用的标题（原始值，基类负责转义）
+  // 卡片显示用的标题（原始值，基类负责转义）
   getListTitle(item: IPanelItem): string;
 
-  // 列表项显示用的内容（原始值，基类负责转义）
+  // 卡片显示用的内容（原始值，基类负责转义）
   getListContent(item: IPanelItem): string;
 }
 
@@ -118,7 +116,6 @@ export abstract class PanelManagerBase {
   protected itemFingerprints = new Map<string, string>();
 
   // 视图设置（在子类构造函数中初始化）
-  viewModeType!: string;
   sortBy!: string;
   sortOrder!: string;
   cardSize!: number;
@@ -138,7 +135,6 @@ export abstract class PanelManagerBase {
 
   // 存储键名（子类实现）
   protected abstract get storageKeys(): {
-    viewMode: string;
     sortBy: string;
     sortOrder: string;
     cardSize: string;
@@ -380,7 +376,7 @@ export abstract class PanelManagerBase {
   protected abstract getItemFingerprint(item: IPanelItem): string;
 
   /**
-   * 渲染单个项的 HTML（子类实现，按当前视图模式生成网格卡片或列表项）
+   * 渲染单个项的 HTML（子类实现，生成网格卡片）
    * @abstract
    * @param item - 项目对象
    * @param index - 排序索引（需保持与旧元素一致）
@@ -446,13 +442,8 @@ export abstract class PanelManagerBase {
 
     // 重绑按钮事件与 hover 预览（逐元素绑定，重建后需重新绑定）
     const config = this.getUIConfig();
-    if (this.viewModeType === "grid") {
-      this.bindCardButtonEvents(changed);
-      this.bindHoverPreview(config.cardSelector);
-    } else {
-      this.bindListButtonEvents(changed);
-      this.bindHoverPreview(config.listItemSelector);
-    }
+    this.bindCardButtonEvents(changed);
+    this.bindHoverPreview(config.cardSelector);
   }
 
   /**
@@ -520,120 +511,53 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 绑定列表按钮事件（通用实现）
-   * @param filtered - 筛选后的项目列表
-   */
-  bindListButtonEvents(filtered: IPanelItem[]): void {
-    const config = this.getUIConfig();
-    const listContainer = document.getElementById(config.listContainerId);
-    if (!listContainer) return;
-
-    listContainer.querySelectorAll(config.listItemSelector).forEach((item) => {
-      const id = (item as HTMLElement).dataset.id;
-      const itemData = filtered.find((i) => String(i.id) === String(id));
-      if (!itemData) return;
-
-      // 收藏按钮
-      const favoriteBtn = item.querySelector(".favorite-btn");
-      if (favoriteBtn) {
-        favoriteBtn.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          await this.toggleFavorite(String(id), !itemData.isFavorite);
-        });
-      }
-
-      // 删除按钮
-      const deleteBtn = item.querySelector(".delete-btn");
-      if (deleteBtn) {
-        deleteBtn.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          const { config: dialogConfig, name } = config.getDeleteConfirmConfig(itemData);
-          const confirmed = await DialogService.showConfirmDialogByConfig(
-            dialogConfig as IDialogTemplate,
-            name ? { name } : undefined,
-          );
-          if (confirmed) {
-            await this.deleteItem(String(id));
-          }
-        });
-      }
-
-      // 复制按钮
-      const copyBtn = item.querySelector(".copy-btn");
-      if (copyBtn) {
-        copyBtn.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          const { content, hasContent } = config.getCopyContent(itemData);
-          if (!hasContent) {
-            this.app.showToast?.("没有可复制的内容", "warning");
-            return;
-          }
-          try {
-            await window.electronAPI.copyToClipboard(content);
-            this.app.showToast?.("已复制到剪贴板", "success");
-          } catch (error) {
-            window.electronAPI.logError(
-              "PanelManagerBase.ts",
-              "Failed to copy to clipboard",
-              error,
-            );
-            this.app.showToast?.("复制失败", "error");
-          }
-        });
-      }
-    });
-  }
-
-  /**
    * 绑定右键菜单事件（事件委托）
-   * 覆盖卡片视图、列表视图和紧凑视图
+   * 覆盖卡片视图
    * @private
    */
   protected bindContextMenuEvents(): void {
     const config = this.getUIConfig();
-    const itemSelectors = [config.cardSelector, config.listItemSelector].join(", ");
+    const itemSelectors = [config.cardSelector].join(", ");
 
-    [config.gridContainerId, config.listContainerId].forEach((containerId) => {
-      const container = document.getElementById(containerId);
-      if (!container || container.dataset.contextMenuBound === "true") return;
+    const container = document.getElementById(config.gridContainerId);
+    if (!container || container.dataset.contextMenuBound === "true") return;
 
-      container.dataset.contextMenuBound = "true";
-      container.addEventListener("contextmenu", (e) => {
-        const itemEl = (e.target as HTMLElement).closest(itemSelectors) as HTMLElement | null;
-        if (!itemEl) return;
+    container.dataset.contextMenuBound = "true";
+    container.addEventListener("contextmenu", (e) => {
+      const itemEl = (e.target as HTMLElement).closest(itemSelectors) as HTMLElement | null;
+      if (!itemEl) return;
 
-        const id = config.getElementId(itemEl);
-        if (!id) return;
+      const id = config.getElementId(itemEl);
+      if (!id) return;
 
-        const item = this.filteredItems.find((i) => String(i.id) === id);
-        if (!item) return;
+      const item = this.filteredItems.find((i) => String(i.id) === id);
+      if (!item) return;
 
-        const path = config.getOpenLocationPath(item);
-        if (!path) {
-          this.app.showToast?.("没有可打开的本地保存位置", "warning");
-          return;
-        }
+      const path = config.getOpenLocationPath(item);
+      if (!path) {
+        this.app.showToast?.("没有可打开的本地保存位置", "warning");
+        return;
+      }
 
-        e.preventDefault();
-        showContextMenu({
-          x: e.clientX,
-          y: e.clientY,
-          items: [
-            {
-              id: "openLocation",
-              label: Constants.CONTEXT_MENU_OPEN_LOCATION,
-              onClick: () => {
-                window.electronAPI.openImageLocation(path).catch((error: unknown) => {
-                  window.electronAPI.logError(
-                    "PanelManagerBase.ts",
-                    "Failed to open image location",
-                    error,
-                  );
-                });
-              },
+      e.preventDefault();
+      showContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        items: [
+          {
+            id: "openLocation",
+            label: Constants.CONTEXT_MENU_OPEN_LOCATION,
+            onClick: () => {
+              window.electronAPI.openImageLocation(path).catch((error: unknown) => {
+                window.electronAPI.logError(
+                  "PanelManagerBase.ts",
+                  "Failed to open image location",
+                  error,
+                );
+              });
             },
-          ],
-        });
+          },
+        ],
       });
     });
   }
@@ -784,20 +708,12 @@ export abstract class PanelManagerBase {
       }
     };
 
-    // 更新卡片视图
+    // 更新网格视图
     const card = document.querySelector(`${config.cardSelector}[data-id="${id}"]`);
     if (card) {
       const btn = card.querySelector(".favorite-btn");
       updateBtn(btn);
       card.classList.toggle("is-favorite", isFavorite);
-    }
-
-    // 更新列表视图
-    const listItem = document.querySelector(`${config.listItemSelector}[data-id="${id}"]`);
-    if (listItem) {
-      const btn = listItem.querySelector(".favorite-btn");
-      updateBtn(btn);
-      listItem.classList.toggle("list-item--favorite", isFavorite);
     }
   }
 
@@ -1041,7 +957,7 @@ export abstract class PanelManagerBase {
     // 更新选择模式类
     this.updateSelectionModeClass();
 
-    // 更新卡片/列表项的选中状态（视图切换后需要重新应用）
+    // 更新卡片的选中状态（视图切换后需要重新应用）
     this.updateItemSelectionState();
   }
 
@@ -1441,16 +1357,6 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 设置视图模式
-   * @param mode - 视图模式
-   */
-  setViewMode(mode: string): void {
-    this.viewModeType = mode;
-    localStorageManager.set(this.storageKeys.viewMode, mode);
-    this.renderView();
-  }
-
-  /**
    * 设置排序方式
    * @param sortBy - 排序字段
    * @param sortOrder - 排序顺序
@@ -1510,17 +1416,13 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 清除所有卡片/列表项的选中状态
+   * 清除所有卡片的选中状态
    * 在退出批量模式时调用，确保复选框和选中样式被清除
    */
   protected clearAllItemSelectionState(): void {
     // 根据当前面板类型获取选择器
     const isImagePanel = this.panelType === "image";
     const cardSelector = isImagePanel ? ".image-card" : ".prompt-card";
-    const listItemSelector = isImagePanel ? ".list-item--image" : ".list-item--prompt";
-    const compactItemSelector = isImagePanel
-      ? ".list-item--image.list-item--compact"
-      : ".list-item--prompt.list-item--compact";
 
     // 清除网格视图中的卡片选中状态
     document.querySelectorAll(cardSelector).forEach((card) => {
@@ -1529,20 +1431,6 @@ export abstract class PanelManagerBase {
       if (checkbox) {
         checkbox.checked = false;
       }
-    });
-
-    // 清除列表视图中的项选中状态
-    document.querySelectorAll(listItemSelector).forEach((item) => {
-      item.classList.remove("is-selected");
-      const checkbox = item.querySelector(".list-item__checkbox") as HTMLInputElement;
-      if (checkbox) {
-        checkbox.checked = false;
-      }
-    });
-
-    // 清除紧凑视图中的项选中状态
-    document.querySelectorAll(compactItemSelector).forEach((item) => {
-      item.classList.remove("is-selected");
     });
   }
 
@@ -1570,12 +1458,7 @@ export abstract class PanelManagerBase {
    * 根据是否有选中项在容器上添加/移除 selection-mode 类
    */
   protected updateSelectionModeClass(): void {
-    const containerIds = [
-      Constants.Ids.IMAGE_GRID,
-      Constants.Ids.PROMPT_GRID,
-      Constants.Ids.IMAGE_LIST,
-      Constants.Ids.PROMPT_LIST,
-    ];
+    const containerIds = [Constants.Ids.IMAGE_GRID, Constants.Ids.PROMPT_GRID];
 
     containerIds.forEach((id) => {
       const container = document.getElementById(id);
@@ -1589,7 +1472,7 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 更新卡片/列表项的选中状态
+   * 更新卡片的选中状态
    * 在视图切换或重新渲染后调用，确保选中状态正确显示
    */
   protected updateItemSelectionState(): void {
@@ -1598,10 +1481,6 @@ export abstract class PanelManagerBase {
     // 根据当前面板类型获取选择器
     const isImagePanel = this.panelType === "image";
     const cardSelector = isImagePanel ? ".image-card" : ".prompt-card";
-    const listItemSelector = isImagePanel ? ".list-item--image" : ".list-item--prompt";
-    const compactItemSelector = isImagePanel
-      ? ".list-item--image.list-item--compact"
-      : ".list-item--prompt.list-item--compact";
 
     // 更新网格视图中的卡片
     document.querySelectorAll(cardSelector).forEach((card) => {
@@ -1613,27 +1492,6 @@ export abstract class PanelManagerBase {
         if (checkbox) {
           checkbox.checked = isSelected;
         }
-      }
-    });
-
-    // 更新列表视图中的项
-    document.querySelectorAll(listItemSelector).forEach((item) => {
-      const id = item.getAttribute("data-id");
-      if (id) {
-        const isSelected = selectedIds.has(id);
-        item.classList.toggle("is-selected", isSelected);
-        const checkbox = item.querySelector(".list-item__checkbox") as HTMLInputElement;
-        if (checkbox) {
-          checkbox.checked = isSelected;
-        }
-      }
-    });
-
-    // 更新紧凑视图中的项
-    document.querySelectorAll(compactItemSelector).forEach((item) => {
-      const id = item.getAttribute("data-id");
-      if (id) {
-        item.classList.toggle("is-selected", selectedIds.has(id));
       }
     });
   }
@@ -1657,15 +1515,13 @@ export abstract class PanelManagerBase {
     const itemIds = new Set(items.map((i) => String(i.id)));
     const selector = config.getCardDropSelector();
 
-    [config.gridContainerId, config.listContainerId].forEach((containerId) => {
-      const container = document.getElementById(containerId);
-      if (!container) return;
-      container.querySelectorAll(selector).forEach((el) => {
-        const elId = (el as HTMLElement).dataset.id;
-        if (elId && !itemIds.has(String(elId))) {
-          el.remove();
-        }
-      });
+    const container = document.getElementById(config.gridContainerId);
+    if (!container) return;
+    container.querySelectorAll(selector).forEach((el) => {
+      const elId = (el as HTMLElement).dataset.id;
+      if (elId && !itemIds.has(String(elId))) {
+        el.remove();
+      }
     });
   }
 

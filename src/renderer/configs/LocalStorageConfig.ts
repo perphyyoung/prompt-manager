@@ -208,21 +208,5 @@ localStorageManager.registerConfig({
   serializer: (value) => String(value),
 });
 
-/**
- * 提示词面板视图模式
- */
-localStorageManager.registerConfig({
-  key: Constants.LocalStorageKey.PROMPT_VIEW_MODE,
-  defaultValue: "grid",
-});
-
-/**
- * 图像面板视图模式
- */
-localStorageManager.registerConfig({
-  key: Constants.LocalStorageKey.IMAGE_VIEW_MODE,
-  defaultValue: "grid",
-});
-
 // 导出已配置的 localStorageManager 实例
 export { localStorageManager };

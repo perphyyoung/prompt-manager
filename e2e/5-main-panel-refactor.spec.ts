@@ -5,13 +5,6 @@ import { enterImageGridView, enterPromptGridView, test } from "./electron-test.t
 
 /**
  * 主界面重构功能 E2E 测试
- *
- * 测试场景：
- * 1. 卡片收藏按钮功能（图像和提示词）
- * 2. 卡片复制按钮功能（图像和提示词）
- * 3. 列表视图按钮功能（提示词）
- * 4. 标签筛选区域收起/展开切换（图像和提示词）
- * 5. 收藏状态在卡片和列表视图间同步（提示词）
  */
 test.describe("主界面重构功能", () => {
   // 存储测试用数据的 ID

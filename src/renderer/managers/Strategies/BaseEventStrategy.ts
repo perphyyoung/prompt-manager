@@ -14,7 +14,7 @@ export interface IEventStrategySelectors {
 
 /**
  * 统一的事件策略基类
- * 使用事件委托方式处理所有视图（网格/列表/紧凑）的点击和复选框事件
+ * 使用事件委托方式处理网格视图的点击和复选框事件
  * 通过 data-id 属性在 items 数组中查找对应项，不受 DOM 顺序影响
  */
 export abstract class BaseEventStrategy implements IEventStrategy {

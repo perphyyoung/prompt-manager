@@ -81,7 +81,6 @@ export class ImagePanelManager extends PanelManagerBase {
   // 存储键名
   protected get storageKeys() {
     return {
-      viewMode: Constants.LocalStorageKey.IMAGE_VIEW_MODE,
       sortBy: Constants.LocalStorageKey.IMAGE_SORT_BY,
       sortOrder: Constants.LocalStorageKey.IMAGE_SORT_ORDER,
       cardSize: Constants.LocalStorageKey.IMAGE_CARD_SIZE,
@@ -108,8 +107,6 @@ export class ImagePanelManager extends PanelManagerBase {
     });
 
     // 从 localStorage 加载设置（在 super 之后，init 之前）
-    // 图像主页仅保留网格视图
-    this.viewModeType = "grid";
     this.sortBy = localStorageManager.get<string>(this.storageKeys.sortBy);
     this.sortOrder = localStorageManager.get<string>(this.storageKeys.sortOrder);
     this.cardSize = localStorageManager.get<number>(this.storageKeys.cardSize);
@@ -173,12 +170,10 @@ export class ImagePanelManager extends PanelManagerBase {
   protected getUIConfig() {
     return {
       cardSelector: ".image-card",
-      listItemSelector: ".list-item--image",
       cardBgSelector: ".image-card-bg, .card__bg",
       gridContainerId: Constants.Ids.IMAGE_GRID,
-      listContainerId: Constants.Ids.IMAGE_LIST,
       dragSource: "image-tag",
-      getCardDropSelector: () => ".image-card, .list-item--image",
+      getCardDropSelector: () => ".image-card",
 
       getElementId: (element: HTMLElement): string | undefined => {
         return element.dataset.id || element.dataset.imageId || undefined;
@@ -638,7 +633,7 @@ export class ImagePanelManager extends PanelManagerBase {
 
   /**
    * 渲染单个图像的 HTML（实现基类抽象方法）
-   * 按当前视图模式生成网格卡片或列表项，index 需与旧元素保持一致
+   * 生成网格卡片 HTML，index 需与旧元素保持一致
    */
   protected renderSingleItemHtml(img: IImage, index: number, _isSelected: boolean): string {
     return this.createCard(img, index);
@@ -1037,7 +1032,7 @@ export class ImagePanelManager extends PanelManagerBase {
    * 获取当前视图的事件策略
    */
   protected getEventStrategy(): IEventStrategy | null {
-    return new ImageEventStrategy(this, this.viewModeType);
+    return new ImageEventStrategy(this);
   }
 
   /**
@@ -1060,10 +1055,7 @@ export class ImagePanelManager extends PanelManagerBase {
  * 图像主页仅保留网格视图
  */
 class ImageEventStrategy extends BaseEventStrategy {
-  constructor(
-    private manager: ImagePanelManager,
-    private viewMode: string,
-  ) {
+  constructor(private manager: ImagePanelManager) {
     super();
   }
 

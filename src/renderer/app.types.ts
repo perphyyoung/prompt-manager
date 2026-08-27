@@ -22,8 +22,6 @@ export interface IPanelManager {
   tagFilterSortBy: string;
   tagFilterSortOrder: string;
   cardSize: number;
-  viewModeType: string;
-  setViewMode(mode: string): void;
   setCardSize(size: number): void;
   handleFilterAction(): void;
   refreshAfterUpdate(): Promise<void>;

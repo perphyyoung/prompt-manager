@@ -78,7 +78,6 @@ export class PromptPanelManager extends PanelManagerBase {
   // 存储键名
   protected get storageKeys() {
     return {
-      viewMode: Constants.LocalStorageKey.PROMPT_VIEW_MODE,
       sortBy: Constants.LocalStorageKey.PROMPT_SORT_BY,
       sortOrder: Constants.LocalStorageKey.PROMPT_SORT_ORDER,
       cardSize: Constants.LocalStorageKey.PROMPT_CARD_SIZE,
@@ -106,8 +105,6 @@ export class PromptPanelManager extends PanelManagerBase {
     });
 
     // 从 localStorage 加载设置（在 super 之后，init 之前）
-    // 提示词主页仅保留网格视图
-    this.viewModeType = "grid";
     this.sortBy = localStorageManager.get<string>(this.storageKeys.sortBy);
     this.sortOrder = localStorageManager.get<string>(this.storageKeys.sortOrder);
     this.cardSize = localStorageManager.get<number>(this.storageKeys.cardSize);
@@ -150,12 +147,10 @@ export class PromptPanelManager extends PanelManagerBase {
   protected getUIConfig() {
     return {
       cardSelector: ".prompt-card",
-      listItemSelector: ".list-item--prompt",
       cardBgSelector: ".prompt-card-bg, .card__bg",
       gridContainerId: Constants.Ids.PROMPT_GRID,
-      listContainerId: Constants.Ids.PROMPT_LIST,
       dragSource: "prompt-tag",
-      getCardDropSelector: () => ".prompt-card, .list-item--prompt",
+      getCardDropSelector: () => ".prompt-card",
 
       getElementId: (element: HTMLElement): string | undefined => {
         return element.dataset.id || element.dataset.promptId || undefined;
@@ -1057,7 +1052,7 @@ export class PromptPanelManager extends PanelManagerBase {
 
   /**
    * 渲染单个提示词的 HTML（实现基类抽象方法）
-   * 按当前视图模式生成网格卡片或列表项，index 需与旧元素保持一致
+   * 生成网格卡片 HTML，index 需与旧元素保持一致
    */
   protected renderSingleItemHtml(prompt: IPrompt, index: number, _isSelected: boolean): string {
     return this.createCard(prompt, index);
@@ -1094,7 +1089,7 @@ export class PromptPanelManager extends PanelManagerBase {
    * 获取当前视图的事件策略
    */
   protected getEventStrategy(): IEventStrategy | null {
-    return new PromptEventStrategy(this, this.viewModeType);
+    return new PromptEventStrategy(this);
   }
 
   /**
@@ -1117,10 +1112,7 @@ export class PromptPanelManager extends PanelManagerBase {
  * 提示词主页仅保留网格视图
  */
 class PromptEventStrategy extends BaseEventStrategy {
-  constructor(
-    private manager: PromptPanelManager,
-    private viewMode: string,
-  ) {
+  constructor(private manager: PromptPanelManager) {
     super();
   }
 

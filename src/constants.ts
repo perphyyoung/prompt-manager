@@ -148,12 +148,6 @@ export class Constants {
     CURRENT_PANEL: "currentPanel",
     SIDEBAR_COLLAPSED: "sidebarCollapsed",
 
-    // 提示词视图模式
-    PROMPT_VIEW_MODE: "promptViewMode",
-
-    // 图像视图模式
-    IMAGE_VIEW_MODE: "imageViewMode",
-
     // 提示词排序
     PROMPT_SORT_BY: "promptSortBy",
     PROMPT_SORT_ORDER: "promptSortOrder",
@@ -235,7 +229,6 @@ export class Constants {
 
     // 提示词视图容器
     PROMPT_GRID: "promptGrid",
-    PROMPT_LIST: "promptList",
     PROMPT_EMPTY_STATE: "promptEmptyState",
 
     // 提示词详情
@@ -533,7 +526,6 @@ export class Constants {
     IMAGE_CARD_SIZE_SLIDER: "imageCardSizeSlider",
     IMAGE_TAG_FILTER_CONTENT: "imageTagFilterContent",
     IMAGE_GRID: "imageGrid",
-    IMAGE_LIST: "imageList",
     IMAGE_PROMPT_TOOLTIP: "imagePromptTooltip",
     IMAGE_PROMPT_TOOLTIP_CONTENT: "imagePromptTooltipContent",
     IMAGE_EMPTY_STATE: "imageEmptyState",
@@ -587,7 +579,6 @@ export class Constants {
     EXPORT_FULL_BACKUP_BTN: "exportFullBackupBtn",
     IMPORT_FULL_BACKUP_BTN: "importFullBackupBtn",
     VIEW_MODE_TOGGLE: "viewModeToggle",
-    VIEW_MODE_SELECT: "viewModeSelect",
     CLEAR_ALL_DATA_BTN: "clearAllDataBtn",
 
     // 动态创建的上下文菜单

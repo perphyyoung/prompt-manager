@@ -92,10 +92,6 @@
 
 - `enterImageGridView()` - 进入图像网格视图
 - `enterPromptGridView()` - 进入提示词网格视图
-- `enterImageListView()` - 进入图像列表视图
-- `enterPromptListView()` - 进入提示词列表视图
-- `enterImageCompactView()` - 进入图像紧凑视图
-- `enterPromptCompactView()` - 进入提示词紧凑视图
 
 ## 4. 详情界面辅助函数
 

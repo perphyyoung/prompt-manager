@@ -10,13 +10,6 @@ export interface ButtonConfig {
   className?: string;
 }
 
-export interface ListButtonOptions {
-  id: string | number;
-  isActive?: boolean;
-  icon: string;
-  title?: string;
-}
-
 export class ButtonFactory {
   /**
    * 创建收藏按钮
@@ -113,46 +106,3 @@ export const BUTTON_ICON_MAP: Record<string, (icons: Icons, isActive?: boolean) 
   delete: (icons) => icons.delete,
   restore: (icons) => icons.restore || icons.undo || "",
 };
-
-interface ListButtonConfig {
-  title: string;
-  activeTitle?: string;
-  className: string;
-}
-
-/**
- * 列表按钮配置查找表
- * 用于列表视图按钮的标题和样式
- */
-const LIST_BUTTON_CONFIG: Record<string, ListButtonConfig> = {
-  favorite: {
-    title: "收藏",
-    activeTitle: "取消收藏",
-    className: "favorite-btn",
-  },
-  copy: {
-    title: "复制内容",
-    className: "copy-btn",
-  },
-  delete: {
-    title: "删除",
-    className: "delete-btn",
-  },
-};
-
-/**
- * 生成列表按钮 HTML
- * @param type - 按钮类型
- * @param options - 配置选项
- * @returns 按钮 HTML
- */
-export function createListButtonHtml(type: string, options: ListButtonOptions): string {
-  const { id, isActive, icon } = options;
-  const config = LIST_BUTTON_CONFIG[type];
-  if (!config) return "";
-
-  const activeClass = isActive ? "active" : "";
-  const title = isActive && config.activeTitle ? config.activeTitle : config.title;
-
-  return `<button type="button" class="${config.className} ${activeClass}" title="${title}" data-id="${id}">${icon}</button>`;
-}

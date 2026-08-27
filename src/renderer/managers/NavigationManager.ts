@@ -20,12 +20,10 @@ interface IPanelConfig {
 // App 类型定义
 interface IApp {
   promptPanelManager: {
-    viewModeType: string;
     ensureRendered: () => Promise<void>;
     exitBatchMode?: () => void;
   } | null;
   imagePanelManager: {
-    viewModeType: string;
     ensureRendered: () => Promise<void>;
     exitBatchMode?: () => void;
   } | null;

@@ -23,7 +23,6 @@ interface ShortcutManagerOptions {
     saveAndCloseImageDetail?: () => Promise<void>;
     refreshData?: () => Promise<void>;
     promptPanelManager?: {
-      viewModeType: string;
       renderView: () => void | Promise<void>;
       selectAllVisibleItems?: () => void;
     } | null;
