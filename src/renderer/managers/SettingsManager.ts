@@ -20,7 +20,7 @@ interface IDataClearApi {
  * App 类型定义
  */
 interface IApp {
-  viewMode: string;
+  safeMode: string;
   promptPanelManager: {
     renderView: () => Promise<void>;
     renderTagFilters: () => Promise<void>;
@@ -201,8 +201,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     this.setFontSizeScale(savedFontSize, false);
 
     // 加载视图模式到 app
-    const savedViewMode = localStorageManager.get<string>(Constants.LocalStorageKey.VIEW_MODE);
-    this.app.viewMode = savedViewMode;
+    this.app.safeMode = localStorageManager.get<string>(Constants.LocalStorageKey.SAFE_MODE);
   }
 
   /**
@@ -220,16 +219,16 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       .getElementById(Constants.Ids.REBUILD_THUMBNAILS_BTN)
       ?.addEventListener("click", () => this.rebuildThumbnails());
 
-    // 视图模式
-    const viewModeToggle = document.getElementById(
-      Constants.Ids.VIEW_MODE_TOGGLE,
+    // 安全模式
+    const safeModeToggle = document.getElementById(
+      Constants.Ids.SAFE_MODE_TOGGLE,
     ) as HTMLInputElement | null;
-    if (viewModeToggle) {
+    if (safeModeToggle) {
       // 初始化状态：safe = 选中(绿色), nsfw = 未选中(灰色)
-      viewModeToggle.checked = this.app?.viewMode === Constants.ViewMode.SAFE;
-      viewModeToggle.addEventListener("change", () => {
-        const newMode = viewModeToggle.checked ? Constants.ViewMode.SAFE : Constants.ViewMode.NSFW;
-        this.handleViewModeChange(newMode);
+      safeModeToggle.checked = this.app.safeMode === Constants.SafeMode.SAFE;
+      safeModeToggle.addEventListener("change", () => {
+        const newMode = safeModeToggle.checked ? Constants.SafeMode.SAFE : Constants.SafeMode.NSFW;
+        this.handleSafeModeChange(newMode);
       });
     }
 
@@ -505,17 +504,17 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
   }
 
   /**
-   * 处理视图模式变更
+   * 处理安全模式变更
    * @param mode - 视图模式
    * @private
    */
-  private async handleViewModeChange(mode: string): Promise<void> {
-    localStorageManager.set(Constants.LocalStorageKey.VIEW_MODE, mode);
+  private async handleSafeModeChange(mode: string): Promise<void> {
+    localStorageManager.set(Constants.LocalStorageKey.SAFE_MODE, mode);
 
-    // 更新 app 的 viewMode
-    this.app.viewMode = mode;
+    // 更新 app 的 safeMode
+    this.app.safeMode = mode;
 
-    this.app.showToast?.(mode === "safe" ? "已切换到安全模式" : "已切换到 NSFW 模式", "info");
+    this.app.showToast?.(mode === "safe" ? "已切换到安全模式" : "已切换到敏感模式", "info");
 
     // 更新面板管理器
     if (this.app.promptPanelManager) {

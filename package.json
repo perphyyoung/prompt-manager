@@ -1,6 +1,6 @@
 {
   "name": "prompt-manager",
-  "version": "0.11.73",
+  "version": "0.11.74",
   "description": "本地提示词管理工具",
   "keywords": [
     "electron",

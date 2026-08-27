@@ -218,7 +218,7 @@ export interface IApp {
   // 状态
   currentPanel: string;
   isFromDetailJump: boolean;
-  viewMode: string;
+  safeMode: string;
 
   // 标签排序状态
   promptTagSortBy: string;
@@ -236,7 +236,7 @@ export interface IApp {
   showToast(message: string, type?: string): void;
   renderStatistics(): Promise<void>;
   refreshData(): Promise<void>;
-  toggleViewMode(): Promise<void>;
+  toggleSafeMode(): Promise<void>;
   openStatisticsModal(): Promise<void>;
   closeStatisticsModal(): void;
   openEditPromptModal(prompt: IPrompt, options?: unknown): Promise<void>;

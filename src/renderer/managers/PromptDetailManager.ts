@@ -449,7 +449,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
       elementId: Constants.Ids.PROMPT_DETAIL_SAFE_TOGGLE,
       getValue: (element: HTMLElement) => ((element as HTMLInputElement).checked ? 1 : 0),
       onChange: (value: unknown) => {
-        this.app.showToast(value ? "已标记为安全" : "已标记为不安全", "success");
+        this.app.showToast(value ? "已标记为安全" : "已标记为敏感", "success");
       },
     });
 

@@ -33,7 +33,7 @@ export class Constants {
   static SAFE_TAG = "安全";
 
   // 视图模式值
-  static ViewMode = Object.freeze({
+  static SafeMode = Object.freeze({
     SAFE: "safe",
     NSFW: "nsfw",
   });
@@ -144,7 +144,7 @@ export class Constants {
     FONT_SIZE_SCALE: "fontSizeScale",
 
     // 视图
-    VIEW_MODE: "viewMode",
+    SAFE_MODE: "safeMode",
     CURRENT_PANEL: "currentPanel",
     SIDEBAR_COLLAPSED: "sidebarCollapsed",
 
@@ -578,7 +578,7 @@ export class Constants {
     EXPORT_ORPHAN_FILES_BTN: "exportOrphanFilesBtn",
     EXPORT_FULL_BACKUP_BTN: "exportFullBackupBtn",
     IMPORT_FULL_BACKUP_BTN: "importFullBackupBtn",
-    VIEW_MODE_TOGGLE: "viewModeToggle",
+    SAFE_MODE_TOGGLE: "safeModeToggle",
     CLEAR_ALL_DATA_BTN: "clearAllDataBtn",
 
     // 动态创建的上下文菜单

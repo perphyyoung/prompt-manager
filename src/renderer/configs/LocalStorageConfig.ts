@@ -47,9 +47,9 @@ localStorageManager.registerConfig({
  * 视图模式配置
  */
 localStorageManager.registerConfig({
-  key: Constants.LocalStorageKey.VIEW_MODE,
-  defaultValue: Constants.ViewMode.SAFE,
-  validator: (value) => value === Constants.ViewMode.SAFE || value === Constants.ViewMode.NSFW,
+  key: Constants.LocalStorageKey.SAFE_MODE,
+  defaultValue: Constants.SafeMode.SAFE,
+  validator: (value) => value === Constants.SafeMode.SAFE || value === Constants.SafeMode.NSFW,
 });
 
 /**

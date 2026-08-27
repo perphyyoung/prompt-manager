@@ -150,7 +150,7 @@ Constants.IMAGE_SPECIAL_TAGS
 
 // 提示词特殊标签
 Constants.PROMPT_SPECIAL_TAGS  
-// ['收藏', '多图', '无图', '无标', '安全', '不安全']
+// ['收藏', '多图', '无图', '无标', '安全', '敏感']
 ```
 
 ***

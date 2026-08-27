@@ -111,7 +111,7 @@ export class StatisticsManager {
    * 避免把全量提示词/图像经 IPC 拉进渲染进程做 JS 计数
    */
   async calculateStatistics(): Promise<IStatistics> {
-    const isSafeMode = this.app.viewMode === "safe";
+    const isSafeMode = this.app.safeMode === "safe";
     const [stats, promptTagGroups, imageTagGroups] = await Promise.all([
       window.electronAPI.getStatistics(isSafeMode),
       window.electronAPI.getPromptTagGroups(),

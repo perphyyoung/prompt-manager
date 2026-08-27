@@ -298,7 +298,7 @@ export class ImagePanelManager extends PanelManagerBase {
       searchQuery: this.getSearchQuery() || undefined,
       tagNames: tagNames.length > 0 ? tagNames : undefined,
       specialTags: specialTags.length > 0 ? specialTags : undefined,
-      isSafe: this.app.viewMode === "safe" ? true : undefined,
+      isSafe: this.app.safeMode === "safe" ? true : undefined,
       invertedFilter: this.invertedFilter,
       limit: PANEL_PAGE_SIZE,
       offset: this.currentOffset,
@@ -854,7 +854,7 @@ export class ImagePanelManager extends PanelManagerBase {
       searchQuery: this.getSearchQuery() || undefined,
       tagNames: tagNames.length > 0 ? tagNames : undefined,
       specialTags: specialTags.length > 0 ? specialTags : undefined,
-      isSafe: this.app.viewMode === "safe" ? true : undefined,
+      isSafe: this.app.safeMode === "safe" ? true : undefined,
       invertedFilter: this.invertedFilter,
     };
   }
@@ -881,7 +881,7 @@ export class ImagePanelManager extends PanelManagerBase {
     }
 
     // NSFW 模式下显示安全评级标签
-    if (this.app.viewMode === "nsfw") {
+    if (this.app.safeMode === "nsfw") {
       if (counts.safe > 0) {
         specialTags.push({ tag: Constants.SAFE_TAG, count: counts.safe });
       }

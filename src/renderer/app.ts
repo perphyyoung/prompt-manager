@@ -63,7 +63,7 @@ class PromptManager implements IApp {
   promptRefImagesCache: ReturnType<typeof cacheManager.createCache>;
 
   // 状态
-  viewMode: string;
+  safeMode: string;
 
   // 标签排序状态
   promptTagSortBy: string;
@@ -117,8 +117,8 @@ class PromptManager implements IApp {
     this.cacheManager = cacheManager;
     this.promptRefImagesCache = cacheManager.createCache("promptRefImages", 100);
 
-    // 从 localStorage 加载 viewMode（在创建面板管理器之前）
-    this.viewMode = localStorageManager.get<string>(Constants.LocalStorageKey.VIEW_MODE);
+    // 从 localStorage 加载 safeMode（在创建面板管理器之前）
+    this.safeMode = localStorageManager.get<string>(Constants.LocalStorageKey.SAFE_MODE);
 
     // 标签管理排序状态
     this.promptTagSortBy = localStorageManager.get<string>(
@@ -389,10 +389,10 @@ class PromptManager implements IApp {
   }
 
   /**
-   * 切换视图模式（safe/nsfw）
+   * 切换安全模式（safe/nsfw）
    */
-  async toggleViewMode() {
-    this.viewMode = this.viewMode === "safe" ? "nsfw" : "safe";
+  async toggleSafeMode() {
+    this.safeMode = this.safeMode === "safe" ? "nsfw" : "safe";
 
     // 重新渲染
     await this.promptPanelManager?.renderView();
@@ -403,7 +403,7 @@ class PromptManager implements IApp {
     // 刷新统计
     await this.renderStatistics();
 
-    this.showToast(`已切换到${this.viewMode === "safe" ? "安全" : "NSFW"}模式`, "success");
+    this.showToast(`已切换到${this.safeMode === "safe" ? "安全" : "敏感"}模式`, "success");
   }
 
   /**

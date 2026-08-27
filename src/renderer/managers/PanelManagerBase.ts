@@ -998,7 +998,7 @@ export abstract class PanelManagerBase {
       // 获取可见项目
       const visibleItems = this.getItems().filter(
         (item: IPanelItem) =>
-          !item.isDeleted && (this.app.viewMode !== "safe" || item.isSafe !== 0),
+          !item.isDeleted && (this.app.safeMode !== "safe" || item.isSafe !== 0),
       );
 
       // 计算特殊标签计数
@@ -1037,14 +1037,14 @@ export abstract class PanelManagerBase {
   }
 
   /**
-   * 计算可见项目的标签计数（考虑 viewMode 和 isDeleted）
+   * 计算可见项目的标签计数（考虑 safeMode 和 isDeleted）
    * 用于特殊标签筛选器显示
    * @param _tags - 所有标签（为兼容接口保留，实际使用 visibleItems 计算）
    * @returns 标签计数对象
    */
   calculateTagCounts(_tags: string[]): Record<string, number> {
     const visibleItems = this.getItems().filter(
-      (item: IPanelItem) => !item.isDeleted && (this.app.viewMode !== "safe" || item.isSafe !== 0),
+      (item: IPanelItem) => !item.isDeleted && (this.app.safeMode !== "safe" || item.isSafe !== 0),
     );
     return TagService.countTagsInItems(visibleItems);
   }

@@ -140,7 +140,7 @@ export class ImageSelectorManager {
         sortOrder: this.sortOrder === "asc" ? "asc" : "desc",
         searchQuery: searchTerm || undefined,
         tagNames: selectedTag ? [selectedTag] : undefined,
-        isSafe: this.app.viewMode === "safe" ? true : undefined,
+        isSafe: this.app.safeMode === "safe" ? true : undefined,
         limit: this.pageSize,
         offset: 0,
       };
