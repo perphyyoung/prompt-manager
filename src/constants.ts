@@ -97,7 +97,7 @@ export class Constants {
   static MSG_SECONDARY_JUMP_DISABLED = "禁止二级跳转";
 
   // 标签输入框 placeholder
-  static PLACEHOLDER_TAG_INPUT = "回车添加标签，用逗号或空格分隔可以批量";
+  static PLACEHOLDER_TAG_INPUT = "请输入标签名";
   static PLACEHOLDER_TAG_RENAME = "请输入新标签名:";
 
   // 保存状态提示

@@ -5,10 +5,8 @@ import {
   closePromptTagManager,
   createImageTagGroup,
   createImageTagInManager,
-  createImageTagsInManagerBatch,
   createPromptTagGroup,
   createPromptTagInManager,
-  createPromptTagsInManagerBatch,
   enterImageTagManager,
   enterPromptTagManager,
   test,
@@ -69,8 +67,8 @@ test.describe("标签管理功能", () => {
       const tagElement = page.locator(`.tag-manager-item[data-tag="${testTagName}"]`);
       await expect(tagElement).toBeVisible({ timeout: 1000 });
 
-      // Verify toast message - 匹配 "成功创建 X 个标签"
-      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("成功创建")`, {
+      // Verify toast message - 匹配 `已创建标签 "xxx"`
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("已创建标签")`, {
         timeout: 1000,
       });
 
@@ -302,7 +300,6 @@ test.describe("标签管理功能", () => {
 
     test("搜索并删除 e2e 标签", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
-      await enterImageTagManager(page);
 
       // Create multiple e2e test tags with specific keyword
       const searchKeyword = "img_e2e_batch";
@@ -310,7 +307,15 @@ test.describe("标签管理功能", () => {
       const testTagName2 = electronTest.generateE2ePrefixName(searchKeyword);
       // CRITICAL: Create control group that does NOT match search keyword
       const controlTagName = electronTest.generateE2ePrefixName("control_not_deleted");
-      await createImageTagsInManagerBatch(page, [testTagName1, testTagName2, controlTagName]);
+
+      // 通过 API factory 创建测试数据，不走 UI 对话框
+      const factory = electronTest.getApiFactory().createImageFactory();
+      for (const name of [testTagName1, testTagName2, controlTagName]) {
+        await factory.createTag(name);
+      }
+      await electronTest.refreshData();
+
+      await enterImageTagManager(page);
 
       // Search for specific keyword (not just 'e2e')
       await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
@@ -433,8 +438,8 @@ test.describe("标签管理功能", () => {
       const tagElement = page.locator(`.tag-manager-item[data-tag="${testTagName}"]`);
       await expect(tagElement).toBeVisible({ timeout: 1000 });
 
-      // Verify toast message - 匹配 "成功创建 X 个标签"
-      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("成功创建")`, {
+      // Verify toast message - 匹配 `已创建标签 "xxx"`
+      await page.waitForSelector(`#${Constants.Ids.TOAST_CONTAINER}:has-text("已创建标签")`, {
         timeout: 1000,
       });
 
@@ -672,7 +677,6 @@ test.describe("标签管理功能", () => {
 
     test("搜索并删除 e2e 标签", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
-      await enterPromptTagManager(page);
 
       // Create multiple e2e test tags with specific keyword
       const searchKeyword = "prompt_e2e_batch";
@@ -680,7 +684,15 @@ test.describe("标签管理功能", () => {
       const testTagName2 = electronTest.generateE2ePrefixName(searchKeyword);
       // CRITICAL: Create control group that does NOT match search keyword
       const controlTagName = electronTest.generateE2ePrefixName("control_not_deleted");
-      await createPromptTagsInManagerBatch(page, [testTagName1, testTagName2, controlTagName]);
+
+      // 通过 API factory 创建测试数据，不走 UI 对话框
+      const factory = electronTest.getApiFactory().createPromptFactory();
+      for (const name of [testTagName1, testTagName2, controlTagName]) {
+        await factory.createTag(name);
+      }
+      await electronTest.refreshData();
+
+      await enterPromptTagManager(page);
 
       // Search for specific keyword (not just 'e2e')
       await page.fill(`#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);

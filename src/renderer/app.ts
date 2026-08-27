@@ -28,7 +28,7 @@ import {
 
 import eventBus from "../utils/EventBus.ts";
 import { HtmlUtils, cacheManager } from "../utils/index.ts";
-import { clearTagsCache } from "../pyTagGroups/operations.ts";
+import { tagService } from "./services/TagService.ts";
 import { HoverTooltipManager, ShortcutManager } from "./renderer_utils/index.ts";
 import { localStorageManager } from "./configs/LocalStorageConfig.ts";
 import type { IPrompt, IImage } from "../types/entities.ts";
@@ -423,9 +423,9 @@ class PromptManager implements IApp {
       await this.promptPanelManager?.renderTagFilters();
       await this.imagePanelManager?.renderTagFilters();
 
-      // 清除 PyTagGroups 缓存，确保下次打开标签管理器时加载最新数据
-      clearTagsCache("prompt");
-      clearTagsCache("image");
+      // 清除标签缓存，确保下次打开标签管理器时加载最新数据
+      tagService.clearAllCaches("prompt");
+      tagService.clearAllCaches("image");
 
       // 刷新统计
       await this.renderStatistics();

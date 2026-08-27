@@ -19,8 +19,8 @@ import { Constants } from "../src/constants.ts";
  * 1. unlinkTagFromItem - 从项目移除标签（详情界面删除标签）
  * 2. 标签存在检查（通过 getImageTags/getAllTags 模拟）
  * 3. 获取组内标签（通过 getImageTagGroups 模拟）
- * 4. parseTagInput - 标签输入解析
- * 5. updated_at 字段更新验证
+ * 4. updated_at 字段更新验证
+ * （标签已改为一次添加一个，分隔符输入解析相关测试已移除）
  */
 test.describe("TagService 高级功能测试", () => {
   // 文件级别：创建基础测试数据（所有测试复用）
@@ -321,106 +321,6 @@ test.describe("TagService 高级功能测试", () => {
     });
   });
 
-  // ========== 标签输入解析测试（parseTagInput） ==========
-
-  test.describe("标签输入解析", () => {
-    test("图像标签 - 解析多种分隔符的输入", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
-      await enterImageDetailView(page);
-
-      // 测试用例：空格分隔（使用 UI，因为测试目标是输入解析）
-      const tag1 = electronTest.generateE2ePrefixName("space");
-      const tag2 = electronTest.generateE2ePrefixName("space");
-      await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, `${tag1} ${tag2}`);
-      await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "Enter");
-
-      // 验证两个标签都被添加
-      await expect(
-        page.locator(
-          `#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag1}"]`,
-        ),
-      ).toBeVisible({ timeout: 1000 });
-      await expect(
-        page.locator(
-          `#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag2}"]`,
-        ),
-      ).toBeVisible({ timeout: 1000 });
-    });
-
-    test("提示词标签 - 解析多种分隔符的输入", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
-      await enterPromptDetailView(page);
-
-      // 测试用例：英文逗号分隔（使用 UI，因为测试目标是输入解析）
-      const tag1 = electronTest.generateE2ePrefixName("comma1");
-      const tag2 = electronTest.generateE2ePrefixName("comma2");
-      await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, `${tag1},${tag2}`);
-      await page.press(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, "Enter");
-
-      // 验证两个标签都被添加
-      await expect(
-        page.locator(
-          `#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag1}"]`,
-        ),
-      ).toBeVisible({ timeout: 1000 });
-      await expect(
-        page.locator(
-          `#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag2}"]`,
-        ),
-      ).toBeVisible({ timeout: 1000 });
-    });
-
-    test("图像标签 - 解析中文逗号分隔", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
-      await enterImageDetailView(page);
-
-      // 测试用例：中文逗号分隔（使用 UI，因为测试目标是输入解析）
-      const tag1 = electronTest.generateE2ePrefixName("cncomma1");
-      const tag2 = electronTest.generateE2ePrefixName("cncomma2");
-      await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, `${tag1}，${tag2}`);
-      await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "Enter");
-
-      // 验证两个标签都被添加
-      await expect(
-        page.locator(
-          `#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag1}"]`,
-        ),
-      ).toBeVisible({ timeout: 1000 });
-      await expect(
-        page.locator(
-          `#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag2}"]`,
-        ),
-      ).toBeVisible({ timeout: 1000 });
-    });
-
-    test("提示词标签 - 解析中文逗号分隔", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
-      await enterPromptDetailView(page);
-
-      // 测试用例：中文逗号分隔（使用 UI，因为测试目标是输入解析）
-      const tag1 = electronTest.generateE2ePrefixName("cncomma1");
-      const tag2 = electronTest.generateE2ePrefixName("cncomma2");
-      await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, `${tag1}，${tag2}`);
-      await page.press(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, "Enter");
-
-      // 验证两个标签都被添加
-      await expect(
-        page.locator(
-          `#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag1}"]`,
-        ),
-      ).toBeVisible({ timeout: 1000 });
-      await expect(
-        page.locator(
-          `#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag2}"]`,
-        ),
-      ).toBeVisible({ timeout: 1000 });
-    });
-  });
-
   // ========== updated_at 更新验证测试 ==========
 
   test.describe("updated_at 字段更新验证", () => {
@@ -504,94 +404,6 @@ test.describe("TagService 高级功能测试", () => {
       expect(new Date(promptAfter?.updatedAt || "").getTime()).toBeGreaterThan(
         new Date(updatedAtBefore || "").getTime(),
       );
-    });
-
-    test("图像 - 批量添加标签时 updated_at 更新", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
-      // 1. 进入图像详情界面
-      const { firstImageId } = await enterImageDetailView(page);
-
-      // 2. 获取当前 updated_at
-      const imageBefore = await getImageFromDatabase(page, firstImageId);
-      const updatedAtBefore = imageBefore?.updatedAt;
-
-      // 3. 等待下一秒开始，确保添加操作发生在不同秒
-      // （界面显示的时间只精确到秒，同一秒内操作时间戳相同）
-      await page.waitForFunction(
-        (beforeTime: string | undefined) => {
-          const now = new Date().toLocaleString("zh-CN");
-          return now !== beforeTime;
-        },
-        updatedAtBefore,
-        { timeout: 1000 },
-      );
-
-      // 4. 批量添加多个标签（空格分隔）（使用 UI，因为测试目标是 updated_at 更新）
-      const tag1 = electronTest.generateE2ePrefixName("batch1");
-      const tag2 = electronTest.generateE2ePrefixName("batch2");
-      const tag3 = electronTest.generateE2ePrefixName("batch3");
-      await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, `${tag1} ${tag2} ${tag3}`);
-      await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "Enter");
-
-      // 等待所有标签添加成功
-      await expect(
-        page.locator(
-          `#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag1}"]`,
-        ),
-      ).toBeVisible({ timeout: 1000 });
-
-      // 5. 验证 updated_at 已更新
-      const imageAfter = await getImageFromDatabase(page, firstImageId);
-      expect(imageAfter?.updatedAt).not.toBe(updatedAtBefore);
-
-      // 6. 验证所有标签都已关联
-      expect(imageAfter?.tags).toContain(tag1);
-      expect(imageAfter?.tags).toContain(tag2);
-      expect(imageAfter?.tags).toContain(tag3);
-    });
-
-    test("提示词 - 批量添加标签时 updated_at 更新", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
-      // 1. 进入提示词详情界面
-      const { firstPromptId } = await enterPromptDetailView(page);
-
-      // 2. 获取当前 updated_at
-      const promptBefore = await getPromptFromDatabase(page, firstPromptId);
-      const updatedAtBefore = promptBefore?.updatedAt;
-
-      // 3. 等待下一秒开始，确保添加操作发生在不同秒
-      // （界面显示的时间只精确到秒，同一秒内操作时间戳相同）
-      await page.waitForFunction(
-        (beforeTime: string | undefined) => {
-          const now = new Date().toLocaleString("zh-CN");
-          return now !== beforeTime;
-        },
-        updatedAtBefore,
-        { timeout: 1000 },
-      );
-
-      // 4. 批量添加多个标签（逗号分隔）（使用 UI，因为测试目标是 updated_at 更新）
-      const tag1 = electronTest.generateE2ePrefixName("pbatch1");
-      const tag2 = electronTest.generateE2ePrefixName("pbatch2");
-      await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, `${tag1},${tag2}`);
-      await page.press(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, "Enter");
-
-      // 等待所有标签添加成功
-      await expect(
-        page.locator(
-          `#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag1}"]`,
-        ),
-      ).toBeVisible({ timeout: 1000 });
-
-      // 5. 验证 updated_at 已更新
-      const promptAfter = await getPromptFromDatabase(page, firstPromptId);
-      expect(promptAfter?.updatedAt).not.toBe(updatedAtBefore);
-
-      // 6. 验证所有标签都已关联
-      expect(promptAfter?.tags).toContain(tag1);
-      expect(promptAfter?.tags).toContain(tag2);
     });
   });
 });

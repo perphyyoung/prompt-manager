@@ -4,7 +4,8 @@ import { test, enterPromptDetailView, enterImageDetailView } from "./electron-te
 
 /**
  * 测试详情界面标签输入框的各种添加方式
- * 包括：直接回车、点击下拉建议项、下拉框中回车选择、批量添加多个标签
+ * 包括：直接回车、点击下拉建议项、下拉框中回车选择
+ * （标签已改为一次添加一个，不再支持分隔符批量添加）
  *
  * 测试顺序：先统一测试图像方面，再测试提示词方面
  */
@@ -169,54 +170,6 @@ test.describe("详情界面标签输入方法", () => {
     // 验证输入框被清空
     const inputValue = await page.inputValue(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`);
     expect(inputValue).toBe("");
-  });
-
-  /**
-   * 在图像详情界面测试：批量添加多个标签（使用空格分隔）
-   */
-  test("图像详情界面 - 批量添加多个标签（使用空格分隔）", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
-    // 进入图像详情界面
-    await enterImageDetailView(page);
-
-    // 生成多个测试标签名
-    const tag1 = electronTest.generateE2ePrefixName("space_1");
-    const tag2 = electronTest.generateE2ePrefixName("space_2");
-
-    // 输入空格分隔的标签
-    const inputValue = `${tag1} ${tag2}`;
-    await page.fill(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, inputValue);
-
-    // 按回车批量添加
-    await page.press(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`, "Enter");
-
-    // 验证所有标签都已添加
-    await expect(
-      page.locator(
-        `#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag1}"]`,
-      ),
-    ).toBeVisible({ timeout: 1000 });
-    await expect(
-      page.locator(
-        `#${Constants.Ids.IMAGE_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag2}"]`,
-      ),
-    ).toBeVisible({ timeout: 1000 });
-
-    // 验证输入框被清空
-    const inputValueAfter = await page.inputValue(`#${Constants.Ids.IMAGE_DETAIL_TAG_INPUT}`);
-    expect(inputValueAfter).toBe("");
-
-    // 通过 API 验证所有标签都已保存
-    const allTagsExist = await page.evaluate(
-      async (tags: string[]) => {
-        const allTags = await window.electronAPI.getImageTags();
-        return tags.every((tag) => allTags.includes(tag));
-      },
-      [tag1, tag2],
-    );
-
-    expect(allTagsExist).toBe(true);
   });
 
   /**
@@ -392,60 +345,6 @@ test.describe("详情界面标签输入方法", () => {
     // 验证输入框被清空
     const inputValue = await page.inputValue(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`);
     expect(inputValue).toBe("");
-  });
-
-  /**
-   * 在提示词详情界面测试：批量添加多个标签（使用逗号分隔）
-   */
-  test("提示词详情界面 - 批量添加多个标签（使用逗号分隔）", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
-    // 进入提示词详情界面
-    await enterPromptDetailView(page);
-
-    // 生成多个测试标签名
-    const tag1 = electronTest.generateE2ePrefixName("batch_1");
-    const tag2 = electronTest.generateE2ePrefixName("batch_2");
-    const tag3 = electronTest.generateE2ePrefixName("batch_3");
-
-    // 输入逗号分隔的标签
-    const inputValue = `${tag1},${tag2}，${tag3}`; // 混合使用英文和中文逗号
-    await page.fill(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, inputValue);
-
-    // 按回车批量添加
-    await page.press(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`, "Enter");
-
-    // 验证所有标签都已添加
-    await expect(
-      page.locator(
-        `#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag1}"]`,
-      ),
-    ).toBeVisible({ timeout: 1000 });
-    await expect(
-      page.locator(
-        `#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag2}"]`,
-      ),
-    ).toBeVisible({ timeout: 1000 });
-    await expect(
-      page.locator(
-        `#${Constants.Ids.PROMPT_DETAIL_TAGS_CONTAINER} .tag-editable[data-tag="${tag3}"]`,
-      ),
-    ).toBeVisible({ timeout: 1000 });
-
-    // 验证输入框被清空
-    const inputValueAfter = await page.inputValue(`#${Constants.Ids.PROMPT_DETAIL_TAGS_INPUT}`);
-    expect(inputValueAfter).toBe("");
-
-    // 通过 API 验证所有标签都已保存
-    const allTagsExist = await page.evaluate(
-      async (tags: string[]) => {
-        const allTags = await window.electronAPI.getAllTags();
-        return tags.every((tag) => allTags.includes(tag));
-      },
-      [tag1, tag2, tag3],
-    );
-
-    expect(allTagsExist).toBe(true);
   });
 
   /**

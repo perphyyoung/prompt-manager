@@ -207,7 +207,7 @@ describe("BatchToolbarMiddle", () => {
     it("应该支持批量添加标签", async () => {
       middle.init("promptMain", mockBusinessConfig);
 
-      await middle.batchAddTag("promptMain", ["id1"], ["tag1", "tag2"]);
+      await middle.batchAddTag("promptMain", ["id1"], "tag1");
     });
 
     it("应该支持批量切换收藏状态", async () => {

@@ -1,61 +1,19 @@
 /**
  * PyTagGroups 操作模块
- * 封装所有标签和标签组的 CRUD 操作
- * 通过 dataAccess 访问数据，处理缓存同步
+ * 封装所有标签和标签组的 CRUD 操作（纯数据操作，缓存由 TagService 管理）
+ * 直接调用 IPC（window.electronAPI）
  * 错误处理：抛出异常，由调用方处理日志
  */
 
-import { cacheManager } from "../utils/CacheManager.ts";
 import type {
   TagName,
   TagGroup,
   TagGroupId,
   DataType,
-  TagOperationResult,
   TagDeleteResult,
   TagCreateOptions,
 } from "./types.ts";
 import { TagExistsError, InvalidTagNameError } from "./types.ts";
-import { createDataAccess } from "./dataAccess.ts";
-
-// ========== 缓存操作 ==========
-
-function getTagsCacheKey(type: DataType): string {
-  return `${type}Tags`;
-}
-
-function getTagGroupsCacheKey(type: DataType): string {
-  return `${type}TagGroups`;
-}
-
-function getFromCache<T>(key: string): T | null {
-  const cache = cacheManager.getCache(key);
-  if (!cache) {
-    return null;
-  }
-  return cache.get("data")?.data || null;
-}
-
-function setCache<T>(key: string, data: T): void {
-  const cache = cacheManager.createCache(key, 10);
-  cache.set("data", { data, time: Date.now() });
-}
-
-function clearCache(key: string): void {
-  const cache = cacheManager.getCache(key);
-  if (cache) {
-    cache.clear();
-  }
-}
-
-/**
- * 清除指定类型的标签缓存
- * @param type - 数据类型
- */
-export function clearTagsCache(type: DataType): void {
-  clearCache(getTagsCacheKey(type));
-  clearCache(getTagGroupsCacheKey(type));
-}
 
 // ========== 标签操作 ==========
 
@@ -66,74 +24,31 @@ export function clearTagsCache(type: DataType): void {
  * @throws 数据库操作失败时抛出异常
  */
 export async function getTags(type: DataType): Promise<TagName[]> {
-  const cacheKey = getTagsCacheKey(type);
-  const cached = getFromCache<TagName[]>(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  const dataAccess = createDataAccess(type);
-  const data = await dataAccess.getTags();
-
-  setCache(cacheKey, data);
-  return data;
+  return type === "prompt" ? window.electronAPI.getPromptTags() : window.electronAPI.getImageTags();
 }
 
 /**
- * 创建标签
+ * 创建标签（纯数据操作，业务校验由 TagService 负责）
  * @param type - 数据类型
- * @param tags - 标签列表
+ * @param tag - 标签名（调用方保证已 trim 且非空）
  * @param options - 创建选项
- * @returns 操作结果
- * @throws 验证失败或数据库操作失败时抛出异常
+ * @throws 数据库操作失败时抛出异常
  */
-export async function createTags(
+export async function createTag(
   type: DataType,
-  tags: TagName[],
+  tag: TagName,
   options: TagCreateOptions = {},
-): Promise<TagOperationResult> {
-  const result: TagOperationResult = {
-    success: true,
-    created: [],
-    skipped: [],
-    errors: [],
-  };
-
-  const existingTags = await getTags(type);
-  const dataAccess = createDataAccess(type);
-
-  for (const tag of tags) {
-    const trimmedTag = tag.trim();
-    if (!trimmedTag) {
-      throw new InvalidTagNameError(tag, "标签名不能为空");
-    }
-
-    // 检查已存在
-    if (existingTags.includes(trimmedTag)) {
-      result.skipped.push(trimmedTag);
-      continue;
-    }
-
-    // 创建标签
-    await dataAccess.addTag(trimmedTag);
-
-    // 分配到组
-    if (options.defaultGroupId !== undefined && options.defaultGroupId !== null) {
-      await dataAccess.assignTagToGroup(trimmedTag, options.defaultGroupId);
-    }
-
-    result.created.push(trimmedTag);
-    existingTags.push(trimmedTag);
+): Promise<void> {
+  if (type === "prompt") {
+    await window.electronAPI.addPromptTag(tag);
+  } else {
+    await window.electronAPI.addImageTag(tag);
   }
 
-  // 清除缓存
-  if (result.created.length > 0 || result.errors.length > 0) {
-    clearCache(getTagsCacheKey(type));
-    clearCache(getTagGroupsCacheKey(type));
+  // 分配到组
+  if (options.defaultGroupId !== undefined && options.defaultGroupId !== null) {
+    await assignTagToGroup(type, tag, options.defaultGroupId);
   }
-
-  result.success = result.errors.length === 0;
-  return result;
 }
 
 /**
@@ -154,11 +69,11 @@ export async function renameTag(type: DataType, oldName: TagName, newName: TagNa
     throw new TagExistsError(trimmedNewName);
   }
 
-  const dataAccess = createDataAccess(type);
-  await dataAccess.renameTag(oldName, trimmedNewName);
-
-  clearCache(getTagsCacheKey(type));
-  clearCache(getTagGroupsCacheKey(type));
+  if (type === "prompt") {
+    await window.electronAPI.renamePromptTag(oldName, trimmedNewName);
+  } else {
+    await window.electronAPI.renameImageTag(oldName, trimmedNewName);
+  }
 }
 
 /**
@@ -173,7 +88,10 @@ export async function deleteTags(type: DataType, tags: TagName[]): Promise<TagDe
     errors: [],
   };
 
-  const dataAccess = createDataAccess(type);
+  const removeTagFromItem = (itemId: string, tag: TagName) =>
+    type === "prompt"
+      ? window.electronAPI.removeTagFromPrompt(itemId, tag)
+      : window.electronAPI.removeTagFromImage(itemId, tag);
 
   for (const tag of tags) {
     const trimmedTag = tag.trim();
@@ -181,16 +99,23 @@ export async function deleteTags(type: DataType, tags: TagName[]): Promise<TagDe
 
     try {
       // 1. 从所有项目中移除标签
-      const itemIds = await dataAccess.getItemsByTag(trimmedTag);
+      const itemIds =
+        type === "prompt"
+          ? await window.electronAPI.getPromptsByTag(trimmedTag)
+          : await window.electronAPI.getImagesByTag(trimmedTag);
       for (const itemId of itemIds) {
-        await dataAccess.removeTagFromItem(itemId, trimmedTag);
+        await removeTagFromItem(itemId, trimmedTag);
       }
 
       // 2. 清除标签组关联
-      await dataAccess.assignTagToGroup(trimmedTag, null);
+      await assignTagToGroup(type, trimmedTag, null);
 
       // 3. 删除标签
-      await dataAccess.deleteTag(trimmedTag);
+      if (type === "prompt") {
+        await window.electronAPI.deletePromptTag(trimmedTag);
+      } else {
+        await window.electronAPI.deleteImageTag(trimmedTag);
+      }
 
       result.deleted++;
     } catch (error) {
@@ -200,11 +125,6 @@ export async function deleteTags(type: DataType, tags: TagName[]): Promise<TagDe
         code: "INVALID",
       });
     }
-  }
-
-  if (result.deleted > 0) {
-    clearCache(getTagsCacheKey(type));
-    clearCache(getTagGroupsCacheKey(type));
   }
 
   return result;
@@ -222,22 +142,11 @@ export async function assignTagToGroup(
   tag: TagName,
   groupId: TagGroupId | null,
 ): Promise<void> {
-  const dataAccess = createDataAccess(type);
-  await dataAccess.assignTagToGroup(tag, groupId);
-
-  clearCache(getTagGroupsCacheKey(type));
-}
-
-/**
- * 获取使用指定标签的所有项目
- * @param type - 数据类型
- * @param tag - 标签名
- * @returns 项目ID列表
- * @throws 数据库操作失败时抛出异常
- */
-export async function getItemsByTag(type: DataType, tag: TagName): Promise<string[]> {
-  const dataAccess = createDataAccess(type);
-  return await dataAccess.getItemsByTag(tag);
+  if (type === "prompt") {
+    await window.electronAPI.assignPromptTagToBelongGroup(tag, groupId);
+  } else {
+    await window.electronAPI.assignImageTagToBelongGroup(tag, groupId);
+  }
 }
 
 // ========== 标签组操作 ==========
@@ -249,17 +158,9 @@ export async function getItemsByTag(type: DataType, tag: TagName): Promise<strin
  * @throws 数据库操作失败时抛出异常
  */
 export async function getTagGroups(type: DataType): Promise<TagGroup[]> {
-  const cacheKey = getTagGroupsCacheKey(type);
-  const cached = getFromCache<TagGroup[]>(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  const dataAccess = createDataAccess(type);
-  const data = await dataAccess.getTagGroups();
-
-  setCache(cacheKey, data);
-  return data;
+  return type === "prompt"
+    ? window.electronAPI.getPromptTagGroups()
+    : window.electronAPI.getImageTagGroups();
 }
 
 /**
@@ -280,11 +181,9 @@ export async function createTagGroup(
     throw new Error("标签组名称不能为空");
   }
 
-  const dataAccess = createDataAccess(type);
-  const result = await dataAccess.createTagGroup(trimmedName, sortOrder);
-
-  clearCache(getTagGroupsCacheKey(type));
-  return result;
+  return type === "prompt"
+    ? window.electronAPI.createPromptTagGroup(trimmedName, sortOrder)
+    : window.electronAPI.createImageTagGroup(trimmedName, sortOrder);
 }
 
 /**
@@ -299,10 +198,11 @@ export async function updateTagGroup(
   id: TagGroupId,
   attrs: Partial<TagGroup>,
 ): Promise<void> {
-  const dataAccess = createDataAccess(type);
-  await dataAccess.updateTagGroup(id, attrs);
-
-  clearCache(getTagGroupsCacheKey(type));
+  if (type === "prompt") {
+    await window.electronAPI.updatePromptTagGroupAttrs(id, attrs);
+  } else {
+    await window.electronAPI.updateImageTagGroupAttrs(id, attrs);
+  }
 }
 
 /**
@@ -312,8 +212,9 @@ export async function updateTagGroup(
  * @throws 数据库操作失败时抛出异常
  */
 export async function deleteTagGroup(type: DataType, id: TagGroupId): Promise<void> {
-  const dataAccess = createDataAccess(type);
-  await dataAccess.deleteTagGroup(id);
-
-  clearCache(getTagGroupsCacheKey(type));
+  if (type === "prompt") {
+    await window.electronAPI.deletePromptTagGroup(id);
+  } else {
+    await window.electronAPI.deleteImageTagGroup(id);
+  }
 }

@@ -79,8 +79,6 @@
 - `closePromptTagManager()` - 关闭提示词标签管理器
 - `createImageTagInManager()` - 在图像标签管理器中创建标签
 - `createPromptTagInManager()` - 在提示词标签管理器中创建标签
-- `createImageTagsInManagerBatch()` - 在图像标签管理器中批量创建标签
-- `createPromptTagsInManagerBatch()` - 在提示词标签管理器中批量创建标签
 - `createImageTagInDetail()` - 在图像详情界面创建标签
 - `createPromptTagInDetail()` - 在提示词详情界面创建标签
 - `createImageTagInBatchToolbar()` - 在主界面批量工具栏创建图像标签
@@ -134,6 +132,7 @@
 ## 注意事项
 
 - 所有测试标签名都会自动添加 `e2e_` 前缀
+- 标签一次只能创建一个（不支持分隔符批量添加）；测试需要多个标签时，用 API factory 的 `createTag()` 循环创建，不走 UI 对话框
 - `cleanupAndReset()` 会删除所有带 `e2e_` 前缀的标签和标签组，关闭所有模态框、回到图像主界面，确保下一轮测试在一致的起点
 - 自动完成测试需要在创建标签后调用 `clearTagCache()`，因为标签缓存可能导致新创建的标签在自动完成中不可用
 - 使用 `test` fixture 时，应用会在测试完成后自动关闭，无需手动调用 `close()`

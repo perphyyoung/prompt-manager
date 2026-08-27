@@ -8,47 +8,37 @@ import {
   validateTagDelete,
   validateTagRename,
   validateGroupName,
-  getReservedTags,
-  getAllReservedTags,
 } from "../../src/pyTagGroups/validation.ts";
-import { Constants } from "../../src/constants.ts";
 
 describe("validation", () => {
   describe("validateTagCreate", () => {
     const existingTags = ["existing1", "existing2"];
-    const reservedTags = ["reserved1", "reserved2"];
 
     it("should validate valid tag", () => {
-      const result = validateTagCreate("newtag", existingTags, reservedTags);
+      const result = validateTagCreate("newtag", existingTags);
       expect(result.valid).toBe(true);
     });
 
     it("should reject empty tag", () => {
-      const result = validateTagCreate("", existingTags, reservedTags);
+      const result = validateTagCreate("", existingTags);
       expect(result.valid).toBe(false);
       expect(result.code).toBe("INVALID");
     });
 
     it("should reject whitespace only tag", () => {
-      const result = validateTagCreate("   ", existingTags, reservedTags);
+      const result = validateTagCreate("   ", existingTags);
       expect(result.valid).toBe(false);
       expect(result.code).toBe("INVALID");
     });
 
     it("should reject existing tag", () => {
-      const result = validateTagCreate("existing1", existingTags, reservedTags);
+      const result = validateTagCreate("existing1", existingTags);
       expect(result.valid).toBe(false);
       expect(result.code).toBe("EXISTS");
     });
 
-    it("should reject reserved tag", () => {
-      const result = validateTagCreate("reserved1", existingTags, reservedTags);
-      expect(result.valid).toBe(false);
-      expect(result.code).toBe("RESERVED");
-    });
-
     it("should trim tag before validation", () => {
-      const result = validateTagCreate("  existing1  ", existingTags, reservedTags);
+      const result = validateTagCreate("  existing1  ", existingTags);
       expect(result.valid).toBe(false);
       expect(result.code).toBe("EXISTS");
     });
@@ -134,25 +124,6 @@ describe("validation", () => {
       const result = validateGroupName("   ");
       expect(result.valid).toBe(false);
       expect(result.code).toBe("INVALID");
-    });
-  });
-
-  describe("getReservedTags", () => {
-    it("should return prompt reserved tags", () => {
-      const result = getReservedTags("prompt");
-      expect(result).toEqual([...Constants.PROMPT_SPECIAL_TAGS]);
-    });
-
-    it("should return image reserved tags", () => {
-      const result = getReservedTags("image");
-      expect(result).toEqual([...Constants.IMAGE_SPECIAL_TAGS]);
-    });
-  });
-
-  describe("getAllReservedTags", () => {
-    it("should return all reserved tags", () => {
-      const result = getAllReservedTags();
-      expect(result).toEqual([...Constants.ALL_SPECIAL_TAGS]);
     });
   });
 });

@@ -12,7 +12,7 @@ export { TagAutocomplete } from "./TagAutocomplete.ts";
 // TagService 标签业务服务
 export { TagService, tagService } from "./TagService.ts";
 export type {
-  CreateTagsOptions,
+  CreateTagOptions,
   LinkTagsOptions,
   RemoveTagsOptions,
   UnlinkTagOptions,

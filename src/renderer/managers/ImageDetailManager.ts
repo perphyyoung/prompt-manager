@@ -352,10 +352,17 @@ export class ImageDetailManager extends DetailViewManager<IImage> {
           const currentItem = this.currentItem;
           const tagService = TagService.getInstance();
           const result = await tagService.linkTagsToItem({
-            tagNames: [tagName],
+            tagName,
             type: "image",
             itemId: currentItem?.id,
           });
+
+          // 提示错误（如输入了特殊标签）
+          if (result.errors.length > 0) {
+            tagService.reportTagErrors(result.errors, (msg, type) =>
+              this.app.showToast(msg, type as "success" | "warning" | "error"),
+            );
+          }
 
           if (result.success) {
             // 添加新创建的标签和已存在的标签（skipped）到本地状态
@@ -374,39 +381,6 @@ export class ImageDetailManager extends DetailViewManager<IImage> {
         } catch (error) {
           ErrorHandler.handleError(
             { module: "ImageDetailManager.ts", operation: "add tag" },
-            error,
-            { userMessage: "添加标签失败" },
-          );
-          return false;
-        }
-      },
-      onBatchAdd: async (tagNames: string[]) => {
-        try {
-          const currentItem = this.currentItem;
-          const tagService = TagService.getInstance();
-          const result = await tagService.linkTagsToItem({
-            tagNames,
-            type: "image",
-            itemId: currentItem?.id,
-          });
-
-          if (result.success) {
-            // 添加新创建的标签和已存在的标签（skipped）到本地状态
-            const allTagsToAdd = [...result.created, ...result.skipped];
-            for (const tag of allTagsToAdd) {
-              if (!this.currentTags.includes(tag)) {
-                this.currentTags.push(tag);
-              }
-            }
-            this.syncImageTagsToCache();
-            // 触发重新渲染
-            this.detailTagManager?.onRender?.();
-            this.app.eventBus.emit(Events.IMAGES_CHANGED);
-          }
-          return result.success;
-        } catch (error) {
-          ErrorHandler.handleError(
-            { module: "ImageDetailManager.ts", operation: "add tags" },
             error,
             { userMessage: "添加标签失败" },
           );

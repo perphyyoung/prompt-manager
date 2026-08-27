@@ -12,9 +12,6 @@ import {
   buildTagsWithGroupInfo,
   filterNewTags,
   filterExistingTags,
-  sortTagsByCount,
-  toTagObjects,
-  fromTagObjects,
 } from "../../src/pyTagGroups/utils.ts";
 import type { TagGroup } from "../../src/pyTagGroups/types.ts";
 
@@ -171,71 +168,6 @@ describe("utils", () => {
 
     it("should return empty array if none exist", () => {
       expect(filterExistingTags(["a", "b"], ["c", "d"])).toEqual([]);
-    });
-  });
-
-  describe("sortTagsByCount", () => {
-    it("should sort tags by count in descending order", () => {
-      const tags = ["a", "b", "c"];
-      const counts = { a: 5, b: 10, c: 3 };
-      expect(sortTagsByCount(tags, counts)).toEqual(["b", "a", "c"]);
-    });
-
-    it("should handle missing counts as 0", () => {
-      const tags = ["a", "b", "c"];
-      const counts = { a: 5 };
-      expect(sortTagsByCount(tags, counts)).toEqual(["a", "b", "c"]);
-    });
-
-    it("should not mutate original array", () => {
-      const tags = ["a", "b", "c"];
-      const counts = { a: 1, b: 2, c: 3 };
-      sortTagsByCount(tags, counts);
-      expect(tags).toEqual(["a", "b", "c"]);
-    });
-  });
-
-  describe("toTagObjects", () => {
-    const groups: TagGroup[] = [
-      { id: 1, name: "Group 1", sortOrder: 1, tags: ["a", "b"] },
-      { id: 2, name: "Group 2", sortOrder: 2, tags: ["c"] },
-    ];
-
-    it("should convert tag names to Tag objects with groupId", () => {
-      const tags = ["a", "c"];
-      const result = toTagObjects(tags, groups);
-      expect(result).toEqual([
-        { name: "a", groupId: 1 },
-        { name: "c", groupId: 2 },
-      ]);
-    });
-
-    it("should set groupId to null for ungrouped tags", () => {
-      const tags = ["a", "d"];
-      const result = toTagObjects(tags, groups);
-      expect(result).toEqual([
-        { name: "a", groupId: 1 },
-        { name: "d", groupId: null },
-      ]);
-    });
-
-    it("should handle empty tags", () => {
-      expect(toTagObjects([], groups)).toEqual([]);
-    });
-  });
-
-  describe("fromTagObjects", () => {
-    it("should extract tag names from Tag objects", () => {
-      const tags = [
-        { name: "a", groupId: 1 },
-        { name: "b", groupId: null },
-        { name: "c", groupId: 2 },
-      ];
-      expect(fromTagObjects(tags)).toEqual(["a", "b", "c"]);
-    });
-
-    it("should handle empty array", () => {
-      expect(fromTagObjects([])).toEqual([]);
     });
   });
 });

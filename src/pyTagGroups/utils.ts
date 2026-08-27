@@ -3,7 +3,7 @@
  * 标签相关的纯工具函数，无副作用
  */
 
-import type { TagName, TagGroup, TagGroupId, Tag } from "./types.ts";
+import type { TagName, TagGroup, TagGroupId } from "./types.ts";
 
 /**
  * 解析标签输入（支持批量）
@@ -128,16 +128,6 @@ export function filterNewTags(tags: TagName[], existing: TagName[]): TagName[] {
 }
 
 /**
- * 按标签使用计数排序
- * @param tags - 标签数组
- * @param counts - 标签计数映射
- * @returns 排序后的标签数组
- */
-export function sortTagsByCount(tags: TagName[], counts: Record<TagName, number>): TagName[] {
-  return [...tags].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
-}
-
-/**
  * 过滤已存在的标签（返回存在的）
  * @param tags - 要检查的标签
  * @param existing - 已存在的标签
@@ -145,38 +135,4 @@ export function sortTagsByCount(tags: TagName[], counts: Record<TagName, number>
  */
 export function filterExistingTags(tags: TagName[], existing: TagName[]): TagName[] {
   return tags.filter((tag) => existing.includes(tag));
-}
-
-/**
- * 将标签名数组转换为 Tag 对象数组
- * @param tagNames - 标签名数组
- * @param groups - 标签组数组
- * @returns Tag 对象数组
- */
-export function toTagObjects(tagNames: TagName[], groups: TagGroup[]): Tag[] {
-  const tagGroupMap = new Map<TagName, TagGroupId | null>();
-
-  // 构建标签到组的映射
-  for (const group of groups) {
-    if (group.tags) {
-      for (const tag of group.tags) {
-        tagGroupMap.set(tag, group.id);
-      }
-    }
-  }
-
-  // 转换为 Tag 对象
-  return tagNames.map((name) => ({
-    name,
-    groupId: tagGroupMap.get(name) || null,
-  }));
-}
-
-/**
- * 从 Tag 对象数组提取标签名数组
- * @param tags - Tag 对象数组
- * @returns 标签名数组
- */
-export function fromTagObjects(tags: Tag[]): TagName[] {
-  return tags.map((t) => t.name);
 }

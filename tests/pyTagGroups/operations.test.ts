@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   getTags,
-  createTags,
+  createTag,
   renameTag,
   deleteTags,
   assignTagToGroup,
@@ -77,26 +77,22 @@ describe("operations", () => {
     });
   });
 
-  describe("createTags", () => {
-    it("should create new tags", async () => {
-      const result = await createTags("prompt", ["newtag1", "newtag2"]);
-      expect(result.created).toEqual(["newtag1", "newtag2"]);
-      expect(result.success).toBe(true);
-    });
-
-    it("should skip existing tags", async () => {
-      const result = await createTags("prompt", ["tag1", "newtag"]);
-      expect(result.skipped).toEqual(["tag1"]);
-      expect(result.created).toEqual(["newtag"]);
-    });
-
-    it("should throw InvalidTagNameError for empty tag", async () => {
-      await expect(createTags("prompt", ["  "])).rejects.toThrow(InvalidTagNameError);
+  describe("createTag", () => {
+    it("should create new tag", async () => {
+      await createTag("prompt", "newtag1");
+      expect(mockElectronAPI.addPromptTag).toHaveBeenCalledWith("newtag1");
     });
 
     it("should assign tag to group when defaultGroupId is provided", async () => {
-      await createTags("prompt", ["newtag"], { defaultGroupId: 1 });
-      expect(mockElectronAPI.assignPromptTagToBelongGroup).toHaveBeenCalledWith("newtag", 1);
+      await createTag("prompt", "newtag2", { defaultGroupId: 1 });
+      expect(mockElectronAPI.addPromptTag).toHaveBeenCalledWith("newtag2");
+      expect(mockElectronAPI.assignPromptTagToBelongGroup).toHaveBeenCalledWith("newtag2", 1);
+    });
+
+    it("should not assign group when defaultGroupId is not provided", async () => {
+      await createTag("image", "imgtag1");
+      expect(mockElectronAPI.addImageTag).toHaveBeenCalledWith("imgtag1");
+      expect(mockElectronAPI.assignImageTagToBelongGroup).not.toHaveBeenCalled();
     });
   });
 

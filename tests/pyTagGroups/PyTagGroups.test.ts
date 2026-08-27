@@ -79,76 +79,6 @@ describe("PyTagGroups", () => {
     });
   });
 
-  describe("getAllTags", () => {
-    it("should get all tags", async () => {
-      const tags = await lib.getAllTags();
-      expect(tags).toEqual(["tag1", "tag2", "tag3"]);
-    });
-
-    it("should sort by name when sortBy is name", async () => {
-      mockElectronAPI.getPromptTags.mockResolvedValue(["c", "a", "b"]);
-      const tags = await lib.getAllTags({ sortBy: "name" });
-      expect(tags).toEqual(["a", "b", "c"]);
-    });
-  });
-
-  describe("getTagsWithGroups", () => {
-    it("should get tags with group info", async () => {
-      const tags = await lib.getTagsWithGroups();
-      expect(tags.length).toBe(3);
-      expect(tags[0]).toHaveProperty("name");
-      expect(tags[0]).toHaveProperty("groupId");
-    });
-  });
-
-  describe("create", () => {
-    it("should create single tag", async () => {
-      const result = await lib.create("newtag");
-      expect(result.created).toContain("newtag");
-      expect(result.success).toBe(true);
-    });
-
-    it("should create multiple tags", async () => {
-      const result = await lib.create(["tag1", "tag2", "newtag"]);
-      expect(result.created).toContain("newtag");
-      expect(result.skipped).toContain("tag1");
-      expect(result.skipped).toContain("tag2");
-    });
-
-    it("should parse string input with commas", async () => {
-      // create 方法只接受 TagName | TagName[]，字符串解析需要调用方使用 lib.parse()
-      const tags = lib.parse("tag1, newtag1, newtag2");
-      const result = await lib.create(tags);
-      expect(result.created).toContain("newtag1");
-      expect(result.created).toContain("newtag2");
-    });
-
-    it("should assign to group when defaultGroupId is provided", async () => {
-      await lib.create("newtag", { defaultGroupId: 1 });
-      expect(mockElectronAPI.assignPromptTagToBelongGroup).toHaveBeenCalledWith("newtag", 1);
-    });
-  });
-
-  describe("search", () => {
-    it("should return tags matching prefix", async () => {
-      const results = await lib.search("ta");
-      expect(results).toContain("tag1");
-      expect(results).toContain("tag2");
-      expect(results).toContain("tag3");
-    });
-
-    it("should exclude specified tags", async () => {
-      const results = await lib.search("ta", ["tag1"]);
-      expect(results).not.toContain("tag1");
-      expect(results).toContain("tag2");
-    });
-
-    it("should return empty array when no matches", async () => {
-      const results = await lib.search("xyz");
-      expect(results).toEqual([]);
-    });
-  });
-
   describe("rename", () => {
     it("should rename tag", async () => {
       await lib.rename("tag1", "newtag");
@@ -157,37 +87,6 @@ describe("PyTagGroups", () => {
 
     it("should throw error when new name exists", async () => {
       await expect(lib.rename("tag2", "tag1")).rejects.toThrow();
-    });
-  });
-
-  describe("delete", () => {
-    it("should delete single tag", async () => {
-      const result = await lib.delete("tag1");
-      expect(result.deleted).toBe(1);
-    });
-
-    it("should delete multiple tags", async () => {
-      const result = await lib.delete(["tag1", "tag2"]);
-      expect(result.deleted).toBe(2);
-    });
-
-    it("should report error when deleting non-existent tag", async () => {
-      const result = await lib.delete("nonexistent");
-      expect(result.deleted).toBe(0);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].tag).toBe("nonexistent");
-    });
-  });
-
-  describe("exists", () => {
-    it("should return true for existing tag", async () => {
-      const exists = await lib.exists("tag1");
-      expect(exists).toBe(true);
-    });
-
-    it("should return false for non-existing tag", async () => {
-      const exists = await lib.exists("nonexistent");
-      expect(exists).toBe(false);
     });
   });
 
@@ -205,14 +104,6 @@ describe("PyTagGroups", () => {
       expect(group).toHaveProperty("id");
       expect(group).toHaveProperty("name", "New Group");
       expect(group).toHaveProperty("sortOrder");
-    });
-  });
-
-  describe("getGroups", () => {
-    it("should get all groups", async () => {
-      const groups = await lib.getGroups();
-      expect(groups.length).toBe(2);
-      expect(groups[0].name).toBe("Group 1");
     });
   });
 
@@ -241,51 +132,6 @@ describe("PyTagGroups", () => {
     it("should remove tag from group when groupId is null", async () => {
       await lib.assignToGroup("tag1", null);
       expect(mockElectronAPI.assignPromptTagToBelongGroup).toHaveBeenCalledWith("tag1", null);
-    });
-  });
-
-  describe("parse", () => {
-    it("should parse comma separated tags", () => {
-      const tags = lib.parse("tag1, tag2, tag3");
-      expect(tags).toEqual(["tag1", "tag2", "tag3"]);
-    });
-
-    it("should parse space separated tags", () => {
-      const tags = lib.parse("tag1 tag2 tag3");
-      expect(tags).toEqual(["tag1", "tag2", "tag3"]);
-    });
-
-    it("should handle mixed separators", () => {
-      const tags = lib.parse("tag1, tag2 tag3");
-      expect(tags).toEqual(["tag1", "tag2", "tag3"]);
-    });
-
-    it("should trim whitespace", () => {
-      const tags = lib.parse("  tag1  ,  tag2  ");
-      expect(tags).toEqual(["tag1", "tag2"]);
-    });
-
-    it("should remove empty tags", () => {
-      const tags = lib.parse("tag1,,tag2");
-      expect(tags).toEqual(["tag1", "tag2"]);
-    });
-
-    it("should remove duplicates", () => {
-      const tags = lib.parse("tag1, tag1, tag2");
-      // parseTagInput 不去重，去重由调用方处理
-      expect(tags).toEqual(["tag1", "tag1", "tag2"]);
-    });
-  });
-
-  describe("diff", () => {
-    it("should return tags to remove", () => {
-      const result = lib.diff(["a", "b", "c"], ["b"]);
-      expect(result).toEqual(["a", "c"]);
-    });
-
-    it("should handle empty remove array", () => {
-      const result = lib.diff(["a", "b"], []);
-      expect(result).toEqual(["a", "b"]);
     });
   });
 });

@@ -5,8 +5,6 @@ import {
   enterPromptTagManager,
   closeImageTagManager,
   closePromptTagManager,
-  createImageTagsInManagerBatch,
-  createPromptTagsInManagerBatch,
 } from "./electron-test.ts";
 
 import { Constants } from "../src/constants.ts";
@@ -36,15 +34,20 @@ test.describe("标签管理器搜索状态保持功能", () => {
   test.describe("图像标签管理 - 搜索状态保持", () => {
     test("搜索后单个删除保持搜索状态", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
-      await enterImageTagManager(page);
 
       const searchKeyword = "persist_single_delete";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
       const otherTagName = electronTest.generateE2ePrefixName("other");
 
-      // 批量创建3个标签，减少UI操作次数
-      await createImageTagsInManagerBatch(page, [tagName1, tagName2, otherTagName]);
+      // 通过 API factory 创建测试数据，不走 UI 对话框
+      const factory = electronTest.getApiFactory().createImageFactory();
+      for (const name of [tagName1, tagName2, otherTagName]) {
+        await factory.createTag(name);
+      }
+      await electronTest.refreshData();
+
+      await enterImageTagManager(page);
 
       await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
@@ -124,15 +127,20 @@ test.describe("标签管理器搜索状态保持功能", () => {
 
     test("搜索后单个编辑保持搜索状态", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
-      await enterImageTagManager(page);
 
       const searchKeyword = "persist_single_edit";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
       const newTagName = electronTest.generateE2ePrefixName(`${searchKeyword}_renamed`);
 
-      // 批量创建2个标签，减少UI操作次数
-      await createImageTagsInManagerBatch(page, [tagName1, tagName2]);
+      // 通过 API factory 创建测试数据，不走 UI 对话框
+      const factory = electronTest.getApiFactory().createImageFactory();
+      for (const name of [tagName1, tagName2]) {
+        await factory.createTag(name);
+      }
+      await electronTest.refreshData();
+
+      await enterImageTagManager(page);
 
       await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
@@ -206,15 +214,20 @@ test.describe("标签管理器搜索状态保持功能", () => {
 
     test("搜索后批量删除保持搜索状态", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
-      await enterImageTagManager(page);
 
       const searchKeyword = "persist_test";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
       const otherTagName = electronTest.generateE2ePrefixName("other");
 
-      // 批量创建3个标签，减少UI操作次数
-      await createImageTagsInManagerBatch(page, [tagName1, tagName2, otherTagName]);
+      // 通过 API factory 创建测试数据，不走 UI 对话框
+      const factory = electronTest.getApiFactory().createImageFactory();
+      for (const name of [tagName1, tagName2, otherTagName]) {
+        await factory.createTag(name);
+      }
+      await electronTest.refreshData();
+
+      await enterImageTagManager(page);
 
       await page.fill(`#${Constants.Ids.IMAGE_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
@@ -285,15 +298,20 @@ test.describe("标签管理器搜索状态保持功能", () => {
   test.describe("提示词标签管理 - 搜索状态保持", () => {
     test("搜索后单个删除保持搜索状态", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
-      await enterPromptTagManager(page);
 
       const searchKeyword = "persist_single_delete";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
       const otherTagName = electronTest.generateE2ePrefixName("other");
 
-      // 批量创建3个标签，减少UI操作次数
-      await createPromptTagsInManagerBatch(page, [tagName1, tagName2, otherTagName]);
+      // 通过 API factory 创建测试数据，不走 UI 对话框
+      const factory = electronTest.getApiFactory().createPromptFactory();
+      for (const name of [tagName1, tagName2, otherTagName]) {
+        await factory.createTag(name);
+      }
+      await electronTest.refreshData();
+
+      await enterPromptTagManager(page);
 
       await page.fill(`#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
@@ -373,15 +391,20 @@ test.describe("标签管理器搜索状态保持功能", () => {
 
     test("搜索后单个编辑保持搜索状态", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
-      await enterPromptTagManager(page);
 
       const searchKeyword = "persist_single_edit";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
       const newTagName = electronTest.generateE2ePrefixName(`${searchKeyword}_renamed`);
 
-      // 批量创建2个标签，减少UI操作次数
-      await createPromptTagsInManagerBatch(page, [tagName1, tagName2]);
+      // 通过 API factory 创建测试数据，不走 UI 对话框
+      const factory = electronTest.getApiFactory().createPromptFactory();
+      for (const name of [tagName1, tagName2]) {
+        await factory.createTag(name);
+      }
+      await electronTest.refreshData();
+
+      await enterPromptTagManager(page);
 
       await page.fill(`#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 
@@ -455,15 +478,20 @@ test.describe("标签管理器搜索状态保持功能", () => {
 
     test("搜索后批量删除保持搜索状态", async ({ electronTest, page }) => {
       await electronTest.logTestStart();
-      await enterPromptTagManager(page);
 
       const searchKeyword = "persist_test";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
       const otherTagName = electronTest.generateE2ePrefixName("other");
 
-      // 批量创建3个标签，减少UI操作次数
-      await createPromptTagsInManagerBatch(page, [tagName1, tagName2, otherTagName]);
+      // 通过 API factory 创建测试数据，不走 UI 对话框
+      const factory = electronTest.getApiFactory().createPromptFactory();
+      for (const name of [tagName1, tagName2, otherTagName]) {
+        await factory.createTag(name);
+      }
+      await electronTest.refreshData();
+
+      await enterPromptTagManager(page);
 
       await page.fill(`#${Constants.Ids.PROMPT_TAG_MANAGER_SEARCH_INPUT}`, searchKeyword);
 

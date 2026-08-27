@@ -146,6 +146,5 @@ export interface IDetailTagManager {
   getTags: () => string[];
   setTags: (tags: string[]) => void;
   removeTag: (tagName: string) => Promise<boolean>;
-  addTags: (tagNames: string[]) => Promise<{ success: boolean; added: number }>;
   onRender?: (tags?: string[]) => void;
 }

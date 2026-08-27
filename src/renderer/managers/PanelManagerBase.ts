@@ -207,10 +207,10 @@ export abstract class PanelManagerBase {
         // 面板刷新后以 filtered 数组为权威，残留条目无读取路径
       },
       addTag: {
-        processItems: async (ids: string[], tagNames: string[]) => {
+        processItems: async (ids: string[], tagName: string) => {
           const tagService = TagService.getInstance();
-          const result = await tagService.batchLinkTags({
-            tagNames,
+          const result = await tagService.linkTagsToItem({
+            tagName,
             type: this.panelType,
             itemIds: ids,
           });
@@ -1608,31 +1608,33 @@ export abstract class PanelManagerBase {
     });
   }
 
-  protected async handleBatchAddTag(): Promise<void> {
+  protected async handleBatchAddTag(defaultValue: string = ""): Promise<void> {
     const selectedIds = Array.from(batchToolbarMiddle.getSelectedIds(this.toolbarContext));
     if (selectedIds.length === 0) return;
 
     const tagInputResult = await DialogService.showInputDialog({
       title: "批量添加标签",
-      placeholder: "请输入标签名，多个标签用逗号分隔",
+      placeholder: "请输入标签名",
+      defaultValue,
       autocomplete: this.panelType === "prompt" ? "prompt" : "image",
     });
 
     if (!tagInputResult) return;
 
-    const tagService = TagService.getInstance();
-    const tagNames = tagService.parseTagInput(tagInputResult.value);
-    if (tagNames.length === 0) return;
+    const tagName = tagInputResult.value.trim();
+    if (!tagName) return;
 
     try {
-      await batchToolbarMiddle.batchAddTag(this.toolbarContext, selectedIds, tagNames);
+      await batchToolbarMiddle.batchAddTag(this.toolbarContext, selectedIds, tagName);
       await this.refreshAfterUpdate();
       this.app.showToast?.(`已为 ${selectedIds.length} 个项目添加标签`, "success");
       // 添加成功后退出批量模式
       this.exitBatchMode();
     } catch (error) {
       window.electronAPI.logError("PanelManagerBase.ts", "Failed to batch add tag", error);
-      this.app.showToast?.("批量添加标签失败", "error");
+      this.app.showToast?.(error instanceof Error ? error.message : "批量添加标签失败", "error");
+      // 失败时重新打开对话框保留输入（与标签管理页的添加标签行为一致）
+      await this.handleBatchAddTag(tagName);
     }
   }
 
@@ -1695,7 +1697,7 @@ export abstract class PanelManagerBase {
     // 使用 TagService 统一处理创建和关联
     const tagService = TagService.getInstance();
     const result = await tagService.linkTagsToItem({
-      tagNames: [tagName],
+      tagName,
       type: type as "prompt" | "image",
       itemId: item.id,
     });

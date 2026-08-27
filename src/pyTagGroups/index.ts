@@ -59,14 +59,12 @@ export {
   validateTagDelete,
   validateTagRename,
   validateGroupName,
-  getReservedTags,
-  getAllReservedTags,
 } from "./validation.ts";
 
 // 操作函数（高级使用，按需导出）
 export {
   getTags,
-  createTags,
+  createTag,
   renameTag,
   deleteTags,
   assignTagToGroup,
@@ -74,14 +72,4 @@ export {
   createTagGroup,
   updateTagGroup,
   deleteTagGroup,
-  clearTagsCache,
 } from "./operations.ts";
-
-// 数据访问层（高级使用，按需导出）
-export type { TagDataAccess } from "./dataAccess.ts";
-export { ElectronTagDataAccess, createDataAccess } from "./dataAccess.ts";
-
-// 项目标签关联服务
-export { linkTags } from "./itemTagService.ts";
-
-export type { LinkTagsOptions, LinkTagsResult } from "./itemTagService.ts";

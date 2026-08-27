@@ -701,7 +701,6 @@ export abstract class TagManager {
 
   /**
    * 在标签管理界面新建标签
-   * 支持批量创建，用逗号或空格分隔多个标签
    */
   private async addTagInManagerWithDialog(
     defaultValue: string = "",
@@ -720,35 +719,28 @@ export abstract class TagManager {
     if (!result?.value?.trim()) {
       return;
     }
-    const creationResult = await this.tagService.createTags({
-      tagNames: result.value,
+    const creationResult = await this.tagService.createTag({
+      tagName: result.value,
       type: this.getDataType(),
       defaultGroupId: result.groupId ?? null,
     });
 
     if (creationResult.created.length > 0) {
-      this.app.showToast(`成功创建 ${creationResult.created.length} 个标签`, "success");
+      this.app.showToast(`已创建标签 "${creationResult.created[0]}"`, "success");
     }
 
     if (creationResult.skipped.length > 0) {
-      this.app.showToast(`${creationResult.skipped.length} 个标签已存在`, "warning");
-      // 如果所有标签都被跳过（已存在），重新打开对话框保留输入
-      if (creationResult.created.length === 0 && creationResult.errors.length === 0) {
-        const skippedTags = creationResult.skipped.join(", ");
-        await this.addTagInManagerWithDialog(skippedTags, result.groupId);
-        return;
-      }
+      this.app.showToast(`标签 "${creationResult.skipped[0]}" 已存在`, "warning");
+      // 已存在时重新打开对话框保留输入
+      await this.addTagInManagerWithDialog(creationResult.skipped[0], result.groupId);
+      return;
     }
 
     if (creationResult.errors.length > 0) {
-      const errorMsg = creationResult.errors
-        .map((e: { tag: string; error: string }) => e.error)
-        .join(", ");
-      this.app.showToast(errorMsg, "error");
-      const failedTags = creationResult.errors
-        .map((e: { tag: string; error: string }) => e.tag)
-        .join(", ");
-      await this.addTagInManagerWithDialog(failedTags, result.groupId);
+      const error = creationResult.errors[0];
+      this.app.showToast(error.error, "error");
+      // 失败时重新打开对话框保留输入
+      await this.addTagInManagerWithDialog(error.tag, result.groupId);
       return;
     }
 

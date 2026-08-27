@@ -318,13 +318,13 @@ export class DialogService {
         // 销毁旧实例
         DialogService.inputModalAutocomplete?.destroy();
 
-        // onBatchAdd 回调：填入输入框并提交对话框
-        const onBatchAdd = (tagNames: string[]) => {
+        // onSelect 回调：填入输入框并提交对话框
+        const onSelect = (tag: string) => {
           const field = document.getElementById(
             Constants.Ids.INPUT_MODAL_FIELD,
           ) as HTMLInputElement;
           if (field) {
-            field.value = tagNames.join(", ");
+            field.value = tag;
           }
           const okBtn = document.getElementById(Constants.Ids.INPUT_OK_BTN);
           okBtn?.click();
@@ -336,7 +336,7 @@ export class DialogService {
           dropdownId: Constants.Ids.INPUT_MODAL_TAG_AUTOCOMPLETE,
           containerSelector: ".modal-body",
           type: options.autocomplete,
-          onBatchAdd,
+          onSelect,
         });
         DialogService.inputModalAutocomplete.init();
       }

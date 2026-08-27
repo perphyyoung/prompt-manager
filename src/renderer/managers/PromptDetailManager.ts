@@ -257,10 +257,17 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
           const currentItem = this.currentItem;
           const tagService = TagService.getInstance();
           const result = await tagService.linkTagsToItem({
-            tagNames: [tagName],
+            tagName,
             type: "prompt",
             itemId: currentItem?.id,
           });
+
+          // 提示错误（如输入了特殊标签）
+          if (result.errors.length > 0) {
+            tagService.reportTagErrors(result.errors, (msg, type) =>
+              this.app.showToast(msg, type as "success" | "warning" | "error"),
+            );
+          }
 
           if (result.success) {
             // 添加新创建的标签和已存在的标签（skipped）到本地状态
@@ -277,45 +284,6 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
           return result.success;
         } catch (error) {
           window.electronAPI.logError("PromptDetailManager.ts", "Failed to add tag:", error);
-
-          // 根据错误类型显示不同的提示
-          if (error instanceof TagExistsError) {
-            this.app.showToast("标签已存在", "warning");
-          } else if (error instanceof InvalidTagNameError) {
-            this.app.showToast("标签名无效: " + (error as Error).message, "warning");
-          } else if (error instanceof TagOperationError) {
-            this.app.showToast("操作失败: " + (error as Error).message, "error");
-          } else {
-            this.app.showToast(error instanceof Error ? error.message : "添加标签失败", "error");
-          }
-          return false;
-        }
-      },
-      onBatchAdd: async (tagNames: string[]) => {
-        try {
-          const currentItem = this.currentItem;
-          const tagService = TagService.getInstance();
-          const result = await tagService.linkTagsToItem({
-            tagNames,
-            type: "prompt",
-            itemId: currentItem?.id,
-          });
-
-          if (result.success) {
-            // 添加新创建的标签和已存在的标签（skipped）到本地状态
-            const allTagsToAdd = [...result.created, ...result.skipped];
-            for (const tag of allTagsToAdd) {
-              if (!this.currentTags.includes(tag)) {
-                this.currentTags.push(tag);
-              }
-            }
-            // 触发重新渲染
-            this.detailTagManager?.onRender?.();
-            this.app.eventBus.emit(Events.PROMPTS_CHANGED);
-          }
-          return result.success;
-        } catch (error) {
-          window.electronAPI.logError("PromptDetailManager.ts", "Failed to add tags:", error);
 
           // 根据错误类型显示不同的提示
           if (error instanceof TagExistsError) {

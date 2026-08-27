@@ -19,8 +19,8 @@ declare global {
 interface TagAutocompleteOptions {
   inputId: string;
   dropdownId: ElementId;
+  /** 提交单个标签（下拉选择或回车提交输入值） */
   onSelect?: (tagName: string) => Promise<boolean> | boolean;
-  onBatchAdd?: (tagNames: string[]) => Promise<boolean> | boolean;
   containerSelector?: string;
   type: "image" | "prompt";
   excludeTags?: string[];
@@ -30,7 +30,6 @@ export class TagAutocomplete {
   private inputId: string;
   private dropdownId: ElementId;
   private onSelect?: (tagName: string) => Promise<boolean> | boolean;
-  private onBatchAdd?: (tagNames: string[]) => Promise<boolean> | boolean;
   private containerSelector?: string;
   private type: "image" | "prompt";
   private excludeTags?: string[];
@@ -52,7 +51,6 @@ export class TagAutocomplete {
     this.inputId = options.inputId;
     this.dropdownId = options.dropdownId;
     this.onSelect = options.onSelect;
-    this.onBatchAdd = options.onBatchAdd;
     this.containerSelector = options.containerSelector;
     this.type = options.type;
     this.excludeTags = options.excludeTags;
@@ -312,10 +310,10 @@ export class TagAutocomplete {
         }
       }
 
-      if (this.onBatchAdd) {
+      if (this.onSelect) {
         e.preventDefault();
         e.stopPropagation();
-        this.handleBatchAdd();
+        this.submitInputValue();
       }
     }
   }
@@ -340,48 +338,24 @@ export class TagAutocomplete {
   private async selectTag(tag: string): Promise<void> {
     if (!this.input) return;
 
-    // 优先使用 onSelect（详情页：直接添加标签）
     if (this.onSelect) {
       const result = await this.onSelect(tag);
       if (result !== false) {
         this.input.value = "";
         this.hideDropdown();
       }
-      return;
-    }
-
-    // 否则使用 onBatchAdd（模态框：填入输入框并提交）
-    if (this.onBatchAdd) {
-      const result = await this.onBatchAdd([tag]);
-      if (result !== false) {
-        this.input.value = "";
-        this.hideDropdown();
-      }
-      return;
     }
   }
 
   /**
-   * 处理批量添加
+   * 提交输入框当前值（单个标签）
    * @private
    */
-  private async handleBatchAdd(): Promise<void> {
+  private submitInputValue(): void {
     if (!this.input) return;
-
     const value = this.input.value.trim();
     if (!value) return;
-
-    // 使用 TagService 统一解析标签输入
-    const tags = this.tagService.parseTagInput(value);
-
-    if (tags.length === 0) return;
-
-    const result = await this.onBatchAdd?.(tags);
-
-    if (result !== false) {
-      this.input.value = "";
-      this.hideDropdown();
-    }
+    this.selectTag(value);
   }
 
   /**

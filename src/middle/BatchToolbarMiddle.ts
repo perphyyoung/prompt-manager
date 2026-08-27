@@ -39,7 +39,7 @@ export interface BatchBusinessConfig {
     clearCache?: () => void;
   };
   addTag: {
-    processItems: (ids: string[], tagNames: string[]) => Promise<void>;
+    processItems: (ids: string[], tagName: string) => Promise<void>;
   };
   favorite: {
     batchApi: (ids: string[]) => Promise<{ success: boolean; updated?: number } | void>;
@@ -368,15 +368,15 @@ export class BatchToolbarMiddle {
    * 批量添加标签
    * @param context - 工具栏上下文
    * @param ids - 项目 ID 数组
-   * @param tagNames - 标签名数组
+   * @param tagName - 标签名
    */
-  async batchAddTag(context: ToolbarContext, ids: string[], tagNames: string[]): Promise<void> {
+  async batchAddTag(context: ToolbarContext, ids: string[], tagName: string): Promise<void> {
     const config = this.states.get(context)?.businessConfig.addTag;
     if (!config) {
       throw new Error(`未配置 ${context} 的批量添加标签业务逻辑`);
     }
 
-    await config.processItems(ids, tagNames);
+    await config.processItems(ids, tagName);
   }
 
   /**

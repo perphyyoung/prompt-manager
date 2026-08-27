@@ -6,33 +6,35 @@
 import {
   DataType,
   TagName,
+  TagError,
   TagOperationResult,
   TagDeleteResult,
   TagCreateOptions,
-  createTags,
+  createTag as createTagOperation,
   deleteTags,
-  getTags,
-  getTagGroups,
-  linkTags,
+  getTags as getTagsOperation,
+  getTagGroups as getTagGroupsOperation,
   parseTagInput,
   TagGroup,
   PyTagGroups,
 } from "../../pyTagGroups/index.ts";
-import { createDataAccess } from "../../pyTagGroups/dataAccess.ts";
-import { Events } from "../../constants.ts";
+import { cacheManager } from "../../utils/CacheManager.ts";
+import { Constants, Events } from "../../constants.ts";
 
 // ========== 选项类型 ==========
 
-export interface CreateTagsOptions {
-  tagNames: string | string[];
+export interface CreateTagOptions {
+  tagName: string;
   type: DataType;
   defaultGroupId?: number | null;
 }
 
 export interface LinkTagsOptions {
-  tagNames: string | string[];
+  /** 标签名 */
+  tagName: string;
   type: DataType;
   itemId?: string;
+  /** 多个项目ID（批量关联） */
   itemIds?: string[];
 }
 
@@ -99,6 +101,79 @@ export class TagService {
     return TagService.instance;
   }
 
+  // ========== 缓存层 ==========
+
+  private getTagsCacheKey(type: DataType): string {
+    return `${type}Tags`;
+  }
+
+  private getTagGroupsCacheKey(type: DataType): string {
+    return `${type}TagGroups`;
+  }
+
+  private getFromCache<T>(key: string): T | null {
+    const cache = cacheManager.getCache(key);
+    return cache?.get("data")?.data ?? null;
+  }
+
+  private setCache<T>(key: string, data: T): void {
+    cacheManager.createCache(key, 10).set("data", { data, time: Date.now() });
+  }
+
+  /**
+   * 获取标签列表（带缓存）
+   */
+  private async getTagsCached(type: DataType): Promise<TagName[]> {
+    const cacheKey = this.getTagsCacheKey(type);
+    const cached = this.getFromCache<TagName[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const data = await getTagsOperation(type);
+    this.setCache(cacheKey, data);
+    return data;
+  }
+
+  /**
+   * 获取标签组列表（带缓存）
+   */
+  private async getTagGroupsCached(type: DataType): Promise<TagGroup[]> {
+    const cacheKey = this.getTagGroupsCacheKey(type);
+    const cached = this.getFromCache<TagGroup[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const data = await getTagGroupsOperation(type);
+    this.setCache(cacheKey, data);
+    return data;
+  }
+
+  /**
+   * 清除标签缓存（标签列表变更时调用）
+   */
+  clearTagsCache(type: DataType): void {
+    const tagsCache = cacheManager.getCache(this.getTagsCacheKey(type));
+    tagsCache?.clear();
+  }
+
+  /**
+   * 清除标签组缓存（标签组变更时调用）
+   */
+  clearTagGroupsCache(type: DataType): void {
+    const groupsCache = cacheManager.getCache(this.getTagGroupsCacheKey(type));
+    groupsCache?.clear();
+  }
+
+  /**
+   * 清除指定类型的所有标签相关缓存
+   */
+  clearAllCaches(type: DataType): void {
+    this.clearTagsCache(type);
+    this.clearTagGroupsCache(type);
+  }
+
   /**
    * 设置事件总线
    */
@@ -107,36 +182,53 @@ export class TagService {
   }
 
   /**
-   * 创建标签
+   * 创建标签（业务校验 + 数据操作）
    * @param options - 创建选项
    * @returns 操作结果
    */
-  async createTags(options: CreateTagsOptions): Promise<TagOperationResult> {
-    const { tagNames, type, defaultGroupId } = options;
-    const names = this.parseAndNormalizeTagNames(tagNames);
+  async createTag(options: CreateTagOptions): Promise<TagOperationResult> {
+    const { tagName, type, defaultGroupId } = options;
 
-    if (names.length === 0) {
+    // 1. 标准化标签名
+    const name = tagName.trim();
+    if (!name) {
+      return { success: true, created: [], skipped: [], errors: [] };
+    }
+
+    // 2. 业务校验①：特殊标签不能手动创建（图像和提示词共用）
+    if (Constants.ALL_SPECIAL_TAGS.includes(name)) {
       return {
-        success: true,
+        success: false,
         created: [],
         skipped: [],
-        errors: [],
+        errors: [
+          {
+            tag: name,
+            error: `"${name}" 是系统特殊标签，不能手动添加`,
+            code: "RESERVED",
+          },
+        ],
       };
     }
 
+    // 3. 业务校验②：已存在则跳过
+    const existingTags = await this.getTagsCached(type);
+    if (existingTags.includes(name)) {
+      return { success: true, created: [], skipped: [name], errors: [] };
+    }
+
+    // 4. 执行创建
     const createOptions: TagCreateOptions = {};
     if (defaultGroupId !== undefined) {
       createOptions.defaultGroupId = defaultGroupId;
     }
+    await createTagOperation(type, name, createOptions);
 
-    const result = await createTags(type, names, createOptions);
+    // 5. 清除缓存 + 触发事件通知
+    this.clearAllCaches(type);
+    this.emitItemsChanged(type);
 
-    // 触发事件通知
-    if (result.created.length > 0 || result.errors.length > 0) {
-      this.emitItemsChanged(type);
-    }
-
-    return result;
+    return { success: true, created: [name], skipped: [], errors: [] };
   }
 
   /**
@@ -156,6 +248,7 @@ export class TagService {
 
     // 触发事件通知
     if (result.deleted > 0) {
+      this.clearAllCaches(type);
       this.emitItemsChanged(type);
     }
 
@@ -163,59 +256,65 @@ export class TagService {
   }
 
   /**
-   * 关联标签到项目
+   * 关联标签到项目（单标签，可关联单个或多个项目）
+   * 创建标签（已存在则跳过）并批量关联到项目
    * @param options - 关联选项
    * @returns 操作结果
    */
   async linkTagsToItem(options: LinkTagsOptions): Promise<LinkTagsResult> {
-    const { tagNames, type, itemId, itemIds } = options;
+    const { tagName, type, itemId, itemIds } = options;
 
-    // 1. 解析并标准化标签名
-    const names = this.parseAndNormalizeTagNames(tagNames);
-    if (names.length === 0) {
-      return {
-        success: true,
-        created: [],
-        skipped: [],
-        errors: [],
-        linkedToItem: false,
-        linkedItemCount: 0,
-      };
-    }
-
-    // 2. 合并项目ID
+    // 1. 合并去重项目ID，标签名有效时才需要关联
     const targetIds: string[] = [];
     if (itemId) targetIds.push(itemId);
     if (itemIds) targetIds.push(...itemIds);
     const uniqueIds = [...new Set(targetIds)];
+    const name = tagName.trim();
+    const linked = uniqueIds.length > 0 && !!name;
 
-    // 3. 调用 linkTags 创建标签并关联（内部已处理 updated_at）
-    const linkResult = await linkTags({
-      tagNames: names,
-      type,
-      itemIds: uniqueIds.length > 0 ? uniqueIds : undefined,
-    });
+    // 2. 创建标签（业务校验、已存在跳过均在 createTag 内）
+    const createResult = await this.createTag({ tagName, type });
 
-    // 4. 触发事件和缓存更新
-    if (linkResult.success) {
+    // 3. 校验失败（保留标签等）不关联
+    if (createResult.errors.length > 0) {
+      return { ...createResult, linkedToItem: false, linkedItemCount: 0 };
+    }
+
+    // 4. 关联到项目（集合级批量 IPC：主进程事务内集合 SQL）
+    if (linked) {
+      if (type === "image") {
+        await window.electronAPI.addImageTagsBatch(uniqueIds, [name]);
+      } else {
+        await window.electronAPI.addPromptTagsBatch(uniqueIds, [name]);
+      }
+    }
+
+    // 5. 触发事件和缓存更新
+    if (createResult.success) {
       this.emitItemsChanged(type);
     }
 
     return {
-      ...linkResult,
-      linkedToItem: uniqueIds.length > 0,
+      ...createResult,
+      linkedToItem: linked,
       linkedItemCount: uniqueIds.length,
     };
   }
 
   /**
-   * 批量关联标签（多选用）
-   * @param options - 关联选项
-   * @returns 操作结果
+   * 将操作结果中的错误以 toast 形式提示用户
+   * 特殊标签（保留标签）用 warning，其余用 error
+   * @param errors - 操作结果中的错误列表
+   * @param showToast - toast 回调
    */
-  async batchLinkTags(options: LinkTagsOptions): Promise<LinkTagsResult> {
-    // 批量关联与单个关联逻辑相同
-    return this.linkTagsToItem(options);
+  reportTagErrors(errors: TagError[], showToast: (msg: string, type?: string) => void): void {
+    for (const err of errors) {
+      if (err.code === "RESERVED") {
+        showToast(`"${err.tag}" 是系统特殊标签，不能手动添加`, "warning");
+      } else {
+        showToast(err.error, "error");
+      }
+    }
   }
 
   /**
@@ -227,10 +326,15 @@ export class TagService {
     const { type, itemId, tagName } = options;
 
     try {
-      // 使用 dataAccess 解除标签关联（不是删除标签）
-      // 注意：removeTagFromItem 内部会更新 updated_at
-      const dataAccess = createDataAccess(type);
-      await dataAccess.removeTagFromItem(itemId, tagName);
+      // 直接调用 IPC 解除标签关联（不是删除标签）
+      // 注意：IPC 内部会更新 updated_at
+      const result =
+        type === "prompt"
+          ? await window.electronAPI.removeTagFromPrompt(itemId, tagName)
+          : await window.electronAPI.removeTagFromImage(itemId, tagName);
+      if (!result) {
+        throw new Error(`Failed to remove tag "${tagName}" from item "${itemId}"`);
+      }
 
       // 触发事件
       this.emitItemsChanged(type);
@@ -248,7 +352,7 @@ export class TagService {
    * @returns 标签列表
    */
   async getTags(type: DataType): Promise<TagName[]> {
-    return getTags(type);
+    return this.getTagsCached(type);
   }
 
   /**
@@ -257,16 +361,7 @@ export class TagService {
    * @returns 标签组列表
    */
   async getTagGroups(type: DataType): Promise<TagGroup[]> {
-    return getTagGroups(type);
-  }
-
-  /**
-   * 解析标签输入（支持多种分隔符）
-   * @param input - 输入字符串
-   * @returns 标签名数组
-   */
-  parseTagInput(input: string): string[] {
-    return parseTagInput(input);
+    return this.getTagGroupsCached(type);
   }
 
   /**
@@ -277,6 +372,7 @@ export class TagService {
     const { type, oldName, newName } = options;
     const pyTagGroups = PyTagGroups.getInstance(type);
     await pyTagGroups.rename(oldName, newName);
+    this.clearAllCaches(type);
   }
 
   /**
@@ -286,8 +382,8 @@ export class TagService {
    * @returns 是否存在
    */
   async tagExists(type: DataType, tagName: string): Promise<boolean> {
-    const pyTagGroups = PyTagGroups.getInstance(type);
-    return pyTagGroups.exists(tagName);
+    const tags = await this.getTagsCached(type);
+    return tags.includes(tagName.trim());
   }
 
   // ========== 标签组操作 ==========
@@ -300,7 +396,9 @@ export class TagService {
   async createTagGroup(options: CreateTagGroupOptions): Promise<TagGroup> {
     const { type, name, sortOrder } = options;
     const pyTagGroups = PyTagGroups.getInstance(type);
-    return pyTagGroups.createGroup(name, sortOrder);
+    const group = await pyTagGroups.createGroup(name, sortOrder);
+    this.clearTagGroupsCache(type);
+    return group;
   }
 
   /**
@@ -311,6 +409,7 @@ export class TagService {
     const { type, id, attrs } = options;
     const pyTagGroups = PyTagGroups.getInstance(type);
     await pyTagGroups.updateGroup(id, attrs);
+    this.clearTagGroupsCache(type);
   }
 
   /**
@@ -321,6 +420,7 @@ export class TagService {
     const { type, id } = options;
     const pyTagGroups = PyTagGroups.getInstance(type);
     await pyTagGroups.deleteGroup(id);
+    this.clearTagGroupsCache(type);
   }
 
   /**
@@ -331,6 +431,7 @@ export class TagService {
     const { type, tagName, groupId } = options;
     const pyTagGroups = PyTagGroups.getInstance(type);
     await pyTagGroups.assignToGroup(tagName, groupId);
+    this.clearTagGroupsCache(type);
   }
 
   /**
@@ -340,8 +441,8 @@ export class TagService {
    * @returns 标签列表
    */
   async getTagsByGroup(type: DataType, groupId: number): Promise<TagName[]> {
-    const pyTagGroups = PyTagGroups.getInstance(type);
-    return pyTagGroups.getTagsByGroup(groupId);
+    const groups = await this.getTagGroupsCached(type);
+    return groups.find((g) => g.id === groupId)?.tags || [];
   }
 
   /**
@@ -352,8 +453,14 @@ export class TagService {
    * @returns 匹配的标签列表
    */
   async searchTags(type: DataType, prefix: string, exclude?: TagName[]): Promise<TagName[]> {
-    const pyTagGroups = PyTagGroups.getInstance(type);
-    return pyTagGroups.search(prefix, exclude);
+    const allTags = await this.getTagsCached(type);
+    const lowerPrefix = prefix.toLowerCase().trim();
+
+    if (!lowerPrefix) return [];
+
+    return allTags.filter(
+      (tag) => tag.toLowerCase().startsWith(lowerPrefix) && (!exclude || !exclude.includes(tag)),
+    );
   }
 
   // ========== 静态工具方法 ==========
