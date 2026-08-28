@@ -4,7 +4,6 @@
  * 从 main/index.ts 原样迁出，逻辑未改动。
  */
 
-
 import * as db from "../../database.js";
 import { TrashType } from "../../../shared/domain/trashType.ts";
 import type { IPrompt, IImage } from "../../../types/entities.js";

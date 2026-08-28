@@ -6,18 +6,20 @@
 
 import path from "path";
 import { promises as fs } from "fs";
-import {
-  app,
-  BrowserWindow,
-  Menu,
-  Tray,
-  nativeImage,
-  session,
-} from "electron";
+import { app, BrowserWindow, Menu, Tray, nativeImage, session } from "electron";
 import { spawn } from "child_process";
 import * as db from "./database.js";
 import { logError, logWarn, initLogger } from "./mainLogger.js";
-import { getDataDir, getMainWindow, isProduction, isTestMode, ROOT_DIR, setMainWindow, setTray, setCurrentDataDir } from "./runtime.js";
+import {
+  getDataDir,
+  getMainWindow,
+  isProduction,
+  isTestMode,
+  ROOT_DIR,
+  setMainWindow,
+  setTray,
+  setCurrentDataDir,
+} from "./runtime.js";
 import { initTagsCache } from "./infrastructure/tagCache.js";
 
 /**

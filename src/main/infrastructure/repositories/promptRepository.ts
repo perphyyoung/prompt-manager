@@ -7,7 +7,18 @@ import { addPromptTags } from "./tagRepository.js";
 import { addPromptImages } from "./imageRepository.js";
 import { run, get, all, runInTransaction, TAG_SEPARATOR } from "../sqlite/connection.js";
 import { dbTime, formatDbTimeToLocal } from "../../../utils/index.js";
-import type { PromptRow, Prompt, CreatePromptParams, UpdatePromptParams, MapPromptOptions, GetPromptsPaginatedOptions, PaginatedPromptsResult, CountPromptTagsOptions, PromptSpecialTagCounts, ImageRef } from "../../../shared/domain/database-types.js";
+import type {
+  PromptRow,
+  Prompt,
+  CreatePromptParams,
+  UpdatePromptParams,
+  MapPromptOptions,
+  GetPromptsPaginatedOptions,
+  PaginatedPromptsResult,
+  CountPromptTagsOptions,
+  PromptSpecialTagCounts,
+  ImageRef,
+} from "../../../shared/domain/database-types.js";
 /**
  * 将数据库行映射为提示词对象
  * @param row - 数据库行
@@ -350,25 +361,6 @@ async function countPromptSpecialTags(
 }
 
 /**
- * 检查标题是否已存在
- * @param title - 提示词标题
- * @param excludeId - 排除的提示词ID（用于编辑时排除自己）
- * @returns 是否存在
- */
-async function isTitleExists(title: string, excludeId: string | null = null): Promise<boolean> {
-  let sql = "SELECT COUNT(*) as count FROM prompts WHERE title = ? AND is_deleted = 0";
-  const params: any[] = [title];
-
-  if (excludeId) {
-    sql += " AND id != ?";
-    params.push(excludeId);
-  }
-
-  const result = await get<{ count: number }>(sql, params);
-  return result ? result.count > 0 : false;
-}
-
-/**
  * 获取单个提示词
  */
 async function getPromptById(id: string): Promise<Prompt | null> {
@@ -698,7 +690,6 @@ async function getDeletedPrompts(): Promise<Prompt[]> {
 
 // ==================== 标签操作 ====================
 
-
 /**
  * 批量切换提示词收藏状态
  * 每个提示词的收藏状态会被切换（收藏->取消收藏，未收藏->收藏）
@@ -722,7 +713,6 @@ async function batchFavoritePrompts(ids: string[]): Promise<{ success: boolean; 
   });
 }
 
-
 export {
   getPrompts,
   getPromptsPaginated,
@@ -730,7 +720,6 @@ export {
   getPromptIdsByFilter,
   countPromptTags,
   countPromptSpecialTags,
-  isTitleExists,
   getPromptById,
   getPromptsByIds,
   addPrompt,

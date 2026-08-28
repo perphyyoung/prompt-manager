@@ -155,7 +155,7 @@ export class CacheManager {
    * @returns 是否有新项写入
    */
   async prefetchImagePaths(
-    images: Array<{ id: string | number; relativePath?: string; thumbnailPath?: string }>,
+    images: Array<{ id: string | number; relativePath?: string; thumbnailPath?: string | null }>,
     electronAPI: { getImagesPaths: (relativePaths: string[]) => Promise<string[]> },
   ): Promise<void> {
     if (images.length === 0) return;

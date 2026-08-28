@@ -4,26 +4,24 @@
  * 从 main/index.ts 原样迁出，逻辑未改动。
  */
 
-import { ipcMain, dialog } from "electron";
-import { promises as fs } from "fs";
 import * as db from "../../database.js";
-import type { IPrompt } from "../../../types/entities.js";
-import type { CreatePromptParams, UpdatePromptParams } from "../../../shared/domain/database-types.js";
+import type {
+  CreatePromptParams,
+  UpdatePromptParams,
+} from "../../../shared/domain/database-types.js";
 import { generatePromptId } from "../../../utils/idGenerator.js";
 import { logError } from "../../mainLogger.js";
-import { getMainWindow } from "../../runtime.js";
 import { handleTyped } from "./handleTyped.js";
 
 export function registerPromptIpc() {
   // 获取所有 Prompts（含已删除；供 e2e 测试与备份统计使用）
   handleTyped("getPrompts", async (event, sortBy, sortOrder) => {
-    // IPC 边界: 主进程领域模型 Prompt → 线格式 IPrompt(类型统一待办)
-    return (await db.getPrompts(sortBy, sortOrder)) as unknown as IPrompt[];
+    return await db.getPrompts(sortBy, sortOrder);
   });
 
   // 分页获取 Prompts
   handleTyped("getPromptsPaginated", async (event, options) => {
-    return (await db.getPromptsPaginated(options)) as unknown as { items: IPrompt[]; totalCount: number };
+    return await db.getPromptsPaginated(options);
   });
 
   // 获取满足筛选条件的全部提示词 id（用于"全选"批量操作）
@@ -56,7 +54,7 @@ export function registerPromptIpc() {
     if (!newPrompt.title) {
       newPrompt.title = newPrompt.id;
     }
-    return (await db.addPrompt(newPrompt)) as unknown as IPrompt;
+    return await db.addPrompt(newPrompt);
   });
 
   // 更新 Prompt
@@ -74,15 +72,10 @@ export function registerPromptIpc() {
     }
   });
 
-  // 检查标题是否已存在
-  handleTyped("isTitleExists", async (event, title, excludeId) => {
-    return await db.isTitleExists(title, excludeId);
-  });
-
   // 批量获取提示词（按 ID 列表，保持传入顺序）
   handleTyped("getPromptsByIds", async (event, ids) => {
     try {
-      return (await db.getPromptsByIds(ids)) as unknown as IPrompt[];
+      return await db.getPromptsByIds(ids);
     } catch (error) {
       logError("Main", "Get prompts by ids error:", error);
       throw error;
@@ -92,55 +85,10 @@ export function registerPromptIpc() {
   // 根据 ID 获取提示词信息
   handleTyped("getPromptById", async (event, promptId) => {
     try {
-      return (await db.getPromptById(promptId)) as unknown as IPrompt | null;
+      return await db.getPromptById(promptId);
     } catch (error) {
       logError("Main", "Get prompt by id error:", error);
       throw error;
     }
-  });
-
-  // 导出 Prompts
-  handleTyped("exportPrompts", async (event, prompts) => {
-    const mainWindow = getMainWindow();
-    if (!mainWindow) throw new Error("Main window is not available");
-    const { filePath } = await dialog.showSaveDialog(mainWindow, {
-      title: "导出 Prompts",
-      defaultPath: "prompts-backup.json",
-      filters: [{ name: "JSON Files", extensions: ["json"] }],
-    });
-
-    if (filePath) {
-      await fs.writeFile(filePath, JSON.stringify(prompts, null, 2), "utf8");
-      return true;
-    }
-    return false;
-  });
-
-  // 导入 Prompts
-  handleTyped("importPrompts", async () => {
-    const { filePaths } = await dialog.showOpenDialog({
-      title: "导入 Prompts",
-      filters: [{ name: "JSON Files", extensions: ["json"] }],
-      properties: ["openFile"],
-    });
-
-    if (filePaths && filePaths.length > 0) {
-      const data = await fs.readFile(filePaths[0], "utf8");
-      const imported = JSON.parse(data);
-
-      // 导入数据到数据库
-      const importedPrompts = [];
-      for (const item of imported) {
-        const newPrompt = {
-          ...item,
-          id: generatePromptId(),
-        };
-        await db.addPrompt(newPrompt);
-        importedPrompts.push(newPrompt);
-      }
-
-      return importedPrompts;
-    }
-    return null;
   });
 }

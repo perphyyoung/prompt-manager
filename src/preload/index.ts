@@ -52,14 +52,7 @@ const rebuildThumbnailsProgressCallbacks = new WeakMap<
 
 // ==================== API 定义 ====================
 
-type NonBridged =
-  | "rendererLog"
-  | "exportPrompts"
-  | "importPrompts"
-  | "isTitleExists"
-  | "getPromptImages"
-  | "optimizeDatabase"
-  | "selectImageFiles";
+type NonBridged = "rendererLog";
 
 interface LogMethods {
   logDebug: (component: string, message: string, data?: unknown) => void;

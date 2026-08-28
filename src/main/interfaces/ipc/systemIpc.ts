@@ -6,7 +6,7 @@
 
 import path from "path";
 import { promises as fs } from "fs";
-import { ipcMain, app, dialog, shell, clipboard } from "electron";
+import { app, dialog, shell, clipboard } from "electron";
 import * as db from "../../database.js";
 import { logInfo, logError, logWarn, logDebug } from "../../mainLogger.js";
 import { getCurrentDataDir, getDataDir, getMainWindow } from "../../runtime.js";
@@ -82,16 +82,6 @@ export function registerSystemIpc() {
       return await db.getStatistics(isSafeOnly);
     } catch (error) {
       logError("Main", "Get statistics error:", error);
-      throw error;
-    }
-  });
-
-  // 优化数据库
-  handleTyped("optimizeDatabase", async () => {
-    try {
-      return await db.optimizeDatabase();
-    } catch (error) {
-      logError("Main", "Optimize database error:", error);
       throw error;
     }
   });

@@ -32,7 +32,24 @@ import { tagService } from "./services/TagService.ts";
 import { HoverTooltipManager, ShortcutManager } from "./renderer_utils/index.ts";
 import { localStorageManager } from "./configs/LocalStorageConfig.ts";
 import type { IPrompt, IImage } from "../types/entities.ts";
-import type { IApp, IPanelManager, IToastManager, IImageFullscreenManager, INavigationManager, IToolbarManager, ISearchSortManager, IImportExportManager, ISettingsManager, IImageSelectorManager, INewPromptManager, IImageUploadManager, IHoverTooltipManager, IShortcutManager, IEventBus, ICacheManager } from "./app.types.ts";
+import type {
+  IApp,
+  IPanelManager,
+  IToastManager,
+  IImageFullscreenManager,
+  INavigationManager,
+  IToolbarManager,
+  ISearchSortManager,
+  IImportExportManager,
+  ISettingsManager,
+  IImageSelectorManager,
+  INewPromptManager,
+  IImageUploadManager,
+  IHoverTooltipManager,
+  IShortcutManager,
+  IEventBus,
+  ICacheManager,
+} from "./app.types.ts";
 
 // ==================== 主应用类 ====================
 

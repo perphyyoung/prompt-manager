@@ -10,7 +10,7 @@ export interface PromptCreateData {
   contentTranslate?: string;
   note?: string;
   isSafe?: number;
-  isFavorite?: number;
+  isFavorite?: boolean;
   tags?: string[];
   images?: Array<{ id: string; thumbnailPath?: string }>;
 }
@@ -22,7 +22,7 @@ export interface ImageCreateData {
   label: string;
   fileName?: string;
   isSafe?: number;
-  isFavorite?: number;
+  isFavorite?: boolean;
   note?: string;
   tags?: string[];
   prompts?: Array<{ id: string }>;

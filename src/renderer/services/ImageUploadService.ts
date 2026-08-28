@@ -27,7 +27,6 @@ interface ImageInfo {
   [key: string]: unknown;
 }
 
-
 export class ImageUploadService {
   private app: ImageUploadManagerDeps;
 

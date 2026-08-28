@@ -5,8 +5,8 @@ export interface TrashItem {
   id: string;
   type: string;
   deletedAt: string;
-  images?: Array<{ thumbnailPath?: string }>;
-  thumbnailPath?: string;
+  images?: Array<{ thumbnailPath?: string | null }>;
+  thumbnailPath?: string | null;
   relativePath?: string;
   [key: string]: unknown;
 }

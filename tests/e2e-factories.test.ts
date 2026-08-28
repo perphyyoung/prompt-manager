@@ -191,7 +191,7 @@ describe("PromptApiFactory", () => {
       tags: [],
       images: [],
       isSafe: 1,
-      isFavorite: 0,
+      isFavorite: false,
       contentTranslate: "",
       note: "",
       createdAt: "",

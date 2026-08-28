@@ -6,7 +6,7 @@
 
 import path from "path";
 import { promises as fs } from "fs";
-import { ipcMain, dialog, shell } from "electron";
+import { dialog, shell } from "electron";
 import * as db from "../../database.js";
 import { logError, logWarn } from "../../mainLogger.js";
 import { getCurrentDataDir } from "../../runtime.js";
@@ -16,8 +16,7 @@ import {
   saveImageFile,
 } from "../../infrastructure/imageFiles.js";
 import { handleTyped } from "./handleTyped.js";
-import { IPC_EVENTS, type IpcApi } from "../../../shared/ipc-contract.js";
-import type { IImage } from "../../../types/entities.js";
+import { IPC_EVENTS } from "../../../shared/ipc-contract.js";
 import type { UpdateImageParams } from "../../../shared/domain/database-types.js";
 
 export function registerImageIpc() {
@@ -71,7 +70,7 @@ export function registerImageIpc() {
       // 返回新图像完整信息及关联提示词ID列表（用于前端刷新缓存）
       const newImage = await db.getImageById(saveResult.id);
       const relatedPromptIds = (newImage?.promptRefs || []).map((ref) => String(ref.promptId));
-      return { success: true, image: newImage, relatedPromptIds } as unknown as IpcApi["replaceImage"] extends (...args: never[]) => infer R ? R : never;
+      return { success: true, image: newImage, relatedPromptIds };
     } catch (error) {
       logError("Main", "Replace image error:", error);
       throw error;
@@ -123,7 +122,7 @@ export function registerImageIpc() {
   // 获取所有图像信息
   handleTyped("getImages", async (event, sortBy, sortOrder) => {
     try {
-      return (await db.getImages(sortBy, sortOrder)) as unknown as IImage[];
+      return await db.getImages(sortBy, sortOrder);
     } catch (error) {
       logError("Main", "Get images error:", error);
       throw error;
@@ -205,7 +204,7 @@ export function registerImageIpc() {
   // 分页获取图像信息
   handleTyped("getImagesPaginated", async (event, options) => {
     try {
-      return (await db.getImagesPaginated(options)) as unknown as { items: IImage[]; totalCount: number };
+      return await db.getImagesPaginated(options);
     } catch (error) {
       logError("Main", "Get images paginated error:", error);
       throw error;
@@ -245,7 +244,7 @@ export function registerImageIpc() {
   // 根据 ID 批量获取图像信息
   handleTyped("getImagesByIds", async (event, ids) => {
     try {
-      return (await db.getImagesByIds(ids)) as unknown as IImage[];
+      return await db.getImagesByIds(ids);
     } catch (error) {
       logError("Main", "Get images by ids error:", error);
       throw error;
@@ -255,19 +254,9 @@ export function registerImageIpc() {
   // 根据 ID 获取图像信息
   handleTyped("getImageById", async (event, imageId) => {
     try {
-      return (await db.getImageById(imageId)) as unknown as IImage | null;
+      return await db.getImageById(imageId);
     } catch (error) {
       logError("Main", "Get image by id error:", error);
-      throw error;
-    }
-  });
-
-  // 获取提示词关联的图像
-  handleTyped("getPromptImages", async (event, promptId) => {
-    try {
-      return await db.getPromptImages(promptId);
-    } catch (error) {
-      logError("Main", "Get prompt images error:", error);
       throw error;
     }
   });
@@ -313,22 +302,5 @@ export function registerImageIpc() {
     }
     const fullPath = path.join(getCurrentDataDir(), relativePath);
     shell.showItemInFolder(fullPath);
-  });
-
-  // 选择图像文件
-  handleTyped("selectImageFiles", async () => {
-    const result = await dialog.showOpenDialog({
-      title: "选择图像",
-      properties: ["openFile", "multiSelections"],
-      filters: [
-        { name: "图像文件", extensions: ["jpg", "jpeg", "png", "gif", "bmp", "webp"] },
-        { name: "所有文件", extensions: ["*"] },
-      ],
-    });
-
-    if (!result.canceled && result.filePaths.length > 0) {
-      return result.filePaths;
-    }
-    return null;
   });
 }

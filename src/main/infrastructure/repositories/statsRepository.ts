@@ -114,8 +114,4 @@ async function clearAllData(dataDir: string): Promise<string> {
   }
 }
 
-
-export {
-  getStatistics,
-  clearAllData,
-};
+export { getStatistics, clearAllData };

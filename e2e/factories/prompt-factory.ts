@@ -24,7 +24,7 @@ export class PromptApiFactory extends BaseTestDataFactory<IPrompt> {
       contentTranslate: data.contentTranslate || "",
       note: data.note || "",
       isSafe: data.isSafe ?? 1,
-      isFavorite: data.isFavorite ?? 0,
+      isFavorite: data.isFavorite ?? false,
       tags: data.tags || [],
       images: data.images || [],
       isDeleted: false,

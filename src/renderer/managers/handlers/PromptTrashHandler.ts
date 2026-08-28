@@ -36,7 +36,7 @@ export class PromptTrashHandler {
 
   // ========== 数据转换 ==========
 
-  getThumbnailPath(item: { images?: Array<{ thumbnailPath?: string }> }): string | null {
+  getThumbnailPath(item: { images?: Array<{ thumbnailPath?: string | null }> }): string | null {
     return item.images?.[0]?.thumbnailPath || null;
   }
 

@@ -3,50 +3,66 @@
  * 共享类型，不依赖任何具体实现
  */
 
-/** Prompt 数据 */
-export interface IPrompt {
+/**
+ * Prompt 数据(线格式)
+ * 与主进程领域模型 shared/domain/database-types.ts#Prompt 结构兼容,
+ * 差异字段(contentTranslate/note 等可选性)为渲染侧宽松视图。
+ */
+export type IPrompt = {
   id: string;
   title: string;
   content: string;
   contentTranslate?: string;
   note?: string;
   isSafe?: number;
-  isFavorite?: number;
+  isFavorite?: boolean;
   isDeleted: boolean;
-  images?: Array<{ id: string; thumbnailPath?: string }>;
+  images?: ImageRefView[];
   tags?: string[];
   createdAt?: string;
   updatedAt?: string;
-  deletedAt?: string;
-  [key: string]: unknown;
-}
+  deletedAt?: string | null;
+};
 
-/** 图像数据 */
-export interface IImage {
+/**
+ * 图像数据(线格式)
+ * 与主进程领域模型 shared/domain/database-types.ts#Image 结构兼容
+ */
+export type IImage = {
   id: string;
   fileName: string;
   relativePath: string;
-  thumbnailPath?: string;
+  thumbnailPath?: string | null;
   isSafe?: number;
-  isFavorite?: number;
+  isFavorite?: boolean;
   isDeleted: boolean;
   fileSize?: number;
-  width?: number;
-  height?: number;
+  width?: number | null;
+  height?: number | null;
   note?: string;
-  promptRefs?: Array<{
-    promptId: string;
-    promptTitle?: string;
-    promptContent?: string;
-    promptContentTranslate?: string;
-    promptNote?: string;
-  }>;
+  promptRefs?: PromptRefView[];
   prompts?: Array<{ id: string }>;
   tags?: string[];
   createdAt?: string;
   updatedAt?: string;
-  deletedAt?: string;
-  [key: string]: unknown;
+  deletedAt?: string | null;
+};
+
+/** 提示词卡片上的图像引用(线格式, 见 domain#ImageRef) */
+export interface ImageRefView {
+  id: string;
+  fileName?: string;
+  relativePath?: string;
+  thumbnailPath?: string | null;
+}
+
+/** 图像卡片上的提示词引用(线格式, 见 domain#PromptRef) */
+export interface PromptRefView {
+  promptId: string;
+  promptTitle?: string;
+  promptContent?: string;
+  promptContentTranslate?: string;
+  promptNote?: string;
 }
 
 /** 孤儿文件 */

@@ -5,14 +5,7 @@
  * 仓库层: infrastructure/repositories/*
  */
 
-export {
-  initDatabase,
-  closeDatabase,
-  run,
-  get,
-  all,
-  optimizeDatabase,
-} from "./infrastructure/sqlite/connection.js";
+export { initDatabase, closeDatabase, run, get, all } from "./infrastructure/sqlite/connection.js";
 
 export {
   createPromptTagGroup,
@@ -36,7 +29,6 @@ export {
   countPromptSpecialTags,
   getPromptById,
   getPromptsByIds,
-  isTitleExists,
   addPrompt,
   updatePrompt,
   deletePrompt,
@@ -95,7 +87,6 @@ export {
   emptyImageTrash,
   addPromptImages,
   addImagePrompts,
-  getPromptImages,
   updateImage,
   updateImagesBatch,
   batchFavoriteImages,

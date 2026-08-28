@@ -14,9 +14,7 @@ import {
   DatabaseErrorCode,
   ConstraintViolationError,
 } from "../../database-errors.ts";
-import type {
-  RunResult,
-} from "../../../shared/domain/database-types.js";
+import type { RunResult } from "../../../shared/domain/database-types.js";
 
 sqlite3.verbose();
 
@@ -422,38 +420,6 @@ async function runInTransaction<T>(asyncFn: () => Promise<T>): Promise<T> {
 }
 
 /**
- * 数据库维护优化
- * 定期执行 VACUUM 和 ANALYZE
- */
-async function optimizeDatabase(): Promise<boolean> {
-  logDebug("Database", "Starting optimization...");
-
-  try {
-    // 回收空间
-    await run("VACUUM");
-    logDebug("Database", "VACUUM completed");
-
-    // 更新统计信息
-    await run("ANALYZE");
-    logDebug("Database", "ANALYZE completed");
-
-    // 完整性检查
-    const result = await get<{ integrity_check: string }>("PRAGMA integrity_check");
-    if (result && result.integrity_check !== "ok") {
-      logError("Database", `Integrity check failed: ${result.integrity_check}`);
-    } else {
-      logDebug("Database", "Integrity check passed");
-    }
-
-    logDebug("Database", "Optimization completed");
-    return true;
-  } catch (error: any) {
-    logError("Database", "Optimization failed:", error);
-    throw error;
-  }
-}
-
-/**
  * 数据库配置
  * 可通过环境变量或运行时修改
  */
@@ -599,18 +565,8 @@ function all<T = any>(sql: string, params: any[] = []): Promise<T[]> {
 
 // ==================== Tag Group 操作 ====================
 
-
 // 供按域仓库模块使用的连接层导出
-export {
-  initDatabase,
-  closeDatabase,
-  run,
-  get,
-  all,
-  runInTransaction,
-  optimizeDatabase,
-  TAG_SEPARATOR,
-};
+export { initDatabase, closeDatabase, run, get, all, runInTransaction, TAG_SEPARATOR };
 
 /** 获取底层 sqlite 连接（用于 run/get/all 未覆盖的预处理语句场景） */
 export function getDb(): sqlite3.Database | null {

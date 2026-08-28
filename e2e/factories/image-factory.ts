@@ -155,10 +155,9 @@ export class ImageApiFactory extends BaseTestDataFactory<IImage> {
           contentTranslate: "",
           note: "",
           isSafe: 1,
-          isFavorite: 0,
+          isFavorite: false,
           tags: [],
           images: [{ id: params.imageId }],
-          isDeleted: false,
         });
       },
       { title, imageId },

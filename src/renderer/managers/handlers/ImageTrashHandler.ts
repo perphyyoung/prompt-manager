@@ -36,7 +36,7 @@ export class ImageTrashHandler {
 
   // ========== 数据转换 ==========
 
-  getThumbnailPath(item: { thumbnailPath?: string; relativePath?: string }): string | null {
+  getThumbnailPath(item: { thumbnailPath?: string | null; relativePath?: string }): string | null {
     return item.thumbnailPath || item.relativePath || null;
   }
 

@@ -298,7 +298,10 @@ export interface DetailViewManagerDeps {
   isFromDetailJump: boolean;
   isSameId(id1: string | number, id2: string | number): boolean;
   newPromptManager: INewPromptManager | null;
-  openFullscreen( images: Array<{ id?: string; relativePath?: string; fileName?: string }>, index: number, ): Promise<void>;
+  openFullscreen(
+    images: Array<{ id?: string; relativePath?: string; fileName?: string }>,
+    index: number,
+  ): Promise<void>;
   openImageDetailModal(image: IImage, options?: unknown): Promise<void>;
   promptDetailManager: IDetailManager | null;
   promptRefImagesCache: LRUCache;
@@ -387,4 +390,3 @@ export interface ImageSelectorManagerDeps {
   isSameId(id1: string | number, id2: string | number): boolean;
   safeMode: string;
 }
-

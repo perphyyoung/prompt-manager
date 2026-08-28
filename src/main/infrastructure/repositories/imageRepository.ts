@@ -10,7 +10,21 @@ import { dbTime, formatDbTimeToLocal } from "../../../utils/index.js";
 import { isConstraintError } from "../../database-errors.js";
 import path from "path";
 import { promises as fs } from "fs";
-import type { ImageRow, Image, CreateImageParams, UpdateImageParams, MapImageOptions, GetImagesOptions, GetImagesPaginatedOptions, PaginatedImagesResult, CountImageTagsOptions, ImageSpecialTagCounts, ImageFilePaths, ImageCleanupInfo, PromptImage, UpdateThumbnailParams } from "../../../shared/domain/database-types.js";
+import type {
+  ImageRow,
+  Image,
+  CreateImageParams,
+  UpdateImageParams,
+  MapImageOptions,
+  GetImagesOptions,
+  GetImagesPaginatedOptions,
+  PaginatedImagesResult,
+  CountImageTagsOptions,
+  ImageSpecialTagCounts,
+  ImageFilePaths,
+  ImageCleanupInfo,
+  UpdateThumbnailParams,
+} from "../../../shared/domain/database-types.js";
 /**
  * 将数据库行映射为图像对象
  * @param row - 数据库行
@@ -1070,42 +1084,7 @@ async function addImagePrompts(
   return addRelationsBatch(imageId, promptIds, IMAGE_PROMPT_RELATION_CONFIG, preserveOrder);
 }
 
-/**
- * 获取提示词关联的图像
- */
-async function getPromptImages(promptId: string): Promise<PromptImage[]> {
-  const sql = `
-    SELECT i.*,
-           (SELECT GROUP_CONCAT(it.name, char(31))
-            FROM image_tag_relations itr
-            JOIN image_tags it ON itr.tag_id = it.id
-            WHERE itr.image_id = i.id) as image_tags
-    FROM images i
-    JOIN prompt_image_relations pir ON i.id = pir.image_id
-    WHERE pir.prompt_id = ? AND i.is_deleted = 0
-    ORDER BY pir.sort_order ASC
-  `;
-  const rows = await all<ImageRow>(sql, [promptId]);
-  return rows.map((row) => ({
-    id: row.id,
-    fileName: row.file_name,
-    storedName: row.stored_name,
-    relativePath: row.relative_path,
-    thumbnailPath: row.thumbnail_path,
-    width: row.width,
-    height: row.height,
-    isSafe: row.is_safe === 1 ? 1 : 0, // 严格限制为 0 或 1，其他值视为 0
-    note: row.note,
-    isDeleted: row.is_deleted === 1,
-    deletedAt: row.deleted_at,
-    createdAt: row.created_at,
-    tags: row.image_tags ? row.image_tags.split(TAG_SEPARATOR).filter((t) => t) : [],
-    promptRefs: [{ promptId: promptId }],
-  }));
-}
-
 // ==================== 图像标签管理 ====================
-
 
 /**
  * 批量切换图像收藏状态
@@ -1130,7 +1109,6 @@ async function batchFavoriteImages(ids: string[]): Promise<{ success: boolean; u
   });
 }
 
-
 export {
   getImages,
   getImagesPaginated,
@@ -1153,7 +1131,6 @@ export {
   emptyImageTrash,
   addPromptImages,
   addImagePrompts,
-  getPromptImages,
   updateImage,
   updateImagesBatch,
   batchFavoriteImages,

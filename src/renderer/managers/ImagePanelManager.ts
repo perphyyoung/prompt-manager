@@ -836,14 +836,15 @@ export class ImagePanelManager extends PanelManagerBase {
     }
   }
 
-  private lastSpecialTagCounts: import("../../shared/domain/database-types.js").ImageSpecialTagCounts = {
-    favorite: 0,
-    unreferenced: 0,
-    multiRef: 0,
-    noTag: 0,
-    safe: 0,
-    unsafe: 0,
-  };
+  private lastSpecialTagCounts: import("../../shared/domain/database-types.js").ImageSpecialTagCounts =
+    {
+      favorite: 0,
+      unreferenced: 0,
+      multiRef: 0,
+      noTag: 0,
+      safe: 0,
+      unsafe: 0,
+    };
 
   /**
    * 构建计数查询选项
@@ -933,11 +934,11 @@ export class ImagePanelManager extends PanelManagerBase {
    */
   async toggleFavorite(id: string, isFavorite: boolean): Promise<void> {
     try {
-      await window.electronAPI.updateImage(id, { isFavorite: isFavorite ? 1 : 0 });
+      await window.electronAPI.updateImage(id, { isFavorite });
 
       const img = this.images.find((i) => String(i.id) === String(id));
       if (img) {
-        img.isFavorite = isFavorite ? 1 : 0;
+        img.isFavorite = isFavorite;
       }
 
       this.app.showToast(isFavorite ? "已收藏" : "已取消收藏", "success");

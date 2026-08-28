@@ -15,7 +15,11 @@ import {
 } from "../services/index.ts";
 import { showContextMenu } from "../renderer_utils/ContextMenuUtils.ts";
 import { IPrompt, IImage } from "../../types/entities.ts";
-import { TagExistsError, InvalidTagNameError, TagOperationError } from "../../lib/tag-groups/index.ts";
+import {
+  TagExistsError,
+  InvalidTagNameError,
+  TagOperationError,
+} from "../../lib/tag-groups/index.ts";
 import { TagService } from "../services/index.ts";
 import { createDetailTagController } from "./DetailTagController.ts";
 import type { DetailViewManagerDeps } from "../app.types.ts";
@@ -429,7 +433,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
         const boolValue = Boolean(value);
         // 更新 currentItem 的收藏状态
         if (this.currentItem) {
-          this.currentItem.isFavorite = boolValue ? 1 : 0;
+          this.currentItem.isFavorite = boolValue;
         }
         this.updateFavoriteBtnUI(boolValue);
         this.app.showToast(boolValue ? "已收藏" : "已取消收藏", "success");

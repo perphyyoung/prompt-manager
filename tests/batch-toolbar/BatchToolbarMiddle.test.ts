@@ -3,7 +3,10 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { BatchToolbarMiddle, type BatchBusinessConfig } from "../../src/renderer/features/batch-toolbar/index.ts";
+import {
+  BatchToolbarMiddle,
+  type BatchBusinessConfig,
+} from "../../src/renderer/features/batch-toolbar/index.ts";
 import { Constants } from "../../src/renderer/constants.ts";
 
 describe("BatchToolbarMiddle", () => {

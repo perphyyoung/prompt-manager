@@ -11,7 +11,10 @@ type MaybePromise<T> = T | Promise<T>;
 
 export function handleTyped<K extends keyof IpcApi>(
   key: K,
-  handler: (event: IpcMainInvokeEvent, ...args: Parameters<IpcApi[K]>) => MaybePromise<Awaited<ReturnType<IpcApi[K]>>>,
+  handler: (
+    event: IpcMainInvokeEvent,
+    ...args: Parameters<IpcApi[K]>
+  ) => MaybePromise<Awaited<ReturnType<IpcApi[K]>>>,
 ): void {
   ipcMain.handle(IPC[key], (event, ...args: unknown[]) =>
     (handler as unknown as (e: IpcMainInvokeEvent, ...a: unknown[]) => unknown)(event, ...args),

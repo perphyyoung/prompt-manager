@@ -823,7 +823,7 @@ export class ImageDetailManager extends DetailViewManager<IImage> {
         const boolValue = Boolean(value);
         // 更新 currentItem 的收藏状态
         if (this.currentItem) {
-          this.currentItem.isFavorite = boolValue ? 1 : 0;
+          this.currentItem.isFavorite = boolValue;
         }
         this.updateFavoriteBtnUI(boolValue);
         this.app.showToast(boolValue ? "已收藏" : "已取消收藏", "success");

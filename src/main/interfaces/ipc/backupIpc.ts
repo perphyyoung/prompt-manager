@@ -6,7 +6,7 @@
 
 import path from "path";
 import { promises as fs } from "fs";
-import { ipcMain, dialog } from "electron";
+import { dialog } from "electron";
 import * as db from "../../database.js";
 import { getFormattedLocalTimeToSecond } from "../../../utils/index.js";
 import { copyDirectoryWithProgress } from "../../../utils/FileUtils.js";
@@ -83,7 +83,10 @@ export function registerBackupIpc() {
           deletedCount++;
           thumbnailSuccessCount++;
         } catch (error) {
-          logError("Main", "Failed to delete orphan thumbnail:", { fullPath: file.fullPath, error });
+          logError("Main", "Failed to delete orphan thumbnail:", {
+            fullPath: file.fullPath,
+            error,
+          });
           failedCount++;
         }
       }

@@ -14,7 +14,7 @@ import { IEventStrategy, IEventStrategyItem } from "./Strategies/IEventStrategy.
 
 interface ImageInfo {
   id?: string;
-  thumbnailPath?: string;
+  thumbnailPath?: string | null;
   relativePath?: string;
 }
 
@@ -424,8 +424,11 @@ export class PromptPanelManager extends PanelManagerBase {
 
     // 仅获取未在路径缓存中的图元数据
     const needFetchIds: string[] = [];
-    const needFetchImages: Array<{ id: string; relativePath?: string; thumbnailPath?: string }> =
-      [];
+    const needFetchImages: Array<{
+      id: string;
+      relativePath?: string;
+      thumbnailPath?: string | null;
+    }> = [];
     for (const imageId of firstImageIds) {
       if (cacheManager.getImagePath(imageId, "thumbnail")) continue;
       const cached = cacheManager.getImageCache().peek(imageId) as
@@ -438,7 +441,8 @@ export class PromptPanelManager extends PanelManagerBase {
       }
     }
 
-    let fetchedImages: Array<{ id: string; relativePath?: string; thumbnailPath?: string }> = [];
+    let fetchedImages: Array<{ id: string; relativePath?: string; thumbnailPath?: string | null }> =
+      [];
     if (needFetchIds.length > 0) {
       try {
         const imgs = await window.electronAPI.getImagesByIds(needFetchIds);
@@ -816,15 +820,16 @@ export class PromptPanelManager extends PanelManagerBase {
 
   private lastTagCounts: Record<string, number> = {};
 
-  private lastSpecialTagCounts: import("../../shared/domain/database-types.js").PromptSpecialTagCounts = {
-    favorite: 0,
-    safe: 0,
-    unsafe: 0,
-    multiImage: 0,
-    noImage: 0,
-    noTag: 0,
-    singleLang: 0,
-  };
+  private lastSpecialTagCounts: import("../../shared/domain/database-types.js").PromptSpecialTagCounts =
+    {
+      favorite: 0,
+      safe: 0,
+      unsafe: 0,
+      multiImage: 0,
+      noImage: 0,
+      noTag: 0,
+      singleLang: 0,
+    };
 
   /**
    * 计算标签计数（重写基类方法）
@@ -942,12 +947,12 @@ export class PromptPanelManager extends PanelManagerBase {
    */
   async toggleFavorite(id: string, isFavorite: boolean): Promise<void> {
     try {
-      await window.electronAPI.updatePrompt(id, { isFavorite: isFavorite ? 1 : 0 });
+      await window.electronAPI.updatePrompt(id, { isFavorite: isFavorite });
 
       // 更新本地数据
       const prompt = this.prompts.find((p) => String(p.id) === String(id));
       if (prompt) {
-        prompt.isFavorite = isFavorite ? 1 : 0;
+        prompt.isFavorite = isFavorite;
       }
 
       this.app.showToast(isFavorite ? "已收藏" : "已取消收藏", "success");

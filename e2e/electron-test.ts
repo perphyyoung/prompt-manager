@@ -419,13 +419,13 @@ export class ElectronTestHelper {
     const page = this.getPage();
     const title = this.generatePromptTitle(suffix);
 
-    const promptData: Omit<IPrompt, "id"> = {
+    const promptData: Omit<IPrompt, "id" | "isDeleted"> = {
       title,
       content: `e2e_${title}`,
       contentTranslate: "",
       note: "",
       isSafe: 1,
-      isFavorite: 0,
+      isFavorite: false,
       tags: [],
       ...overrides,
     };
@@ -433,6 +433,7 @@ export class ElectronTestHelper {
     const prompt = await page.evaluate(async (data) => {
       return await window.electronAPI.addPrompt(data);
     }, promptData);
+    if (!prompt) throw new Error("Failed to create prompt");
 
     return prompt;
   }
@@ -751,13 +752,13 @@ export class ElectronTestHelper {
 
     // 6. 如果需要，创建关联的提示词
     if (withPrompt) {
-      const promptData: Omit<IPrompt, "id"> = {
+      const promptData: Omit<IPrompt, "id" | "isDeleted"> = {
         title: this.generatePromptTitle("linked"),
         content: `e2e_linked_prompt_content_${Date.now()}`,
         contentTranslate: "",
         note: "",
         isSafe: 1,
-        isFavorite: 0,
+        isFavorite: false,
         tags: [],
         ...promptOverrides,
       };
@@ -765,6 +766,7 @@ export class ElectronTestHelper {
       const prompt = await page.evaluate(async (data) => {
         return await window.electronAPI.addPrompt(data);
       }, promptData);
+      if (!prompt) throw new Error("Failed to create prompt");
 
       // 建立提示词和图像的关联
       await page.evaluate(
@@ -2145,12 +2147,12 @@ export async function restoreImageFavoriteStatus(
   isFavorite: boolean,
 ): Promise<void> {
   await page.evaluate(
-    async (params: { id: string; status: number }) => {
+    async (params: { id: string; status: boolean }) => {
       await window.electronAPI.updateImage(params.id, {
         isFavorite: params.status,
       });
     },
-    { id: imageId, status: isFavorite ? 1 : 0 },
+    { id: imageId, status: isFavorite },
   );
 }
 
@@ -2166,12 +2168,12 @@ export async function restorePromptFavoriteStatus(
   isFavorite: boolean,
 ): Promise<void> {
   await page.evaluate(
-    async (params: { id: string; status: number }) => {
+    async (params: { id: string; status: boolean }) => {
       await window.electronAPI.updatePrompt(params.id, {
         isFavorite: params.status,
       });
     },
-    { id: promptId, status: isFavorite ? 1 : 0 },
+    { id: promptId, status: isFavorite },
   );
 }
 
