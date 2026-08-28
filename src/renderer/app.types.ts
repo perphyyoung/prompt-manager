@@ -282,35 +282,102 @@ declare global {
 
 // ==================== Manager 窄依赖类型 (阶段5: 依赖显式化) ====================
 /** DetailViewManager 运行所需的最小 IApp 子集 */
-export type DetailViewManagerDeps = Pick<IApp, "autoResizeTextarea" | "eventBus" | "imageDetailManager" | "imageFullscreenManager" | "imageSelectorManager" | "isFromDetailJump" | "isSameId" | "newPromptManager" | "openFullscreen" | "openImageDetailModal" | "promptDetailManager" | "promptRefImagesCache" | "showToast">;
+export interface DetailViewManagerDeps {
+  autoResizeTextarea(element: HTMLElement | null): void;
+  eventBus: IEventBus;
+  imageDetailManager: IDetailManager | null;
+  imageFullscreenManager: IImageFullscreenManager | null;
+  imageSelectorManager: IImageSelectorManager | null;
+  isFromDetailJump: boolean;
+  isSameId(id1: string | number, id2: string | number): boolean;
+  newPromptManager: INewPromptManager | null;
+  openFullscreen( images: Array<{ id?: string; relativePath?: string; fileName?: string }>, index: number, ): Promise<void>;
+  openImageDetailModal(image: IImage, options?: unknown): Promise<void>;
+  promptDetailManager: IDetailManager | null;
+  promptRefImagesCache: LRUCache;
+  showToast(message: string, type?: string): void;
+}
 
 /** PanelManager 运行所需的最小 IApp 子集 */
-export type PanelManagerDeps = Pick<IApp, "cacheManager" | "currentPanel" | "eventBus" | "imageUploadManager" | "newPromptManager" | "openEditPromptModal" | "openImageDetailModal" | "openImageTagManagerModal" | "openPromptTagManagerModal" | "promptHoverTooltip" | "renderStatistics" | "safeMode" | "searchSortManager" | "showToast" | "trashManager">;
+export interface PanelManagerDeps {
+  cacheManager: ICacheManager;
+  currentPanel: string;
+  eventBus: IEventBus;
+  imageUploadManager: IImageUploadManager | null;
+  newPromptManager: INewPromptManager | null;
+  openEditPromptModal(prompt: IPrompt, options?: unknown): Promise<void>;
+  openImageDetailModal(image: IImage, options?: unknown): Promise<void>;
+  openImageTagManagerModal: () => void;
+  openPromptTagManagerModal: () => void;
+  promptHoverTooltip: IHoverTooltipManager | null;
+  renderStatistics(): Promise<void>;
+  safeMode: string;
+  searchSortManager: ISearchSortManager | null;
+  showToast(message: string, type?: string): void;
+  trashManager: { loadTrash: () => Promise<void> } | null;
+}
 
 /** ImageUploadManager 运行所需的最小 IApp 子集 */
-export type ImageUploadManagerDeps = Pick<IApp, "eventBus" | "showToast">;
+export interface ImageUploadManagerDeps {
+  eventBus: IEventBus;
+  showToast(message: string, type?: string): void;
+}
 
 /** StatisticsManager 运行所需的最小 IApp 子集 */
-export type StatisticsManagerDeps = Pick<IApp, "safeMode">;
+export interface StatisticsManagerDeps {
+  safeMode: string;
+}
 
 /** ToolbarManager 运行所需的最小 IApp 子集 */
-export type ToolbarManagerDeps = Pick<IApp, "imagePanelManager" | "promptPanelManager" | "showToast">;
+export interface ToolbarManagerDeps {
+  imagePanelManager: IPanelManager | null;
+  promptPanelManager: IPanelManager | null;
+  showToast(message: string, type?: string): void;
+}
 
 /** TrashManager 运行所需的最小 IApp 子集 */
-export type TrashManagerDeps = Pick<IApp, "cacheManager" | "currentPanel" | "eventBus" | "imagePanelManager" | "promptPanelManager" | "renderStatistics" | "showToast">;
+export interface TrashManagerDeps {
+  cacheManager: ICacheManager;
+  currentPanel: string;
+  eventBus: IEventBus;
+  imagePanelManager: IPanelManager | null;
+  promptPanelManager: IPanelManager | null;
+  renderStatistics(): Promise<void>;
+  showToast(message: string, type?: string): void;
+}
 
 /** SettingsManager 运行所需的最小 IApp 子集 */
-export type SettingsManagerDeps = Pick<IApp, "imagePanelManager" | "importExportManager" | "promptPanelManager" | "relaunchApp" | "renderStatistics" | "safeMode" | "showToast">;
+export interface SettingsManagerDeps {
+  imagePanelManager: IPanelManager | null;
+  importExportManager: IImportExportManager | null;
+  promptPanelManager: IPanelManager | null;
+  relaunchApp(oldDataDir?: string): Promise<void>;
+  renderStatistics(): Promise<void>;
+  safeMode: string;
+  showToast(message: string, type?: string): void;
+}
 
 /** ImportExportManager 运行所需的最小 IApp 子集 */
-export type ImportExportManagerDeps = Pick<IApp, "showToast">;
+export interface ImportExportManagerDeps {
+  showToast(message: string, type?: string): void;
+}
 
 /** NavigationManager 运行所需的最小 IApp 子集 */
-export type NavigationManagerDeps = Pick<IApp, "imagePanelManager" | "promptPanelManager">;
+export interface NavigationManagerDeps {
+  imagePanelManager: IPanelManager | null;
+  promptPanelManager: IPanelManager | null;
+}
 
 /** NewPromptManager 运行所需的最小 IApp 子集 */
-export type NewPromptManagerDeps = Pick<IApp, "autoResizeTextarea" | "eventBus" | "showToast">;
+export interface NewPromptManagerDeps {
+  autoResizeTextarea(element: HTMLElement | null): void;
+  eventBus: IEventBus;
+  showToast(message: string, type?: string): void;
+}
 
 /** ImageSelectorManager 运行所需的最小 IApp 子集 */
-export type ImageSelectorManagerDeps = Pick<IApp, "isSameId" | "safeMode">;
+export interface ImageSelectorManagerDeps {
+  isSameId(id1: string | number, id2: string | number): boolean;
+  safeMode: string;
+}
 
