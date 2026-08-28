@@ -3,7 +3,7 @@ import { PanelManagerBase, IPanelItem, PANEL_PAGE_SIZE } from "./PanelManagerBas
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
 import type { PanelManagerDeps } from "../app.types.ts";
 import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig } from "./SharedComponents/index.ts";
-import { Constants, Events } from "../../constants.ts";
+import { Constants, Events } from "../constants.ts";
 import { DialogConfig } from "../services/index.ts";
 import { batchToolbarMiddle } from "../features/batch-toolbar/index.ts";
 

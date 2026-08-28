@@ -6,7 +6,7 @@ import { DetailViewManager } from "./DetailViewManager.ts";
 import type { IDetailTagManager } from "../../types/entities.ts";
 import { HtmlUtils, validateFileName, cacheManager } from "../../utils/index.ts";
 import { SaveManager, ImageSaveStrategy, ErrorHandler } from "../renderer_utils/index.ts";
-import { Constants, Events } from "../../constants.ts";
+import { Constants, Events } from "../constants.ts";
 import { TagAutocomplete, DialogService, DialogConfig, TagService } from "../services/index.ts";
 import { IImage, IPrompt } from "../../types/entities.ts";
 import type { DetailViewManagerDeps } from "../app.types.ts";

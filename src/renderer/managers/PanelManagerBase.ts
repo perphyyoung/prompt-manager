@@ -7,7 +7,7 @@ import { IEventStrategy, EventContext } from "./Strategies/IEventStrategy.ts";
 import { batchToolbarMiddle, type BatchBusinessConfig } from "../features/batch-toolbar/index.ts";
 import { DialogService, DialogConfig } from "../services/index.ts";
 import type { IDialogTemplate } from "../../types/entities.ts";
-import { Constants, Events } from "../../constants.ts";
+import { Constants, Events } from "../constants.ts";
 import { TagService } from "../services/index.ts";
 import { buildTagsWithGroupInfo } from "../../lib/tag-groups/utils.ts";
 import { PanelManagerDeps } from "../app.types.ts";

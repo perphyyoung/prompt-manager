@@ -3,7 +3,7 @@ import { ImagePreviewManager } from "./ImagePreviewManager.ts";
 import { cacheManager, DuplicatePreventionMixin } from "../../utils/index.ts";
 import { ErrorHandler } from "../renderer_utils/index.ts";
 import { IImage } from "../../types/entities.ts";
-import { Constants, Events } from "../../constants.ts";
+import { Constants, Events } from "../constants.ts";
 import type { NewPromptManagerDeps } from "../app.types.ts";
 
 /**

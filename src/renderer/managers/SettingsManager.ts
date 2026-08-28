@@ -1,4 +1,4 @@
-import { Constants, ElementId } from "../../constants.ts";
+import { Constants, ElementId } from "../constants.ts";
 import { logger } from "../../utils/Logger.ts";
 import { DialogService, DialogConfig } from "../services/index.ts";
 import { ElectronDataClearApi } from "../services/ElectronDataClearApi.ts";

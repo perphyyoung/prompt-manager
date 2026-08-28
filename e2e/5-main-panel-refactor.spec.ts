@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { Constants } from "../src/constants.ts";
+import { Constants } from "../src/renderer/constants.ts";
 import type { IImage, IPrompt } from "../src/preload/index.ts";
 import { enterImageGridView, enterPromptGridView, test } from "./electron-test.ts";
 

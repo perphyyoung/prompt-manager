@@ -4,7 +4,7 @@
  */
 
 import { localStorageManager } from "../../utils/LocalStorageManager";
-import { Constants } from "../../constants";
+import { Constants } from "../constants";
 
 /**
  * 主题配置

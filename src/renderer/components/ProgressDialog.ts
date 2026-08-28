@@ -3,7 +3,7 @@
  * 用于显示长时间操作的进度
  */
 
-import { Constants } from "../../constants";
+import { Constants } from "../constants";
 
 export interface ProgressDialogOptions {
   title?: string;

@@ -1,5 +1,5 @@
 import { HtmlUtils } from "../../utils/index.ts";
-import { Constants } from "../../constants.ts";
+import { Constants } from "../constants.ts";
 import { IImage } from "../../types/entities.ts";
 import type { ImageSelectorManagerDeps } from "../app.types.ts";
 

@@ -3,7 +3,7 @@
  * 管理提示词标签的注册、分组、排序、CRUD 操作
  */
 import { TagManager, ITagManagerElements } from "./TagManager.ts";
-import { Constants } from "../../constants.ts";
+import { Constants } from "../constants.ts";
 
 export class PromptTagManager extends TagManager {
   constructor(app: any) {

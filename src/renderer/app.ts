@@ -3,7 +3,7 @@
  * 作为协调器，整合各个面板管理器
  */
 
-import { Constants, Events } from "../constants.ts";
+import { Constants, Events } from "./constants.ts";
 import { DialogService, DialogConfig } from "./services/index.ts";
 import {
   PromptPanelManager,

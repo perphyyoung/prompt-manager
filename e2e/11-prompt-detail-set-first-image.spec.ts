@@ -9,7 +9,7 @@ import {
   waitForImageOrderChange,
   waitForDatabaseImageOrder,
 } from "./electron-test.ts";
-import { Constants } from "../src/constants.ts";
+import { Constants } from "../src/renderer/constants.ts";
 
 /**
  * 提示词详情界面"设为首张"功能 E2E 测试

@@ -1,4 +1,4 @@
-import { Constants } from "../../constants.ts";
+import { Constants } from "../constants.ts";
 import { ListNavigator, cacheManager, HtmlUtils } from "../../utils/index.ts";
 import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
 import { ErrorHandler } from "../renderer_utils/index.ts";

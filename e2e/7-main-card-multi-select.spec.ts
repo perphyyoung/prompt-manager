@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 import { test } from "./electron-test.ts";
 import type { IImage, IPrompt } from "../src/preload/index.ts";
-import { Constants } from "../src/constants.ts";
+import { Constants } from "../src/renderer/constants.ts";
 
 /**
  * 主界面卡片视图多选功能 E2E 测试

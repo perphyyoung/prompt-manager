@@ -1,5 +1,5 @@
 import { HtmlUtils } from "../../utils/index.ts";
-import { Constants } from "../../constants.ts";
+import { Constants } from "../constants.ts";
 
 // 标签管理器接口（简化）
 interface TagManager {

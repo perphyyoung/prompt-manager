@@ -3,7 +3,7 @@
  * 提供标签输入的自动完成、键盘导航等功能
  */
 
-import type { ElementId } from "../../constants.ts";
+import type { ElementId } from "../constants.ts";
 import { TagService } from "./TagService.ts";
 
 // Symbol 标记，用于防止重复绑定

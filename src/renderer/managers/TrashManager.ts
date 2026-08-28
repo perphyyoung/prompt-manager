@@ -5,7 +5,7 @@ import {
   PromptTrashConfig,
   ImageTrashConfig,
 } from "./SharedComponents/index.ts";
-import { Constants, ElementId, Events } from "../../constants.ts";
+import { Constants, ElementId, Events } from "../constants.ts";
 import { PromptTrashHandler, ImageTrashHandler } from "./handlers/index.ts";
 import { cacheManager } from "../../utils/index.ts";
 import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";

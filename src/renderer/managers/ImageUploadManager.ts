@@ -1,7 +1,7 @@
 import { DelaySaveStrategy } from "../services/index.ts";
 import { ImagePreviewManager } from "./ImagePreviewManager.ts";
 import { DuplicatePreventionMixin } from "../../utils/index.ts";
-import { Constants, Events } from "../../constants.ts";
+import { Constants, Events } from "../constants.ts";
 import type { ImageUploadManagerDeps } from "../app.types.ts";
 
 /**

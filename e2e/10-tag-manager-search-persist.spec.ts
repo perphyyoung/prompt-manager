@@ -7,7 +7,7 @@ import {
   closePromptTagManager,
 } from "./electron-test.ts";
 
-import { Constants } from "../src/constants.ts";
+import { Constants } from "../src/renderer/constants.ts";
 
 /**
  * 标签管理器搜索状态保持功能 E2E 测试

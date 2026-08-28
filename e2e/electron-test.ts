@@ -9,7 +9,7 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { mkdirSync, existsSync, rmSync } from "fs";
 import sharp from "sharp";
-import { Constants } from "../src/constants.ts";
+import { Constants } from "../src/renderer/constants.ts";
 import type { IImage, IPrompt, IElectronAPI } from "../src/preload/index.ts";
 import { tmpdir } from "os";
 import { ApiTestFactory } from "./factories/api-factory.ts";

@@ -3,7 +3,7 @@
  * 负责管理提示消息的显示和隐藏
  */
 
-import { Constants } from "../../constants";
+import { Constants } from "../constants";
 
 interface ToastOptions {
   duration?: number;

@@ -122,7 +122,7 @@ async function getPrompts(sortBy = "updatedAt", sortOrder = "desc"): Promise<Pro
 
 /**
  * 提示词特殊标签到 SQL 条件的映射
- * 键值需与 src/constants.ts 中的特殊标签常量保持一致
+ * 键值需与 src/renderer/constants.ts 中的特殊标签常量保持一致
  */
 const PROMPT_SPECIAL_TAG_CONDITIONS: Record<string, string> = {
   收藏: "p.is_favorite = 1",

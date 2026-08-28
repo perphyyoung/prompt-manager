@@ -5,7 +5,7 @@
 
 import { logger } from "../../utils/Logger.ts";
 import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
-import { Constants } from "../../constants.ts";
+import { Constants } from "../constants.ts";
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
 import type { NavigationManagerDeps } from "../app.types.ts";
 

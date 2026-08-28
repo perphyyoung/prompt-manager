@@ -1,4 +1,4 @@
-import { Constants } from "../../constants";
+import { Constants } from "../constants";
 import { contextStack } from "../managers/ContextStackManager";
 import type { IDialogTemplate, IDialogContext, IClosableElement } from "../../types/entities.ts";
 import { TagAutocomplete } from "./TagAutocomplete.ts";

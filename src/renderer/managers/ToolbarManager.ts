@@ -2,7 +2,7 @@
  * 工具栏管理器
  * 负责处理工具栏按钮事件和操作
  */
-import { Constants } from "../../constants.ts";
+import { Constants } from "../constants.ts";
 import { DialogService, DialogConfig } from "../services/index.ts";
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
 import type { ToolbarManagerDeps } from "../app.types.ts";

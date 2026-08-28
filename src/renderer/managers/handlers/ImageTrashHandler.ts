@@ -1,5 +1,5 @@
 import { localTime } from "../../../utils/index.ts";
-import { Constants, Events } from "../../../constants.ts";
+import { Constants, Events } from "../../constants.ts";
 import type { CacheUpdateData, TrashItem } from "./TrashTypes.ts";
 
 /**

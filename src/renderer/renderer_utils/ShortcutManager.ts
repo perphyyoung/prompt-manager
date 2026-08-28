@@ -5,7 +5,7 @@
 
 import { logger } from "../../utils/Logger.ts";
 import { contextStack } from "../managers/ContextStackManager.ts";
-import { Constants } from "../../constants.ts";
+import { Constants } from "../constants.ts";
 import type { IClosableElement } from "../../types/entities.ts";
 
 interface ShortcutInfo {

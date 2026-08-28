@@ -1,4 +1,4 @@
-import { Constants, ElementId } from "../../constants.ts";
+import { Constants, ElementId } from "../constants.ts";
 import { ListNavigator } from "../../utils/index.ts";
 import { EditableTagList } from "../components/index.ts";
 import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";

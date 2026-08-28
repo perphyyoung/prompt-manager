@@ -4,7 +4,7 @@
  * 规则：字面量 camelCase → 常量全大写下划线分隔
  */
 
-import { Constants } from "../src/constants";
+import { Constants } from "../src/renderer/constants";
 
 /**
  * 将 camelCase 转换为 SNAKE_CASE

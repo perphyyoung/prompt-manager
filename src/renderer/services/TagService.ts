@@ -19,7 +19,7 @@ import {
   PyTagGroups,
 } from "../../lib/tag-groups/index.ts";
 import { cacheManager } from "../../utils/CacheManager.ts";
-import { Constants, Events } from "../../constants.ts";
+import { Constants, Events } from "../constants.ts";
 
 // ========== 选项类型 ==========
 

@@ -1,4 +1,4 @@
-import { Constants, ElementId } from "../../constants.ts";
+import { Constants, ElementId } from "../constants.ts";
 
 /**
  * 上下文栈条目接口

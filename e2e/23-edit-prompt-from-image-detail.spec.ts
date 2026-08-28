@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { Constants } from "../src/constants.ts";
+import { Constants } from "../src/renderer/constants.ts";
 import { enterImageDetailView, test } from "./electron-test.ts";
 
 /**

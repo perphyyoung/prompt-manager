@@ -4,7 +4,7 @@
  */
 
 import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
-import { Constants } from "../../constants.ts";
+import { Constants } from "../constants.ts";
 import type { StatisticsManagerDeps } from "../app.types.ts";
 import type { IClosableElement } from "../../types/entities.ts";
 

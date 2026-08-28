@@ -1,5 +1,5 @@
 import { TagUI } from "./TagUI.ts";
-import { ElementId, Constants } from "../../constants.ts";
+import { ElementId, Constants } from "../constants.ts";
 import { DialogService, DialogConfig } from "../services/index.ts";
 import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
 import { focusInput, ErrorHandler } from "../renderer_utils/index.ts";

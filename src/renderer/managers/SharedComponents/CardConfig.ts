@@ -1,5 +1,5 @@
 import { ButtonFactory, ButtonConfig } from "./ButtonFactory.ts";
-import { Constants } from "../../../constants.ts";
+import { Constants } from "../../constants.ts";
 
 /**
  * 卡片类型枚举

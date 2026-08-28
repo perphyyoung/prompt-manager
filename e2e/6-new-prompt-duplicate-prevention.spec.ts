@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 import { test, enterImageGridView } from "./electron-test.ts";
 import type { IPrompt } from "../src/preload/index.ts";
-import { Constants } from "../src/constants.ts";
+import { Constants } from "../src/renderer/constants.ts";
 
 /**
  * 新建提示词防重复提交 E2E 测试

@@ -6,7 +6,7 @@ import {
   closeImageTagManager,
   closePromptTagManager,
 } from "./electron-test.ts";
-import { Constants } from "../src/constants.ts";
+import { Constants } from "../src/renderer/constants.ts";
 
 /**
  * TagService 操作 E2E 测试

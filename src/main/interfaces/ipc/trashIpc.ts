@@ -6,7 +6,7 @@
 
 import { ipcMain } from "electron";
 import * as db from "../../database.js";
-import { Constants } from "../../../constants.ts";
+import { TrashType } from "../../../shared/domain/trashType.ts";
 import { logError } from "../../mainLogger.js";
 import { getCurrentDataDir } from "../../runtime.js";
 
@@ -34,7 +34,7 @@ export function registerTrashIpc() {
       // 为提示词添加 type 字段
       return deletedPrompts.map((prompt) => ({
         ...prompt,
-        type: Constants.TrashType.PROMPT,
+        type: TrashType.PROMPT,
       }));
     } catch (error) {
       logError("Main", "Get prompt trash error:", error);
@@ -95,7 +95,7 @@ export function registerTrashIpc() {
       // 为图像添加 type 字段
       return deletedImages.map((image) => ({
         ...image,
-        type: Constants.TrashType.IMAGE,
+        type: TrashType.IMAGE,
       }));
     } catch (error) {
       logError("Main", "Get image trash error:", error);

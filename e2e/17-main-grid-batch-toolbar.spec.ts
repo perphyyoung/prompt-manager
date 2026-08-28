@@ -1,6 +1,6 @@
 import { expect } from "@playwright/test";
 import { test, enterImageGridView, enterPromptGridView } from "./electron-test.ts";
-import { Constants } from "../src/constants.ts";
+import { Constants } from "../src/renderer/constants.ts";
 
 test.describe("批量工具栏 - 主界面功能测试", () => {
   // 文件级别：创建基础测试数据（所有测试复用）

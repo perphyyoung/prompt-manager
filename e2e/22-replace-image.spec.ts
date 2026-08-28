@@ -1,6 +1,6 @@
 import { expect } from "@playwright/test";
 import { test, enterImageDetailView, enterPromptDetailView } from "./electron-test.ts";
-import { Constants } from "../src/constants.ts";
+import { Constants } from "../src/renderer/constants.ts";
 import type { IPrompt } from "../src/preload/index.ts";
 import { generateTempImage } from "./factories/image-utils.ts";
 

@@ -11,7 +11,7 @@ import {
 import { sortButtons } from "../../../lib/batch-toolbar/utils.ts";
 import { contextStack, IContextStackEntry } from "../../managers/ContextStackManager.ts";
 import { DialogService } from "../../services/index.ts";
-import { ElementId } from "../../../constants.ts";
+import { ElementId } from "../../constants.ts";
 import type { IDialogTemplate } from "../../../types/entities.ts";
 
 /** 动作处理器 */

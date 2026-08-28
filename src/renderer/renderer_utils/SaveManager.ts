@@ -1,4 +1,4 @@
-import { Constants } from "../../constants.ts";
+import { Constants } from "../constants.ts";
 import { logger } from "../../utils/Logger.ts";
 import { SaveStrategy } from "./SaveStrategy.ts";
 

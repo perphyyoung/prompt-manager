@@ -6,7 +6,7 @@ import {
   ensureTagFilterExpanded,
   ensureTagFilterCollapsed,
 } from "./electron-test.ts";
-import { Constants } from "../src/constants.ts";
+import { Constants } from "../src/renderer/constants.ts";
 import type { IImage, IPrompt } from "../src/preload/index.ts";
 
 /**

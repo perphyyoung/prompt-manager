@@ -2,6 +2,8 @@
  * 常量定义类
  * 集中管理应用中的所有常量
  */
+import { TrashType as SharedTrashType } from "../shared/domain/trashType.ts";
+
 export class Constants {
   // 应用名称
   static APP_NAME = "Prompt Manager";
@@ -196,11 +198,8 @@ export class Constants {
     { value: '"Courier New", Consolas, monospace', label: "等宽字体" },
   ]);
 
-  // 回收站类型常量
-  static TrashType = Object.freeze({
-    PROMPT: "trash-prompt",
-    IMAGE: "trash-image",
-  });
+  // 回收站类型常量（定义见 shared/domain/trashType.ts，主进程共用）
+  static TrashType = SharedTrashType;
 
   // DOM 元素 ID 常量
   static Ids = Object.freeze({

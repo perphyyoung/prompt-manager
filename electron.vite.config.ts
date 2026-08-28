@@ -1,6 +1,6 @@
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import path from "path";
-import { Constants } from "./src/constants.ts";
+import { Constants } from "./src/renderer/constants.ts";
 
 function htmlVariablesPlugin() {
   return {

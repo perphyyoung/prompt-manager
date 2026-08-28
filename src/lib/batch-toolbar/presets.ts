@@ -4,7 +4,7 @@
  */
 
 import type { BatchToolbarConfig, ToolbarContext } from "./types.ts";
-import { Constants } from "../../constants.ts";
+import { Constants } from "../../renderer/constants.ts";
 
 /** 提示词主界面批量工具栏配置 */
 export const PROMPT_MAIN_BATCH_TOOLBAR: BatchToolbarConfig = {

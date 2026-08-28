@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { Constants } from "../src/constants.ts";
+import { Constants } from "../src/renderer/constants.ts";
 import { test, enterImageDetailView, getImageFromDatabase } from "./electron-test.ts";
 import type { IImage } from "../src/preload/index.ts";
 
