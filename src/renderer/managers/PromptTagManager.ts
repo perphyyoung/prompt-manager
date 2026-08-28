@@ -4,9 +4,10 @@
  */
 import { TagManager, ITagManagerElements } from "./TagManager.ts";
 import { Constants } from "../constants.ts";
+import type { TagManagerDeps, IPanelManager } from "../app.types.ts";
 
 export class PromptTagManager extends TagManager {
-  constructor(app: any) {
+  constructor(app: TagManagerDeps) {
     super("prompt", app);
   }
 
@@ -33,7 +34,7 @@ export class PromptTagManager extends TagManager {
     };
   }
 
-  protected getPanelManager(): any {
+  protected getPanelManager(): IPanelManager | null {
     return this.app.promptPanelManager;
   }
 }

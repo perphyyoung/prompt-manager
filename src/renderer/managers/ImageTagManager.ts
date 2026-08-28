@@ -4,9 +4,10 @@
  */
 import { TagManager, ITagManagerElements } from "./TagManager.ts";
 import { Constants } from "../constants.ts";
+import type { TagManagerDeps, IPanelManager } from "../app.types.ts";
 
 export class ImageTagManager extends TagManager {
-  constructor(app: any) {
+  constructor(app: TagManagerDeps) {
     super("image", app);
   }
 
@@ -33,7 +34,7 @@ export class ImageTagManager extends TagManager {
     };
   }
 
-  protected getPanelManager(): any {
+  protected getPanelManager(): IPanelManager | null {
     return this.app.imagePanelManager;
   }
 }

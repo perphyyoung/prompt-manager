@@ -261,6 +261,13 @@ export interface IApp {
   openPromptTagManagerModal: () => void;
 }
 
+/** TagManager 运行所需的最小依赖 */
+export interface TagManagerDeps {
+  showToast(message: string, type?: string): void;
+  promptPanelManager: IPanelManager | null;
+  imagePanelManager: IPanelManager | null;
+}
+
 /**
  * TrashManager 配置选项
  */

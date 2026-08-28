@@ -13,6 +13,7 @@ import {
 } from "../../lib/tag-groups/index.ts";
 import { groupTagsByGroup } from "../../lib/tag-groups/utils.ts";
 import { TagService } from "../services/index.ts";
+import type { TagManagerDeps } from "../app.types.ts";
 
 /**
  * 标签管理器元素 ID 配置
@@ -47,7 +48,7 @@ export abstract class TagManager {
   sortBy: string;
   sortOrder: "asc" | "desc";
   protected tagService: TagService;
-  protected app: any;
+  protected app: TagManagerDeps;
   protected ui: TagUI;
   protected eventBus: any;
   protected selectedTagGroup: any;
@@ -62,7 +63,7 @@ export abstract class TagManager {
   protected _isOperationInProgress: boolean = false;
   protected lastSearchTerm: string = "";
 
-  constructor(type: "prompt" | "image", app: any) {
+  constructor(type: "prompt" | "image", app: TagManagerDeps) {
     this.type = type;
     this.app = app;
     this.tagService = TagService.getInstance();
