@@ -91,20 +91,20 @@ interface IElectronAPI {
   // Prompt 管理
   getPrompts: (sortBy: string, sortOrder: string) => Promise<IPrompt[]>;
   getPromptsPaginated: (
-    options: import("../main/database-types.js").GetPromptsPaginatedOptions,
+    options: import("../shared/domain/database-types.js").GetPromptsPaginatedOptions,
   ) => Promise<{ items: IPrompt[]; totalCount: number }>;
   getPromptIdsByFilter: (
     options: Omit<
-      import("../main/database-types.js").GetPromptsPaginatedOptions,
+      import("../shared/domain/database-types.js").GetPromptsPaginatedOptions,
       "limit" | "offset"
     >,
   ) => Promise<string[]>;
   countPromptTags: (
-    options: import("../main/database-types.js").CountPromptTagsOptions,
+    options: import("../shared/domain/database-types.js").CountPromptTagsOptions,
   ) => Promise<Record<string, number>>;
   countPromptSpecialTags: (
-    options: import("../main/database-types.js").CountPromptTagsOptions,
-  ) => Promise<import("../main/database-types.js").PromptSpecialTagCounts>;
+    options: import("../shared/domain/database-types.js").CountPromptTagsOptions,
+  ) => Promise<import("../shared/domain/database-types.js").PromptSpecialTagCounts>;
   getPromptById: (id: string) => Promise<IPrompt | null>;
   getPromptsByIds: (ids: string[]) => Promise<IPrompt[]>;
   addPrompt: (prompt: Omit<IPrompt, "id">) => Promise<IPrompt>;
@@ -176,20 +176,20 @@ interface IElectronAPI {
   ) => void;
   getImages: (sortBy: string, sortOrder: string) => Promise<IImage[]>;
   getImagesPaginated: (
-    options: import("../main/database-types.js").GetImagesPaginatedOptions,
+    options: import("../shared/domain/database-types.js").GetImagesPaginatedOptions,
   ) => Promise<{ items: IImage[]; totalCount: number }>;
   getImageIdsByFilter: (
     options: Omit<
-      import("../main/database-types.js").GetImagesPaginatedOptions,
+      import("../shared/domain/database-types.js").GetImagesPaginatedOptions,
       "limit" | "offset"
     >,
   ) => Promise<string[]>;
   countImageTags: (
-    options: import("../main/database-types.js").CountImageTagsOptions,
+    options: import("../shared/domain/database-types.js").CountImageTagsOptions,
   ) => Promise<Record<string, number>>;
   countImageSpecialTags: (
-    options: import("../main/database-types.js").CountImageTagsOptions,
-  ) => Promise<import("../main/database-types.js").ImageSpecialTagCounts>;
+    options: import("../shared/domain/database-types.js").CountImageTagsOptions,
+  ) => Promise<import("../shared/domain/database-types.js").ImageSpecialTagCounts>;
   getImagesByIds: (ids: string[]) => Promise<IImage[]>;
   getImageById: (imageId: string) => Promise<IImage | null>;
 
@@ -266,7 +266,7 @@ interface IElectronAPI {
   getAllTags: () => Promise<string[]>;
 
   // 统计
-  getStatistics: (isSafeOnly: boolean) => Promise<import("../main/database-types.js").Statistics>;
+  getStatistics: (isSafeOnly: boolean) => Promise<import("../shared/domain/database-types.js").Statistics>;
 
   // 调试日志
   logDebug: (component: string, message: string, data?: unknown) => void;
@@ -310,17 +310,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ==================== Prompt 管理 ====================
   getPrompts: (sortBy: string, sortOrder: string) =>
     ipcRenderer.invoke("get-prompts", sortBy, sortOrder),
-  getPromptsPaginated: (options: import("../main/database-types.js").GetPromptsPaginatedOptions) =>
+  getPromptsPaginated: (options: import("../shared/domain/database-types.js").GetPromptsPaginatedOptions) =>
     ipcRenderer.invoke("get-prompts-paginated", options),
   getPromptIdsByFilter: (
     options: Omit<
-      import("../main/database-types.js").GetPromptsPaginatedOptions,
+      import("../shared/domain/database-types.js").GetPromptsPaginatedOptions,
       "limit" | "offset"
     >,
   ) => ipcRenderer.invoke("get-prompt-ids-by-filter", options),
-  countPromptTags: (options: import("../main/database-types.js").CountPromptTagsOptions) =>
+  countPromptTags: (options: import("../shared/domain/database-types.js").CountPromptTagsOptions) =>
     ipcRenderer.invoke("count-prompt-tags", options),
-  countPromptSpecialTags: (options: import("../main/database-types.js").CountPromptTagsOptions) =>
+  countPromptSpecialTags: (options: import("../shared/domain/database-types.js").CountPromptTagsOptions) =>
     ipcRenderer.invoke("count-prompt-special-tags", options),
   getPromptById: (id: string) => ipcRenderer.invoke("get-prompt-by-id", id),
   getPromptsByIds: (ids: string[]) => ipcRenderer.invoke("get-prompts-by-ids", ids),
@@ -357,17 +357,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
   clearAllData: () => ipcRenderer.invoke("clear-all-data"),
   getImages: (sortBy: string, sortOrder: string) =>
     ipcRenderer.invoke("get-images", sortBy, sortOrder),
-  getImagesPaginated: (options: import("../main/database-types.js").GetImagesPaginatedOptions) =>
+  getImagesPaginated: (options: import("../shared/domain/database-types.js").GetImagesPaginatedOptions) =>
     ipcRenderer.invoke("get-images-paginated", options),
   getImageIdsByFilter: (
     options: Omit<
-      import("../main/database-types.js").GetImagesPaginatedOptions,
+      import("../shared/domain/database-types.js").GetImagesPaginatedOptions,
       "limit" | "offset"
     >,
   ) => ipcRenderer.invoke("get-image-ids-by-filter", options),
-  countImageTags: (options: import("../main/database-types.js").CountImageTagsOptions) =>
+  countImageTags: (options: import("../shared/domain/database-types.js").CountImageTagsOptions) =>
     ipcRenderer.invoke("count-image-tags", options),
-  countImageSpecialTags: (options: import("../main/database-types.js").CountImageTagsOptions) =>
+  countImageSpecialTags: (options: import("../shared/domain/database-types.js").CountImageTagsOptions) =>
     ipcRenderer.invoke("count-image-special-tags", options),
   getImagesByIds: (ids: string[]) => ipcRenderer.invoke("get-images-by-ids", ids),
   getImageById: (imageId: string) => ipcRenderer.invoke("get-image-by-id", imageId),

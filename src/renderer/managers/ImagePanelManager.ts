@@ -5,7 +5,7 @@ import type { IApp } from "../app.types.ts";
 import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig } from "./SharedComponents/index.ts";
 import { Constants, Events } from "../../constants.ts";
 import { DialogConfig } from "../services/index.ts";
-import { batchToolbarMiddle } from "../../middle/index.ts";
+import { batchToolbarMiddle } from "../features/batch-toolbar/index.ts";
 
 import { IImage } from "../../types/entities.ts";
 import { VirtualWindowRenderer } from "../renderer_utils/index.ts";
@@ -290,7 +290,7 @@ export class ImagePanelManager extends PanelManagerBase {
   /**
    * 构建分页查询选项
    */
-  private buildPaginatedOptions(): import("../../main/database-types.js").GetImagesPaginatedOptions {
+  private buildPaginatedOptions(): import("../../shared/domain/database-types.js").GetImagesPaginatedOptions {
     const { tagNames, specialTags } = this.splitSelectedTags();
     return {
       sortBy: this.sortBy || "updatedAt",
@@ -836,7 +836,7 @@ export class ImagePanelManager extends PanelManagerBase {
     }
   }
 
-  private lastSpecialTagCounts: import("../../main/database-types.js").ImageSpecialTagCounts = {
+  private lastSpecialTagCounts: import("../../shared/domain/database-types.js").ImageSpecialTagCounts = {
     favorite: 0,
     unreferenced: 0,
     multiRef: 0,
@@ -848,7 +848,7 @@ export class ImagePanelManager extends PanelManagerBase {
   /**
    * 构建计数查询选项
    */
-  private buildCountOptions(): import("../../main/database-types.js").CountImageTagsOptions {
+  private buildCountOptions(): import("../../shared/domain/database-types.js").CountImageTagsOptions {
     const { tagNames, specialTags } = this.splitSelectedTags();
     return {
       searchQuery: this.getSearchQuery() || undefined,

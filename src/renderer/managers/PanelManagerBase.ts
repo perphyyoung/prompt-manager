@@ -4,7 +4,7 @@ import { TagUI } from "./TagUI.ts";
 import { TopGroupManager } from "../../pyTagGroups/TopGroupManager.ts";
 import { ITagWithGroup, ITagGroup } from "../../types/entities.ts";
 import { IEventStrategy, EventContext } from "./Strategies/IEventStrategy.ts";
-import { batchToolbarMiddle, type BatchBusinessConfig } from "../../middle/index.ts";
+import { batchToolbarMiddle, type BatchBusinessConfig } from "../features/batch-toolbar/index.ts";
 import { DialogService, DialogConfig } from "../services/index.ts";
 import type { IDialogTemplate } from "../../types/entities.ts";
 import { Constants, Events } from "../../constants.ts";

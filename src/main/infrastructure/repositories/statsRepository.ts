@@ -8,7 +8,7 @@ import { logError, logDebug } from "../../mainLogger.js";
 import { getFormattedLocalTimeToSecond } from "../../../utils/index.js";
 import path from "path";
 import { promises as fs } from "fs";
-import type { Statistics } from "../../database-types.js";
+import type { Statistics } from "../../../shared/domain/database-types.js";
 
 async function getStatistics(isSafeOnly: boolean): Promise<Statistics> {
   try {

@@ -6,7 +6,7 @@ export interface IEventStrategyItem {
   [key: string]: unknown;
 }
 
-import type { BatchToolbarMiddle, ToolbarContext } from "../../../middle/index.ts";
+import type { BatchToolbarMiddle, ToolbarContext } from "../../features/batch-toolbar/index.ts";
 
 export interface EventContext {
   batchToolbarMiddle: BatchToolbarMiddle;

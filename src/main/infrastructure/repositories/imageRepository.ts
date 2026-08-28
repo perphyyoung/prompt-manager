@@ -10,7 +10,7 @@ import { dbTime, formatDbTimeToLocal } from "../../../utils/index.js";
 import { isConstraintError } from "../../database-errors.js";
 import path from "path";
 import { promises as fs } from "fs";
-import type { ImageRow, Image, CreateImageParams, UpdateImageParams, MapImageOptions, GetImagesOptions, GetImagesPaginatedOptions, PaginatedImagesResult, CountImageTagsOptions, ImageSpecialTagCounts, ImageFilePaths, ImageCleanupInfo, PromptImage, UpdateThumbnailParams } from "../../database-types.js";
+import type { ImageRow, Image, CreateImageParams, UpdateImageParams, MapImageOptions, GetImagesOptions, GetImagesPaginatedOptions, PaginatedImagesResult, CountImageTagsOptions, ImageSpecialTagCounts, ImageFilePaths, ImageCleanupInfo, PromptImage, UpdateThumbnailParams } from "../../../shared/domain/database-types.js";
 /**
  * 将数据库行映射为图像对象
  * @param row - 数据库行

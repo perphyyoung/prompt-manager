@@ -135,7 +135,7 @@ export class ImageSelectorManager {
       const searchTerm = searchInput?.value?.trim();
       const selectedTag = tagFilter?.value;
 
-      const options: import("../../main/database-types.js").GetImagesPaginatedOptions = {
+      const options: import("../../shared/domain/database-types.js").GetImagesPaginatedOptions = {
         sortBy: this.sortBy || "updatedAt",
         sortOrder: this.sortOrder === "asc" ? "asc" : "desc",
         searchQuery: searchTerm || undefined,

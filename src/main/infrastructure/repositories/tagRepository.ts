@@ -6,7 +6,7 @@
 import { run, get, all, runInTransaction, getDb } from "../sqlite/connection.js";
 import { dbTime } from "../../../utils/index.js";
 import { isConstraintError } from "../../database-errors.js";
-import type { TagConfigMap } from "../../database-types.js";
+import type { TagConfigMap } from "../../../shared/domain/database-types.js";
 /**
  * 获取所有提示词标签
  */

@@ -16,7 +16,7 @@ import {
 } from "../../database-errors.ts";
 import type {
   RunResult,
-} from "../../database-types.js";
+} from "../../../shared/domain/database-types.js";
 
 sqlite3.verbose();
 

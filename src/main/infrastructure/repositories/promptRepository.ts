@@ -7,7 +7,7 @@ import { addPromptTags } from "./tagRepository.js";
 import { addPromptImages } from "./imageRepository.js";
 import { run, get, all, runInTransaction, TAG_SEPARATOR } from "../sqlite/connection.js";
 import { dbTime, formatDbTimeToLocal } from "../../../utils/index.js";
-import type { PromptRow, Prompt, CreatePromptParams, UpdatePromptParams, MapPromptOptions, GetPromptsPaginatedOptions, PaginatedPromptsResult, CountPromptTagsOptions, PromptSpecialTagCounts, ImageRef } from "../../database-types.js";
+import type { PromptRow, Prompt, CreatePromptParams, UpdatePromptParams, MapPromptOptions, GetPromptsPaginatedOptions, PaginatedPromptsResult, CountPromptTagsOptions, PromptSpecialTagCounts, ImageRef } from "../../../shared/domain/database-types.js";
 /**
  * 将数据库行映射为提示词对象
  * @param row - 数据库行

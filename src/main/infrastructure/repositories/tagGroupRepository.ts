@@ -7,7 +7,7 @@ import { checkTagGroupNameDuplicate } from "./tagRepository.js";
 import { run, get, all } from "../sqlite/connection.js";
 import { dbTime } from "../../../utils/index.js";
 import { DuplicateNameError, isConstraintError } from "../../database-errors.js";
-import type { PromptTagGroup, ImageTagGroup, PromptTagGroupRow, ImageTagGroupRow, UpdateTagGroupParams } from "../../database-types.js";
+import type { PromptTagGroup, ImageTagGroup, PromptTagGroupRow, ImageTagGroupRow, UpdateTagGroupParams } from "../../../shared/domain/database-types.js";
 /**
  * 创建提示词标签组
  * @param name - 标签组名称

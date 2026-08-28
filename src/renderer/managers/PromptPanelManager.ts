@@ -5,7 +5,7 @@ import type { IApp } from "../app.types.ts";
 import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig } from "./SharedComponents/index.ts";
 import { Constants, Events } from "../../constants.ts";
 import { DialogConfig } from "../services/index.ts";
-import { batchToolbarMiddle } from "../../middle/index.ts";
+import { batchToolbarMiddle } from "../features/batch-toolbar/index.ts";
 
 import { IPrompt } from "../../types/entities.ts";
 import { VirtualWindowRenderer } from "../renderer_utils/index.ts";
@@ -332,7 +332,7 @@ export class PromptPanelManager extends PanelManagerBase {
   /**
    * 构建分页查询选项
    */
-  private buildPaginatedOptions(): import("../../main/database-types.js").GetPromptsPaginatedOptions {
+  private buildPaginatedOptions(): import("../../shared/domain/database-types.js").GetPromptsPaginatedOptions {
     const { tagNames, specialTags } = this.splitSelectedTags();
     return {
       sortBy: this.sortBy || "updatedAt",
@@ -816,7 +816,7 @@ export class PromptPanelManager extends PanelManagerBase {
 
   private lastTagCounts: Record<string, number> = {};
 
-  private lastSpecialTagCounts: import("../../main/database-types.js").PromptSpecialTagCounts = {
+  private lastSpecialTagCounts: import("../../shared/domain/database-types.js").PromptSpecialTagCounts = {
     favorite: 0,
     safe: 0,
     unsafe: 0,
@@ -854,7 +854,7 @@ export class PromptPanelManager extends PanelManagerBase {
   /**
    * 构建计数查询选项
    */
-  private buildCountOptions(): import("../../main/database-types.js").CountPromptTagsOptions {
+  private buildCountOptions(): import("../../shared/domain/database-types.js").CountPromptTagsOptions {
     const { tagNames, specialTags } = this.splitSelectedTags();
     return {
       searchQuery: this.getSearchQuery() || undefined,
