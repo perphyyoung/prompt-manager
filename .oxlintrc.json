@@ -34,8 +34,8 @@
           {
             "patterns": [
               {
-                "group": ["../*", "../**"],
-                "message": "shared 层保持零依赖，不得引用其他任何层"
+                "group": ["../*", "../**", "!../types", "!../types/**"],
+                "message": "shared 层保持零依赖(仅允许 ../types 纯类型目录)"
               }
             ]
           }

@@ -5,57 +5,29 @@
  */
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
-import type {
-  IPrompt,
-  IImage,
-  IOrphanFile,
-  IScanOrphanFilesResult,
-  IExportOrphanFilesResult,
-} from "../types/entities.js";
+import {
+  IPC,
+  IPC_EVENTS,
+  IpcApi,
+  LogLevel,
+  IBackupProgress,
+  RebuildThumbnailsProgress,
+} from "../shared/ipc-contract.js";
 
 // ==================== 类型定义 ====================
-
-/** 标签组 */
-interface ITagGroup {
-  id: number;
-  name: string;
-  sortOrder: number;
-  tags?: string[];
-}
-
-/** 备份进度 */
-interface IBackupProgress {
-  stage: string;
-  percent: number;
-  status: string;
-  detail?: string;
-}
-
-/** 日志级别 */
-type LogLevel = "debug" | "error" | "warn" | "info";
 
 /** 备份进度回调类型 */
 type BackupProgressCallback = (progress: IBackupProgress) => void;
 
-/** 备份统计信息 */
-interface IBackupStats {
-  database: boolean;
-  prompts: { count: number };
-  images: { count: number; size: number };
-}
+// ==================== 通道桥接 ====================
 
-/** 备份清单 */
-interface IBackupManifest {
-  /** manifest 格式版本 */
-  version: string;
-  /** 应用名称 */
-  appName: string;
-  /** 导出时间（本地时间格式：YYYY/M/D H:mm:ss） */
-  exportedAt: string;
-  /** 数据格式版本，用于兼容性检查 */
-  dataVersion: number;
-  /** 备份内容统计信息 */
-  contents: IBackupStats;
+/**
+ * 按契约桥接一个 invoke 通道: 入参/返回值/通道名全部由 IpcApi 约束
+ */
+function bridge<K extends keyof IpcApi>(key: K): IpcApi[K] {
+  const invoke = (...args: unknown[]) =>
+    ipcRenderer.invoke(IPC[key], ...args) as ReturnType<IpcApi[K]>;
+  return invoke as IpcApi[K];
 }
 
 // ==================== 内部状态管理 ====================
@@ -72,218 +44,39 @@ const backupProgressCallbacks = new WeakMap<
   (_event: IpcRendererEvent, progress: IBackupProgress) => void
 >();
 
-type RebuildThumbnailsProgressCallback = (progress: {
-  current: number;
-  total: number;
-  fileName: string;
-}) => void;
+type RebuildThumbnailsProgressCallback = (progress: RebuildThumbnailsProgress) => void;
 const rebuildThumbnailsProgressCallbacks = new WeakMap<
   RebuildThumbnailsProgressCallback,
-  (_event: IpcRendererEvent, progress: { current: number; total: number; fileName: string }) => void
+  (_event: IpcRendererEvent, progress: RebuildThumbnailsProgress) => void
 >();
 
 // ==================== API 定义 ====================
 
-interface IElectronAPI {
-  // 应用信息
-  getAppVersion: () => Promise<string>;
+type NonBridged =
+  | "rendererLog"
+  | "exportPrompts"
+  | "importPrompts"
+  | "isTitleExists"
+  | "getPromptImages"
+  | "optimizeDatabase"
+  | "selectImageFiles";
 
-  // Prompt 管理
-  getPrompts: (sortBy: string, sortOrder: string) => Promise<IPrompt[]>;
-  getPromptsPaginated: (
-    options: import("../shared/domain/database-types.js").GetPromptsPaginatedOptions,
-  ) => Promise<{ items: IPrompt[]; totalCount: number }>;
-  getPromptIdsByFilter: (
-    options: Omit<
-      import("../shared/domain/database-types.js").GetPromptsPaginatedOptions,
-      "limit" | "offset"
-    >,
-  ) => Promise<string[]>;
-  countPromptTags: (
-    options: import("../shared/domain/database-types.js").CountPromptTagsOptions,
-  ) => Promise<Record<string, number>>;
-  countPromptSpecialTags: (
-    options: import("../shared/domain/database-types.js").CountPromptTagsOptions,
-  ) => Promise<import("../shared/domain/database-types.js").PromptSpecialTagCounts>;
-  getPromptById: (id: string) => Promise<IPrompt | null>;
-  getPromptsByIds: (ids: string[]) => Promise<IPrompt[]>;
-  addPrompt: (prompt: Omit<IPrompt, "id">) => Promise<IPrompt>;
-  updatePrompt: (id: string, updates: Partial<IPrompt>) => Promise<void>;
-  softDeletePrompt: (id: string) => Promise<void>;
-  softDeletePrompts: (ids: string[]) => Promise<{ success: boolean; deleted: number }>;
-  batchFavoritePrompts: (ids: string[]) => Promise<{ success: boolean; updated: number }>;
-
-  // 剪贴板
-  copyToClipboard: (text: string) => Promise<void>;
-
-  // 全屏控制
-  setFullscreen: (flag: boolean) => Promise<void>;
-
-  // 设置
-  getDataPath: () => Promise<string>;
-  openDataDirectory: () => Promise<void>;
-  selectDirectory: () => Promise<string | null>;
-  selectAndInstallFont: () => Promise<{
-    success: boolean;
-    fontName?: string;
-    filePath?: string;
-    error?: string;
-  }>;
-  getInstalledFonts: () => Promise<{ fontName: string; fileName: string; filePath: string }[]>;
-
-  // 图像文件操作
-  saveImageFile: (
-    sourcePath: string,
-    fileName: string,
-  ) => Promise<{
-    id: string;
-    fileName: string;
-    isDuplicate: boolean;
-    duplicateType?: "restored_from_trash" | "existing";
-    relativePath?: string;
-    thumbnailPath?: string;
-    width?: number;
-    height?: number;
-    size?: number;
-  }>;
-  replaceImage: (oldImageId: string) => Promise<{
-    success: boolean;
-    canceled?: boolean;
-    reason?: string;
-    image?: IImage;
-    relatedPromptIds?: string[];
-  }>;
-  getImagePath: (relativePath: string) => Promise<string>;
-  getImagesPaths: (relativePaths: string[]) => Promise<string[]>;
-  openImageLocation: (relativePath: string) => Promise<void>;
-  openImageFiles: () => Promise<string[]>;
-  clearAllData: () => Promise<string>;
-  ensureImageThumbnails: (ids: string[]) => Promise<{
-    fixed: Array<{ id: string; relativePath: string; fullPath: string }>;
-    missing: string[];
-  }>;
-  rebuildThumbnails: () => Promise<{
-    success: boolean;
-    regenerated: number;
-    failed: number;
-    total: number;
-  }>;
-  onRebuildThumbnailsProgress: (
-    callback: (progress: { current: number; total: number; fileName: string }) => void,
-  ) => void;
-  offRebuildThumbnailsProgress: (
-    callback: (progress: { current: number; total: number; fileName: string }) => void,
-  ) => void;
-  getImages: (sortBy: string, sortOrder: string) => Promise<IImage[]>;
-  getImagesPaginated: (
-    options: import("../shared/domain/database-types.js").GetImagesPaginatedOptions,
-  ) => Promise<{ items: IImage[]; totalCount: number }>;
-  getImageIdsByFilter: (
-    options: Omit<
-      import("../shared/domain/database-types.js").GetImagesPaginatedOptions,
-      "limit" | "offset"
-    >,
-  ) => Promise<string[]>;
-  countImageTags: (
-    options: import("../shared/domain/database-types.js").CountImageTagsOptions,
-  ) => Promise<Record<string, number>>;
-  countImageSpecialTags: (
-    options: import("../shared/domain/database-types.js").CountImageTagsOptions,
-  ) => Promise<import("../shared/domain/database-types.js").ImageSpecialTagCounts>;
-  getImagesByIds: (ids: string[]) => Promise<IImage[]>;
-  getImageById: (imageId: string) => Promise<IImage | null>;
-
-  // 提示词回收站
-  getPromptTrash: () => Promise<Array<IPrompt & { deletedAt: string; type: string }>>;
-  restorePromptFromTrash: (id: string) => Promise<void>;
-  restoreAllPrompts: () => Promise<void>;
-  permanentDeletePrompt: (id: string) => Promise<void>;
-  emptyPromptTrash: () => Promise<void>;
-
-  // 应用控制
-  relaunchApp: (oldDataDir?: string) => Promise<void>;
-
-  // 提示词标签组管理
-  getPromptTagGroups: () => Promise<ITagGroup[]>;
-  createPromptTagGroup: (name: string, sortOrder: number) => Promise<ITagGroup>;
-  updatePromptTagGroupAttrs: (id: number, updates: Partial<ITagGroup>) => Promise<void>;
-  deletePromptTagGroup: (id: number) => Promise<void>;
-  assignPromptTagToBelongGroup: (tagName: string, groupId: number | null) => Promise<void>;
-
-  // 提示词标签管理
-  getPromptTags: () => Promise<string[]>;
-  addPromptTag: (tag: string) => Promise<void>;
-  addPromptTags: (promptId: string, tagNames: string[]) => Promise<void>;
-  addPromptTagsBatch: (
-    promptIds: string[],
-    tagNames: string[],
-  ) => Promise<{ success: boolean; added: number }>;
-  deletePromptTag: (tag: string) => Promise<void>;
-  deletePromptTags: (
-    tags: string[],
-  ) => Promise<{ success: boolean; deleted: number; tags: string[] }>;
-  renamePromptTag: (oldTag: string, newTag: string) => Promise<void>;
-  getPromptsByTag: (tagName: string) => Promise<string[]>;
-  removeTagFromPrompt: (promptId: string, tagName: string) => Promise<boolean>;
-
-  // 图像标签组管理
-  getImageTagGroups: () => Promise<ITagGroup[]>;
-  createImageTagGroup: (name: string, sortOrder: number) => Promise<ITagGroup>;
-  updateImageTagGroupAttrs: (id: number, updates: Partial<ITagGroup>) => Promise<void>;
-  deleteImageTagGroup: (id: number) => Promise<void>;
-  assignImageTagToBelongGroup: (tagName: string, groupId: number | null) => Promise<void>;
-
-  // 图像标签管理
-  getImageTags: () => Promise<string[]>;
-  addImageTag: (tag: string) => Promise<void>;
-  addImageTags: (imageId: string, tagNames: string[]) => Promise<void>;
-  addImageTagsBatch: (
-    imageIds: string[],
-    tagNames: string[],
-  ) => Promise<{ success: boolean; added: number }>;
-  updateImage: (id: string, updates: Partial<IImage>) => Promise<void>;
-  renameImageTag: (oldTag: string, newTag: string) => Promise<void>;
-  deleteImageTag: (tag: string) => Promise<void>;
-  deleteImageTags: (tags: string[]) => Promise<{ success: boolean; deleted: number }>;
-  getImagesByTag: (tagName: string) => Promise<string[]>;
-  removeTagFromImage: (imageId: string, tagName: string) => Promise<boolean>;
-
-  // 图像回收站
-  getImageTrash: () => Promise<Array<IImage & { deletedAt: string; type: string }>>;
-  softDeleteImage: (id: string) => Promise<void>;
-  softDeleteImages: (ids: string[]) => Promise<{ success: boolean; deleted: number }>;
-  batchFavoriteImages: (ids: string[]) => Promise<{ success: boolean; updated: number }>;
-  restoreImageFromTrash: (id: string) => Promise<void>;
-  restoreAllImages: () => Promise<void>;
-  permanentDeleteImage: (id: string) => Promise<boolean>;
-  emptyImageTrash: () => Promise<void>;
-
-  // 导出孤儿文件
-  scanOrphanFiles: () => Promise<IScanOrphanFilesResult>;
-  exportOrphanFiles: (exportDir: string) => Promise<IExportOrphanFilesResult>;
-
-  // 共享标签
-  getAllTags: () => Promise<string[]>;
-
-  // 统计
-  getStatistics: (isSafeOnly: boolean) => Promise<import("../shared/domain/database-types.js").Statistics>;
-
-  // 调试日志
+interface LogMethods {
   logDebug: (component: string, message: string, data?: unknown) => void;
   logError: (component: string, message: string, data?: unknown) => void;
   logWarn: (component: string, message: string, data?: unknown) => void;
   logInfo: (component: string, message: string, data?: unknown) => void;
+}
 
-  // 完整备份
-  exportFullBackup: () => Promise<
-    { success: boolean; filePath: string; stats: IBackupStats } | { cancelled: true }
-  >;
-  importFullBackup: () => Promise<
-    { success: boolean; manifest: IBackupManifest; oldDataDir: string } | { cancelled: true }
-  >;
+interface EventMethods {
+  onRebuildThumbnailsProgress: (callback: (progress: RebuildThumbnailsProgress) => void) => void;
+  offRebuildThumbnailsProgress: (callback: (progress: RebuildThumbnailsProgress) => void) => void;
   onBackupProgress: (callback: BackupProgressCallback) => void;
   offBackupProgress: (callback: BackupProgressCallback) => void;
 }
+
+// 桥接面 = IpcApi(除未桥接通道) + 日志便捷方法 + 推送事件订阅
+export type IElectronAPI = Omit<IpcApi, NonBridged> & LogMethods & EventMethods;
 
 // ==================== 日志辅助函数 ====================
 
@@ -292,7 +85,7 @@ interface IElectronAPI {
  * 错误被静默处理，避免日志系统本身导致的问题
  */
 function sendLog(level: LogLevel, component: string, message: string, data?: unknown): void {
-  ipcRenderer.invoke("renderer-log", level, component, message, data).catch(() => {
+  ipcRenderer.invoke(IPC.rendererLog, level, component, message, data).catch(() => {
     // 日志发送失败时静默处理，避免递归错误
   });
 }
@@ -305,160 +98,125 @@ function sendLog(level: LogLevel, component: string, message: string, data?: unk
  */
 contextBridge.exposeInMainWorld("electronAPI", {
   // ==================== 应用信息 ====================
-  getAppVersion: () => ipcRenderer.invoke("get-app-version"),
+  getAppVersion: bridge("getAppVersion"),
 
   // ==================== Prompt 管理 ====================
-  getPrompts: (sortBy: string, sortOrder: string) =>
-    ipcRenderer.invoke("get-prompts", sortBy, sortOrder),
-  getPromptsPaginated: (options: import("../shared/domain/database-types.js").GetPromptsPaginatedOptions) =>
-    ipcRenderer.invoke("get-prompts-paginated", options),
-  getPromptIdsByFilter: (
-    options: Omit<
-      import("../shared/domain/database-types.js").GetPromptsPaginatedOptions,
-      "limit" | "offset"
-    >,
-  ) => ipcRenderer.invoke("get-prompt-ids-by-filter", options),
-  countPromptTags: (options: import("../shared/domain/database-types.js").CountPromptTagsOptions) =>
-    ipcRenderer.invoke("count-prompt-tags", options),
-  countPromptSpecialTags: (options: import("../shared/domain/database-types.js").CountPromptTagsOptions) =>
-    ipcRenderer.invoke("count-prompt-special-tags", options),
-  getPromptById: (id: string) => ipcRenderer.invoke("get-prompt-by-id", id),
-  getPromptsByIds: (ids: string[]) => ipcRenderer.invoke("get-prompts-by-ids", ids),
-  addPrompt: (prompt: Omit<IPrompt, "id">) => ipcRenderer.invoke("add-prompt", prompt),
-  updatePrompt: (id: string, updates: Partial<IPrompt>) =>
-    ipcRenderer.invoke("update-prompt", id, updates),
-  softDeletePrompt: (id: string) => ipcRenderer.invoke("soft-delete-prompt", id),
-  softDeletePrompts: (ids: string[]) => ipcRenderer.invoke("soft-delete-prompts", ids),
-  batchFavoritePrompts: (ids: string[]) => ipcRenderer.invoke("batch-favorite-prompts", ids),
+  getPrompts: bridge("getPrompts"),
+  getPromptsPaginated: bridge("getPromptsPaginated"),
+  getPromptIdsByFilter: bridge("getPromptIdsByFilter"),
+  countPromptTags: bridge("countPromptTags"),
+  countPromptSpecialTags: bridge("countPromptSpecialTags"),
+  getPromptById: bridge("getPromptById"),
+  getPromptsByIds: bridge("getPromptsByIds"),
+  addPrompt: bridge("addPrompt"),
+  updatePrompt: bridge("updatePrompt"),
+  softDeletePrompt: bridge("softDeletePrompt"),
+  softDeletePrompts: bridge("softDeletePrompts"),
+  batchFavoritePrompts: bridge("batchFavoritePrompts"),
 
-  // ==================== 剪贴板 ====================
-  copyToClipboard: (text: string) => ipcRenderer.invoke("copy-to-clipboard", text),
-
-  // ==================== 全屏控制 ====================
-  setFullscreen: (flag: boolean) => ipcRenderer.invoke("set-fullscreen", flag),
+  // ==================== 剪贴板/全屏 ====================
+  copyToClipboard: bridge("copyToClipboard"),
+  setFullscreen: bridge("setFullscreen"),
 
   // ==================== 设置 ====================
-  getDataPath: () => ipcRenderer.invoke("get-data-path"),
-  openDataDirectory: () => ipcRenderer.invoke("open-data-directory"),
-  selectDirectory: () => ipcRenderer.invoke("select-directory"),
-  selectAndInstallFont: () => ipcRenderer.invoke("select-and-install-font"),
-  getInstalledFonts: () => ipcRenderer.invoke("get-installed-fonts"),
+  getDataPath: bridge("getDataPath"),
+  openDataDirectory: bridge("openDataDirectory"),
+  selectDirectory: bridge("selectDirectory"),
+  selectAndInstallFont: bridge("selectAndInstallFont"),
+  getInstalledFonts: bridge("getInstalledFonts"),
 
   // ==================== 图像文件操作 ====================
-  saveImageFile: (sourcePath: string, fileName: string) =>
-    ipcRenderer.invoke("save-image-file", sourcePath, fileName),
-  replaceImage: (oldImageId: string) => ipcRenderer.invoke("replace-image", oldImageId),
-  getImagePath: (relativePath: string) => ipcRenderer.invoke("get-image-path", relativePath),
-  getImagesPaths: (relativePaths: string[]) =>
-    ipcRenderer.invoke("get-images-paths", relativePaths),
-  openImageLocation: (relativePath: string) =>
-    ipcRenderer.invoke("open-image-location", relativePath),
-  openImageFiles: () => ipcRenderer.invoke("dialog:open-image-files"),
-  clearAllData: () => ipcRenderer.invoke("clear-all-data"),
-  getImages: (sortBy: string, sortOrder: string) =>
-    ipcRenderer.invoke("get-images", sortBy, sortOrder),
-  getImagesPaginated: (options: import("../shared/domain/database-types.js").GetImagesPaginatedOptions) =>
-    ipcRenderer.invoke("get-images-paginated", options),
-  getImageIdsByFilter: (
-    options: Omit<
-      import("../shared/domain/database-types.js").GetImagesPaginatedOptions,
-      "limit" | "offset"
-    >,
-  ) => ipcRenderer.invoke("get-image-ids-by-filter", options),
-  countImageTags: (options: import("../shared/domain/database-types.js").CountImageTagsOptions) =>
-    ipcRenderer.invoke("count-image-tags", options),
-  countImageSpecialTags: (options: import("../shared/domain/database-types.js").CountImageTagsOptions) =>
-    ipcRenderer.invoke("count-image-special-tags", options),
-  getImagesByIds: (ids: string[]) => ipcRenderer.invoke("get-images-by-ids", ids),
-  getImageById: (imageId: string) => ipcRenderer.invoke("get-image-by-id", imageId),
+  saveImageFile: bridge("saveImageFile"),
+  replaceImage: bridge("replaceImage"),
+  getImagePath: bridge("getImagePath"),
+  getImagesPaths: bridge("getImagesPaths"),
+  openImageLocation: bridge("openImageLocation"),
+  openImageFiles: bridge("openImageFiles"),
+  clearAllData: bridge("clearAllData"),
+  ensureImageThumbnails: bridge("ensureImageThumbnails"),
+  rebuildThumbnails: bridge("rebuildThumbnails"),
+
+  // ==================== 图像管理 ====================
+  getImages: bridge("getImages"),
+  getImagesPaginated: bridge("getImagesPaginated"),
+  getImageIdsByFilter: bridge("getImageIdsByFilter"),
+  countImageTags: bridge("countImageTags"),
+  countImageSpecialTags: bridge("countImageSpecialTags"),
+  getImagesByIds: bridge("getImagesByIds"),
+  getImageById: bridge("getImageById"),
+  updateImage: bridge("updateImage"),
 
   // ==================== 提示词回收站 ====================
-  getPromptTrash: () => ipcRenderer.invoke("get-prompt-trash"),
-  restorePromptFromTrash: (id: string) => ipcRenderer.invoke("restore-prompt-from-trash", id),
-  restoreAllPrompts: () => ipcRenderer.invoke("restore-all-prompts"),
-  permanentDeletePrompt: (id: string) => ipcRenderer.invoke("permanent-delete-prompt", id),
-  emptyPromptTrash: () => ipcRenderer.invoke("empty-prompt-trash"),
+  getPromptTrash: bridge("getPromptTrash"),
+  restorePromptFromTrash: bridge("restorePromptFromTrash"),
+  restoreAllPrompts: bridge("restoreAllPrompts"),
+  permanentDeletePrompt: bridge("permanentDeletePrompt"),
+  emptyPromptTrash: bridge("emptyPromptTrash"),
 
   // ==================== 应用控制 ====================
-  relaunchApp: (oldDataDir?: string) => ipcRenderer.invoke("relaunch-app", oldDataDir),
+  relaunchApp: bridge("relaunchApp"),
 
-  // ==================== 提示词标签组管理 ====================
-  getPromptTagGroups: () => ipcRenderer.invoke("get-prompt-tag-groups"),
-  createPromptTagGroup: (name: string, sortOrder: number) =>
-    ipcRenderer.invoke("create-prompt-tag-group", name, sortOrder),
-  updatePromptTagGroupAttrs: (id: number, updates: Partial<ITagGroup>) =>
-    ipcRenderer.invoke("update-prompt-tag-group-attrs", id, updates),
-  deletePromptTagGroup: (id: number) => ipcRenderer.invoke("delete-prompt-tag-group", id),
-  assignPromptTagToBelongGroup: (tagName: string, groupId: number | null) =>
-    ipcRenderer.invoke("assign-prompt-tag-to-belong-group", tagName, groupId),
+  // ==================== 提示词标签组 ====================
+  getPromptTagGroups: bridge("getPromptTagGroups"),
+  createPromptTagGroup: bridge("createPromptTagGroup"),
+  updatePromptTagGroupAttrs: bridge("updatePromptTagGroupAttrs"),
+  deletePromptTagGroup: bridge("deletePromptTagGroup"),
+  assignPromptTagToBelongGroup: bridge("assignPromptTagToBelongGroup"),
 
-  // 提示词标签管理
-  getPromptTags: () => ipcRenderer.invoke("get-prompt-tags"),
-  addPromptTag: (tag: string) => ipcRenderer.invoke("add-prompt-tag", tag),
-  addPromptTags: (promptId: string, tagNames: string[]) =>
-    ipcRenderer.invoke("add-prompt-tags", promptId, tagNames),
-  addPromptTagsBatch: (promptIds: string[], tagNames: string[]) =>
-    ipcRenderer.invoke("add-prompt-tags-batch", promptIds, tagNames),
-  deletePromptTag: (tag: string) => ipcRenderer.invoke("delete-prompt-tag", tag),
-  deletePromptTags: (tags: string[]) => ipcRenderer.invoke("delete-prompt-tags", tags),
-  renamePromptTag: (oldTag: string, newTag: string) =>
-    ipcRenderer.invoke("rename-prompt-tag", oldTag, newTag),
-  getPromptsByTag: (tagName: string) => ipcRenderer.invoke("get-prompts-by-tag", tagName),
-  removeTagFromPrompt: (promptId: string, tagName: string) =>
-    ipcRenderer.invoke("remove-tag-from-prompt", promptId, tagName),
+  // ==================== 提示词标签 ====================
+  getPromptTags: bridge("getPromptTags"),
+  addPromptTag: bridge("addPromptTag"),
+  addPromptTags: bridge("addPromptTags"),
+  addPromptTagsBatch: bridge("addPromptTagsBatch"),
+  deletePromptTag: bridge("deletePromptTag"),
+  deletePromptTags: bridge("deletePromptTags"),
+  renamePromptTag: bridge("renamePromptTag"),
+  getPromptsByTag: bridge("getPromptsByTag"),
+  removeTagFromPrompt: bridge("removeTagFromPrompt"),
 
-  // 图像标签组管理
-  getImageTagGroups: () => ipcRenderer.invoke("get-image-tag-groups"),
-  createImageTagGroup: (name: string, sortOrder: number) =>
-    ipcRenderer.invoke("create-image-tag-group", name, sortOrder),
-  updateImageTagGroupAttrs: (id: number, updates: Partial<ITagGroup>) =>
-    ipcRenderer.invoke("update-image-tag-group-attrs", id, updates),
-  deleteImageTagGroup: (id: number) => ipcRenderer.invoke("delete-image-tag-group", id),
-  assignImageTagToBelongGroup: (tagName: string, groupId: number | null) =>
-    ipcRenderer.invoke("assign-image-tag-to-belong-group", tagName, groupId),
+  // ==================== 图像标签组 ====================
+  getImageTagGroups: bridge("getImageTagGroups"),
+  createImageTagGroup: bridge("createImageTagGroup"),
+  updateImageTagGroupAttrs: bridge("updateImageTagGroupAttrs"),
+  deleteImageTagGroup: bridge("deleteImageTagGroup"),
+  assignImageTagToBelongGroup: bridge("assignImageTagToBelongGroup"),
 
-  // ==================== 图像标签管理 ====================
-  getImageTags: () => ipcRenderer.invoke("get-image-tags"),
-  addImageTag: (tag: string) => ipcRenderer.invoke("add-image-tag", tag),
-  addImageTags: (imageId: string, tagNames: string[]) =>
-    ipcRenderer.invoke("add-image-tags", imageId, tagNames),
-  addImageTagsBatch: (imageIds: string[], tagNames: string[]) =>
-    ipcRenderer.invoke("add-image-tags-batch", imageIds, tagNames),
-  updateImage: (id: string, updates: Partial<IImage>) =>
-    ipcRenderer.invoke("update-image", id, updates),
-  renameImageTag: (oldTag: string, newTag: string) =>
-    ipcRenderer.invoke("rename-image-tag", oldTag, newTag),
-  deleteImageTag: (tag: string) => ipcRenderer.invoke("delete-image-tag", tag),
-  deleteImageTags: (tags: string[]) => ipcRenderer.invoke("delete-image-tags", tags),
-  getImagesByTag: (tagName: string) => ipcRenderer.invoke("get-images-by-tag", tagName),
-  removeTagFromImage: (imageId: string, tagName: string) =>
-    ipcRenderer.invoke("remove-tag-from-image", imageId, tagName),
+  // ==================== 图像标签 ====================
+  getImageTags: bridge("getImageTags"),
+  addImageTag: bridge("addImageTag"),
+  addImageTags: bridge("addImageTags"),
+  addImageTagsBatch: bridge("addImageTagsBatch"),
+  deleteImageTag: bridge("deleteImageTag"),
+  deleteImageTags: bridge("deleteImageTags"),
+  renameImageTag: bridge("renameImageTag"),
+  getImagesByTag: bridge("getImagesByTag"),
+  removeTagFromImage: bridge("removeTagFromImage"),
 
   // ==================== 图像回收站 ====================
-  getImageTrash: () => ipcRenderer.invoke("get-image-trash"),
-  softDeleteImage: (id: string) => ipcRenderer.invoke("soft-delete-image", id),
-  softDeleteImages: (ids: string[]) => ipcRenderer.invoke("soft-delete-images", ids),
-  batchFavoriteImages: (ids: string[]) => ipcRenderer.invoke("batch-favorite-images", ids),
-  restoreImageFromTrash: (id: string) => ipcRenderer.invoke("restore-image-from-trash", id),
-  restoreAllImages: () => ipcRenderer.invoke("restore-all-images"),
-  permanentDeleteImage: (id: string) => ipcRenderer.invoke("permanent-delete-image", id),
-  emptyImageTrash: () => ipcRenderer.invoke("empty-image-trash"),
+  getImageTrash: bridge("getImageTrash"),
+  softDeleteImage: bridge("softDeleteImage"),
+  softDeleteImages: bridge("softDeleteImages"),
+  batchFavoriteImages: bridge("batchFavoriteImages"),
+  restoreImageFromTrash: bridge("restoreImageFromTrash"),
+  restoreAllImages: bridge("restoreAllImages"),
+  permanentDeleteImage: bridge("permanentDeleteImage"),
+  emptyImageTrash: bridge("emptyImageTrash"),
 
-  // ==================== 导出孤儿文件 ====================
-  scanOrphanFiles: () => ipcRenderer.invoke("scan-orphan-files"),
-  exportOrphanFiles: (exportDir: string) => ipcRenderer.invoke("export-orphan-files", exportDir),
+  // ==================== 孤儿文件/共享标签/统计 ====================
+  scanOrphanFiles: bridge("scanOrphanFiles"),
+  exportOrphanFiles: bridge("exportOrphanFiles"),
+  getAllTags: bridge("getAllTags"),
+  getStatistics: bridge("getStatistics"),
 
-  // ==================== 共享标签 ====================
-  getAllTags: () => ipcRenderer.invoke("get-all-tags"),
-
-  // ==================== 统计 ====================
-  getStatistics: (isSafeOnly: boolean) => ipcRenderer.invoke("get-statistics", isSafeOnly),
+  // ==================== 完整备份 ====================
+  exportFullBackup: bridge("exportFullBackup"),
+  importFullBackup: bridge("importFullBackup"),
 
   // ==================== 调试日志 ====================
-  logDebug: (component: string, message: string, data?: unknown) => {
+  logDebug: (component, message, data?) => {
     sendLog("debug", component, message, data);
   },
-  logError: (component: string, message: string, data?: unknown) => {
+  logError: (component, message, data?) => {
     if (data !== undefined) {
       console.error(`[${component}] ${message}`, data);
     } else {
@@ -466,67 +224,57 @@ contextBridge.exposeInMainWorld("electronAPI", {
     }
     sendLog("error", component, message, data);
   },
-  logWarn: (component: string, message: string, data?: unknown) => {
+  logWarn: (component, message, data?) => {
     sendLog("warn", component, message, data);
   },
-  logInfo: (component: string, message: string, data?: unknown) => {
+  logInfo: (component, message, data?) => {
     sendLog("info", component, message, data);
   },
-
-  // ==================== 完整备份 ====================
-  exportFullBackup: () => ipcRenderer.invoke("export-full-backup"),
-  importFullBackup: () => ipcRenderer.invoke("import-full-backup"),
-  ensureImageThumbnails: (ids: string[]) => ipcRenderer.invoke("ensure-image-thumbnails", ids),
-  rebuildThumbnails: () => ipcRenderer.invoke("rebuild-thumbnails"),
-  onRebuildThumbnailsProgress: (
-    callback: (progress: { current: number; total: number; fileName: string }) => void,
-  ) => {
-    const wrappedCallback = (
-      _event: IpcRendererEvent,
-      progress: { current: number; total: number; fileName: string },
-    ) => callback(progress);
+  onRebuildThumbnailsProgress: (callback) => {
+    const wrappedCallback = (_event: IpcRendererEvent, progress: RebuildThumbnailsProgress) =>
+      callback(progress);
     rebuildThumbnailsProgressCallbacks.set(callback, wrappedCallback);
-    ipcRenderer.on("rebuild-thumbnails-progress", wrappedCallback);
+    ipcRenderer.on(IPC_EVENTS.rebuildThumbnailsProgress, wrappedCallback);
   },
-  offRebuildThumbnailsProgress: (
-    callback: (progress: { current: number; total: number; fileName: string }) => void,
-  ) => {
+  offRebuildThumbnailsProgress: (callback) => {
     const wrappedCallback = rebuildThumbnailsProgressCallbacks.get(callback);
     if (wrappedCallback) {
-      ipcRenderer.removeListener("rebuild-thumbnails-progress", wrappedCallback);
+      ipcRenderer.removeListener(IPC_EVENTS.rebuildThumbnailsProgress, wrappedCallback);
       rebuildThumbnailsProgressCallbacks.delete(callback);
     }
   },
-  onBackupProgress: (callback: BackupProgressCallback) => {
+  onBackupProgress: (callback) => {
     const wrappedCallback = (_event: IpcRendererEvent, progress: IBackupProgress) =>
       callback(progress);
-    // 使用 WeakMap 存储包装后的回调，避免内存泄漏
     backupProgressCallbacks.set(callback, wrappedCallback);
-    ipcRenderer.on("backup-progress", wrappedCallback);
+    ipcRenderer.on(IPC_EVENTS.backupProgress, wrappedCallback);
   },
-  offBackupProgress: (callback: BackupProgressCallback) => {
+  offBackupProgress: (callback) => {
     const wrappedCallback = backupProgressCallbacks.get(callback);
     if (wrappedCallback) {
-      ipcRenderer.removeListener("backup-progress", wrappedCallback);
+      ipcRenderer.removeListener(IPC_EVENTS.backupProgress, wrappedCallback);
       backupProgressCallbacks.delete(callback);
     }
   },
-} as IElectronAPI);
+} satisfies IElectronAPI);
 
 // 导出类型供渲染进程使用
+export type { BackupProgressCallback };
 export type {
-  IElectronAPI,
   IPrompt,
   IImage,
-  ITagGroup,
-  IBackupProgress,
   IOrphanFile,
   IScanOrphanFilesResult,
+  IExportOrphanFilesResult,
+} from "../types/entities.js";
+export type {
+  ITagGroup,
+  IBackupProgress,
   LogLevel,
-  BackupProgressCallback,
   IBackupStats,
   IBackupManifest,
-};
+  IpcApi,
+} from "../shared/ipc-contract.js";
 
 // 全局声明
 declare global {

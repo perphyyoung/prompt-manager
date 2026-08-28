@@ -18,19 +18,19 @@ export class PromptTrashHandler {
     return window.electronAPI.getPromptTrash();
   }
 
-  async restoreItem(itemId: string): Promise<void> {
+  async restoreItem(itemId: string): Promise<boolean> {
     return window.electronAPI.restorePromptFromTrash(itemId);
   }
 
-  async restoreAllItems(): Promise<void> {
+  async restoreAllItems(): Promise<boolean> {
     return window.electronAPI.restoreAllPrompts();
   }
 
-  async deleteItem(itemId: string): Promise<void> {
+  async deleteItem(itemId: string): Promise<boolean> {
     return window.electronAPI.permanentDeletePrompt(itemId);
   }
 
-  async clearAllItems(): Promise<void> {
+  async clearAllItems(): Promise<boolean> {
     return window.electronAPI.emptyPromptTrash();
   }
 

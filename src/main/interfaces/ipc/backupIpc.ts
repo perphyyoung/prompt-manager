@@ -23,10 +23,11 @@ import {
   scanOrphanFilesInternal,
   sendBackupProgress,
 } from "../../infrastructure/backup.js";
+import { handleTyped } from "./handleTyped.js";
 
 export function registerBackupIpc() {
   // 扫描孤儿文件
-  ipcMain.handle("scan-orphan-files", async () => {
+  handleTyped("scanOrphanFiles", async () => {
     try {
       return await scanOrphanFilesInternal();
     } catch (error) {
@@ -36,7 +37,7 @@ export function registerBackupIpc() {
   });
 
   // 导出并删除孤儿文件：原图像导出后删除，缩略图直接删除
-  ipcMain.handle("export-orphan-files", async (event, exportDir) => {
+  handleTyped("exportOrphanFiles", async (event, exportDir) => {
     try {
       // 先扫描孤儿文件
       const scanResult = await scanOrphanFilesInternal();
@@ -101,7 +102,7 @@ export function registerBackupIpc() {
   });
 
   // 完整备份导出
-  ipcMain.handle("export-full-backup", async () => {
+  handleTyped("exportFullBackup", async () => {
     try {
       const mainWindow = getMainWindow();
       if (!mainWindow) throw new Error("Main window is not available");
@@ -227,7 +228,7 @@ export function registerBackupIpc() {
   });
 
   // 完整备份导入
-  ipcMain.handle("import-full-backup", async () => {
+  handleTyped("importFullBackup", async () => {
     try {
       const mainWindow = getMainWindow();
       if (!mainWindow) throw new Error("Main window is not available");

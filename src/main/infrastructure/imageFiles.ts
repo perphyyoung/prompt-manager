@@ -143,7 +143,7 @@ export async function regenerateAllThumbnails(
 
     if (total === 0) {
       logInfo("Main", "No images to regenerate thumbnails");
-      return { success: true, regenerated: 0, total: 0 };
+      return { success: true, regenerated: 0, failed: 0, total: 0 };
     }
 
     logInfo(

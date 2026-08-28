@@ -55,9 +55,9 @@ export function addTagsToCache(tagNames: string[]) {
 /**
  * 获取标签缓存（未初始化时先加载）
  */
-export async function getAllTagsCached(): Promise<string[] | null> {
+export async function getAllTagsCached(): Promise<string[]> {
   if (!allTagsCache) {
     await initTagsCache();
   }
-  return allTagsCache;
+  return allTagsCache ?? [];
 }

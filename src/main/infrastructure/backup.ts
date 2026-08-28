@@ -10,6 +10,7 @@ import { promises as fs } from "fs";
 import * as db from "../database.js";
 import { localTime } from "../../utils/index.js";
 import { logError } from "../mainLogger.js";
+import { IPC_EVENTS } from "../../shared/ipc-contract.js";
 import { getCurrentDataDir, getMainWindow } from "../runtime.js";
 import { getImagesDir, getThumbnailsDir } from "./imageFiles.js";
 
@@ -230,7 +231,7 @@ export function sendBackupProgress(progress: {
 }) {
   const mainWindow = getMainWindow();
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("backup-progress", progress);
+    mainWindow.webContents.send(IPC_EVENTS.backupProgress, progress);
   }
 }
 

@@ -11,21 +11,22 @@ import * as db from "../../database.js";
 import { logInfo, logError, logWarn, logDebug } from "../../mainLogger.js";
 import { getCurrentDataDir, getDataDir, getMainWindow } from "../../runtime.js";
 import { relaunchApp } from "../../bootstrap.js";
+import { handleTyped } from "./handleTyped.js";
 
 export function registerSystemIpc() {
   // 重启应用
-  ipcMain.handle("relaunch-app", async (event, oldDataDir) => {
+  handleTyped("relaunchApp", async (event, oldDataDir) => {
     await relaunchApp(oldDataDir);
   });
 
   // 复制到剪贴板
-  ipcMain.handle("copy-to-clipboard", async (event, text) => {
+  handleTyped("copyToClipboard", async (event, text) => {
     clipboard.writeText(text);
     return true;
   });
 
   // 设置全屏模式
-  ipcMain.handle("set-fullscreen", async (event, flag) => {
+  handleTyped("setFullscreen", async (event, flag) => {
     const mainWindow = getMainWindow();
     if (mainWindow) {
       mainWindow.setFullScreen(flag);
@@ -41,17 +42,17 @@ export function registerSystemIpc() {
   });
 
   // 获取数据目录路径
-  ipcMain.handle("get-data-path", async () => {
+  handleTyped("getDataPath", async () => {
     return getDataDir();
   });
 
   // 打开数据目录
-  ipcMain.handle("open-data-directory", async () => {
+  handleTyped("openDataDirectory", async () => {
     await shell.openPath(getCurrentDataDir());
   });
 
   // 选择目录（通用）
-  ipcMain.handle("select-directory", async () => {
+  handleTyped("selectDirectory", async () => {
     const result = await dialog.showOpenDialog({
       title: "选择导出目录",
       properties: ["openDirectory"],
@@ -66,7 +67,7 @@ export function registerSystemIpc() {
   });
 
   // 清空所有数据
-  ipcMain.handle("clear-all-data", async () => {
+  handleTyped("clearAllData", async () => {
     try {
       return await db.clearAllData(getCurrentDataDir());
     } catch (error) {
@@ -76,7 +77,7 @@ export function registerSystemIpc() {
   });
 
   // 获取统计数据（SQL 聚合）
-  ipcMain.handle("get-statistics", async (event, isSafeOnly: boolean) => {
+  handleTyped("getStatistics", async (event, isSafeOnly: boolean) => {
     try {
       return await db.getStatistics(isSafeOnly);
     } catch (error) {
@@ -86,7 +87,7 @@ export function registerSystemIpc() {
   });
 
   // 优化数据库
-  ipcMain.handle("optimize-database", async () => {
+  handleTyped("optimizeDatabase", async () => {
     try {
       return await db.optimizeDatabase();
     } catch (error) {
@@ -96,12 +97,12 @@ export function registerSystemIpc() {
   });
 
   // 获取应用版本号
-  ipcMain.handle("get-app-version", async () => {
+  handleTyped("getAppVersion", async () => {
     return app.getVersion();
   });
 
   // 渲染进程日志（通过 IPC 写入 debug.log）
-  ipcMain.handle("renderer-log", async (event, level, component, message, data) => {
+  handleTyped("rendererLog", async (event, level, component, message, data) => {
     const logFn =
       level === "error"
         ? logError
@@ -115,7 +116,7 @@ export function registerSystemIpc() {
   });
 
   // 选择并安装自定义字体文件
-  ipcMain.handle("select-and-install-font", async () => {
+  handleTyped("selectAndInstallFont", async () => {
     try {
       // 打开字体文件选择对话框
       const result = await dialog.showOpenDialog({
@@ -155,7 +156,7 @@ export function registerSystemIpc() {
   });
 
   // 获取已安装的自定义字体列表
-  ipcMain.handle("get-installed-fonts", async () => {
+  handleTyped("getInstalledFonts", async () => {
     try {
       const fontsDir = path.join(getCurrentDataDir(), "fonts");
 

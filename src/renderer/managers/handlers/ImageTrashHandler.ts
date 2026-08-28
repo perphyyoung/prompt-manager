@@ -18,11 +18,11 @@ export class ImageTrashHandler {
     return window.electronAPI.getImageTrash();
   }
 
-  async restoreItem(itemId: string): Promise<void> {
+  async restoreItem(itemId: string): Promise<boolean> {
     return window.electronAPI.restoreImageFromTrash(itemId);
   }
 
-  async restoreAllItems(): Promise<void> {
+  async restoreAllItems(): Promise<boolean> {
     return window.electronAPI.restoreAllImages();
   }
 
@@ -30,7 +30,7 @@ export class ImageTrashHandler {
     await window.electronAPI.permanentDeleteImage(itemId);
   }
 
-  async clearAllItems(): Promise<void> {
+  async clearAllItems(): Promise<boolean> {
     return window.electronAPI.emptyImageTrash();
   }
 

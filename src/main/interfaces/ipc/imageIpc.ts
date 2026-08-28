@@ -15,15 +15,19 @@ import {
   regenerateAllThumbnails,
   saveImageFile,
 } from "../../infrastructure/imageFiles.js";
+import { handleTyped } from "./handleTyped.js";
+import { IPC_EVENTS, type IpcApi } from "../../../shared/ipc-contract.js";
+import type { IImage } from "../../../types/entities.js";
+import type { UpdateImageParams } from "../../../shared/domain/database-types.js";
 
 export function registerImageIpc() {
   // 保存图像文件
-  ipcMain.handle("save-image-file", async (event, sourcePath, fileName) => {
+  handleTyped("saveImageFile", async (event, sourcePath, fileName) => {
     return await saveImageFile(sourcePath, fileName);
   });
 
   // 替换图像：选择新图像文件，软删除旧图并迁移关联关系
-  ipcMain.handle("replace-image", async (event, oldImageId: string) => {
+  handleTyped("replaceImage", async (event, oldImageId: string) => {
     try {
       // 测试 mock 优先
       const mockPath = (global as any).__testMockedReplaceImageFilePath as string | undefined;
@@ -67,7 +71,7 @@ export function registerImageIpc() {
       // 返回新图像完整信息及关联提示词ID列表（用于前端刷新缓存）
       const newImage = await db.getImageById(saveResult.id);
       const relatedPromptIds = (newImage?.promptRefs || []).map((ref) => String(ref.promptId));
-      return { success: true, image: newImage, relatedPromptIds };
+      return { success: true, image: newImage, relatedPromptIds } as unknown as IpcApi["replaceImage"] extends (...args: never[]) => infer R ? R : never;
     } catch (error) {
       logError("Main", "Replace image error:", error);
       throw error;
@@ -75,7 +79,7 @@ export function registerImageIpc() {
   });
 
   // 打开图像文件对话框（支持多选）
-  ipcMain.handle("dialog:open-image-files", async () => {
+  handleTyped("openImageFiles", async () => {
     // 测试 mock 优先（支持单路径或多路径）
     const mockPath = (global as any).__testMockedImageFilePath as string | undefined;
     const mockPaths = (global as any).__testMockedImageFilePaths as string[] | undefined;
@@ -117,9 +121,9 @@ export function registerImageIpc() {
   });
 
   // 获取所有图像信息
-  ipcMain.handle("get-images", async (event, sortBy, sortOrder) => {
+  handleTyped("getImages", async (event, sortBy, sortOrder) => {
     try {
-      return await db.getImages(sortBy, sortOrder);
+      return (await db.getImages(sortBy, sortOrder)) as unknown as IImage[];
     } catch (error) {
       logError("Main", "Get images error:", error);
       throw error;
@@ -127,7 +131,7 @@ export function registerImageIpc() {
   });
 
   // 校验并按需重建缩略图（懒自愈）：缩略图文件缺失且原图存在时按需生成并更新 DB
-  ipcMain.handle("ensure-image-thumbnails", async (event, ids: string[]) => {
+  handleTyped("ensureImageThumbnails", async (event, ids: string[]) => {
     try {
       const fixed: Array<{ id: string; relativePath: string; fullPath: string }> = [];
       const missing: string[] = [];
@@ -185,11 +189,11 @@ export function registerImageIpc() {
   });
 
   // 全量重建缩略图（设置页手动触发），进度经 sender 推送
-  ipcMain.handle("rebuild-thumbnails", async (event) => {
+  handleTyped("rebuildThumbnails", async (event) => {
     try {
       return await regenerateAllThumbnails((current, total, fileName) => {
         if (!event.sender.isDestroyed()) {
-          event.sender.send("rebuild-thumbnails-progress", { current, total, fileName });
+          event.sender.send(IPC_EVENTS.rebuildThumbnailsProgress, { current, total, fileName });
         }
       });
     } catch (error) {
@@ -199,9 +203,9 @@ export function registerImageIpc() {
   });
 
   // 分页获取图像信息
-  ipcMain.handle("get-images-paginated", async (event, options) => {
+  handleTyped("getImagesPaginated", async (event, options) => {
     try {
-      return await db.getImagesPaginated(options);
+      return (await db.getImagesPaginated(options)) as unknown as { items: IImage[]; totalCount: number };
     } catch (error) {
       logError("Main", "Get images paginated error:", error);
       throw error;
@@ -209,7 +213,7 @@ export function registerImageIpc() {
   });
 
   // 获取满足筛选条件的全部图像 id（用于"全选"批量操作）
-  ipcMain.handle("get-image-ids-by-filter", async (event, options) => {
+  handleTyped("getImageIdsByFilter", async (event, options) => {
     try {
       return await db.getImageIdsByFilter(options);
     } catch (error) {
@@ -219,7 +223,7 @@ export function registerImageIpc() {
   });
 
   // 统计图像标签数量
-  ipcMain.handle("count-image-tags", async (event, options) => {
+  handleTyped("countImageTags", async (event, options) => {
     try {
       return await db.countImageTags(options);
     } catch (error) {
@@ -229,7 +233,7 @@ export function registerImageIpc() {
   });
 
   // 统计图像特殊标签数量
-  ipcMain.handle("count-image-special-tags", async (event, options) => {
+  handleTyped("countImageSpecialTags", async (event, options) => {
     try {
       return await db.countImageSpecialTags(options);
     } catch (error) {
@@ -239,9 +243,9 @@ export function registerImageIpc() {
   });
 
   // 根据 ID 批量获取图像信息
-  ipcMain.handle("get-images-by-ids", async (event, ids) => {
+  handleTyped("getImagesByIds", async (event, ids) => {
     try {
-      return await db.getImagesByIds(ids);
+      return (await db.getImagesByIds(ids)) as unknown as IImage[];
     } catch (error) {
       logError("Main", "Get images by ids error:", error);
       throw error;
@@ -249,9 +253,9 @@ export function registerImageIpc() {
   });
 
   // 根据 ID 获取图像信息
-  ipcMain.handle("get-image-by-id", async (event, imageId) => {
+  handleTyped("getImageById", async (event, imageId) => {
     try {
-      return await db.getImageById(imageId);
+      return (await db.getImageById(imageId)) as unknown as IImage | null;
     } catch (error) {
       logError("Main", "Get image by id error:", error);
       throw error;
@@ -259,7 +263,7 @@ export function registerImageIpc() {
   });
 
   // 获取提示词关联的图像
-  ipcMain.handle("get-prompt-images", async (event, promptId) => {
+  handleTyped("getPromptImages", async (event, promptId) => {
     try {
       return await db.getPromptImages(promptId);
     } catch (error) {
@@ -269,9 +273,9 @@ export function registerImageIpc() {
   });
 
   // 更新图像
-  ipcMain.handle("update-image", async (event, id, updates) => {
+  handleTyped("updateImage", async (event, id, updates) => {
     try {
-      return await db.updateImage(id, updates);
+      await db.updateImage(id, updates as unknown as UpdateImageParams);
     } catch (error) {
       logError("Main", "Update image error:", error);
       throw error;
@@ -279,7 +283,7 @@ export function registerImageIpc() {
   });
 
   // 批量切换图像收藏状态
-  ipcMain.handle("batch-favorite-images", async (event, ids) => {
+  handleTyped("batchFavoriteImages", async (event, ids) => {
     try {
       return await db.batchFavoriteImages(ids);
     } catch (error) {
@@ -289,7 +293,7 @@ export function registerImageIpc() {
   });
 
   // 获取图像完整路径
-  ipcMain.handle("get-image-path", async (event, relativePath) => {
+  handleTyped("getImagePath", async (event, relativePath) => {
     if (!relativePath || typeof relativePath !== "string") {
       throw new Error("Invalid relativePath: " + relativePath);
     }
@@ -297,13 +301,13 @@ export function registerImageIpc() {
   });
 
   // 批量获取图像完整路径
-  ipcMain.handle("get-images-paths", async (event, relativePaths: string[]) => {
+  handleTyped("getImagesPaths", async (event, relativePaths: string[]) => {
     const dataDir = getCurrentDataDir();
     return relativePaths.map((p) => (p ? path.join(dataDir, p) : ""));
   });
 
   // 打开图像本地保存位置
-  ipcMain.handle("open-image-location", async (event, relativePath: string) => {
+  handleTyped("openImageLocation", async (event, relativePath: string) => {
     if (!relativePath || typeof relativePath !== "string") {
       throw new Error("Invalid relativePath: " + relativePath);
     }
@@ -312,7 +316,7 @@ export function registerImageIpc() {
   });
 
   // 选择图像文件
-  ipcMain.handle("select-image-files", async () => {
+  handleTyped("selectImageFiles", async () => {
     const result = await dialog.showOpenDialog({
       title: "选择图像",
       properties: ["openFile", "multiSelections"],

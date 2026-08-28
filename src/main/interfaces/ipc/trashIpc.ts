@@ -4,20 +4,22 @@
  * 从 main/index.ts 原样迁出，逻辑未改动。
  */
 
-import { ipcMain } from "electron";
+
 import * as db from "../../database.js";
 import { TrashType } from "../../../shared/domain/trashType.ts";
+import type { IPrompt, IImage } from "../../../types/entities.js";
 import { logError } from "../../mainLogger.js";
 import { getCurrentDataDir } from "../../runtime.js";
+import { handleTyped } from "./handleTyped.js";
 
 export function registerTrashIpc() {
   // 软删除提示词（移动到回收站）
-  ipcMain.handle("soft-delete-prompt", async (event, id) => {
+  handleTyped("softDeletePrompt", async (event, id) => {
     return await db.deletePrompt(id);
   });
 
   // 批量软删除提示词
-  ipcMain.handle("soft-delete-prompts", async (event, ids) => {
+  handleTyped("softDeletePrompts", async (event, ids) => {
     try {
       return await db.softDeletePrompts(ids);
     } catch (error) {
@@ -27,7 +29,7 @@ export function registerTrashIpc() {
   });
 
   // 获取提示词回收站
-  ipcMain.handle("get-prompt-trash", async () => {
+  handleTyped("getPromptTrash", async () => {
     try {
       const deletedPrompts = await db.getDeletedPrompts();
 
@@ -35,7 +37,7 @@ export function registerTrashIpc() {
       return deletedPrompts.map((prompt) => ({
         ...prompt,
         type: TrashType.PROMPT,
-      }));
+      })) as unknown as Array<IPrompt & { deletedAt: string; type: string }>;
     } catch (error) {
       logError("Main", "Get prompt trash error:", error);
       throw error;
@@ -43,7 +45,7 @@ export function registerTrashIpc() {
   });
 
   // 从提示词回收站恢复
-  ipcMain.handle("restore-prompt-from-trash", async (event, id) => {
+  handleTyped("restorePromptFromTrash", async (event, id) => {
     try {
       await db.restorePrompt(id);
       return true;
@@ -54,7 +56,7 @@ export function registerTrashIpc() {
   });
 
   // 永久删除提示词
-  ipcMain.handle("permanent-delete-prompt", async (event, id) => {
+  handleTyped("permanentDeletePrompt", async (event, id) => {
     try {
       await db.permanentDeletePrompt(id);
       return true;
@@ -65,7 +67,7 @@ export function registerTrashIpc() {
   });
 
   // 恢复所有提示词
-  ipcMain.handle("restore-all-prompts", async () => {
+  handleTyped("restoreAllPrompts", async () => {
     try {
       await db.restoreAllPrompts();
       return true;
@@ -76,7 +78,7 @@ export function registerTrashIpc() {
   });
 
   // 清空提示词回收站
-  ipcMain.handle("empty-prompt-trash", async () => {
+  handleTyped("emptyPromptTrash", async () => {
     try {
       return await db.emptyPromptTrash();
     } catch (error) {
@@ -88,7 +90,7 @@ export function registerTrashIpc() {
   // ==================== 图像回收站 ====================
 
   // 获取图像回收站列表
-  ipcMain.handle("get-image-trash", async () => {
+  handleTyped("getImageTrash", async () => {
     try {
       const deletedImages = await db.getDeletedImages();
 
@@ -96,7 +98,7 @@ export function registerTrashIpc() {
       return deletedImages.map((image) => ({
         ...image,
         type: TrashType.IMAGE,
-      }));
+      })) as unknown as Array<IImage & { deletedAt: string; type: string }>;
     } catch (error) {
       logError("Main", "Get image trash error:", error);
       throw error;
@@ -104,7 +106,7 @@ export function registerTrashIpc() {
   });
 
   // 从回收站恢复图像
-  ipcMain.handle("restore-image-from-trash", async (event, id) => {
+  handleTyped("restoreImageFromTrash", async (event, id) => {
     try {
       await db.restoreImage(id);
       return true;
@@ -115,7 +117,7 @@ export function registerTrashIpc() {
   });
 
   // 永久删除图像
-  ipcMain.handle("permanent-delete-image", async (event, id) => {
+  handleTyped("permanentDeleteImage", async (event, id) => {
     try {
       await db.permanentDeleteImage(id, getCurrentDataDir());
       return true;
@@ -126,7 +128,7 @@ export function registerTrashIpc() {
   });
 
   // 恢复所有图像
-  ipcMain.handle("restore-all-images", async () => {
+  handleTyped("restoreAllImages", async () => {
     try {
       await db.restoreAllImages();
       return true;
@@ -137,7 +139,7 @@ export function registerTrashIpc() {
   });
 
   // 清空图像回收站
-  ipcMain.handle("empty-image-trash", async () => {
+  handleTyped("emptyImageTrash", async () => {
     try {
       await db.emptyImageTrash(getCurrentDataDir());
       return true;
@@ -148,7 +150,7 @@ export function registerTrashIpc() {
   });
 
   // 软删除图像（移动到回收站）
-  ipcMain.handle("soft-delete-image", async (event, id) => {
+  handleTyped("softDeleteImage", async (event, id) => {
     try {
       await db.softDeleteImage(id);
       return true;
@@ -159,7 +161,7 @@ export function registerTrashIpc() {
   });
 
   // 批量软删除图像
-  ipcMain.handle("soft-delete-images", async (event, ids) => {
+  handleTyped("softDeleteImages", async (event, ids) => {
     try {
       const result = await db.softDeleteImages(ids);
       return result;

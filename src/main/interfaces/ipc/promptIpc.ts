@@ -7,23 +7,27 @@
 import { ipcMain, dialog } from "electron";
 import { promises as fs } from "fs";
 import * as db from "../../database.js";
+import type { IPrompt } from "../../../types/entities.js";
+import type { CreatePromptParams, UpdatePromptParams } from "../../../shared/domain/database-types.js";
 import { generatePromptId } from "../../../utils/idGenerator.js";
 import { logError } from "../../mainLogger.js";
 import { getMainWindow } from "../../runtime.js";
+import { handleTyped } from "./handleTyped.js";
 
 export function registerPromptIpc() {
   // 获取所有 Prompts（含已删除；供 e2e 测试与备份统计使用）
-  ipcMain.handle("get-prompts", async (event, sortBy, sortOrder) => {
-    return await db.getPrompts(sortBy, sortOrder);
+  handleTyped("getPrompts", async (event, sortBy, sortOrder) => {
+    // IPC 边界: 主进程领域模型 Prompt → 线格式 IPrompt(类型统一待办)
+    return (await db.getPrompts(sortBy, sortOrder)) as unknown as IPrompt[];
   });
 
   // 分页获取 Prompts
-  ipcMain.handle("get-prompts-paginated", async (event, options) => {
-    return await db.getPromptsPaginated(options);
+  handleTyped("getPromptsPaginated", async (event, options) => {
+    return (await db.getPromptsPaginated(options)) as unknown as { items: IPrompt[]; totalCount: number };
   });
 
   // 获取满足筛选条件的全部提示词 id（用于"全选"批量操作）
-  ipcMain.handle("get-prompt-ids-by-filter", async (event, options) => {
+  handleTyped("getPromptIdsByFilter", async (event, options) => {
     try {
       return await db.getPromptIdsByFilter(options);
     } catch (error) {
@@ -33,35 +37,35 @@ export function registerPromptIpc() {
   });
 
   // 统计提示词标签数量
-  ipcMain.handle("count-prompt-tags", async (event, options) => {
+  handleTyped("countPromptTags", async (event, options) => {
     return await db.countPromptTags(options);
   });
 
   // 统计提示词特殊标签数量
-  ipcMain.handle("count-prompt-special-tags", async (event, options) => {
+  handleTyped("countPromptSpecialTags", async (event, options) => {
     return await db.countPromptSpecialTags(options);
   });
 
   // 添加 Prompt
-  ipcMain.handle("add-prompt", async (event, prompt) => {
+  handleTyped("addPrompt", async (event, prompt) => {
     const newPrompt = {
-      id: generatePromptId(),
       ...prompt,
-    };
+      id: generatePromptId(),
+    } as unknown as CreatePromptParams;
     // 如果没有提供标题，使用 ID 作为标题
     if (!newPrompt.title) {
       newPrompt.title = newPrompt.id;
     }
-    return await db.addPrompt(newPrompt);
+    return (await db.addPrompt(newPrompt)) as unknown as IPrompt;
   });
 
   // 更新 Prompt
-  ipcMain.handle("update-prompt", async (event, id, updates) => {
-    return await db.updatePrompt(id, updates);
+  handleTyped("updatePrompt", async (event, id, updates) => {
+    await db.updatePrompt(id, updates as unknown as UpdatePromptParams);
   });
 
   // 批量切换提示词收藏状态
-  ipcMain.handle("batch-favorite-prompts", async (event, ids) => {
+  handleTyped("batchFavoritePrompts", async (event, ids) => {
     try {
       return await db.batchFavoritePrompts(ids);
     } catch (error) {
@@ -71,14 +75,14 @@ export function registerPromptIpc() {
   });
 
   // 检查标题是否已存在
-  ipcMain.handle("is-title-exists", async (event, title, excludeId) => {
+  handleTyped("isTitleExists", async (event, title, excludeId) => {
     return await db.isTitleExists(title, excludeId);
   });
 
   // 批量获取提示词（按 ID 列表，保持传入顺序）
-  ipcMain.handle("get-prompts-by-ids", async (event, ids: string[]) => {
+  handleTyped("getPromptsByIds", async (event, ids) => {
     try {
-      return await db.getPromptsByIds(ids);
+      return (await db.getPromptsByIds(ids)) as unknown as IPrompt[];
     } catch (error) {
       logError("Main", "Get prompts by ids error:", error);
       throw error;
@@ -86,9 +90,9 @@ export function registerPromptIpc() {
   });
 
   // 根据 ID 获取提示词信息
-  ipcMain.handle("get-prompt-by-id", async (event, promptId) => {
+  handleTyped("getPromptById", async (event, promptId) => {
     try {
-      return await db.getPromptById(promptId);
+      return (await db.getPromptById(promptId)) as unknown as IPrompt | null;
     } catch (error) {
       logError("Main", "Get prompt by id error:", error);
       throw error;
@@ -96,7 +100,7 @@ export function registerPromptIpc() {
   });
 
   // 导出 Prompts
-  ipcMain.handle("export-prompts", async (event, prompts) => {
+  handleTyped("exportPrompts", async (event, prompts) => {
     const mainWindow = getMainWindow();
     if (!mainWindow) throw new Error("Main window is not available");
     const { filePath } = await dialog.showSaveDialog(mainWindow, {
@@ -113,7 +117,7 @@ export function registerPromptIpc() {
   });
 
   // 导入 Prompts
-  ipcMain.handle("import-prompts", async () => {
+  handleTyped("importPrompts", async () => {
     const { filePaths } = await dialog.showOpenDialog({
       title: "导入 Prompts",
       filters: [{ name: "JSON Files", extensions: ["json"] }],
