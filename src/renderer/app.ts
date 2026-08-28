@@ -32,24 +32,7 @@ import { tagService } from "./services/TagService.ts";
 import { HoverTooltipManager, ShortcutManager } from "./renderer_utils/index.ts";
 import { localStorageManager } from "./configs/LocalStorageConfig.ts";
 import type { IPrompt, IImage } from "../types/entities.ts";
-import type {
-  IApp,
-  IPanelManager,
-  IToastManager,
-  IImageFullscreenManager,
-  INavigationManager,
-  IToolbarManager,
-  ISearchSortManager,
-  IImportExportManager,
-  ISettingsManager,
-  IImageSelectorManager,
-  INewPromptManager,
-  IImageUploadManager,
-  IHoverTooltipManager,
-  IShortcutManager,
-  IEventBus,
-  ICacheManager,
-} from "./app.types.ts";
+import type { IApp, IPanelManager, IToastManager, IImageFullscreenManager, INavigationManager, IToolbarManager, ISearchSortManager, IImportExportManager, ISettingsManager, IImageSelectorManager, INewPromptManager, IImageUploadManager, IHoverTooltipManager, IShortcutManager, IEventBus, ICacheManager } from "./app.types.ts";
 
 // ==================== 主应用类 ====================
 
@@ -205,7 +188,6 @@ class PromptManager implements IApp {
   initHoverTooltips() {
     // 提示词预览 tooltip（左右布局，同时显示内容和图像）
     this.promptHoverTooltip = new HoverTooltipManager(
-      this,
       Constants.Ids.PROMPT_PREVIEW_TOOLTIP,
       Constants.Ids.PROMPT_PREVIEW_CONTENT,
       Constants.Ids.PROMPT_PREVIEW_IMAGE,

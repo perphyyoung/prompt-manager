@@ -10,7 +10,7 @@ import type { IDialogTemplate } from "../../types/entities.ts";
 import { Constants, Events } from "../../constants.ts";
 import { TagService } from "../services/index.ts";
 import { buildTagsWithGroupInfo } from "../../lib/tag-groups/utils.ts";
-import { IApp } from "../app.types.ts";
+import { PanelManagerDeps } from "../app.types.ts";
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
 import { showContextMenu } from "../renderer_utils/ContextMenuUtils.ts";
 import { VirtualScrollBar } from "../renderer_utils/VirtualScrollBar.ts";
@@ -24,7 +24,7 @@ export const PANEL_PAGE_SIZE = 100;
 
 // 面板管理器基类选项接口
 interface PanelManagerBaseOptions {
-  app: IApp;
+  app: PanelManagerDeps;
   defaultCardSize?: number;
   onSelectionChange?: () => void;
 }
@@ -102,7 +102,7 @@ interface IUIConfig {
  */
 export abstract class PanelManagerBase {
   [key: string]: unknown;
-  app: IApp;
+  app: PanelManagerDeps;
   protected tagManager?: unknown;
   protected defaultCardSize: number;
   protected onSelectionChange?: () => void;

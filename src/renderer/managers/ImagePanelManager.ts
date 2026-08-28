@@ -1,7 +1,7 @@
 import { cacheManager, cyrb53 } from "../../utils/index.ts";
 import { PanelManagerBase, IPanelItem, PANEL_PAGE_SIZE } from "./PanelManagerBase.ts";
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
-import type { IApp } from "../app.types.ts";
+import type { PanelManagerDeps } from "../app.types.ts";
 import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig } from "./SharedComponents/index.ts";
 import { Constants, Events } from "../../constants.ts";
 import { DialogConfig } from "../services/index.ts";
@@ -100,7 +100,7 @@ export class ImagePanelManager extends PanelManagerBase {
     [Constants.NO_TAG_TAG, (img) => !img.tags || img.tags.length === 0],
   ]);
 
-  constructor(app: IApp) {
+  constructor(app: PanelManagerDeps) {
     super({
       app: app,
       defaultCardSize: 180,

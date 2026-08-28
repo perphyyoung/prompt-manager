@@ -1,13 +1,13 @@
 import { HtmlUtils } from "../../utils/index.ts";
 import { Constants } from "../../constants.ts";
 import { IImage } from "../../types/entities.ts";
-import type { IApp } from "../app.types.ts";
+import type { ImageSelectorManagerDeps } from "../app.types.ts";
 
 /**
  * ImageSelectorManager 构造选项
  */
 interface IImageSelectorManagerOptions {
-  app: IApp;
+  app: ImageSelectorManagerDeps;
 }
 
 /**
@@ -22,7 +22,7 @@ interface IOpenOptions {
  * 负责管理提示词编辑时的图像选择功能
  */
 export class ImageSelectorManager {
-  private app: IApp;
+  private app: ImageSelectorManagerDeps;
 
   // 选择状态
   private selectedImages: Array<{ id: string; path: string }>;

@@ -4,17 +4,11 @@ import { cacheManager, DuplicatePreventionMixin } from "../../utils/index.ts";
 import { ErrorHandler } from "../renderer_utils/index.ts";
 import { IImage } from "../../types/entities.ts";
 import { Constants, Events } from "../../constants.ts";
+import type { NewPromptManagerDeps } from "../app.types.ts";
 
 /**
  * App 类型定义
  */
-interface IApp {
-  showToast: (message: string, type?: string) => void;
-  autoResizeTextarea: (element: HTMLElement) => void;
-  eventBus: {
-    emit: (event: string) => void;
-  };
-}
 
 /**
  * 打开选项
@@ -36,7 +30,7 @@ interface IImageSelectionResult {
  * NewPromptManager 构造选项
  */
 interface INewPromptManagerOptions {
-  app: IApp;
+  app: NewPromptManagerDeps;
 }
 
 /**
@@ -45,7 +39,7 @@ interface INewPromptManagerOptions {
  * 职责：协调策略、预览管理和 UI 交互
  */
 export class NewPromptManager extends DuplicatePreventionMixin(Object) {
-  private app: IApp;
+  private app: NewPromptManagerDeps;
   private strategy: DelaySaveStrategy;
   private previewManager: ImagePreviewManager;
 
@@ -64,12 +58,7 @@ export class NewPromptManager extends DuplicatePreventionMixin(Object) {
   constructor(options: INewPromptManagerOptions) {
     super();
     this.app = options.app;
-    this.strategy = new DelaySaveStrategy(
-      this.app as unknown as {
-        eventBus: { emit: (event: string) => void };
-        [key: string]: unknown;
-      },
-    );
+    this.strategy = new DelaySaveStrategy(this.app);
     this.previewManager = new ImagePreviewManager({
       containerId: Constants.Ids.NEW_PROMPT_IMAGE_PREVIEW_LIST,
       onRemove: (index: number) => this.handleRemoveImage(index),

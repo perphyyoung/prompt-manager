@@ -18,7 +18,7 @@ import { IPrompt, IImage } from "../../types/entities.ts";
 import { TagExistsError, InvalidTagNameError, TagOperationError } from "../../lib/tag-groups/index.ts";
 import { TagService } from "../services/index.ts";
 import { createDetailTagController } from "./DetailTagController.ts";
-import type { IApp } from "../app.types.ts";
+import type { DetailViewManagerDeps } from "../app.types.ts";
 
 // 图像选择结果
 interface IImageSelectionResult {
@@ -36,7 +36,7 @@ interface IOpenOptions {
 
 // PromptDetailManager 构造选项
 interface IPromptDetailManagerOptions {
-  app: IApp;
+  app: DetailViewManagerDeps;
 }
 
 export class PromptDetailManager extends DetailViewManager<IPrompt> {
@@ -51,7 +51,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
   private returnToItem: unknown = null;
   private currentTags: string[] = [];
   private imagesChangedHandler: (() => void) | null = null;
-  protected app: IApp;
+  protected app: DetailViewManagerDeps;
 
   /**
    * @param options - 配置选项

@@ -7,6 +7,7 @@ import { logger } from "../../utils/Logger.ts";
 import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
 import { Constants } from "../../constants.ts";
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
+import type { NavigationManagerDeps } from "../app.types.ts";
 
 // 面板配置接口
 interface IPanelConfig {
@@ -18,29 +19,16 @@ interface IPanelConfig {
 }
 
 // App 类型定义
-interface IApp {
-  promptPanelManager: {
-    ensureRendered: () => Promise<void>;
-    exitBatchMode?: () => void;
-  } | null;
-  imagePanelManager: {
-    ensureRendered: () => Promise<void>;
-    exitBatchMode?: () => void;
-  } | null;
-  eventBus: {
-    emit: (event: string, data?: unknown) => void;
-  };
-}
 
 // NavigationManager 构造选项
 interface INavigationManagerOptions {
-  app: IApp;
+  app: NavigationManagerDeps;
   storageKey?: string;
   defaultPanel?: string;
 }
 
 export class NavigationManager {
-  private app: IApp;
+  private app: NavigationManagerDeps;
   private storageKey: string;
   private defaultPanel: string;
 
@@ -49,7 +37,7 @@ export class NavigationManager {
   private onPanelChange: ((panelName: string, panelConfig: IPanelConfig) => void) | null;
   private isInitialized = false;
 
-  constructor(options: INavigationManagerOptions = { app: {} as IApp }) {
+  constructor(options: INavigationManagerOptions = { app: {} as NavigationManagerDeps }) {
     this.app = options.app;
     this.storageKey = options.storageKey || "currentPanel";
     this.defaultPanel = options.defaultPanel || "prompt";

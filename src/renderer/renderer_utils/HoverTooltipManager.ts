@@ -1,6 +1,5 @@
 import { cacheManager } from "../../utils/index.ts";
 import { logger } from "../../utils/Logger.ts";
-import { IApp } from "../app.types.ts";
 
 interface HoverTooltipOptions {
   getContent?: (element: Element) => string | null;
@@ -22,12 +21,10 @@ export class HoverTooltipManager {
   private imageEl: HTMLImageElement | null;
   private hoverTimer: ReturnType<typeof setTimeout> | null = null;
   private currentElement: Element | null = null;
-  private app: IApp;
   /** 已绑定 hover 的元素（bind 幂等，避免重复叠加监听器） */
   private boundElements = new WeakSet<Element>();
 
-  constructor(app: IApp, tooltipId: string, contentId: string, imageId: string) {
-    this.app = app;
+  constructor(tooltipId: string, contentId: string, imageId: string) {
     this.tooltip = document.getElementById(tooltipId);
     this.contentEl = document.getElementById(contentId);
     this.imageEl = document.getElementById(imageId) as HTMLImageElement | null;

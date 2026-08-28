@@ -5,44 +5,24 @@
 import { Constants } from "../../constants.ts";
 import { DialogService, DialogConfig } from "../services/index.ts";
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
+import type { ToolbarManagerDeps } from "../app.types.ts";
 
 /**
  * App 类型定义
  */
-interface IApp {
-  promptPanelManager: {
-    loadData: () => Promise<unknown[]>;
-    renderView: () => Promise<void>;
-    renderTagFilters: () => Promise<void>;
-    clearTagFilter: () => void;
-    toggleTagFilterState: () => Promise<void>;
-  } | null;
-  imagePanelManager: {
-    loadData: () => Promise<unknown[]>;
-    renderView: () => Promise<void>;
-    renderTagFilters: () => Promise<void>;
-    clearTagFilter: () => void;
-    toggleTagFilterState: () => Promise<void>;
-  } | null;
-  openPromptTagManagerModal?: () => void;
-  openImageTagManagerModal?: () => void;
-  openStatisticsModal?: () => void;
-  showToast?: (message: string, type: string) => void;
-  relaunchApp?: () => Promise<void>;
-}
 
 /**
  * ToolbarManager 构造选项
  */
 interface IToolbarManagerOptions {
-  app: IApp;
+  app: ToolbarManagerDeps;
 }
 
 export class ToolbarManager {
-  private app: IApp;
+  private app: ToolbarManagerDeps;
   private isInitialized = false;
 
-  constructor(options: IToolbarManagerOptions = { app: {} as IApp }) {
+  constructor(options: IToolbarManagerOptions = { app: {} as ToolbarManagerDeps }) {
     this.app = options.app;
   }
 

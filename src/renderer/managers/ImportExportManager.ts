@@ -3,17 +3,17 @@
  * 负责处理数据导出功能
  */
 
-import type { IApp } from "../app.types.ts";
+import type { ImportExportManagerDeps } from "../app.types.ts";
 import type { IScanOrphanFilesResult, IExportOrphanFilesResult } from "../../types/entities.ts";
 import { progressDialog } from "../components/ProgressDialog.ts";
 import { ErrorHandler } from "../renderer_utils/index.ts";
 
 interface ImportExportManagerOptions {
-  app: IApp;
+  app: ImportExportManagerDeps;
 }
 
 export class ImportExportManager {
-  private app: IApp;
+  private app: ImportExportManagerDeps;
   private isExporting: boolean = false;
   private isInitialized = false;
 

@@ -10,7 +10,7 @@ import { PromptTrashHandler, ImageTrashHandler } from "./handlers/index.ts";
 import { cacheManager } from "../../utils/index.ts";
 import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
 import type { TrashHandler, TrashItem } from "./handlers/TrashHandler.ts";
-import type { IApp, IEventBus, IPanelManager } from "../app.types.ts";
+import type { IEventBus, IPanelManager, TrashManagerDeps } from "../app.types.ts";
 
 /**
  * 回收站类型
@@ -30,7 +30,7 @@ interface ITrashModalConfig {
  * TrashManager 配置选项
  */
 interface TrashManagerOptions {
-  app: IApp;
+  app: TrashManagerDeps;
   eventBus: IEventBus;
 }
 
@@ -39,7 +39,7 @@ interface TrashManagerOptions {
  * 使用模板方法模式管理已删除的提示词和图像，同时负责回收站模态框的显示/隐藏
  */
 export class TrashManager {
-  private readonly app: IApp;
+  private readonly app: TrashManagerDeps;
   private trashItems: TrashItem[] = [];
   private currentHandler: TrashHandler | null = null;
   private activeModals: Set<TrashType> = new Set();

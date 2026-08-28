@@ -5,7 +5,7 @@
  */
 
 // 导入类型以确保 window.electronAPI 被正确识别
-import type {} from "../app.types.ts";
+import type { ImageUploadManagerDeps } from "../app.types.ts";
 
 // 文件信息接口
 interface FileInfo {
@@ -27,18 +27,14 @@ interface ImageInfo {
   [key: string]: unknown;
 }
 
-// 应用接口（简化）
-interface IApp {
-  [key: string]: any;
-}
 
 export class ImageUploadService {
-  private app: IApp;
+  private app: ImageUploadManagerDeps;
 
   /**
    * @param app - 应用实例
    */
-  constructor(app: IApp) {
+  constructor(app: ImageUploadManagerDeps) {
     this.app = app;
   }
 

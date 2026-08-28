@@ -5,7 +5,7 @@
 
 import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
 import { Constants } from "../../constants.ts";
-import type { IApp } from "../app.types.ts";
+import type { StatisticsManagerDeps } from "../app.types.ts";
 import type { IClosableElement } from "../../types/entities.ts";
 
 export interface IStatistics {
@@ -27,9 +27,9 @@ export interface IStatistics {
 }
 
 export class StatisticsManager {
-  private app: IApp;
+  private app: StatisticsManagerDeps;
 
-  constructor(app: IApp) {
+  constructor(app: StatisticsManagerDeps) {
     this.app = app;
     this.bindStatsEvents();
   }

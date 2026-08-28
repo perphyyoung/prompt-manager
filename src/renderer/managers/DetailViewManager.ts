@@ -3,9 +3,9 @@ import { ListNavigator } from "../../utils/index.ts";
 import { EditableTagList } from "../components/index.ts";
 import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
 import type { IClosableElement, IDetailTagManager } from "../../types/entities.ts";
-import type { IApp } from "../app.types.ts";
+import type { DetailViewManagerDeps } from "../app.types.ts";
 interface DetailViewManagerOptions {
-  app: IApp;
+  app: DetailViewManagerDeps;
   modalId: string;
   closeBtnId: string;
 }
@@ -28,7 +28,7 @@ export interface DetailViewItem {
  * 提供详情模态框的通用功能；泛型参数为当前详情实体类型
  */
 export abstract class DetailViewManager<TItem extends DetailViewItem = DetailViewItem> {
-  protected app: IApp;
+  protected app: DetailViewManagerDeps;
   protected modalId: string;
   protected closeBtnId: string;
 

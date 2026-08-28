@@ -2,16 +2,11 @@ import { DelaySaveStrategy } from "../services/index.ts";
 import { ImagePreviewManager } from "./ImagePreviewManager.ts";
 import { DuplicatePreventionMixin } from "../../utils/index.ts";
 import { Constants, Events } from "../../constants.ts";
+import type { ImageUploadManagerDeps } from "../app.types.ts";
 
 /**
  * App 类型定义
  */
-interface IApp {
-  showToast: (message: string, type?: string) => void;
-  eventBus: {
-    emit: (event: string) => void;
-  };
-}
 
 /**
  * 图像选择结果
@@ -35,7 +30,7 @@ interface IImageOperationResult {
  * ImageUploadManager 构造选项
  */
 interface IImageUploadManagerOptions {
-  app: IApp;
+  app: ImageUploadManagerDeps;
 }
 
 /**
@@ -44,7 +39,7 @@ interface IImageUploadManagerOptions {
  * 职责：协调策略、预览管理和 UI 交互
  */
 export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
-  private app: IApp;
+  private app: ImageUploadManagerDeps;
   private strategy: DelaySaveStrategy;
   private previewManager: ImagePreviewManager;
 
@@ -54,12 +49,7 @@ export class ImageUploadManager extends DuplicatePreventionMixin(Object) {
   constructor(options: IImageUploadManagerOptions) {
     super();
     this.app = options.app;
-    this.strategy = new DelaySaveStrategy(
-      this.app as unknown as {
-        eventBus: { emit: (event: string) => void };
-        [key: string]: unknown;
-      },
-    );
+    this.strategy = new DelaySaveStrategy(this.app);
     this.previewManager = new ImagePreviewManager({
       containerId: Constants.Ids.MODAL_IMAGE_PREVIEW_LIST,
       onRemove: (index: number) => this.handleRemoveImage(index),

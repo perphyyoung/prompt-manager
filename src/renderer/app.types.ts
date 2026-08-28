@@ -279,3 +279,38 @@ declare global {
     dialogService: typeof DialogService;
   }
 }
+
+// ==================== Manager 窄依赖类型 (阶段5: 依赖显式化) ====================
+/** DetailViewManager 运行所需的最小 IApp 子集 */
+export type DetailViewManagerDeps = Pick<IApp, "autoResizeTextarea" | "eventBus" | "imageDetailManager" | "imageFullscreenManager" | "imageSelectorManager" | "isFromDetailJump" | "isSameId" | "newPromptManager" | "openFullscreen" | "openImageDetailModal" | "promptDetailManager" | "promptRefImagesCache" | "showToast">;
+
+/** PanelManager 运行所需的最小 IApp 子集 */
+export type PanelManagerDeps = Pick<IApp, "cacheManager" | "currentPanel" | "eventBus" | "imageUploadManager" | "newPromptManager" | "openEditPromptModal" | "openImageDetailModal" | "openImageTagManagerModal" | "openPromptTagManagerModal" | "promptHoverTooltip" | "renderStatistics" | "safeMode" | "searchSortManager" | "showToast" | "trashManager">;
+
+/** ImageUploadManager 运行所需的最小 IApp 子集 */
+export type ImageUploadManagerDeps = Pick<IApp, "eventBus" | "showToast">;
+
+/** StatisticsManager 运行所需的最小 IApp 子集 */
+export type StatisticsManagerDeps = Pick<IApp, "safeMode">;
+
+/** ToolbarManager 运行所需的最小 IApp 子集 */
+export type ToolbarManagerDeps = Pick<IApp, "imagePanelManager" | "promptPanelManager" | "showToast">;
+
+/** TrashManager 运行所需的最小 IApp 子集 */
+export type TrashManagerDeps = Pick<IApp, "cacheManager" | "currentPanel" | "eventBus" | "imagePanelManager" | "promptPanelManager" | "renderStatistics" | "showToast">;
+
+/** SettingsManager 运行所需的最小 IApp 子集 */
+export type SettingsManagerDeps = Pick<IApp, "imagePanelManager" | "importExportManager" | "promptPanelManager" | "relaunchApp" | "renderStatistics" | "safeMode" | "showToast">;
+
+/** ImportExportManager 运行所需的最小 IApp 子集 */
+export type ImportExportManagerDeps = Pick<IApp, "showToast">;
+
+/** NavigationManager 运行所需的最小 IApp 子集 */
+export type NavigationManagerDeps = Pick<IApp, "imagePanelManager" | "promptPanelManager">;
+
+/** NewPromptManager 运行所需的最小 IApp 子集 */
+export type NewPromptManagerDeps = Pick<IApp, "autoResizeTextarea" | "eventBus" | "showToast">;
+
+/** ImageSelectorManager 运行所需的最小 IApp 子集 */
+export type ImageSelectorManagerDeps = Pick<IApp, "isSameId" | "safeMode">;
+

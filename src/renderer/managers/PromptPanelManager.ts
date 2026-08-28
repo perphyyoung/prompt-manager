@@ -1,7 +1,7 @@
 import { cacheManager, cyrb53 } from "../../utils/index.ts";
 import { PanelManagerBase, IPanelItem, PANEL_PAGE_SIZE } from "./PanelManagerBase.ts";
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
-import type { IApp } from "../app.types.ts";
+import type { PanelManagerDeps } from "../app.types.ts";
 import { PanelRenderer, UnifiedCardRenderer, PromptMainConfig } from "./SharedComponents/index.ts";
 import { Constants, Events } from "../../constants.ts";
 import { DialogConfig } from "../services/index.ts";
@@ -98,7 +98,7 @@ export class PromptPanelManager extends PanelManagerBase {
     [Constants.SINGLE_LANG_TAG, (p) => !p.contentTranslate || p.contentTranslate.trim() === ""],
   ]);
 
-  constructor(app: IApp) {
+  constructor(app: PanelManagerDeps) {
     super({
       app: app,
       defaultCardSize: 260,

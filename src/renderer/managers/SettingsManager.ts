@@ -8,6 +8,7 @@ import { ErrorHandler } from "../renderer_utils/index.ts";
 import { progressDialog } from "../components/ProgressDialog.ts";
 import type { IClosableElement } from "../../types/entities.ts";
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
+import type { SettingsManagerDeps } from "../app.types.ts";
 
 /**
  * 数据清空 API 接口
@@ -19,31 +20,12 @@ interface IDataClearApi {
 /**
  * App 类型定义
  */
-interface IApp {
-  safeMode: string;
-  promptPanelManager: {
-    renderView: () => Promise<void>;
-    renderTagFilters: () => Promise<void>;
-  } | null;
-  imagePanelManager: {
-    renderView: () => Promise<void>;
-    renderTagFilters: () => Promise<void>;
-  } | null;
-  showToast?: (message: string, type: string) => void;
-  relaunchApp?: (renamedPath?: string) => void;
-  importExportManager?: {
-    exportOrphanFiles: () => Promise<boolean>;
-    exportFullBackup: () => Promise<boolean>;
-    importFullBackup: () => Promise<boolean>;
-  } | null;
-  renderStatistics?: () => Promise<void>;
-}
 
 /**
  * SettingsManager 构造选项
  */
 interface ISettingsManagerOptions {
-  app: IApp;
+  app: SettingsManagerDeps;
   dataClearApi?: IDataClearApi;
 }
 
@@ -52,7 +34,7 @@ interface ISettingsManagerOptions {
  * 负责处理应用设置相关操作和设置模态框的显示/隐藏
  */
 export class SettingsManager extends DuplicatePreventionMixin(Object) {
-  private app: IApp;
+  private app: SettingsManagerDeps;
   private dataClearApi: IDataClearApi;
 
   // 设置状态

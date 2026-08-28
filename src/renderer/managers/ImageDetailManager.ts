@@ -9,7 +9,7 @@ import { SaveManager, ImageSaveStrategy, ErrorHandler } from "../renderer_utils/
 import { Constants, Events } from "../../constants.ts";
 import { TagAutocomplete, DialogService, DialogConfig, TagService } from "../services/index.ts";
 import { IImage, IPrompt } from "../../types/entities.ts";
-import type { IApp } from "../app.types.ts";
+import type { DetailViewManagerDeps } from "../app.types.ts";
 import { showContextMenu } from "../renderer_utils/ContextMenuUtils.ts";
 import { createDetailTagController } from "./DetailTagController.ts";
 
@@ -21,7 +21,7 @@ interface IOpenOptions {
 }
 
 interface IImageDetailManagerOptions {
-  app: IApp;
+  app: DetailViewManagerDeps;
 }
 
 export class ImageDetailManager extends DetailViewManager<IImage> {

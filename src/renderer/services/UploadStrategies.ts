@@ -1,4 +1,5 @@
 import { ImageUploadService } from "./ImageUploadService.ts";
+import type { ImageUploadManagerDeps } from "../app.types.ts";
 
 // 进度回调函数类型
 type ProgressCallback = (current: number, total: number) => void;
@@ -27,24 +28,16 @@ interface UploadResult {
 }
 
 // 应用接口（简化）
-interface IApp {
-  showToast?: (message: string, type?: string, duration?: number) => void;
-  eventBus: {
-    emit: (event: string, data?: unknown) => void;
-  };
-
-  [key: string]: any;
-}
 
 /**
  * 上传策略基类
  * 纯策略逻辑，不包含 UI 操作
  */
 export abstract class UploadStrategy {
-  protected app: IApp;
+  protected app: ImageUploadManagerDeps;
   protected imageUploadService: ImageUploadService;
 
-  constructor(app: IApp) {
+  constructor(app: ImageUploadManagerDeps) {
     this.app = app;
     this.imageUploadService = new ImageUploadService(app);
   }
@@ -83,7 +76,7 @@ export class DelaySaveStrategy extends UploadStrategy {
   private selectedFilePaths: string[];
   private savedImages: unknown[];
 
-  constructor(app: IApp) {
+  constructor(app: ImageUploadManagerDeps) {
     super(app);
     this.selectedFilePaths = [];
     this.savedImages = [];
@@ -189,7 +182,7 @@ export class DelaySaveStrategy extends UploadStrategy {
 export class DirectSaveStrategy extends UploadStrategy {
   private savedImages: unknown[];
 
-  constructor(app: IApp) {
+  constructor(app: ImageUploadManagerDeps) {
     super(app);
     this.savedImages = [];
   }
