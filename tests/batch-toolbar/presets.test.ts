@@ -9,7 +9,7 @@ import {
   PRESET_CONFIGS,
   getPresetConfig,
   getAllPresetConfigs,
-} from "../../src/pyBatchToolbar/presets.ts";
+} from "../../src/lib/batch-toolbar/presets.ts";
 import { Constants } from "../../src/constants.ts";
 
 describe("pyBatchToolbar presets", () => {

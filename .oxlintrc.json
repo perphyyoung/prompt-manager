@@ -9,6 +9,56 @@
     "testing-playwright/**",
     "py-data*/**"
   ],
+  "overrides": [
+    {
+      "files": ["src/renderer/**/*.ts", "src/preload/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/main/**", "**/main"],
+                "message": "渲染进程/preload 禁止引用主进程模块，共享类型放 src/shared"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/shared/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["../*", "../**"],
+                "message": "shared 层保持零依赖，不得引用其他任何层"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/main/interfaces/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/renderer/**", "**/renderer"],
+                "message": "主进程 IPC 路由禁止引用渲染进程模块"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
   "rules": {
     "no-unused-vars": "error",
     "no-unused-expressions": "error",

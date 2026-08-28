@@ -10,4 +10,4 @@ export type {
   ToolbarContext,
   BatchToolbarConfig,
 } from "./BatchToolbarMiddle.ts";
-export type { ToolbarButtonConfig } from "../../../pyBatchToolbar/index.ts";
+export type { ToolbarButtonConfig } from "../../../lib/batch-toolbar/index.ts";

@@ -7,8 +7,8 @@ import {
   getPresetConfig,
   type BatchToolbarConfig,
   type ToolbarContext,
-} from "../../../pyBatchToolbar/index.ts";
-import { sortButtons } from "../../../pyBatchToolbar/utils.ts";
+} from "../../../lib/batch-toolbar/index.ts";
+import { sortButtons } from "../../../lib/batch-toolbar/utils.ts";
 import { contextStack, IContextStackEntry } from "../../managers/ContextStackManager.ts";
 import { DialogService } from "../../services/index.ts";
 import { ElementId } from "../../../constants.ts";
@@ -450,7 +450,7 @@ export class BatchToolbarMiddle {
    */
   updateButtons(
     context: ToolbarContext,
-    buttons: import("../../../pyBatchToolbar/types.ts").ToolbarButtonConfig[],
+    buttons: import("../../../lib/batch-toolbar/types.ts").ToolbarButtonConfig[],
   ): void {
     const state = this.states.get(context);
     if (!state) return;
@@ -920,4 +920,4 @@ export class BatchToolbarMiddle {
 export const batchToolbarMiddle = BatchToolbarMiddle.getInstance();
 
 // 重新导出类型
-export type { ToolbarContext, BatchToolbarConfig } from "../../../pyBatchToolbar/index.ts";
+export type { ToolbarContext, BatchToolbarConfig } from "../../../lib/batch-toolbar/index.ts";

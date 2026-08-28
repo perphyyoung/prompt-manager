@@ -15,7 +15,7 @@ import {
 } from "../services/index.ts";
 import { showContextMenu } from "../renderer_utils/ContextMenuUtils.ts";
 import { IPrompt, IImage } from "../../types/entities.ts";
-import { TagExistsError, InvalidTagNameError, TagOperationError } from "../../pyTagGroups/index.ts";
+import { TagExistsError, InvalidTagNameError, TagOperationError } from "../../lib/tag-groups/index.ts";
 import { TagService } from "../services/index.ts";
 import { createDetailTagController } from "./DetailTagController.ts";
 import type { IApp } from "../app.types.ts";

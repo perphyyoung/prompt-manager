@@ -8,7 +8,7 @@ import {
   validateTagDelete,
   validateTagRename,
   validateGroupName,
-} from "../../src/pyTagGroups/validation.ts";
+} from "../../src/lib/tag-groups/validation.ts";
 
 describe("validation", () => {
   describe("validateTagCreate", () => {

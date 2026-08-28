@@ -13,8 +13,8 @@ import {
   createTagGroup,
   updateTagGroup,
   deleteTagGroup,
-} from "../../src/pyTagGroups/operations.ts";
-import { TagExistsError, InvalidTagNameError } from "../../src/pyTagGroups/types.ts";
+} from "../../src/lib/tag-groups/operations.ts";
+import { TagExistsError, InvalidTagNameError } from "../../src/lib/tag-groups/types.ts";
 
 // Mock cacheManager
 vi.mock("../../src/utils/CacheManager.ts", () => ({

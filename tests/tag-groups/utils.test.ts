@@ -12,8 +12,8 @@ import {
   buildTagsWithGroupInfo,
   filterNewTags,
   filterExistingTags,
-} from "../../src/pyTagGroups/utils.ts";
-import type { TagGroup } from "../../src/pyTagGroups/types.ts";
+} from "../../src/lib/tag-groups/utils.ts";
+import type { TagGroup } from "../../src/lib/tag-groups/types.ts";
 
 describe("utils", () => {
   describe("parseTagInput", () => {

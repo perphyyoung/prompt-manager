@@ -4,10 +4,10 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { TagService } from "../../src/renderer/services/TagService.ts";
-import * as operations from "../../src/pyTagGroups/operations.ts";
+import * as operations from "../../src/lib/tag-groups/operations.ts";
 
 // Mock pyTagGroups 模块
-vi.mock("../../src/pyTagGroups/operations.ts", () => ({
+vi.mock("../../src/lib/tag-groups/operations.ts", () => ({
   createTag: vi.fn().mockResolvedValue(undefined),
   deleteTags: vi.fn(),
   getTags: vi.fn().mockResolvedValue([]),

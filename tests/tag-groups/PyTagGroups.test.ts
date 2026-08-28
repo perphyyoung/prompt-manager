@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { PyTagGroups } from "../../src/pyTagGroups/PyTagGroups.ts";
+import { PyTagGroups } from "../../src/lib/tag-groups/PyTagGroups.ts";
 
 // Mock cacheManager
 vi.mock("../../src/utils/CacheManager.ts", () => ({

@@ -1,5 +1,5 @@
 /**
- * pyBatchToolbar 工具函数
+ * batch-toolbar 库 工具函数
  */
 
 import type { ToolbarButtonConfig } from "./types.ts";

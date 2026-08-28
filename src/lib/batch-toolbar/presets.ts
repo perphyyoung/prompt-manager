@@ -1,10 +1,10 @@
 /**
- * pyBatchToolbar 预设配置
+ * batch-toolbar 库 预设配置
  * 2 个入口的默认工具栏配置
  */
 
 import type { BatchToolbarConfig, ToolbarContext } from "./types.ts";
-import { Constants } from "../constants.ts";
+import { Constants } from "../../constants.ts";
 
 /** 提示词主界面批量工具栏配置 */
 export const PROMPT_MAIN_BATCH_TOOLBAR: BatchToolbarConfig = {

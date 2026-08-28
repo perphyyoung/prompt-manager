@@ -1,7 +1,7 @@
 import { HtmlUtils } from "../../utils/index.ts";
 import { cacheManager } from "../../utils/CacheManager.ts";
 import { TagUI } from "./TagUI.ts";
-import { TopGroupManager } from "../../pyTagGroups/TopGroupManager.ts";
+import { TopGroupManager } from "../../lib/tag-groups/TopGroupManager.ts";
 import { ITagWithGroup, ITagGroup } from "../../types/entities.ts";
 import { IEventStrategy, EventContext } from "./Strategies/IEventStrategy.ts";
 import { batchToolbarMiddle, type BatchBusinessConfig } from "../features/batch-toolbar/index.ts";
@@ -9,7 +9,7 @@ import { DialogService, DialogConfig } from "../services/index.ts";
 import type { IDialogTemplate } from "../../types/entities.ts";
 import { Constants, Events } from "../../constants.ts";
 import { TagService } from "../services/index.ts";
-import { buildTagsWithGroupInfo } from "../../pyTagGroups/utils.ts";
+import { buildTagsWithGroupInfo } from "../../lib/tag-groups/utils.ts";
 import { IApp } from "../app.types.ts";
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
 import { showContextMenu } from "../renderer_utils/ContextMenuUtils.ts";

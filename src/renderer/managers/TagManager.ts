@@ -10,8 +10,8 @@ import {
   InvalidTagNameError,
   TagOperationError,
   DataType,
-} from "../../pyTagGroups/index.ts";
-import { groupTagsByGroup } from "../../pyTagGroups/utils.ts";
+} from "../../lib/tag-groups/index.ts";
+import { groupTagsByGroup } from "../../lib/tag-groups/utils.ts";
 import { TagService } from "../services/index.ts";
 
 /**

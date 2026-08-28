@@ -1,10 +1,10 @@
 /**
- * pyBatchToolbar 批量工具栏库
+ * batch-toolbar 库 批量工具栏库
  * 配置和类型定义库
  *
  * 使用示例：
  * ```typescript
- * import { getPresetConfig } from './pyBatchToolbar';
+ * import { getPresetConfig } from './lib/batch-toolbar';
  *
  * const config = getPresetConfig('promptMain');
  * ```

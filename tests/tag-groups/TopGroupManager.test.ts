@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { TopGroupManager } from "../../src/pyTagGroups/TopGroupManager";
-import { TagInfo, SpecialTagInfo } from "../../src/pyTagGroups/types";
+import { TopGroupManager } from "../../src/lib/tag-groups/TopGroupManager";
+import { TagInfo, SpecialTagInfo } from "../../src/lib/tag-groups/types";
 import { TagUI } from "../../src/renderer/managers/TagUI";
 
 describe("TopGroupManager", () => {

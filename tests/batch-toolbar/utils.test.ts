@@ -9,8 +9,8 @@ import {
   filterVisibleButtons,
   generateToolbarId,
   isValidContext,
-} from "../../src/pyBatchToolbar/utils.ts";
-import type { ToolbarButtonConfig } from "../../src/pyBatchToolbar/types.ts";
+} from "../../src/lib/batch-toolbar/utils.ts";
+import type { ToolbarButtonConfig } from "../../src/lib/batch-toolbar/types.ts";
 
 describe("pyBatchToolbar utils", () => {
   describe("sortButtons", () => {

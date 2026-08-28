@@ -1,5 +1,5 @@
 /**
- * pyBatchToolbar 类型定义
+ * batch-toolbar 库 类型定义
  * 批量工具栏库的核心类型
  */
 

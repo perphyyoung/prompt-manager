@@ -4,7 +4,7 @@
  *
  * 使用示例：
  * ```typescript
- * import { PyTagGroups, Tag, TagGroup } from './pyTagGroups';
+ * import { PyTagGroups, Tag, TagGroup } from './lib/tag-groups';
  *
  * const lib = PyTagGroups.getInstance('prompt');
  * const result = await lib.create(['tag1', 'tag2']);

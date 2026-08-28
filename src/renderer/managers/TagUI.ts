@@ -1,6 +1,6 @@
 import { Constants } from "../../constants.ts";
 import { HtmlUtils } from "../../utils/index.ts";
-import { TopGroupManager } from "../../pyTagGroups/TopGroupManager.ts";
+import { TopGroupManager } from "../../lib/tag-groups/TopGroupManager.ts";
 import { ITagWithGroup, ITagGroup } from "../../types/entities.ts";
 
 interface TagCountInfo {
