@@ -1,4 +1,5 @@
 import { HtmlUtils } from "../../utils/index.ts";
+import type { GetImagesPaginatedOptions } from "../../shared/domain/database-types.js";
 import { Constants } from "../constants.ts";
 import { IImage } from "../../types/entities.ts";
 import type { ImageSelectorManagerDeps } from "../app.types.ts";
@@ -135,7 +136,7 @@ export class ImageSelectorManager {
       const searchTerm = searchInput?.value?.trim();
       const selectedTag = tagFilter?.value;
 
-      const options: import("../../shared/domain/database-types.js").GetImagesPaginatedOptions = {
+      const options: GetImagesPaginatedOptions = {
         sortBy: this.sortBy || "updatedAt",
         sortOrder: this.sortOrder === "asc" ? "asc" : "desc",
         searchQuery: searchTerm || undefined,

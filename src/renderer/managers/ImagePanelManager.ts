@@ -2,6 +2,11 @@ import { cacheManager, cyrb53 } from "../../utils/index.ts";
 import { TagService } from "../services/TagService.ts";
 import { PanelManagerBase, IPanelItem, PANEL_PAGE_SIZE } from "./PanelManagerBase.ts";
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
+import type {
+  CountImageTagsOptions,
+  GetImagesPaginatedOptions,
+  ImageSpecialTagCounts,
+} from "../../shared/domain/database-types.js";
 import type { PanelManagerDeps } from "../app.types.ts";
 import { PanelRenderer, UnifiedCardRenderer, ImageMainConfig } from "./SharedComponents/index.ts";
 import { Constants, Events } from "../constants.ts";
@@ -291,7 +296,7 @@ export class ImagePanelManager extends PanelManagerBase {
   /**
    * 构建分页查询选项
    */
-  private buildPaginatedOptions(): import("../../shared/domain/database-types.js").GetImagesPaginatedOptions {
+  private buildPaginatedOptions(): GetImagesPaginatedOptions {
     const { tagNames, specialTags } = this.splitSelectedTags();
     return {
       sortBy: this.sortBy || "updatedAt",
@@ -838,20 +843,19 @@ export class ImagePanelManager extends PanelManagerBase {
     }
   }
 
-  private lastSpecialTagCounts: import("../../shared/domain/database-types.js").ImageSpecialTagCounts =
-    {
-      favorite: 0,
-      unreferenced: 0,
-      multiRef: 0,
-      noTag: 0,
-      safe: 0,
-      unsafe: 0,
-    };
+  private lastSpecialTagCounts: ImageSpecialTagCounts = {
+    favorite: 0,
+    unreferenced: 0,
+    multiRef: 0,
+    noTag: 0,
+    safe: 0,
+    unsafe: 0,
+  };
 
   /**
    * 构建计数查询选项
    */
-  private buildCountOptions(): import("../../shared/domain/database-types.js").CountImageTagsOptions {
+  private buildCountOptions(): CountImageTagsOptions {
     const { tagNames, specialTags } = this.splitSelectedTags();
     return {
       searchQuery: this.getSearchQuery() || undefined,

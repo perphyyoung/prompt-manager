@@ -20,6 +20,12 @@ import {
 } from "../../lib/tag-groups/index.ts";
 import { cacheManager } from "../../utils/CacheManager.ts";
 import { Constants, Events } from "../constants.ts";
+import type {
+  CountImageTagsOptions,
+  CountPromptTagsOptions,
+  ImageSpecialTagCounts,
+  PromptSpecialTagCounts,
+} from "../../shared/domain/database-types.js";
 
 // ========== 选项类型 ==========
 
@@ -87,18 +93,10 @@ export interface AssignTagToGroupOptions {
 
 /** TagService 直接调用的 electronAPI 子集 */
 export interface TagServiceIpcPort {
-  countPromptTags: (
-    options: import("../../shared/domain/database-types.js").CountPromptTagsOptions,
-  ) => Promise<Record<string, number>>;
-  countImageTags: (
-    options: import("../../shared/domain/database-types.js").CountImageTagsOptions,
-  ) => Promise<Record<string, number>>;
-  countPromptSpecialTags: (
-    options: import("../../shared/domain/database-types.js").CountPromptTagsOptions,
-  ) => Promise<import("../../shared/domain/database-types.js").PromptSpecialTagCounts>;
-  countImageSpecialTags: (
-    options: import("../../shared/domain/database-types.js").CountImageTagsOptions,
-  ) => Promise<import("../../shared/domain/database-types.js").ImageSpecialTagCounts>;
+  countPromptTags: (options: CountPromptTagsOptions) => Promise<Record<string, number>>;
+  countImageTags: (options: CountImageTagsOptions) => Promise<Record<string, number>>;
+  countPromptSpecialTags: (options: CountPromptTagsOptions) => Promise<PromptSpecialTagCounts>;
+  countImageSpecialTags: (options: CountImageTagsOptions) => Promise<ImageSpecialTagCounts>;
   addPromptTagsBatch: (
     promptIds: string[],
     tagNames: string[],
@@ -517,7 +515,7 @@ export class TagService {
    */
   async getTagCounts(
     type: DataType,
-    options: import("../../shared/domain/database-types.js").CountPromptTagsOptions = {},
+    options: CountPromptTagsOptions = {},
   ): Promise<Record<string, number>> {
     return type === "prompt"
       ? this.ports.ipc.countPromptTags(options)
@@ -529,28 +527,19 @@ export class TagService {
    */
   async getSpecialTagCounts(
     type: "prompt",
-    options?: import("../../shared/domain/database-types.js").CountPromptTagsOptions,
-  ): Promise<import("../../shared/domain/database-types.js").PromptSpecialTagCounts>;
+    options?: CountPromptTagsOptions,
+  ): Promise<PromptSpecialTagCounts>;
   async getSpecialTagCounts(
     type: "image",
-    options?: import("../../shared/domain/database-types.js").CountImageTagsOptions,
-  ): Promise<import("../../shared/domain/database-types.js").ImageSpecialTagCounts>;
+    options?: CountImageTagsOptions,
+  ): Promise<ImageSpecialTagCounts>;
   async getSpecialTagCounts(
     type: DataType,
-    options:
-      | import("../../shared/domain/database-types.js").CountPromptTagsOptions
-      | import("../../shared/domain/database-types.js").CountImageTagsOptions = {},
-  ): Promise<
-    | import("../../shared/domain/database-types.js").PromptSpecialTagCounts
-    | import("../../shared/domain/database-types.js").ImageSpecialTagCounts
-  > {
+    options: CountPromptTagsOptions | CountImageTagsOptions = {},
+  ): Promise<PromptSpecialTagCounts | ImageSpecialTagCounts> {
     return type === "prompt"
-      ? this.ports.ipc.countPromptSpecialTags(
-          options as import("../../shared/domain/database-types.js").CountPromptTagsOptions,
-        )
-      : this.ports.ipc.countImageSpecialTags(
-          options as import("../../shared/domain/database-types.js").CountImageTagsOptions,
-        );
+      ? this.ports.ipc.countPromptSpecialTags(options as CountPromptTagsOptions)
+      : this.ports.ipc.countImageSpecialTags(options as CountImageTagsOptions);
   }
 
   /**

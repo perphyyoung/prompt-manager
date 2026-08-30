@@ -337,10 +337,12 @@ export abstract class TagManager {
 
   /**
    * 获取标签使用计数
-   * 数据库全量统计(此前基于面板已加载条目,分页/搜索/安全模式导致计数偏小)
+   * 数据库全量统计(此前基于面板已加载条目,分页/搜索导致计数偏小);
+   * 安全模式下仅统计可见条目,与筛选区计数语义一致
    */
   private async calculateTagCounts(): Promise<Record<string, number>> {
-    return this.tagService.getTagCounts(this.getDataType());
+    const isSafe = this.app.safeMode === "safe" ? true : undefined;
+    return this.tagService.getTagCounts(this.getDataType(), { isSafe });
   }
 
   /**

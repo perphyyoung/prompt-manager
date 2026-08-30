@@ -6,6 +6,7 @@
 import {
   getPresetConfig,
   type BatchToolbarConfig,
+  type ToolbarButtonConfig,
   type ToolbarContext,
 } from "../../../lib/batch-toolbar/index.ts";
 import { sortButtons } from "../../../lib/batch-toolbar/utils.ts";
@@ -448,10 +449,7 @@ export class BatchToolbarMiddle {
    * @param context - 工具栏上下文
    * @param buttons - 按钮配置数组
    */
-  updateButtons(
-    context: ToolbarContext,
-    buttons: import("../../../lib/batch-toolbar/types.ts").ToolbarButtonConfig[],
-  ): void {
+  updateButtons(context: ToolbarContext, buttons: ToolbarButtonConfig[]): void {
     const state = this.states.get(context);
     if (!state) return;
 

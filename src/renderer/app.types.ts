@@ -266,6 +266,8 @@ export interface TagManagerDeps {
   showToast(message: string, type?: string): void;
   promptPanelManager: IPanelManager | null;
   imagePanelManager: IPanelManager | null;
+  /** 安全模式(计数徽标按可见条目统计) */
+  safeMode: string;
 }
 
 /**
