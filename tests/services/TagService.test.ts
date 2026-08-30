@@ -229,4 +229,80 @@ describe("TagService", () => {
       expect(instance1).toBe(instance2);
     });
   });
+
+  describe("依赖注入(端口)", () => {
+    function createFakePorts() {
+      const cacheStore = new Map<string, unknown>();
+      const ports = {
+        ipc: {
+          addPromptTagsBatch: vi.fn().mockResolvedValue({ success: true, added: 1 }),
+          addImageTagsBatch: vi.fn().mockResolvedValue({ success: true, added: 1 }),
+          removeTagFromPrompt: vi.fn().mockResolvedValue(true),
+          removeTagFromImage: vi.fn().mockResolvedValue(true),
+          logError: vi.fn(),
+        },
+        cache: {
+          get: <T>(key: string) => (cacheStore.get(key) as T | undefined) ?? null,
+          set: vi.fn((key: string, data: unknown) => {
+            cacheStore.set(key, data);
+          }),
+          clear: vi.fn((key: string) => {
+            cacheStore.delete(key);
+          }),
+        },
+      };
+      return { ports, cacheStore };
+    }
+
+    it("unlinkTagFromItem 走注入的 ipc 端口并触发事件", async () => {
+      const { ports } = createFakePorts();
+      const eventBus = { emit: vi.fn() };
+      const service = new TagService(ports);
+      service.setEventBus(eventBus);
+
+      const ok = await service.unlinkTagFromItem({ type: "prompt", itemId: "p1", tagName: "t" });
+
+      expect(ok).toBe(true);
+      expect(ports.ipc.removeTagFromPrompt).toHaveBeenCalledWith("p1", "t");
+      expect(eventBus.emit).toHaveBeenCalled();
+    });
+
+    it("ipc 返回 false 时返回 false 且记录日志", async () => {
+      const { ports } = createFakePorts();
+      ports.ipc.removeTagFromPrompt.mockResolvedValue(false);
+      const service = new TagService(ports);
+
+      const ok = await service.unlinkTagFromItem({ type: "prompt", itemId: "p1", tagName: "t" });
+
+      expect(ok).toBe(false);
+      expect(ports.ipc.logError).toHaveBeenCalled();
+    });
+
+    it("linkTagsToItem 走注入的批量关联端口(itemIds 去重)", async () => {
+      vi.mocked(operations.getTags).mockResolvedValue([]);
+      const { ports } = createFakePorts();
+      const service = new TagService(ports);
+
+      await service.linkTagsToItem({
+        tagName: "tag-x",
+        type: "prompt",
+        itemIds: ["p1", "p1", "p2"],
+      });
+
+      expect(ports.ipc.addPromptTagsBatch).toHaveBeenCalledWith(["p1", "p2"], ["tag-x"]);
+    });
+
+    it("缓存读写与失效走注入的 cache 端口", async () => {
+      vi.mocked(operations.getTags).mockResolvedValue(["tag1"]);
+      const { ports, cacheStore } = createFakePorts();
+      const service = new TagService(ports);
+
+      await service.getTags("prompt");
+      expect(ports.cache.set).toHaveBeenCalledWith("promptTags", ["tag1"]);
+      expect(cacheStore.get("promptTags")).toEqual(["tag1"]);
+
+      await service.clearTagsCache("prompt");
+      expect(ports.cache.clear).toHaveBeenCalledWith("promptTags");
+    });
+  });
 });

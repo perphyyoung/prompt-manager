@@ -83,20 +83,81 @@ export interface AssignTagToGroupOptions {
   groupId: number | null;
 }
 
+// ========== 依赖端口 ==========
+
+/** TagService 直接调用的 electronAPI 子集 */
+export interface TagServiceIpcPort {
+  addPromptTagsBatch: (
+    promptIds: string[],
+    tagNames: string[],
+  ) => Promise<{ success: boolean; added: number }>;
+  addImageTagsBatch: (
+    imageIds: string[],
+    tagNames: string[],
+  ) => Promise<{ success: boolean; added: number }>;
+  removeTagFromPrompt: (promptId: string, tagName: string) => Promise<boolean>;
+  removeTagFromImage: (imageId: string, tagName: string) => Promise<boolean>;
+  logError: (component: string, message: string, data?: unknown) => void;
+}
+
+/** 标签/标签组缓存端口(基于 cacheManager 的 LRU) */
+export interface TagServiceCachePort {
+  get<T>(key: string): T | null;
+  set<T>(key: string, data: T): void;
+  clear(key: string): void;
+}
+
+export interface TagServicePorts {
+  ipc: TagServiceIpcPort;
+  cache: TagServiceCachePort;
+}
+
+/**
+ * 默认端口:惰性解析 window.electronAPI(单例创建可能早于环境就绪,且测试会替换全局)。
+ * 测试请传入 fake ports 构造,不要替换全局。
+ */
+function createDefaultPorts(): TagServicePorts {
+  return {
+    ipc: {
+      addPromptTagsBatch: (promptIds, tagNames) =>
+        window.electronAPI.addPromptTagsBatch(promptIds, tagNames),
+      addImageTagsBatch: (imageIds, tagNames) =>
+        window.electronAPI.addImageTagsBatch(imageIds, tagNames),
+      removeTagFromPrompt: (promptId, tagName) =>
+        window.electronAPI.removeTagFromPrompt(promptId, tagName),
+      removeTagFromImage: (imageId, tagName) =>
+        window.electronAPI.removeTagFromImage(imageId, tagName),
+      logError: (component, message, data) => window.electronAPI.logError(component, message, data),
+    },
+    cache: {
+      get: <T>(key: string) => {
+        const cache = cacheManager.getCache(key);
+        return (cache?.get("data")?.data as T) ?? null;
+      },
+      set: <T>(key: string, data: T) => {
+        cacheManager.createCache(key, 10).set("data", { data, time: Date.now() });
+      },
+      clear: (key: string) => {
+        cacheManager.getCache(key)?.clear();
+      },
+    },
+  };
+}
+
 // ========== TagService 类 ==========
 
 export class TagService {
   private static instance: TagService | null = null;
   private eventBus: { emit: (event: string) => void } | null = null;
 
-  private constructor() {}
+  constructor(private readonly ports: TagServicePorts = createDefaultPorts()) {}
 
   /**
-   * 获取单例实例
+   * 获取单例实例(首次调用时可注入端口;省略则用默认端口)
    */
-  static getInstance(): TagService {
+  static getInstance(ports?: TagServicePorts): TagService {
     if (!TagService.instance) {
-      TagService.instance = new TagService();
+      TagService.instance = ports ? new TagService(ports) : new TagService();
     }
     return TagService.instance;
   }
@@ -112,12 +173,11 @@ export class TagService {
   }
 
   private getFromCache<T>(key: string): T | null {
-    const cache = cacheManager.getCache(key);
-    return cache?.get("data")?.data ?? null;
+    return this.ports.cache.get<T>(key);
   }
 
   private setCache<T>(key: string, data: T): void {
-    cacheManager.createCache(key, 10).set("data", { data, time: Date.now() });
+    this.ports.cache.set(key, data);
   }
 
   /**
@@ -154,16 +214,14 @@ export class TagService {
    * 清除标签缓存（标签列表变更时调用）
    */
   clearTagsCache(type: DataType): void {
-    const tagsCache = cacheManager.getCache(this.getTagsCacheKey(type));
-    tagsCache?.clear();
+    this.ports.cache.clear(this.getTagsCacheKey(type));
   }
 
   /**
    * 清除标签组缓存（标签组变更时调用）
    */
   clearTagGroupsCache(type: DataType): void {
-    const groupsCache = cacheManager.getCache(this.getTagGroupsCacheKey(type));
-    groupsCache?.clear();
+    this.ports.cache.clear(this.getTagGroupsCacheKey(type));
   }
 
   /**
@@ -283,9 +341,9 @@ export class TagService {
     // 4. 关联到项目（集合级批量 IPC：主进程事务内集合 SQL）
     if (linked) {
       if (type === "image") {
-        await window.electronAPI.addImageTagsBatch(uniqueIds, [name]);
+        await this.ports.ipc.addImageTagsBatch(uniqueIds, [name]);
       } else {
-        await window.electronAPI.addPromptTagsBatch(uniqueIds, [name]);
+        await this.ports.ipc.addPromptTagsBatch(uniqueIds, [name]);
       }
     }
 
@@ -330,8 +388,8 @@ export class TagService {
       // 注意：IPC 内部会更新 updated_at
       const result =
         type === "prompt"
-          ? await window.electronAPI.removeTagFromPrompt(itemId, tagName)
-          : await window.electronAPI.removeTagFromImage(itemId, tagName);
+          ? await this.ports.ipc.removeTagFromPrompt(itemId, tagName)
+          : await this.ports.ipc.removeTagFromImage(itemId, tagName);
       if (!result) {
         throw new Error(`Failed to remove tag "${tagName}" from item "${itemId}"`);
       }
@@ -341,7 +399,7 @@ export class TagService {
 
       return true;
     } catch (error) {
-      window.electronAPI.logError("TagService", "Failed to unlink tag from item:", error);
+      this.ports.ipc.logError("TagService", "Failed to unlink tag from item:", error);
       return false;
     }
   }
