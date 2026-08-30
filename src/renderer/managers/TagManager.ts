@@ -132,7 +132,7 @@ export abstract class TagManager {
         return;
       }
 
-      const tagCounts = this.calculateTagCounts(tags);
+      const tagCounts = await this.calculateTagCounts();
 
       const filteredTags = searchTerm
         ? tags.filter((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -336,13 +336,11 @@ export abstract class TagManager {
   }
 
   /**
-   * 计算标签在面板中的使用次数
-   * 用于标签管理器内排序
+   * 获取标签使用计数
+   * 数据库全量统计(此前基于面板已加载条目,分页/搜索/安全模式导致计数偏小)
    */
-  private calculateTagCounts(tags: string[]): Record<string, number> {
-    const panelManager = this.getPanelManager();
-    const items = panelManager?.getItems() ?? [];
-    return TagService.countTagUsage(tags, items);
+  private async calculateTagCounts(): Promise<Record<string, number>> {
+    return this.tagService.getTagCounts(this.getDataType());
   }
 
   /**

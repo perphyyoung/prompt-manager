@@ -87,6 +87,18 @@ export interface AssignTagToGroupOptions {
 
 /** TagService 直接调用的 electronAPI 子集 */
 export interface TagServiceIpcPort {
+  countPromptTags: (
+    options: import("../../shared/domain/database-types.js").CountPromptTagsOptions,
+  ) => Promise<Record<string, number>>;
+  countImageTags: (
+    options: import("../../shared/domain/database-types.js").CountImageTagsOptions,
+  ) => Promise<Record<string, number>>;
+  countPromptSpecialTags: (
+    options: import("../../shared/domain/database-types.js").CountPromptTagsOptions,
+  ) => Promise<import("../../shared/domain/database-types.js").PromptSpecialTagCounts>;
+  countImageSpecialTags: (
+    options: import("../../shared/domain/database-types.js").CountImageTagsOptions,
+  ) => Promise<import("../../shared/domain/database-types.js").ImageSpecialTagCounts>;
   addPromptTagsBatch: (
     promptIds: string[],
     tagNames: string[],
@@ -119,6 +131,10 @@ export interface TagServicePorts {
 function createDefaultPorts(): TagServicePorts {
   return {
     ipc: {
+      countPromptTags: (options) => window.electronAPI.countPromptTags(options),
+      countImageTags: (options) => window.electronAPI.countImageTags(options),
+      countPromptSpecialTags: (options) => window.electronAPI.countPromptSpecialTags(options),
+      countImageSpecialTags: (options) => window.electronAPI.countImageSpecialTags(options),
       addPromptTagsBatch: (promptIds, tagNames) =>
         window.electronAPI.addPromptTagsBatch(promptIds, tagNames),
       addImageTagsBatch: (imageIds, tagNames) =>
@@ -490,6 +506,51 @@ export class TagService {
     const pyTagGroups = PyTagGroups.getInstance(type);
     await pyTagGroups.assignToGroup(tagName, groupId);
     this.clearTagGroupsCache(type);
+  }
+
+  /**
+   * 获取标签使用计数(数据库全库统计)
+   * 无 options 时为全局语义(全部未删除条目);带 options 时为筛选上下文语义(面板筛选区)
+   * @param type - 数据类型
+   * @param options - 计数筛选选项(缺省 = 全量)
+   * @returns 标签名 → 使用数
+   */
+  async getTagCounts(
+    type: DataType,
+    options: import("../../shared/domain/database-types.js").CountPromptTagsOptions = {},
+  ): Promise<Record<string, number>> {
+    return type === "prompt"
+      ? this.ports.ipc.countPromptTags(options)
+      : this.ports.ipc.countImageTags(options);
+  }
+
+  /**
+   * 获取特殊标签计数(数据库全库统计,语义同 getTagCounts)
+   */
+  async getSpecialTagCounts(
+    type: "prompt",
+    options?: import("../../shared/domain/database-types.js").CountPromptTagsOptions,
+  ): Promise<import("../../shared/domain/database-types.js").PromptSpecialTagCounts>;
+  async getSpecialTagCounts(
+    type: "image",
+    options?: import("../../shared/domain/database-types.js").CountImageTagsOptions,
+  ): Promise<import("../../shared/domain/database-types.js").ImageSpecialTagCounts>;
+  async getSpecialTagCounts(
+    type: DataType,
+    options:
+      | import("../../shared/domain/database-types.js").CountPromptTagsOptions
+      | import("../../shared/domain/database-types.js").CountImageTagsOptions = {},
+  ): Promise<
+    | import("../../shared/domain/database-types.js").PromptSpecialTagCounts
+    | import("../../shared/domain/database-types.js").ImageSpecialTagCounts
+  > {
+    return type === "prompt"
+      ? this.ports.ipc.countPromptSpecialTags(
+          options as import("../../shared/domain/database-types.js").CountPromptTagsOptions,
+        )
+      : this.ports.ipc.countImageSpecialTags(
+          options as import("../../shared/domain/database-types.js").CountImageTagsOptions,
+        );
   }
 
   /**

@@ -1,4 +1,5 @@
 import { cacheManager, cyrb53 } from "../../utils/index.ts";
+import { TagService } from "../services/TagService.ts";
 import { PanelManagerBase, IPanelItem, PANEL_PAGE_SIZE } from "./PanelManagerBase.ts";
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
 import type { PanelManagerDeps } from "../app.types.ts";
@@ -825,9 +826,10 @@ export class ImagePanelManager extends PanelManagerBase {
   private async refreshTagCounts(): Promise<void> {
     try {
       const options = this.buildCountOptions();
+      const tagService = TagService.getInstance();
       const [tagCounts, specialTagCounts] = await Promise.all([
-        window.electronAPI.countImageTags(options),
-        window.electronAPI.countImageSpecialTags(options),
+        tagService.getTagCounts("image", options),
+        tagService.getSpecialTagCounts("image", options),
       ]);
       this.lastTagCounts = tagCounts;
       this.lastSpecialTagCounts = specialTagCounts;

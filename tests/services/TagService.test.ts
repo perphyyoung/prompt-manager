@@ -235,6 +235,10 @@ describe("TagService", () => {
       const cacheStore = new Map<string, unknown>();
       const ports = {
         ipc: {
+          countPromptTags: vi.fn().mockResolvedValue({}),
+          countImageTags: vi.fn().mockResolvedValue({}),
+          countPromptSpecialTags: vi.fn().mockResolvedValue({}),
+          countImageSpecialTags: vi.fn().mockResolvedValue({}),
           addPromptTagsBatch: vi.fn().mockResolvedValue({ success: true, added: 1 }),
           addImageTagsBatch: vi.fn().mockResolvedValue({ success: true, added: 1 }),
           removeTagFromPrompt: vi.fn().mockResolvedValue(true),
