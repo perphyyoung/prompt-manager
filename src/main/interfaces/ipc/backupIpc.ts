@@ -4,7 +4,6 @@
  * 从 main/index.ts 原样迁出，逻辑未改动。
  */
 
-import path from "path";
 import { promises as fs } from "fs";
 import { dialog } from "electron";
 import * as db from "../../database.js";
@@ -23,6 +22,7 @@ import {
   sendBackupProgress,
 } from "../../infrastructure/backup.js";
 import { ExportFullBackupService } from "../../application/ExportFullBackupService.js";
+import { ExportOrphanFilesService } from "../../application/ExportOrphanFilesService.js";
 import { ImportFullBackupService } from "../../application/ImportFullBackupService.js";
 import { handleTyped } from "./handleTyped.js";
 
@@ -39,66 +39,21 @@ export function registerBackupIpc() {
 
   // 导出并删除孤儿文件：原图像导出后删除，缩略图直接删除
   handleTyped("exportOrphanFiles", async (event, exportDir) => {
+    // 依赖装配:错误翻译留在路由,计数语义(单文件失败不中断)在 application 层
+    const service = new ExportOrphanFilesService({
+      scanOrphanFiles: scanOrphanFilesInternal,
+      timestamp: () => Date.now(),
+      fs: {
+        mkdir: async (dir) => {
+          await fs.mkdir(dir, { recursive: true });
+        },
+        copyFile: (src, dst) => fs.copyFile(src, dst),
+        unlink: (filePath) => fs.unlink(filePath),
+      },
+    });
+
     try {
-      // 先扫描孤儿文件
-      const scanResult = await scanOrphanFilesInternal();
-
-      if (scanResult.totalCount === 0) {
-        return { successCount: 0, failedCount: 0, exportCount: 0, deletedCount: 0, exportPath: "" };
-      }
-
-      // 创建导出目录
-      const orphanExportDir = path.join(exportDir, `orphan_files_${Date.now()}`);
-      await fs.mkdir(orphanExportDir, { recursive: true });
-
-      let exportCount = 0;
-      let deletedCount = 0;
-      let failedCount = 0;
-      let imageSuccessCount = 0;
-      let thumbnailSuccessCount = 0;
-
-      // 1. 导出原图像，导出成功后删除源文件
-      for (const file of scanResult.orphanImages) {
-        try {
-          const fileName = path.basename(file.fullPath);
-          const targetPath = path.join(orphanExportDir, fileName);
-          await fs.copyFile(file.fullPath, targetPath);
-          exportCount++;
-
-          await fs.unlink(file.fullPath);
-          deletedCount++;
-          imageSuccessCount++;
-        } catch (error) {
-          logError("Main", "Failed to export and delete orphan image:", {
-            fullPath: file.fullPath,
-            error,
-          });
-          failedCount++;
-        }
-      }
-
-      // 2. 缩略图直接删除，不导出
-      for (const file of scanResult.orphanThumbnails) {
-        try {
-          await fs.unlink(file.fullPath);
-          deletedCount++;
-          thumbnailSuccessCount++;
-        } catch (error) {
-          logError("Main", "Failed to delete orphan thumbnail:", {
-            fullPath: file.fullPath,
-            error,
-          });
-          failedCount++;
-        }
-      }
-
-      return {
-        successCount: imageSuccessCount + thumbnailSuccessCount,
-        failedCount,
-        exportCount,
-        deletedCount,
-        exportPath: orphanExportDir,
-      };
+      return await service.execute(exportDir);
     } catch (error) {
       logError("Main", "Export orphan files error:", error);
       throw error;
