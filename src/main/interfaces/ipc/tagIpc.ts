@@ -5,287 +5,187 @@
  */
 
 import * as db from "../../database.js";
-import { logError } from "../../mainLogger.js";
 import { getAllTagsCached } from "../../infrastructure/tagCache.js";
 import { tagMutationService } from "../../application/index.js";
-import { handleTyped } from "./handleTyped.js";
+import { handleLogged, handleTyped } from "./handleTyped.js";
 
 export function registerTagIpc() {
   // 获取所有提示词标签
-  handleTyped("getPromptTags", async () => {
-    try {
-      return await db.getPromptTags();
-    } catch (error) {
-      logError("Main", "Get prompt tags error:", error);
-      throw error;
-    }
+  handleLogged("getPromptTags", "Get prompt tags error:", async () => {
+    return await db.getPromptTags();
   });
 
   // 添加提示词标签
-  handleTyped("addPromptTag", async (event, tag) => {
-    try {
-      return await tagMutationService.addPromptTag(tag);
-    } catch (error) {
-      logError("Main", "Add prompt tag error:", error);
-      throw error;
-    }
+  handleLogged("addPromptTag", "Add prompt tag error:", async (event, tag) => {
+    return await tagMutationService.addPromptTag(tag);
   });
 
   // 为提示词添加多个标签
-  handleTyped("addPromptTags", async (event, promptId, tagNames) => {
-    try {
-      return await tagMutationService.addPromptTags(promptId, tagNames);
-    } catch (error) {
-      logError("Main", "Add prompt tags error:", error);
-      throw error;
-    }
+  handleLogged("addPromptTags", "Add prompt tags error:", async (event, promptId, tagNames) => {
+    return await tagMutationService.addPromptTags(promptId, tagNames);
   });
 
   // 批量为多个提示词添加标签（集合操作）
-  handleTyped("addPromptTagsBatch", async (event, promptIds, tagNames) => {
-    try {
+  handleLogged(
+    "addPromptTagsBatch",
+    "Add prompt tags batch error:",
+    async (event, promptIds, tagNames) => {
       return await tagMutationService.addPromptTagsBatch(promptIds, tagNames);
-    } catch (error) {
-      logError("Main", "Add prompt tags batch error:", error);
-      throw error;
-    }
-  });
+    },
+  );
 
   // 删除提示词标签
-  handleTyped("deletePromptTag", async (event, tag) => {
-    try {
-      // 从数据库删除标签（会级联删除关联关系）
-      return await tagMutationService.deletePromptTag(tag);
-    } catch (error) {
-      logError("Main", "Delete prompt tag error:", error);
-      throw error;
-    }
+  handleLogged("deletePromptTag", "Delete prompt tag error:", async (event, tag) => {
+    // 从数据库删除标签（会级联删除关联关系）
+    return await tagMutationService.deletePromptTag(tag);
   });
 
   // 批量删除提示词标签
-  handleTyped("deletePromptTags", async (event, tags) => {
-    try {
-      return await tagMutationService.deletePromptTags(tags);
-    } catch (error) {
-      logError("Main", "Batch delete prompt tags error:", error);
-      throw error;
-    }
+  handleLogged("deletePromptTags", "Batch delete prompt tags error:", async (event, tags) => {
+    return await tagMutationService.deletePromptTags(tags);
   });
 
   // 获取使用指定标签的提示词列表
-  handleTyped("getPromptsByTag", async (event, tagName) => {
-    try {
-      return await db.getPromptsByTag(tagName);
-    } catch (error) {
-      logError("Main", "Get prompts by tag error:", error);
-      throw error;
-    }
+  handleLogged("getPromptsByTag", "Get prompts by tag error:", async (event, tagName) => {
+    return await db.getPromptsByTag(tagName);
   });
 
   // 从提示词中移除标签
-  handleTyped("removeTagFromPrompt", async (event, promptId, tagName) => {
-    try {
+  handleLogged(
+    "removeTagFromPrompt",
+    "Remove tag from prompt error:",
+    async (event, promptId, tagName) => {
       await db.removeTagFromPrompt(promptId, tagName);
       return true;
-    } catch (error) {
-      logError("Main", "Remove tag from prompt error:", error);
-      throw error;
-    }
-  });
+    },
+  );
 
   // ==================== 提示词标签组 IPC ====================
 
   // 获取所有提示词标签组（包含标签列表）
-  handleTyped("getPromptTagGroups", async () => {
-    try {
-      return await db.getPromptTagGroups();
-    } catch (error) {
-      logError("Main", "Get prompt tag groups error:", error);
-      throw error;
-    }
+  handleLogged("getPromptTagGroups", "Get prompt tag groups error:", async () => {
+    return await db.getPromptTagGroups();
   });
 
   // 创建提示词标签组
-  handleTyped("createPromptTagGroup", async (event, name, sortOrder) => {
-    try {
+  handleLogged(
+    "createPromptTagGroup",
+    "Create prompt tag group error:",
+    async (event, name, sortOrder) => {
       return await db.createPromptTagGroup(name, sortOrder);
-    } catch (error) {
-      logError("Main", "Create prompt tag group error:", error);
-      throw error;
-    }
-  });
+    },
+  );
 
   // 更新提示词标签组属性
-  handleTyped("updatePromptTagGroupAttrs", async (event, id, updates) => {
-    try {
+  handleLogged(
+    "updatePromptTagGroupAttrs",
+    "Update prompt tag group attrs error:",
+    async (event, id, updates) => {
       await db.updatePromptTagGroup(id, updates);
-    } catch (error) {
-      logError("Main", "Update prompt tag group attrs error:", error);
-      throw error;
-    }
-  });
+    },
+  );
 
   // 删除提示词标签组
-  handleTyped("deletePromptTagGroup", async (event, id) => {
-    try {
-      return await db.deletePromptTagGroup(id);
-    } catch (error) {
-      logError("Main", "Delete prompt tag group error:", error);
-      throw error;
-    }
+  handleLogged("deletePromptTagGroup", "Delete prompt tag group error:", async (event, id) => {
+    return await db.deletePromptTagGroup(id);
   });
 
   // 分配提示词标签到所属组
-  handleTyped("assignPromptTagToBelongGroup", async (event, tagName, groupId) => {
-    try {
+  handleLogged(
+    "assignPromptTagToBelongGroup",
+    "Assign prompt tag to belong group error:",
+    async (event, tagName, groupId) => {
       return await db.updatePromptTagGroupByTagName(tagName, groupId);
-    } catch (error) {
-      logError("Main", "Assign prompt tag to belong group error:", error);
-      throw error;
-    }
-  });
+    },
+  );
 
   // 重命名提示词标签
-  handleTyped("renamePromptTag", async (event, oldTag, newTag) => {
-    try {
-      return await tagMutationService.renamePromptTag(oldTag, newTag);
-    } catch (error) {
-      logError("Main", "Rename prompt tag error:", error);
-      throw error;
-    }
+  handleLogged("renamePromptTag", "Rename prompt tag error:", async (event, oldTag, newTag) => {
+    return await tagMutationService.renamePromptTag(oldTag, newTag);
   });
 
   // 获取所有图像标签
-  handleTyped("getImageTags", async () => {
-    try {
-      return await db.getImageTags();
-    } catch (error) {
-      logError("Main", "Get image tags error:", error);
-      throw error;
-    }
+  handleLogged("getImageTags", "Get image tags error:", async () => {
+    return await db.getImageTags();
   });
 
   // 添加图像标签
-  handleTyped("addImageTag", async (event, tag) => {
-    try {
-      return await tagMutationService.addImageTag(tag);
-    } catch (error) {
-      logError("Main", "Add image tag error:", error);
-      throw error;
-    }
+  handleLogged("addImageTag", "Add image tag error:", async (event, tag) => {
+    return await tagMutationService.addImageTag(tag);
   });
 
   // 为图像添加多个标签
-  handleTyped("addImageTags", async (event, imageId, tagNames) => {
-    try {
-      return await tagMutationService.addImageTags(imageId, tagNames);
-    } catch (error) {
-      logError("Main", "Add image tags error:", error);
-      throw error;
-    }
+  handleLogged("addImageTags", "Add image tags error:", async (event, imageId, tagNames) => {
+    return await tagMutationService.addImageTags(imageId, tagNames);
   });
 
   // 批量为多张图像添加标签（集合操作）
-  handleTyped("addImageTagsBatch", async (event, imageIds, tagNames) => {
-    try {
+  handleLogged(
+    "addImageTagsBatch",
+    "Add image tags batch error:",
+    async (event, imageIds, tagNames) => {
       return await tagMutationService.addImageTagsBatch(imageIds, tagNames);
-    } catch (error) {
-      logError("Main", "Add image tags batch error:", error);
-      throw error;
-    }
-  });
+    },
+  );
 
   // 重命名图像标签
-  handleTyped("renameImageTag", async (event, oldTag, newTag) => {
-    try {
-      return await tagMutationService.renameImageTag(oldTag, newTag);
-    } catch (error) {
-      logError("Main", "Rename image tag error:", error);
-      throw error;
-    }
+  handleLogged("renameImageTag", "Rename image tag error:", async (event, oldTag, newTag) => {
+    return await tagMutationService.renameImageTag(oldTag, newTag);
   });
 
   // 删除图像标签（集合级级联删除，单事务）
-  handleTyped("deleteImageTag", async (event, tag) => {
-    try {
-      return await tagMutationService.deleteImageTag(tag);
-    } catch (error) {
-      logError("Main", "Delete image tag error:", error);
-      throw error;
-    }
+  handleLogged("deleteImageTag", "Delete image tag error:", async (event, tag) => {
+    return await tagMutationService.deleteImageTag(tag);
   });
 
   // 批量删除图像标签（集合级级联删除，单事务）
-  handleTyped("deleteImageTags", async (event, tags) => {
-    try {
-      return await tagMutationService.deleteImageTags(tags);
-    } catch (error) {
-      logError("Main", "Batch delete image tags error:", error);
-      throw error;
-    }
+  handleLogged("deleteImageTags", "Batch delete image tags error:", async (event, tags) => {
+    return await tagMutationService.deleteImageTags(tags);
   });
 
   // 获取使用指定标签的图像列表
-  handleTyped("getImagesByTag", async (event, tagName) => {
-    try {
-      return await db.getImagesByTag(tagName);
-    } catch (error) {
-      logError("Main", "Get images by tag error:", error);
-      throw error;
-    }
+  handleLogged("getImagesByTag", "Get images by tag error:", async (event, tagName) => {
+    return await db.getImagesByTag(tagName);
   });
 
   // 从图像中移除标签
-  handleTyped("removeTagFromImage", async (event, imageId, tagName) => {
-    try {
+  handleLogged(
+    "removeTagFromImage",
+    "Remove tag from image error:",
+    async (event, imageId, tagName) => {
       await db.removeTagFromImage(imageId, tagName);
       return true;
-    } catch (error) {
-      logError("Main", "Remove tag from image error:", error);
-      throw error;
-    }
-  });
+    },
+  );
 
   // ==================== 图像标签组 IPC ====================
 
   // 获取所有图像标签组（包含标签列表）
-  handleTyped("getImageTagGroups", async () => {
-    try {
-      return await db.getImageTagGroups();
-    } catch (error) {
-      logError("Main", "Get image tag groups error:", error);
-      throw error;
-    }
+  handleLogged("getImageTagGroups", "Get image tag groups error:", async () => {
+    return await db.getImageTagGroups();
   });
 
   // 创建图像标签组
-  handleTyped("createImageTagGroup", async (event, name, sortOrder) => {
-    try {
+  handleLogged(
+    "createImageTagGroup",
+    "Create image tag group error:",
+    async (event, name, sortOrder) => {
       return await db.createImageTagGroup(name, sortOrder);
-    } catch (error) {
-      logError("Main", "Create image tag group error:", error);
-      throw error;
-    }
-  });
+    },
+  );
 
   // 更新图像标签组
-  handleTyped("updateImageTagGroupAttrs", async (event, id, updates) => {
-    try {
+  handleLogged(
+    "updateImageTagGroupAttrs",
+    "Update image tag group error:",
+    async (event, id, updates) => {
       await db.updateImageTagGroup(id, updates);
-    } catch (error) {
-      logError("Main", "Update image tag group error:", error);
-      throw error;
-    }
-  });
+    },
+  );
 
   // 删除图像标签组
-  handleTyped("deleteImageTagGroup", async (event, id) => {
-    try {
-      return await db.deleteImageTagGroup(id);
-    } catch (error) {
-      logError("Main", "Delete image tag group error:", error);
-      throw error;
-    }
+  handleLogged("deleteImageTagGroup", "Delete image tag group error:", async (event, id) => {
+    return await db.deleteImageTagGroup(id);
   });
 
   // 获取所有标签（提示词和图像标签合并）
@@ -294,12 +194,11 @@ export function registerTagIpc() {
   });
 
   // 分配图像标签到所属组
-  handleTyped("assignImageTagToBelongGroup", async (event, tagName, groupId) => {
-    try {
+  handleLogged(
+    "assignImageTagToBelongGroup",
+    "Assign image tag to belong group error:",
+    async (event, tagName, groupId) => {
       return await db.assignImageTagToBelongGroup(tagName, groupId);
-    } catch (error) {
-      logError("Main", "Assign image tag to belong group error:", error);
-      throw error;
-    }
-  });
+    },
+  );
 }
