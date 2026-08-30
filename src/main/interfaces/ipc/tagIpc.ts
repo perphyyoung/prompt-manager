@@ -6,7 +6,8 @@
 
 import * as db from "../../database.js";
 import { logError } from "../../mainLogger.js";
-import { addTagToCache, addTagsToCache, getAllTagsCached } from "../../infrastructure/tagCache.js";
+import { getAllTagsCached } from "../../infrastructure/tagCache.js";
+import { tagMutationService } from "../../application/index.js";
 import { handleTyped } from "./handleTyped.js";
 
 export function registerTagIpc() {
@@ -23,10 +24,7 @@ export function registerTagIpc() {
   // 添加提示词标签
   handleTyped("addPromptTag", async (event, tag) => {
     try {
-      await db.addPromptTag(tag);
-      // 更新缓存
-      addTagToCache(tag);
-      return await db.getPromptTags();
+      return await tagMutationService.addPromptTag(tag);
     } catch (error) {
       logError("Main", "Add prompt tag error:", error);
       throw error;
@@ -36,10 +34,7 @@ export function registerTagIpc() {
   // 为提示词添加多个标签
   handleTyped("addPromptTags", async (event, promptId, tagNames) => {
     try {
-      await db.addPromptTags(promptId, tagNames);
-      // 批量更新缓存
-      addTagsToCache(tagNames);
-      return true;
+      return await tagMutationService.addPromptTags(promptId, tagNames);
     } catch (error) {
       logError("Main", "Add prompt tags error:", error);
       throw error;
@@ -49,9 +44,7 @@ export function registerTagIpc() {
   // 批量为多个提示词添加标签（集合操作）
   handleTyped("addPromptTagsBatch", async (event, promptIds, tagNames) => {
     try {
-      const result = await db.addPromptTagsBatch(promptIds, tagNames);
-      addTagsToCache(tagNames);
-      return result;
+      return await tagMutationService.addPromptTagsBatch(promptIds, tagNames);
     } catch (error) {
       logError("Main", "Add prompt tags batch error:", error);
       throw error;
@@ -62,8 +55,7 @@ export function registerTagIpc() {
   handleTyped("deletePromptTag", async (event, tag) => {
     try {
       // 从数据库删除标签（会级联删除关联关系）
-      await db.deletePromptTag(tag);
-      return await db.getPromptTags();
+      return await tagMutationService.deletePromptTag(tag);
     } catch (error) {
       logError("Main", "Delete prompt tag error:", error);
       throw error;
@@ -73,9 +65,7 @@ export function registerTagIpc() {
   // 批量删除提示词标签
   handleTyped("deletePromptTags", async (event, tags) => {
     try {
-      const result = await db.deletePromptTags(tags);
-      const remainingTags = await db.getPromptTags();
-      return { ...result, tags: remainingTags };
+      return await tagMutationService.deletePromptTags(tags);
     } catch (error) {
       logError("Main", "Batch delete prompt tags error:", error);
       throw error;
@@ -158,7 +148,7 @@ export function registerTagIpc() {
   // 重命名提示词标签
   handleTyped("renamePromptTag", async (event, oldTag, newTag) => {
     try {
-      return await db.renameTag("prompt", oldTag, newTag);
+      return await tagMutationService.renamePromptTag(oldTag, newTag);
     } catch (error) {
       logError("Main", "Rename prompt tag error:", error);
       throw error;
@@ -178,10 +168,7 @@ export function registerTagIpc() {
   // 添加图像标签
   handleTyped("addImageTag", async (event, tag) => {
     try {
-      await db.addImageTag(tag);
-      // 更新缓存
-      addTagToCache(tag);
-      return await db.getImageTags();
+      return await tagMutationService.addImageTag(tag);
     } catch (error) {
       logError("Main", "Add image tag error:", error);
       throw error;
@@ -191,10 +178,7 @@ export function registerTagIpc() {
   // 为图像添加多个标签
   handleTyped("addImageTags", async (event, imageId, tagNames) => {
     try {
-      await db.addImageTags(imageId, tagNames);
-      // 批量更新缓存
-      addTagsToCache(tagNames);
-      return true;
+      return await tagMutationService.addImageTags(imageId, tagNames);
     } catch (error) {
       logError("Main", "Add image tags error:", error);
       throw error;
@@ -204,9 +188,7 @@ export function registerTagIpc() {
   // 批量为多张图像添加标签（集合操作）
   handleTyped("addImageTagsBatch", async (event, imageIds, tagNames) => {
     try {
-      const result = await db.addImageTagsBatch(imageIds, tagNames);
-      addTagsToCache(tagNames);
-      return result;
+      return await tagMutationService.addImageTagsBatch(imageIds, tagNames);
     } catch (error) {
       logError("Main", "Add image tags batch error:", error);
       throw error;
@@ -216,7 +198,7 @@ export function registerTagIpc() {
   // 重命名图像标签
   handleTyped("renameImageTag", async (event, oldTag, newTag) => {
     try {
-      return await db.renameTag("image", oldTag, newTag);
+      return await tagMutationService.renameImageTag(oldTag, newTag);
     } catch (error) {
       logError("Main", "Rename image tag error:", error);
       throw error;
@@ -226,8 +208,7 @@ export function registerTagIpc() {
   // 删除图像标签（集合级级联删除，单事务）
   handleTyped("deleteImageTag", async (event, tag) => {
     try {
-      await db.deleteImageTag(tag);
-      return true;
+      return await tagMutationService.deleteImageTag(tag);
     } catch (error) {
       logError("Main", "Delete image tag error:", error);
       throw error;
@@ -237,7 +218,7 @@ export function registerTagIpc() {
   // 批量删除图像标签（集合级级联删除，单事务）
   handleTyped("deleteImageTags", async (event, tags) => {
     try {
-      return await db.deleteImageTags(tags);
+      return await tagMutationService.deleteImageTags(tags);
     } catch (error) {
       logError("Main", "Batch delete image tags error:", error);
       throw error;

@@ -8,6 +8,7 @@
 import { getFormattedLocalTimeToSecond } from "../../utils/index.js";
 import * as db from "../database.js";
 import { getCurrentDataDir } from "../runtime.js";
+import { initTagsCache } from "../infrastructure/tagCache.js";
 import { regenerateAllThumbnails } from "../infrastructure/imageFiles.js";
 import {
   createZipArchive,
@@ -19,6 +20,7 @@ import { nodeFsPort } from "../infrastructure/fsPort.js";
 import { ExportFullBackupService } from "./ExportFullBackupService.js";
 import { ExportOrphanFilesService } from "./ExportOrphanFilesService.js";
 import { ImportFullBackupService } from "./ImportFullBackupService.js";
+import { TagMutationService } from "./TagMutationService.js";
 
 /** 备份文件名时间戳 */
 const backupTimestamp = () => getFormattedLocalTimeToSecond().replace(/[:\s]/g, "-");
@@ -52,3 +54,9 @@ export const backupUseCases = {
     fs: nodeFsPort,
   }),
 };
+
+/** 标签写操作 + 全标签缓存一致性(写后全量重建,见 TagMutationService 注释) */
+export const tagMutationService = new TagMutationService({
+  tags: db,
+  cache: { refreshAll: initTagsCache },
+});
