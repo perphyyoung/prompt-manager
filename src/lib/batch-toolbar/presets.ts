@@ -4,11 +4,16 @@
  */
 
 import type { BatchToolbarConfig, ToolbarContext } from "./types.ts";
-import { Constants } from "../../renderer/constants.ts";
 
 /** 提示词主界面批量工具栏配置 */
+/** 批量工具栏 DOM 元素 ID(工具栏 DOM 由本库渲染,id 归本库所有) */
+export const TOOLBAR_IDS = {
+  promptMain: "promptMainBatchToolbar",
+  imageMain: "imageMainBatchToolbar",
+} as const;
+
 export const PROMPT_MAIN_BATCH_TOOLBAR: BatchToolbarConfig = {
-  id: Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR,
+  id: TOOLBAR_IDS.promptMain,
   context: "promptMain",
   dataType: "prompt",
   label: "提示词",
@@ -24,7 +29,7 @@ export const PROMPT_MAIN_BATCH_TOOLBAR: BatchToolbarConfig = {
 
 /** 图像主界面批量工具栏配置 */
 export const IMAGE_MAIN_BATCH_TOOLBAR: BatchToolbarConfig = {
-  id: Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR,
+  id: TOOLBAR_IDS.imageMain,
   context: "imageMain",
   dataType: "image",
   label: "图像",

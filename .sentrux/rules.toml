@@ -1,20 +1,80 @@
+# 分层与依赖方向 —— 与 代码目录结构说明.md 保持一致
+# layers:order 越小越基础,依赖只能从大 order 流向小 order
+#   shared/lib/types/utils(0) ← main-infrastructure(1) ← application(2) ← main-interfaces/preload/renderer(3)
+# boundaries:与 order 无关的点名禁令,补齐跨进程规则(renderer/preload ✗ main 等)
+
 [constraints]
 max_cycles = 0
 max_coupling = "B"
 max_cc = 25
 no_god_files = true
 
+# ---- 领域与共享件(order 0):零依赖,不引用任何上层 ----
 [[layers]]
-name = "src"
-paths = ["src/*"]
+name = "shared-domain"
+paths = ["src/shared/**", "src/lib/**", "src/types/**", "src/utils/**"]
 order = 0
 
+# ---- 主进程基础设施(order 1):实现领域端口与文件/日志/运行时状态 ----
+[[layers]]
+name = "main-infrastructure"
+paths = [
+  "src/main/infrastructure/**",
+  "src/main/database.ts",
+  "src/main/database-errors.ts",
+  "src/main/mainLogger.ts",
+  "src/main/runtime.ts",
+]
+order = 1
+
+# ---- 应用层(order 2):用例编排 ----
+[[layers]]
+name = "application"
+paths = ["src/main/application/**"]
+order = 2
+
+# ---- 接口适配(order 3):组合根与 IPC 路由 ----
+[[layers]]
+name = "main-interfaces"
+paths = ["src/main/interfaces/**", "src/main/bootstrap.ts", "src/main/index.ts"]
+order = 3
+
+# ---- 接口适配(order 3):preload 安全桥 ----
+[[layers]]
+name = "preload"
+paths = ["src/preload/**"]
+order = 3
+
+# ---- 接口适配(order 3):渲染进程视图 ----
+[[layers]]
+name = "renderer"
+paths = ["src/renderer/**"]
+order = 3
+
+# ---- 测试(e2e 可引用任意层) ----
 [[layers]]
 name = "e2e"
-paths = ["e2e/*"]
+paths = ["e2e/**"]
 order = 5
 
+# ---- 点名禁令(boundaries 与 order 无关) ----
+
 [[boundaries]]
-from = "src/pyBatchToolbar/*"
-to = "src/middle/*"
-reason = "pyBatchToolbar must not depend on middle"
+from = "src/renderer/**"
+to = "src/main/**"
+reason = "渲染进程禁止引用主进程模块,共享类型放 src/shared 或 src/types"
+
+[[boundaries]]
+from = "src/preload/**"
+to = "src/main/**"
+reason = "preload 禁止引用主进程模块,共享类型放 src/shared"
+
+[[boundaries]]
+from = "src/main/interfaces/**"
+to = "src/renderer/**"
+reason = "主进程 IPC 路由禁止引用渲染进程模块"
+
+[[boundaries]]
+from = "src/**"
+to = "e2e/**"
+reason = "src must not depend on e2e"

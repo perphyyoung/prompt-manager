@@ -4,6 +4,8 @@
  */
 import { TrashType as SharedTrashType } from "../shared/domain/trashType.ts";
 
+import { TOOLBAR_IDS } from "../lib/batch-toolbar/presets.js";
+
 export class Constants {
   // 应用名称
   static APP_NAME = "Prompt Manager";
@@ -251,9 +253,9 @@ export class Constants {
     // 全屏查看器
     IMAGE_FULLSCREEN_VIEWER: "imageFullscreenViewer",
 
-    // 主面板批量模式工具栏
-    PROMPT_MAIN_BATCH_TOOLBAR: "promptMainBatchToolbar",
-    IMAGE_MAIN_BATCH_TOOLBAR: "imageMainBatchToolbar",
+    // 主面板批量模式工具栏(id 归 lib/batch-toolbar 所有,此处聚合进 Ids)
+    PROMPT_MAIN_BATCH_TOOLBAR: TOOLBAR_IDS.promptMain,
+    IMAGE_MAIN_BATCH_TOOLBAR: TOOLBAR_IDS.imageMain,
 
     // 主面板批量操作按钮
     PROMPT_BATCH_SELECT_ALL_BTN: "promptBatchSelectAllBtn",
