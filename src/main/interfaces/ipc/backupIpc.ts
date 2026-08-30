@@ -14,7 +14,6 @@ import { logError } from "../../mainLogger.js";
 import { getCurrentDataDir, getMainWindow } from "../../runtime.js";
 import { regenerateAllThumbnails } from "../../infrastructure/imageFiles.js";
 import {
-  buildBackupManifest,
   createTempDir,
   createZipArchive,
   extractZipArchive,
@@ -23,6 +22,7 @@ import {
   scanOrphanFilesInternal,
   sendBackupProgress,
 } from "../../infrastructure/backup.js";
+import { ExportFullBackupService } from "../../application/ExportFullBackupService.js";
 import { ImportFullBackupService } from "../../application/ImportFullBackupService.js";
 import { handleTyped } from "./handleTyped.js";
 
@@ -122,104 +122,30 @@ export function registerBackupIpc() {
         return { cancelled: true };
       }
 
-      const exportDir = filePaths[0];
-
-      // 发送开始进度
-      sendBackupProgress({
-        stage: "start",
-        percent: 0,
-        status: "准备中...",
-        detail: "正在统计文件...",
+      // 依赖装配:目录选择与错误翻译留在路由,编排进 application 层
+      const service = new ExportFullBackupService({
+        getDataDir: getCurrentDataDir,
+        getBackupStats,
+        onProgress: sendBackupProgress,
+        timestamp: () => getFormattedLocalTimeToSecond().replace(/[:\s]/g, "-"),
+        createZip: createZipArchive,
+        fs: {
+          writeFile: (filePath, content) => fs.writeFile(filePath, content, "utf8"),
+          mkdir: async (dir) => {
+            await fs.mkdir(dir, { recursive: true });
+          },
+          copyFile: (src, dst) => fs.copyFile(src, dst),
+          copyDirWithProgress: async (src, dst, onFile) => {
+            await copyDirectoryWithProgress(src, dst, { onProgress: onFile });
+          },
+          createTempDir: createTempDir,
+          removeDir: removeDirectory,
+        },
       });
 
-      // 在实际开始备份时生成文件名（确保时间戳准确）
-      const timestamp = getFormattedLocalTimeToSecond().replace(/[:\s]/g, "-");
-      const fileName = `prompt-manager-backup-${timestamp}.zip`;
-      const filePath = path.join(exportDir, fileName);
-
-      // 创建临时目录
-      const tempDir = await createTempDir("prompt-manager-backup");
-
-      try {
-        // 1. 生成 manifest.json (5%)
-        sendBackupProgress({
-          stage: "manifest",
-          percent: 5,
-          status: "正在生成备份清单...",
-        });
-
-        const stats = await getBackupStats();
-        const manifest = buildBackupManifest(stats);
-        await fs.writeFile(
-          path.join(tempDir, "manifest.json"),
-          JSON.stringify(manifest, null, 2),
-          "utf8",
-        );
-
-        // 2. 复制数据库 (5% -> 15%)
-        sendBackupProgress({
-          stage: "database",
-          percent: 15,
-          status: "正在复制数据库...",
-        });
-
-        const dbDir = path.join(tempDir, "database");
-        await fs.mkdir(dbDir, { recursive: true });
-        const dbSource = path.join(getCurrentDataDir(), "prompt-manager.db");
-        const dbTarget = path.join(dbDir, "prompt-manager.db");
-        await fs.copyFile(dbSource, dbTarget);
-
-        // 3. 复制图像文件 (15% -> 80%)
-        const imagesSource = path.join(getCurrentDataDir(), "images");
-        const imagesTarget = path.join(tempDir, "files", "images");
-
-        sendBackupProgress({
-          stage: "images",
-          percent: 15,
-          status: "正在复制图像文件...",
-          detail: `共 ${stats.images.count} 个文件`,
-        });
-
-        await copyDirectoryWithProgress(imagesSource, imagesTarget, {
-          onProgress: (copiedCount, totalCount, fileName) => {
-            const percent = 15 + (copiedCount / totalCount) * 65;
-            sendBackupProgress({
-              stage: "images",
-              percent: Math.round(percent),
-              status: `正在复制图像文件... (${copiedCount}/${totalCount})`,
-              detail: fileName,
-            });
-          },
-        });
-
-        // 注意：缩略图、字体和设置不导出
-
-        // 4. 压缩为 ZIP (80% -> 100%)
-        sendBackupProgress({
-          stage: "compress",
-          percent: 80,
-          status: "正在压缩备份文件...",
-        });
-
-        await createZipArchive(tempDir, filePath);
-
-        // 完成
-        sendBackupProgress({
-          stage: "complete",
-          percent: 100,
-          status: "备份完成！",
-        });
-
-        return {
-          success: true,
-          filePath,
-          stats,
-        };
-      } finally {
-        // 清理临时目录
-        await removeDirectory(tempDir);
-      }
+      return await service.execute(filePaths[0]);
     } catch (error) {
+      // 错误翻译:日志 + error 进度(边界层职责)
       logError("Main", "Export full backup error:", error);
       sendBackupProgress({
         stage: "error",
