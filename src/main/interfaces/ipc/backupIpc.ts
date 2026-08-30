@@ -23,6 +23,7 @@ import {
   scanOrphanFilesInternal,
   sendBackupProgress,
 } from "../../infrastructure/backup.js";
+import { ImportFullBackupService } from "../../application/ImportFullBackupService.js";
 import { handleTyped } from "./handleTyped.js";
 
 export function registerBackupIpc() {
@@ -247,167 +248,33 @@ export function registerBackupIpc() {
         return { cancelled: true };
       }
 
-      const zipPath = filePaths[0];
-
-      // 发送开始进度
-      sendBackupProgress({
-        stage: "start",
-        percent: 0,
-        status: "准备导入...",
-        detail: "正在准备导入环境...",
+      // 依赖装配:文件选择与错误翻译留在路由,编排进 application 层
+      const service = new ImportFullBackupService({
+        closeDatabase: () => db.closeDatabase(),
+        initDatabase: (dataDir) => db.initDatabase(dataDir),
+        getDataDir: getCurrentDataDir,
+        onProgress: sendBackupProgress,
+        timestamp: () => getFormattedLocalTimeToSecond().replace(/[:\s]/g, "-"),
+        regenerateThumbnails: regenerateAllThumbnails,
+        fs: {
+          extractZip: extractZipArchive,
+          copyFile: (src, dst) => fs.copyFile(src, dst),
+          rename: (from, to) => fs.rename(from, to),
+          mkdir: async (dir) => {
+            await fs.mkdir(dir, { recursive: true });
+          },
+          readFile: async (filePath) => (await fs.readFile(filePath, "utf8")) as string,
+          copyDirWithProgress: async (src, dst, onFile) => {
+            await copyDirectoryWithProgress(src, dst, { onProgress: onFile });
+          },
+          removeDir: removeDirectory,
+          createTempDir: createTempDir,
+        },
       });
 
-      // 解压到临时目录
-      const tempDir = await createTempDir("prompt-manager-restore");
-
-      try {
-        // 1. 解压 ZIP (0% -> 20%)
-        sendBackupProgress({
-          stage: "compress",
-          percent: 5,
-          status: "正在解压备份文件...",
-        });
-
-        await extractZipArchive(zipPath, tempDir);
-
-        // 2. 验证 manifest (20% -> 25%)
-        sendBackupProgress({
-          stage: "manifest",
-          percent: 20,
-          status: "正在验证备份文件...",
-        });
-
-        const manifestPath = path.join(tempDir, "manifest.json");
-        let manifest;
-        try {
-          const manifestContent = await fs.readFile(manifestPath, "utf8");
-          manifest = JSON.parse(manifestContent);
-        } catch {
-          throw new Error("无效的备份文件：缺少 manifest.json");
-        }
-
-        // 3. 版本兼容性检查 (25% -> 30%)
-        sendBackupProgress({
-          stage: "manifest",
-          percent: 25,
-          status: "正在检查版本兼容性...",
-        });
-
-        // 使用 dataVersion 进行数据格式兼容性检查
-        const backupDataVersion = manifest.dataVersion || 1;
-        const currentDataVersion = 1; // 当前支持的数据格式版本
-
-        if (backupDataVersion !== currentDataVersion) {
-          throw new Error(
-            `数据格式版本不兼容：备份数据版本 ${backupDataVersion}，当前支持版本 ${currentDataVersion}`,
-          );
-        }
-
-        // 4. 备份当前数据 (30% -> 40%)
-        sendBackupProgress({
-          stage: "database",
-          percent: 30,
-          status: "正在备份当前数据...",
-        });
-
-        const dataDir = getCurrentDataDir();
-
-        // 关闭数据库连接以释放文件锁
-        await db.closeDatabase();
-
-        const timestamp = getFormattedLocalTimeToSecond().replace(/[:\s]/g, "-");
-        const backupDir = `${dataDir}_${timestamp}`;
-        await fs.rename(dataDir, backupDir);
-
-        try {
-          // 5. 恢复数据
-          await fs.mkdir(dataDir, { recursive: true });
-
-          // 恢复数据库 (40% -> 50%)
-          sendBackupProgress({
-            stage: "database",
-            percent: 40,
-            status: "正在恢复数据库...",
-          });
-
-          const dbSource = path.join(tempDir, "database", "prompt-manager.db");
-          const dbTarget = path.join(dataDir, "prompt-manager.db");
-          await fs.copyFile(dbSource, dbTarget);
-
-          // 重新初始化数据库连接
-          await db.initDatabase(dataDir);
-
-          // 恢复图像 (50% -> 80%)
-          const imagesSource = path.join(tempDir, "files", "images");
-          const imagesTarget = path.join(dataDir, "images");
-          const imageStats = manifest.contents?.images || { count: 0 };
-
-          sendBackupProgress({
-            stage: "images",
-            percent: 50,
-            status: "正在恢复图像文件...",
-            detail: `共 ${imageStats.count} 个文件`,
-          });
-
-          await copyDirectoryWithProgress(imagesSource, imagesTarget, {
-            onProgress: (copiedCount, totalCount, fileName) => {
-              const percent = 50 + (copiedCount / totalCount) * 40;
-              sendBackupProgress({
-                stage: "images",
-                percent: Math.round(percent),
-                status: `正在恢复图像文件... (${copiedCount}/${totalCount})`,
-                detail: fileName,
-              });
-            },
-          });
-
-          // 重新生成缩略图 (90% -> 100%)
-          sendBackupProgress({
-            stage: "thumbnails",
-            percent: 90,
-            status: "正在重新生成缩略图...",
-          });
-
-          await regenerateAllThumbnails((current, total, fileName) => {
-            const percent = 90 + (current / total) * 10;
-            sendBackupProgress({
-              stage: "thumbnails",
-              percent: Math.round(percent),
-              status: "正在重新生成缩略图...",
-              detail: `${current}/${total} ${fileName || ""}`,
-            });
-          });
-
-          // 完成
-          sendBackupProgress({
-            stage: "complete",
-            percent: 100,
-            status: "导入完成！",
-          });
-
-          return {
-            success: true,
-            manifest,
-            oldDataDir: backupDir,
-          };
-        } catch (error) {
-          // 恢复失败，尝试回滚
-          logError("Main", "Restore failed, attempting rollback:", error);
-          sendBackupProgress({
-            stage: "error",
-            percent: 0,
-            status: "导入失败，正在回滚...",
-            detail: "正在恢复到原数据...",
-          });
-          await removeDirectory(dataDir);
-          await fs.rename(backupDir, dataDir);
-          throw new Error("导入失败，已自动回滚到原数据");
-        }
-      } finally {
-        // 清理临时目录
-        await removeDirectory(tempDir);
-      }
+      return await service.execute(filePaths[0]);
     } catch (error) {
+      // 错误翻译:日志 + error 进度(边界层职责)
       logError("Main", "Import full backup error:", error);
       sendBackupProgress({
         stage: "error",
