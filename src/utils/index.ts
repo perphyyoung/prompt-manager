@@ -43,8 +43,6 @@ export { generatePromptId, generateImageId } from "./idGenerator.ts";
 
 // ========== 防重复提交工具 ==========
 export {
-  withDuplicatePrevention,
-  wrapWithDuplicatePrevention,
   createDuplicatePreventionExecutor,
   DuplicatePreventionMixin,
   type IDuplicatePrevention,

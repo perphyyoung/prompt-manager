@@ -129,22 +129,6 @@ export class InvalidTagNameError extends TagOperationError {
   }
 }
 
-/** 保留标签异常 */
-export class ReservedTagError extends TagOperationError {
-  constructor(tag: TagName) {
-    super(`标签 "${tag}" 是系统保留标签，无法修改`, "RESERVED", tag);
-    this.name = "ReservedTagError";
-  }
-}
-
-/** 标签组不存在异常 */
-export class TagGroupNotFoundError extends TagOperationError {
-  constructor(groupId: TagGroupId) {
-    super(`标签组 ID ${groupId} 不存在`, "NOT_FOUND");
-    this.name = "TagGroupNotFoundError";
-  }
-}
-
 // ========== TopGroupManager 类型 ==========
 
 /** 标签信息 */

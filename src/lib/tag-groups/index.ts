@@ -37,8 +37,6 @@ export {
   TagExistsError,
   TagNotFoundError,
   InvalidTagNameError,
-  ReservedTagError,
-  TagGroupNotFoundError,
 } from "./types.ts";
 
 // 工具函数（按需导出）

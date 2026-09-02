@@ -22,28 +22,6 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 }
 
 /**
- * 使用 requestAnimationFrame 的防抖函数
- * 适用于 UI 更新场景，确保在下一帧渲染前执行
- * @param fn - 要执行的函数
- * @returns 防抖后的函数
- */
-export function rafDebounce<T extends (...args: unknown[]) => unknown>(
-  fn: T,
-): (...args: Parameters<T>) => void {
-  let rafId: number | null = null;
-
-  return (...args: Parameters<T>) => {
-    if (rafId) {
-      window.cancelAnimationFrame(rafId);
-    }
-    rafId = window.requestAnimationFrame(() => {
-      fn(...args);
-    });
-  };
-}
-
-/**
- * 节流函数
  * 固定时间间隔执行一次
  * @param fn - 要执行的函数
  * @param interval - 间隔时间（毫秒）

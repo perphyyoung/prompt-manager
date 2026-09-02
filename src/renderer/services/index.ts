@@ -28,4 +28,3 @@ export type {
 export { DataClearApi } from "./DataClearApi.ts";
 export { DataClearIpcService } from "./DataClearIpcService.ts";
 export { ElectronDataClearApi } from "./ElectronDataClearApi.ts";
-export { MockDataClearApi } from "./MockDataClearApi.ts";

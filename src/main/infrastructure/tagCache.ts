@@ -24,35 +24,6 @@ export async function initTagsCache() {
 }
 
 /**
- * 更新标签缓存（添加新标签）
- * @param {string} tagName - 标签名称
- */
-export function addTagToCache(tagName: string) {
-  if (allTagsCache && !allTagsCache.includes(tagName)) {
-    allTagsCache.push(tagName);
-    allTagsCache.sort();
-  }
-}
-
-/**
- * 批量更新标签缓存
- * @param {Array<string>} tagNames - 标签名称数组
- */
-export function addTagsToCache(tagNames: string[]) {
-  if (!allTagsCache) return;
-  let updated = false;
-  for (const tagName of tagNames) {
-    if (!allTagsCache.includes(tagName)) {
-      allTagsCache.push(tagName);
-      updated = true;
-    }
-  }
-  if (updated) {
-    allTagsCache.sort();
-  }
-}
-
-/**
  * 获取标签缓存（未初始化时先加载）
  */
 export async function getAllTagsCached(): Promise<string[]> {
