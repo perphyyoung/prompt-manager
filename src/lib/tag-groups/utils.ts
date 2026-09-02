@@ -6,20 +6,6 @@
 import type { TagName, TagGroup, TagGroupId } from "./types.ts";
 
 /**
- * 解析标签输入（支持批量）
- * 支持逗号、中文逗号、空格分隔
- * @param input - 输入字符串
- * @returns 标签数组
- */
-export function parseTagInput(input: string): TagName[] {
-  return input
-    .replace(/^[，,]+|[，,]+$/g, "")
-    .split(/[,，\s]+/)
-    .map((t) => t.trim())
-    .filter((t) => t);
-}
-
-/**
  * 计算标签差集
  * @param current - 当前标签数组
  * @param removed - 要移除的标签数组

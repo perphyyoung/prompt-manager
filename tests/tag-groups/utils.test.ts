@@ -4,7 +4,6 @@
 
 import { describe, it, expect } from "vitest";
 import {
-  parseTagInput,
   diffTags,
   normalizeTag,
   hasTag,
@@ -16,42 +15,6 @@ import {
 import type { TagGroup } from "../../src/lib/tag-groups/types.ts";
 
 describe("utils", () => {
-  describe("parseTagInput", () => {
-    it("should parse comma separated tags", () => {
-      expect(parseTagInput("tag1,tag2,tag3")).toEqual(["tag1", "tag2", "tag3"]);
-    });
-
-    it("should parse Chinese comma separated tags", () => {
-      expect(parseTagInput("tag1，tag2，tag3")).toEqual(["tag1", "tag2", "tag3"]);
-    });
-
-    it("should parse space separated tags", () => {
-      expect(parseTagInput("tag1 tag2 tag3")).toEqual(["tag1", "tag2", "tag3"]);
-    });
-
-    it("should parse mixed separators", () => {
-      expect(parseTagInput("tag1, tag2，tag3 tag4")).toEqual(["tag1", "tag2", "tag3", "tag4"]);
-    });
-
-    it("should trim whitespace", () => {
-      expect(parseTagInput("  tag1  ,  tag2  ")).toEqual(["tag1", "tag2"]);
-    });
-
-    it("should remove empty tags", () => {
-      expect(parseTagInput("tag1,,tag2")).toEqual(["tag1", "tag2"]);
-    });
-
-    it("should remove leading/trailing separators", () => {
-      expect(parseTagInput(",tag1,tag2,")).toEqual(["tag1", "tag2"]);
-      expect(parseTagInput("，tag1，tag2，")).toEqual(["tag1", "tag2"]);
-    });
-
-    it("should return empty array for empty input", () => {
-      expect(parseTagInput("")).toEqual([]);
-      expect(parseTagInput("   ")).toEqual([]);
-    });
-  });
-
   describe("diffTags", () => {
     it("should remove tags from array", () => {
       expect(diffTags(["a", "b", "c"], ["b"])).toEqual(["a", "c"]);
