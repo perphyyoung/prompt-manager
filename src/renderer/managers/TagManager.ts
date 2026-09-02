@@ -199,8 +199,8 @@ export abstract class TagManager {
       });
       if (!confirmed) return;
 
-      const result = await this.tagService.removeTags({
-        tagNames: [tag],
+      const result = await this.tagService.removeTag({
+        tagName: tag,
         type: this.getDataType(),
       });
       this.app.showToast(`${this.getTypeLabel()}标签已删除`);

@@ -13,10 +13,10 @@ export { TagAutocomplete } from "./TagAutocomplete.ts";
 export { TagService, tagService } from "./TagService.ts";
 export type {
   CreateTagOptions,
-  LinkTagsOptions,
-  RemoveTagsOptions,
+  LinkTagOptions,
+  RemoveTagOptions,
   UnlinkTagOptions,
-  LinkTagsResult,
+  LinkTagResult,
   RenameTagOptions,
   CreateTagGroupOptions,
   UpdateTagGroupOptions,

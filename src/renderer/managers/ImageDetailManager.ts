@@ -351,7 +351,7 @@ export class ImageDetailManager extends DetailViewManager<IImage> {
         try {
           const currentItem = this.currentItem;
           const tagService = TagService.getInstance();
-          const result = await tagService.linkTagsToItem({
+          const result = await tagService.linkTagToItem({
             tagName,
             type: "image",
             itemId: currentItem?.id,

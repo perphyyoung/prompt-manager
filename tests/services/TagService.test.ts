@@ -9,7 +9,7 @@ import * as operations from "../../src/lib/tag-groups/operations.ts";
 // Mock pyTagGroups 模块
 vi.mock("../../src/lib/tag-groups/operations.ts", () => ({
   createTag: vi.fn().mockResolvedValue(undefined),
-  deleteTags: vi.fn(),
+  deleteTag: vi.fn(),
   getTags: vi.fn().mockResolvedValue([]),
   getTagGroups: vi.fn(),
 }));
@@ -113,14 +113,14 @@ describe("TagService", () => {
     });
   });
 
-  describe("linkTagsToItem", () => {
+  describe("linkTagToItem", () => {
     it("应该成功关联标签到项目", async () => {
       vi.mocked(operations.getTags).mockResolvedValue([]);
 
       const eventBus = { emit: vi.fn() };
       tagService.setEventBus(eventBus);
 
-      const result = await tagService.linkTagsToItem({
+      const result = await tagService.linkTagToItem({
         tagName: "tag1",
         type: "prompt",
         itemId: "item-123",
@@ -139,7 +139,7 @@ describe("TagService", () => {
     it("应该支持批量关联到多个项目", async () => {
       vi.mocked(operations.getTags).mockResolvedValue([]);
 
-      await tagService.linkTagsToItem({
+      await tagService.linkTagToItem({
         tagName: "tag1",
         type: "image",
         itemIds: ["item-1", "item-2"],
@@ -154,7 +154,7 @@ describe("TagService", () => {
     });
 
     it("应该处理空标签名", async () => {
-      const result = await tagService.linkTagsToItem({
+      const result = await tagService.linkTagToItem({
         tagName: "  ",
         type: "prompt",
         itemId: "item-123",
@@ -167,7 +167,7 @@ describe("TagService", () => {
     });
 
     it("保留标签应该不创建也不关联", async () => {
-      const result = await tagService.linkTagsToItem({
+      const result = await tagService.linkTagToItem({
         tagName: "收藏",
         type: "prompt",
         itemId: "item-123",
@@ -182,7 +182,7 @@ describe("TagService", () => {
     it("应该处理无项目ID的情况", async () => {
       vi.mocked(operations.getTags).mockResolvedValue([]);
 
-      const result = await tagService.linkTagsToItem({
+      const result = await tagService.linkTagToItem({
         tagName: "tag1",
         type: "prompt",
       });
@@ -194,31 +194,31 @@ describe("TagService", () => {
     });
   });
 
-  describe("removeTags", () => {
+  describe("removeTag", () => {
     it("应该成功删除标签", async () => {
       const mockResult = {
-        deleted: 2,
+        deleted: 1,
         errors: [],
       };
-      vi.mocked(operations.deleteTags).mockResolvedValue(mockResult);
+      vi.mocked(operations.deleteTag).mockResolvedValue(mockResult);
 
-      const result = await tagService.removeTags({
-        tagNames: ["tag1", "tag2"],
+      const result = await tagService.removeTag({
+        tagName: "tag1",
         type: "prompt",
       });
 
-      expect(result.deleted).toBe(2);
-      expect(operations.deleteTags).toHaveBeenCalledWith("prompt", ["tag1", "tag2"]);
+      expect(result.deleted).toBe(1);
+      expect(operations.deleteTag).toHaveBeenCalledWith("prompt", "tag1");
     });
 
-    it("应该处理空标签列表", async () => {
-      const result = await tagService.removeTags({
-        tagNames: [],
+    it("应该处理空标签名", async () => {
+      const result = await tagService.removeTag({
+        tagName: "  ",
         type: "image",
       });
 
       expect(result.deleted).toBe(0);
-      expect(operations.deleteTags).not.toHaveBeenCalled();
+      expect(operations.deleteTag).not.toHaveBeenCalled();
     });
   });
 
@@ -282,12 +282,12 @@ describe("TagService", () => {
       expect(ports.ipc.logError).toHaveBeenCalled();
     });
 
-    it("linkTagsToItem 走注入的批量关联端口(itemIds 去重)", async () => {
+    it("linkTagToItem 走注入的批量关联端口(itemIds 去重)", async () => {
       vi.mocked(operations.getTags).mockResolvedValue([]);
       const { ports } = createFakePorts();
       const service = new TagService(ports);
 
-      await service.linkTagsToItem({
+      await service.linkTagToItem({
         tagName: "tag-x",
         type: "prompt",
         itemIds: ["p1", "p1", "p2"],

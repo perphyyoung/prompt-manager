@@ -11,7 +11,7 @@ import {
   TagDeleteResult,
   TagCreateOptions,
   createTag as createTagOperation,
-  deleteTags,
+  deleteTag,
   getTags as getTagsOperation,
   getTagGroups as getTagGroupsOperation,
   TagGroup,
@@ -34,7 +34,7 @@ export interface CreateTagOptions {
   defaultGroupId?: number | null;
 }
 
-export interface LinkTagsOptions {
+export interface LinkTagOptions {
   /** 标签名 */
   tagName: string;
   type: DataType;
@@ -43,8 +43,8 @@ export interface LinkTagsOptions {
   itemIds?: string[];
 }
 
-export interface RemoveTagsOptions {
-  tagNames: string[];
+export interface RemoveTagOptions {
+  tagName: string;
   type: DataType;
 }
 
@@ -54,7 +54,7 @@ export interface UnlinkTagOptions {
   tagName: string;
 }
 
-export interface LinkTagsResult extends TagOperationResult {
+export interface LinkTagResult extends TagOperationResult {
   linkedToItem: boolean;
   linkedItemCount: number;
 }
@@ -307,15 +307,15 @@ export class TagService {
    * @param options - 删除选项
    * @returns 删除结果
    */
-  async removeTags(options: RemoveTagsOptions): Promise<TagDeleteResult> {
-    const { tagNames, type } = options;
-    const names = this.normalizeTagNames(tagNames);
+  async removeTag(options: RemoveTagOptions): Promise<TagDeleteResult> {
+    const { tagName, type } = options;
+    const name = tagName.trim();
 
-    if (names.length === 0) {
+    if (!name) {
       return { deleted: 0, errors: [] };
     }
 
-    const result = await deleteTags(type, names);
+    const result = await deleteTag(type, name);
 
     // 触发事件通知
     if (result.deleted > 0) {
@@ -332,7 +332,7 @@ export class TagService {
    * @param options - 关联选项
    * @returns 操作结果
    */
-  async linkTagsToItem(options: LinkTagsOptions): Promise<LinkTagsResult> {
+  async linkTagToItem(options: LinkTagOptions): Promise<LinkTagResult> {
     const { tagName, type, itemId, itemIds } = options;
 
     // 1. 合并去重项目ID，标签名有效时才需要关联
@@ -604,15 +604,6 @@ export class TagService {
   }
 
   // ========== 私有方法 ==========
-
-  /**
-   * 标准化标签名列表（去除首尾空格，过滤空值）
-   * @param tagNames - 标签名数组
-   * @returns 标准化后的标签名数组
-   */
-  private normalizeTagNames(tagNames: string[]): string[] {
-    return tagNames.map((n) => n.trim()).filter((n) => n.length > 0);
-  }
 
   /**
    * 触发项目变更事件

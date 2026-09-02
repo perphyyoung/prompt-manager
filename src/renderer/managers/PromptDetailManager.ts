@@ -260,7 +260,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
         try {
           const currentItem = this.currentItem;
           const tagService = TagService.getInstance();
-          const result = await tagService.linkTagsToItem({
+          const result = await tagService.linkTagToItem({
             tagName,
             type: "prompt",
             itemId: currentItem?.id,

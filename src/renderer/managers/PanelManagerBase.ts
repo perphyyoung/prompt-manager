@@ -209,7 +209,7 @@ export abstract class PanelManagerBase {
       addTag: {
         processItems: async (ids: string[], tagName: string) => {
           const tagService = TagService.getInstance();
-          const result = await tagService.linkTagsToItem({
+          const result = await tagService.linkTagToItem({
             tagName,
             type: this.panelType,
             itemIds: ids,
@@ -1696,7 +1696,7 @@ export abstract class PanelManagerBase {
 
     // 使用 TagService 统一处理创建和关联
     const tagService = TagService.getInstance();
-    const result = await tagService.linkTagsToItem({
+    const result = await tagService.linkTagToItem({
       tagName,
       type: type as "prompt" | "image",
       itemId: item.id,

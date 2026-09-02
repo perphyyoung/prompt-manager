@@ -7,7 +7,7 @@ import {
   getTags,
   createTag,
   renameTag,
-  deleteTags,
+  deleteTag,
   assignTagToGroup,
   getTagGroups,
   createTagGroup,
@@ -111,26 +111,22 @@ describe("operations", () => {
     });
   });
 
-  describe("deleteTags", () => {
-    it("should delete tags and return result", async () => {
-      const result = await deleteTags("prompt", ["tag1"]);
+  describe("deleteTag", () => {
+    it("should delete tag and return result", async () => {
+      const result = await deleteTag("prompt", "tag1");
       expect(result.deleted).toBe(1);
       expect(result.errors).toEqual([]);
     });
 
-    it("should handle multiple tags", async () => {
-      const result = await deleteTags("prompt", ["tag1", "tag2"]);
-      expect(result.deleted).toBe(2);
-    });
-
-    it("should skip empty tags", async () => {
-      const result = await deleteTags("prompt", ["tag1", "  ", "tag2"]);
-      expect(result.deleted).toBe(2);
+    it("should return deleted 0 for empty tag", async () => {
+      const result = await deleteTag("prompt", "  ");
+      expect(result.deleted).toBe(0);
+      expect(mockElectronAPI.deletePromptTag).not.toHaveBeenCalled();
     });
 
     it("should remove tag from items before deleting", async () => {
       mockElectronAPI.getPromptsByTag.mockResolvedValue(["prompt1", "prompt2"]);
-      await deleteTags("prompt", ["tag1"]);
+      await deleteTag("prompt", "tag1");
 
       expect(mockElectronAPI.getPromptsByTag).toHaveBeenCalledWith("tag1");
       expect(mockElectronAPI.removeTagFromPrompt).toHaveBeenCalledTimes(2);
@@ -139,13 +135,13 @@ describe("operations", () => {
     });
 
     it("should clear group assignment before deleting", async () => {
-      await deleteTags("prompt", ["tag1"]);
+      await deleteTag("prompt", "tag1");
       expect(mockElectronAPI.assignPromptTagToBelongGroup).toHaveBeenCalledWith("tag1", null);
     });
 
     it("should collect errors for failed deletions", async () => {
       mockElectronAPI.deletePromptTag.mockRejectedValue(new Error("Database error"));
-      const result = await deleteTags("prompt", ["tag1"]);
+      const result = await deleteTag("prompt", "tag1");
 
       expect(result.deleted).toBe(0);
       expect(result.errors.length).toBe(1);

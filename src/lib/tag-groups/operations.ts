@@ -79,55 +79,52 @@ export async function renameTag(type: DataType, oldName: TagName, newName: TagNa
 /**
  * 删除标签
  * @param type - 数据类型
- * @param tags - 要删除的标签列表
- * @returns 删除结果（批量操作，不抛出异常，返回错误列表）
+ * @param tag - 要删除的标签名
+ * @returns 删除结果（不抛出异常，失败时返回错误列表）
  */
-export async function deleteTags(type: DataType, tags: TagName[]): Promise<TagDeleteResult> {
-  const result: TagDeleteResult = {
-    deleted: 0,
-    errors: [],
-  };
-
-  const removeTagFromItem = (itemId: string, tag: TagName) =>
-    type === "prompt"
-      ? window.electronAPI.removeTagFromPrompt(itemId, tag)
-      : window.electronAPI.removeTagFromImage(itemId, tag);
-
-  for (const tag of tags) {
-    const trimmedTag = tag.trim();
-    if (!trimmedTag) continue;
-
-    try {
-      // 1. 从所有项目中移除标签
-      const itemIds =
-        type === "prompt"
-          ? await window.electronAPI.getPromptsByTag(trimmedTag)
-          : await window.electronAPI.getImagesByTag(trimmedTag);
-      for (const itemId of itemIds) {
-        await removeTagFromItem(itemId, trimmedTag);
-      }
-
-      // 2. 清除标签组关联
-      await assignTagToGroup(type, trimmedTag, null);
-
-      // 3. 删除标签
-      if (type === "prompt") {
-        await window.electronAPI.deletePromptTag(trimmedTag);
-      } else {
-        await window.electronAPI.deleteImageTag(trimmedTag);
-      }
-
-      result.deleted++;
-    } catch (error) {
-      result.errors.push({
-        tag: trimmedTag,
-        error: error instanceof Error ? error.message : "删除失败",
-        code: "INVALID",
-      });
-    }
+export async function deleteTag(type: DataType, tag: TagName): Promise<TagDeleteResult> {
+  const trimmedTag = tag.trim();
+  if (!trimmedTag) {
+    return { deleted: 0, errors: [] };
   }
 
-  return result;
+  try {
+    // 1. 从所有项目中移除标签
+    const itemIds =
+      type === "prompt"
+        ? await window.electronAPI.getPromptsByTag(trimmedTag)
+        : await window.electronAPI.getImagesByTag(trimmedTag);
+    for (const itemId of itemIds) {
+      if (type === "prompt") {
+        await window.electronAPI.removeTagFromPrompt(itemId, trimmedTag);
+      } else {
+        await window.electronAPI.removeTagFromImage(itemId, trimmedTag);
+      }
+    }
+
+    // 2. 清除标签组关联
+    await assignTagToGroup(type, trimmedTag, null);
+
+    // 3. 删除标签
+    if (type === "prompt") {
+      await window.electronAPI.deletePromptTag(trimmedTag);
+    } else {
+      await window.electronAPI.deleteImageTag(trimmedTag);
+    }
+
+    return { deleted: 1, errors: [] };
+  } catch (error) {
+    return {
+      deleted: 0,
+      errors: [
+        {
+          tag: trimmedTag,
+          error: error instanceof Error ? error.message : "删除失败",
+          code: "INVALID",
+        },
+      ],
+    };
+  }
 }
 
 /**

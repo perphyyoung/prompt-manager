@@ -65,7 +65,7 @@ export {
   getTags,
   createTag,
   renameTag,
-  deleteTags,
+  deleteTag,
   assignTagToGroup,
   getTagGroups,
   createTagGroup,
