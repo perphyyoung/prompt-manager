@@ -28,7 +28,7 @@
   --font-size-lg: calc(16px * var(--font-size-scale));
 }
 
-/* 黑暗模式变量 */
+/* 暗黑模式变量 */
 [data-theme="dark"] {
   --primary-color: #818cf8;
   --primary-hover: #6366f1;

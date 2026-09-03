@@ -546,7 +546,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     }
 
     if (showToast) {
-      this.app.showToast?.(theme === "dark" ? "已切换到黑暗模式" : "已切换到明亮模式", "success");
+      this.app.showToast?.(theme === "dark" ? "已切换到暗黑模式" : "已切换到明亮模式", "success");
     }
   }
 
