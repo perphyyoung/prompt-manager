@@ -70,7 +70,7 @@ describe("TagService", () => {
       expect(operations.createTag).not.toHaveBeenCalled();
     });
 
-    it("应该拒绝保留标签", async () => {
+    it("应该拒绝特殊标签", async () => {
       const result = await tagService.createTag({
         tagName: "收藏",
         type: "image",
@@ -81,7 +81,7 @@ describe("TagService", () => {
         {
           tag: "收藏",
           error: '"收藏" 是系统特殊标签，不能手动添加',
-          code: "RESERVED",
+          code: "SPECIAL",
         },
       ]);
       expect(operations.createTag).not.toHaveBeenCalled();
@@ -166,7 +166,7 @@ describe("TagService", () => {
       expect(window.electronAPI.addPromptTagsBatch).not.toHaveBeenCalled();
     });
 
-    it("保留标签应该不创建也不关联", async () => {
+    it("特殊标签应该不创建也不关联", async () => {
       const result = await tagService.linkTagToItem({
         tagName: "收藏",
         type: "prompt",

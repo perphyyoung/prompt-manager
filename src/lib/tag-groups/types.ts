@@ -39,7 +39,7 @@ export interface TagGroup {
 
 /** 错误代码 */
 export type ErrorCode =
-  | "RESERVED" // 系统保留标签
+  | "SPECIAL" // 系统特殊标签（不可手动增删改）
   | "EXISTS" // 已存在
   | "INVALID" // 无效名称
   | "PERMISSION" // 权限不足

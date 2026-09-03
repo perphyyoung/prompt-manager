@@ -276,7 +276,7 @@ export class TagService {
           {
             tag: name,
             error: `"${name}" 是系统特殊标签，不能手动添加`,
-            code: "RESERVED",
+            code: "SPECIAL",
           },
         ],
       };
@@ -346,7 +346,7 @@ export class TagService {
     // 2. 创建标签（业务校验、已存在跳过均在 createTag 内）
     const createResult = await this.createTag({ tagName, type });
 
-    // 3. 校验失败（保留标签等）不关联
+    // 3. 校验失败（特殊标签等）不关联
     if (createResult.errors.length > 0) {
       return { ...createResult, linkedToItem: false, linkedItemCount: 0 };
     }
@@ -374,13 +374,13 @@ export class TagService {
 
   /**
    * 将操作结果中的错误以 toast 形式提示用户
-   * 特殊标签（保留标签）用 warning，其余用 error
+   * 特殊标签用 warning，其余用 error
    * @param errors - 操作结果中的错误列表
    * @param showToast - toast 回调
    */
   reportTagErrors(errors: TagError[], showToast: (msg: string, type?: string) => void): void {
     for (const err of errors) {
-      if (err.code === "RESERVED") {
+      if (err.code === "SPECIAL") {
         showToast(`"${err.tag}" 是系统特殊标签，不能手动添加`, "warning");
       } else {
         showToast(err.error, "error");

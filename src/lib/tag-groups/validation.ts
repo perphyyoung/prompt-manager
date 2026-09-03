@@ -1,7 +1,7 @@
 /**
  * PyTagGroups 验证模块
  * 所有标签相关的验证逻辑，纯函数，无副作用
- * 注意：特殊标签（保留标签）校验属于业务逻辑，由 TagService 直接读取 Constants.ALL_SPECIAL_TAGS 处理
+ * 注意：特殊标签校验属于业务逻辑，由 TagService 直接读取 Constants.ALL_SPECIAL_TAGS 处理
  */
 
 import type { TagName, ValidationResult, ErrorCode } from "./types.ts";
