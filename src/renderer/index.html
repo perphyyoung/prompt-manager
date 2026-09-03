@@ -182,7 +182,12 @@
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="m21 21-4.35-4.35"></path>
               </svg>
-              <input type="text" id="promptSearchInput" placeholder="搜索提示词..." />
+              <input
+                type="text"
+                id="promptSearchInput"
+                placeholder="搜索标题/内容/翻译/备注/标签"
+                title="搜索范围：标题、内容、翻译、备注、标签（模糊匹配，不区分大小写）"
+              />
               <button
                 type="button"
                 id="clearPromptSearchBtn"
@@ -414,7 +419,12 @@
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="m21 21-4.35-4.35"></path>
               </svg>
-              <input type="text" id="imageSearchInput" placeholder="搜索图像..." />
+              <input
+                type="text"
+                id="imageSearchInput"
+                placeholder="搜索文件名/备注/标签"
+                title="搜索范围：文件名、备注、标签（模糊匹配，不区分大小写）"
+              />
               <button
                 type="button"
                 id="clearImageSearchBtn"
@@ -1451,7 +1461,12 @@
         <div class="modal-body">
           <div class="image-selector-filters">
             <div class="image-selector-search">
-              <input type="text" id="imageSelectorSearchInput" placeholder="搜索图像..." />
+              <input
+                type="text"
+                id="imageSelectorSearchInput"
+                placeholder="搜索文件名/备注/标签"
+                title="搜索范围：文件名、备注、标签（模糊匹配，不区分大小写）"
+              />
               <button
                 type="button"
                 id="clearImageSelectorSearchBtn"

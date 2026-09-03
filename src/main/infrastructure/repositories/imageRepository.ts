@@ -6,7 +6,7 @@
 import { getImageTagsByImageId, addImageTags } from "./tagRepository.js";
 import { run, get, all, runInTransaction, TAG_SEPARATOR, getDb } from "../sqlite/connection.js";
 import { logError, logDebug } from "../../mainLogger.js";
-import { dbTime, formatDbTimeToLocal } from "../../../utils/index.js";
+import { dbTime, formatDbTimeToLocal, escapeLikePattern } from "../../../utils/index.js";
 import { isConstraintError } from "../../database-errors.js";
 import path from "path";
 import { promises as fs } from "fs";
@@ -192,9 +192,10 @@ function buildImageFilterWhere(options: {
   }
 
   if (options.searchQuery && options.searchQuery.trim()) {
-    const query = `%${options.searchQuery.trim()}%`;
+    // 转义 % / _ ，否则用户输入单个 % 会退化成"匹配全部"
+    const query = `%${escapeLikePattern(options.searchQuery.trim())}%`;
     conditions.push(
-      `(i.file_name LIKE ? OR i.note LIKE ? OR EXISTS (SELECT 1 FROM image_tag_relations itr_search JOIN image_tags it_search ON itr_search.tag_id = it_search.id WHERE itr_search.image_id = i.id AND it_search.name LIKE ?))`,
+      `(i.file_name LIKE ? ESCAPE '\\' OR i.note LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM image_tag_relations itr_search JOIN image_tags it_search ON itr_search.tag_id = it_search.id WHERE itr_search.image_id = i.id AND it_search.name LIKE ? ESCAPE '\\'))`,
     );
     params.push(query, query, query);
   }

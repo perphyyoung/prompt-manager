@@ -188,3 +188,14 @@ export function validateTitle(title: unknown, maxLength: number = 255): Validati
 
   return { valid: true };
 }
+
+/**
+ * 转义 SQLite LIKE 通配符：% 和 _ 视作字面量，转义符为反斜杠
+ * 必须与 SQL 中的 `LIKE ? ESCAPE '\'` 配对使用，
+ * 否则用户输入一个 % 就会退化成"匹配全部"，输入 _ 会匹配任意单字符
+ * @param value - 用户输入的原始关键词
+ * @returns 可直接拼进 LIKE 模式的字符串
+ */
+export function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
+}

@@ -25,6 +25,7 @@ export {
   combineValidators,
   validateFileName,
   validateTitle,
+  escapeLikePattern,
 } from "./TextUtils.ts";
 
 // ========== 时间工具 ==========

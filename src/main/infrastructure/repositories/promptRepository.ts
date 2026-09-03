@@ -6,7 +6,7 @@
 import { addPromptTags } from "./tagRepository.js";
 import { addPromptImages } from "./imageRepository.js";
 import { run, get, all, runInTransaction, TAG_SEPARATOR } from "../sqlite/connection.js";
-import { dbTime, formatDbTimeToLocal } from "../../../utils/index.js";
+import { dbTime, formatDbTimeToLocal, escapeLikePattern } from "../../../utils/index.js";
 import type {
   PromptRow,
   Prompt,
@@ -165,9 +165,10 @@ function buildPromptFilterWhere(options: {
   }
 
   if (options.searchQuery && options.searchQuery.trim()) {
-    const query = `%${options.searchQuery.trim()}%`;
+    // 转义 % / _ ，否则用户输入单个 % 会退化成"匹配全部"
+    const query = `%${escapeLikePattern(options.searchQuery.trim())}%`;
     conditions.push(
-      `(p.title LIKE ? OR p.content LIKE ? OR p.content_translate LIKE ? OR p.note LIKE ? OR EXISTS (SELECT 1 FROM prompt_tag_relations ptr_search JOIN prompt_tags pt_search ON ptr_search.tag_id = pt_search.id WHERE ptr_search.prompt_id = p.id AND pt_search.name LIKE ?))`,
+      `(p.title LIKE ? ESCAPE '\\' OR p.content LIKE ? ESCAPE '\\' OR p.content_translate LIKE ? ESCAPE '\\' OR p.note LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM prompt_tag_relations ptr_search JOIN prompt_tags pt_search ON ptr_search.tag_id = pt_search.id WHERE ptr_search.prompt_id = p.id AND pt_search.name LIKE ? ESCAPE '\\'))`,
     );
     params.push(query, query, query, query, query);
   }

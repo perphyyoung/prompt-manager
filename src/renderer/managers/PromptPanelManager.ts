@@ -638,7 +638,7 @@ export class PromptPanelManager extends PanelManagerBase {
         PanelRenderer.showEmptyState(
           Constants.Ids.PROMPT_GRID,
           Constants.Ids.PROMPT_EMPTY_STATE,
-          `未找到匹配"${currentSearchQuery}"的提示词`,
+          `未找到匹配"${currentSearchQuery}"的提示词（已搜索：标题、内容、翻译、备注、标签）`,
           "搜索无结果",
         );
       } else if (this.selectedTags.size > 0) {

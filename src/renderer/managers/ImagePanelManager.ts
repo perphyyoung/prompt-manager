@@ -477,7 +477,7 @@ export class ImagePanelManager extends PanelManagerBase {
         PanelRenderer.showEmptyState(
           Constants.Ids.IMAGE_GRID,
           Constants.Ids.IMAGE_EMPTY_STATE,
-          `未找到匹配"${currentSearchQuery}"的图像`,
+          `未找到匹配"${currentSearchQuery}"的图像（已搜索：文件名、备注、标签）`,
           "搜索无结果",
         );
       } else if (this.selectedTags.size > 0) {
