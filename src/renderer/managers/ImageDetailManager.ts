@@ -7,7 +7,13 @@ import type { IDetailTagManager } from "../../types/entities.ts";
 import { HtmlUtils, validateFileName, cacheManager } from "../../utils/index.ts";
 import { SaveManager, ImageSaveStrategy, ErrorHandler } from "../renderer_utils/index.ts";
 import { Constants, Events } from "../constants.ts";
-import { TagAutocomplete, DialogService, DialogConfig, TagService } from "../services/index.ts";
+import {
+  TagAutocomplete,
+  DialogService,
+  DialogConfig,
+  TagService,
+  DetailDataService,
+} from "../services/index.ts";
 import { IImage, IPrompt } from "../../types/entities.ts";
 import type { DetailViewManagerDeps } from "../app.types.ts";
 import { showContextMenu } from "../renderer_utils/ContextMenuUtils.ts";
@@ -34,12 +40,18 @@ export class ImageDetailManager extends DetailViewManager<IImage> {
   private currentDetailPromptId: string | null = null;
   private currentDetailPromptRefs: IPrompt[] = [];
   private currentTags: string[] = [];
+  private detailData: DetailDataService;
 
   constructor(options: IImageDetailManagerOptions) {
     super({
       app: options.app,
       modalId: Constants.Ids.IMAGE_DETAIL_MODAL,
       closeBtnId: Constants.Ids.IMAGE_DETAIL_CLOSE_BTN,
+    });
+    // 详情页数据服务：持久化/缓存/列表刷新等「纯数据」关注点下沉到这里
+    this.detailData = new DetailDataService({
+      eventBus: this.app.eventBus,
+      api: window.electronAPI,
     });
   }
 
@@ -711,22 +723,13 @@ export class ImageDetailManager extends DetailViewManager<IImage> {
       const currentItem = this.currentItem;
       const currentPrompts = currentItem?.promptRefs || [];
       const newPrompts = currentPrompts.filter((p) => !this.app.isSameId(p.promptId, promptId));
-      // 转换为数据库需要的格式（只保留 id）
-      const promptsForUpdate = newPrompts.map((p) => ({ id: p.promptId }));
-      await window.electronAPI.updateImage(imageId, { prompts: promptsForUpdate });
+      await this.detailData.saveImagePrompts(imageId, newPrompts);
 
       if (this.currentItem) {
         this.currentItem.promptRefs = newPrompts;
-        const cachedImage = cacheManager.getCachedImage(imageId);
-        if (cachedImage) {
-          cachedImage.promptRefs = newPrompts;
-        }
         await this.renderPromptInfo(this.currentItem);
       }
 
-      // 通过事件通知刷新，避免直接调用导致的重复刷新
-      this.app.eventBus.emit(Events.PROMPTS_CHANGED);
-      this.app.eventBus.emit(Events.IMAGES_CHANGED);
       this.app.showToast("关联已解除", "success");
     } catch (error) {
       window.electronAPI.logError(
@@ -852,30 +855,12 @@ export class ImageDetailManager extends DetailViewManager<IImage> {
     if (!image) return;
     if (!image.promptRefs || image.promptRefs.length === 0) return;
 
-    const syncedIds: string[] = [];
-
-    for (const ref of image.promptRefs) {
-      const promptId = ref.promptId;
-      if (!promptId) continue;
-
-      try {
-        await window.electronAPI.updatePrompt(promptId, { isSafe });
-
-        const cachedPrompt = cacheManager.getCachedPrompt(promptId);
-        if (cachedPrompt) {
-          cachedPrompt.isSafe = isSafe;
-        }
-        syncedIds.push(promptId);
-      } catch (error) {
-        window.electronAPI.logError(
-          "ImageDetailManager.ts",
-          `Failed to sync safety to prompt ${promptId}: ${error}`,
-        );
-      }
-    }
+    const promptIds = image.promptRefs
+      .map((ref) => String(ref.promptId))
+      .filter((id) => id.length > 0);
+    const syncedIds = await this.detailData.syncPromptsSafety(promptIds, isSafe);
 
     if (syncedIds.length > 0) {
-      this.app.eventBus.emit(Events.PROMPTS_CHANGED);
       this.updateOpenPromptDetailUI(syncedIds, isSafe);
     }
   }

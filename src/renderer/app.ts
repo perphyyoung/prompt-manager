@@ -3,7 +3,7 @@
  * 作为协调器，整合各个面板管理器
  */
 
-import { Constants, Events } from "./constants.ts";
+import { Constants } from "./constants.ts";
 import { DialogService, DialogConfig } from "./services/index.ts";
 import {
   PromptPanelManager,
@@ -720,68 +720,6 @@ class PromptManager implements IApp {
    */
   async renderStatistics() {
     await this.statisticsManager?.renderStatistics();
-  }
-
-  /**
-   * 保存提示词字段
-   * @param field - 字段名
-   * @param value - 字段值
-   */
-  async savePromptField(field: string, value: unknown) {
-    const promptIdEl = document.getElementById(
-      Constants.Ids.PROMPT_DETAIL_ID,
-    ) as HTMLInputElement | null;
-    const promptId = promptIdEl ? promptIdEl.value : null;
-
-    if (!promptId) {
-      window.electronAPI.logError("App", "[savePromptField] Prompt ID not found");
-      return;
-    }
-
-    const lockKey = `savePromptField_${promptId}_${field}`;
-    if (this._saveLocks?.has(lockKey)) {
-      return;
-    }
-    if (!this._saveLocks) this._saveLocks = new Set();
-    this._saveLocks.add(lockKey);
-
-    try {
-      const updateData: Record<string, unknown> = {};
-      if (field === "images") {
-        updateData[field] = value
-          ? (value as Array<Record<string, unknown>>).map((img) => ({ ...img }))
-          : [];
-      } else {
-        updateData[field] = value;
-      }
-
-      await window.electronAPI.updatePrompt(promptId, updateData);
-
-      const cachedPrompt = cacheManager.getCachedPrompt(promptId);
-      if (cachedPrompt) {
-        Object.assign(cachedPrompt, updateData);
-      }
-
-      if (field === "images" && value) {
-        (value as Array<{ id?: string }>).forEach((img) => {
-          if (img.id) {
-            const cachedImage = cacheManager.getCachedImage(img.id);
-            if (cachedImage) {
-              (cachedImage as { promptRefs?: unknown[] }).promptRefs =
-                (cachedPrompt as { images?: Array<{ id: string }> })?.images?.filter(
-                  (i) => i.id === (cachedImage as { id: string }).id,
-                ) || [];
-            }
-          }
-        });
-      }
-
-      // 通过事件通知刷新，避免直接调用导致的重复刷新
-      this.eventBus.emit(Events.PROMPTS_CHANGED);
-      this.eventBus.emit(Events.IMAGES_CHANGED);
-    } finally {
-      this._saveLocks?.delete(lockKey);
-    }
   }
 
   /**

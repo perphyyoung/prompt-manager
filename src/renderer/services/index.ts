@@ -11,6 +11,14 @@ export { TagAutocomplete } from "./TagAutocomplete.ts";
 
 // TagService 标签业务服务
 export { TagService, tagService } from "./TagService.ts";
+
+// 详情页数据服务（从详情 Manager 抽取的数据关注点）
+export { DetailDataService } from "./DetailDataService.ts";
+export type {
+  DetailDataApiPort,
+  DetailEventBusPort,
+  DetailDataServiceDeps,
+} from "./DetailDataService.ts";
 export type {
   CreateTagOptions,
   LinkTagOptions,

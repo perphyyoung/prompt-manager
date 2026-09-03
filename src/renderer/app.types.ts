@@ -248,7 +248,6 @@ export interface IApp {
   findPromptById(id: string): unknown | null;
   findImageById(id: string, allImages?: Array<{ id: string }> | null): { id: string } | null;
   generateUniqueTimestamp(): string;
-  savePromptField(field: string, value: unknown): Promise<void>;
   updatePromptFavoriteBtnUI(isFavorite: boolean): void;
   updateImageDetailFavoriteBtnUI(isFavorite: boolean): void;
   renderImageDetailInfo(image: unknown): Promise<void>;

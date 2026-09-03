@@ -12,6 +12,7 @@ import {
   TagAutocomplete,
   DialogService,
   DialogConfig,
+  DetailDataService,
 } from "../services/index.ts";
 import { showContextMenu } from "../renderer_utils/ContextMenuUtils.ts";
 import { IPrompt, IImage } from "../../types/entities.ts";
@@ -45,6 +46,7 @@ interface IPromptDetailManagerOptions {
 
 export class PromptDetailManager extends DetailViewManager<IPrompt> {
   private uploadStrategy: DirectSaveStrategy;
+  private detailData: DetailDataService;
   private isOpeningDialog: boolean;
   private tagAutocomplete: TagAutocomplete | null = null;
   private promptSaveManager: SaveManager | null = null;
@@ -70,6 +72,11 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
     this.app = options.app;
     // 图像上传策略（直接保存，适合频繁操作）
     this.uploadStrategy = new DirectSaveStrategy(this.app);
+    // 详情页数据服务：持久化/缓存/列表刷新等「纯数据」关注点下沉到这里
+    this.detailData = new DetailDataService({
+      eventBus: this.app.eventBus,
+      api: window.electronAPI,
+    });
     // 防抖标志：防止重复打开文件对话框
     this.isOpeningDialog = false;
   }
@@ -518,30 +525,10 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
     if (!prompt) return;
     if (!prompt.images || prompt.images.length === 0) return;
 
-    const syncedIds: string[] = [];
-
-    for (const img of prompt.images) {
-      const imageId = img.id;
-      if (!imageId) continue;
-
-      try {
-        await window.electronAPI.updateImage(imageId, { isSafe });
-
-        const cachedImage = cacheManager.getCachedImage(imageId);
-        if (cachedImage) {
-          cachedImage.isSafe = isSafe;
-        }
-        syncedIds.push(imageId);
-      } catch (error) {
-        window.electronAPI.logError(
-          "PromptDetailManager.ts",
-          `Failed to sync safety to image ${imageId}: ${error}`,
-        );
-      }
-    }
+    const imageIds = prompt.images.map((img) => String(img.id)).filter((id) => id.length > 0);
+    const syncedIds = await this.detailData.syncImagesSafety(imageIds, isSafe);
 
     if (syncedIds.length > 0) {
-      this.app.eventBus.emit(Events.IMAGES_CHANGED);
       this.updateOpenImageDetailUI(syncedIds, isSafe);
     }
   }
@@ -890,7 +877,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
       const promptId = promptIdInput?.value;
       if (promptId) {
         const updatedImages = Array.from(this.app.promptRefImagesCache.values());
-        await this.savePromptField("images", updatedImages);
+        await this.detailData.savePromptImages(promptId, updatedImages);
       }
 
       await this.renderImagePreviews();
@@ -953,7 +940,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
     const promptId = promptIdInput?.value;
 
     if (promptId) {
-      await this.savePromptField("images", currentImages);
+      await this.detailData.savePromptImages(promptId, currentImages);
     }
 
     // 重新渲染
@@ -990,7 +977,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
     ) as HTMLInputElement | null;
     const promptId = promptIdInput?.value;
     if (promptId) {
-      await this.savePromptField("images", images);
+      await this.detailData.savePromptImages(promptId, images);
     }
 
     // 重新渲染
@@ -1169,34 +1156,6 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
   }
 
   /**
-   * 保存提示词字段
-   * @param field - 字段名
-   * @param value - 字段值
-   * @private
-   */
-  private async savePromptField(field: string, value: unknown): Promise<void> {
-    const promptIdInput = document.getElementById(
-      Constants.Ids.PROMPT_DETAIL_ID,
-    ) as HTMLInputElement | null;
-    const promptId = promptIdInput?.value;
-    if (!promptId) return;
-
-    try {
-      const updates = { [field]: value };
-      await window.electronAPI.updatePrompt(promptId, updates);
-
-      this.app.eventBus.emit(Events.IMAGES_CHANGED);
-      this.app.eventBus.emit(Events.PROMPTS_CHANGED);
-    } catch (error) {
-      ErrorHandler.handleError(
-        { module: "PromptDetailManager", operation: "save prompt field" },
-        error,
-        { showToast: false },
-      );
-    }
-  }
-
-  /**
    * 打开图像选择器
    * @private
    */
@@ -1217,7 +1176,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
             const promptId = promptIdInput?.value;
             if (promptId) {
               const updatedImages = Array.from(this.app.promptRefImagesCache.values());
-              this.savePromptField("images", updatedImages);
+              void this.detailData.savePromptImages(promptId, updatedImages);
             }
           }
         },
