@@ -2054,7 +2054,7 @@ export async function getDisplayedImageIds(page: Page): Promise<string[]> {
 }
 
 /**
- * 右键点击图像并选择"设为首张"
+ * 右键点击图像并选择"设为首图"
  * @param page - Playwright page 对象
  * @param imageId - 图像ID
  */
@@ -2071,7 +2071,7 @@ export async function rightClickAndSetAsFirst(page: Page, imageId: string): Prom
     timeout: 1000,
   });
 
-  // 点击"设为首张"菜单项
+  // 点击"设为首图"菜单项
   await page.click('.context-menu-item[data-item-id="setAsFirst"]');
 
   // 等待菜单消失（通过检查特定菜单项是否隐藏）

@@ -738,7 +738,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
         const image = images.find((img) => String(img.id) === String(imageId));
         if (!image) return;
 
-        // 获取索引，用于控制"设为首张"菜单项的显示
+        // 获取索引，用于控制"设为首图"菜单项的显示
         const index = images.findIndex((img) => String(img.id) === String(imageId));
 
         // 显示右键菜单
@@ -948,7 +948,7 @@ export class PromptDetailManager extends DetailViewManager<IPrompt> {
   }
 
   /**
-   * 处理设为首张
+   * 处理设为首图
    * @param index - 图像索引
    * @private
    */

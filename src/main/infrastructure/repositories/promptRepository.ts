@@ -550,7 +550,7 @@ async function updatePrompt(id: string, updates: UpdatePromptParams): Promise<Pr
 
       const imagesToAdd = newImageIds.filter((imgId) => !currentImageIds.includes(imgId));
       const imagesToRemove = currentImageIds.filter((imgId) => !newImageIds.includes(imgId));
-      // 集合一致且序列一致才可跳过；仅顺序变化也需重建以同步 sort_order（"设为首张"）
+      // 集合一致且序列一致才可跳过；仅顺序变化也需重建以同步 sort_order（"设为首图"）
       const sameSequence =
         imagesToAdd.length === 0 &&
         imagesToRemove.length === 0 &&

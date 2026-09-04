@@ -116,7 +116,7 @@
 ## 7. 提示词详情测试辅助函数
 
 - `getDisplayedImageIds()` - 获取当前显示的图像ID列表
-- `rightClickAndSetAsFirst()` - 右键点击图像并选择"设为首张"
+- `rightClickAndSetAsFirst()` - 右键点击图像并选择"设为首图"
 - `waitForImageOrderChange()` - 等待图像顺序变化为目标顺序
 - `waitForDatabaseImageOrder()` - 等待数据库中的图像顺序更新
 

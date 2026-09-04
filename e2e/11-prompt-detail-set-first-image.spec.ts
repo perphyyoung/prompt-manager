@@ -12,9 +12,9 @@ import {
 import { Constants } from "../src/renderer/constants.ts";
 
 /**
- * 提示词详情界面"设为首张"功能 E2E 测试
+ * 提示词详情界面"设为首图"功能 E2E 测试
  *
- * 测试目标：验证右键菜单中的"设为首张"功能正常工作
+ * 测试目标：验证右键菜单中的"设为首图"功能正常工作
  *
  * 测试分组（按图像数量要求）：
  * 1. 空图像测试组（0张图像）
@@ -113,7 +113,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     const openLocationItem = page.locator('.context-menu-item[data-item-id="openLocation"]');
     await expect(openLocationItem).toBeVisible();
 
-    // 验证"设为首张"菜单项隐藏（首张图像不需要该选项）
+    // 验证"设为首图"菜单项隐藏（首张图像不需要该选项）
     const setAsFirstItem = page.locator('.context-menu-item[data-item-id="setAsFirst"]');
     await expect(setAsFirstItem).toBeHidden();
 
@@ -124,7 +124,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
   // ========== 双图像测试组（≥2张图像）==========
 
-  test("双图像：右键点击第二张图像并设为首张", async ({ electronTest, page }) => {
+  test("双图像：右键点击第二张图像并设为首图", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 查找有≥2张图像的提示词
@@ -138,10 +138,10 @@ test.describe('提示词详情界面"设首张"功能', () => {
     const beforeImageIds = await getDisplayedImageIds(page);
     expect(beforeImageIds.length).toBeGreaterThanOrEqual(2);
 
-    // 记录第二张图像的ID（将被设为首张）
+    // 记录第二张图像的ID（将被设为首图）
     const secondImageId = beforeImageIds[1];
 
-    // 右键点击第二张图像并选择"设为首张"
+    // 右键点击第二张图像并选择"设为首图"
     await rightClickAndSetAsFirst(page, secondImageId);
 
     // 等待图像顺序变化（显式等待，而非固定等待）
@@ -157,7 +157,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(afterImageIds.length).toBe(beforeImageIds.length);
   });
 
-  test("双图像：最后一张图像设为首张", async ({ electronTest, page }) => {
+  test("双图像：最后一张图像设为首图", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 复用同一个提示词（已在上一测试中找到）
@@ -171,7 +171,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     const beforeImageIds = await getDisplayedImageIds(page);
     const lastImageId = beforeImageIds[beforeImageIds.length - 1];
 
-    // 右键点击最后一张图像并选择"设为首张"
+    // 右键点击最后一张图像并选择"设为首图"
     await rightClickAndSetAsFirst(page, lastImageId);
 
     // 等待图像顺序变化
@@ -184,7 +184,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(afterImageIds[0]).toBe(lastImageId);
   });
 
-  test("双图像：设为首张后刷新页面验证顺序保持", async ({ electronTest, page }) => {
+  test("双图像：设为首图后刷新页面验证顺序保持", async ({ electronTest, page }) => {
     await electronTest.logTestStart();
 
     // 复用同一个提示词
@@ -198,7 +198,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     const beforeImageIds = await getDisplayedImageIds(page);
     const targetImageId = beforeImageIds[1];
 
-    // 右键点击第二张图像并选择"设为首张"
+    // 右键点击第二张图像并选择"设为首图"
     await rightClickAndSetAsFirst(page, targetImageId);
 
     // 等待图像顺序变化
@@ -242,7 +242,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     const dbImageIdsBefore = dbPromptBefore!.images?.map((img) => String(img.id)) || [];
     const targetImageId = dbImageIdsBefore[1];
 
-    // 右键点击第二张图像并选择"设为首张"
+    // 右键点击第二张图像并选择"设为首图"
     await rightClickAndSetAsFirst(page, targetImageId);
 
     // 等待数据库中的顺序更新（显式等待）
@@ -299,7 +299,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
       );
       return item?.textContent || "";
     });
-    expect(menuText).toBe("设为首张");
+    expect(menuText).toBe("设为首图");
 
     // 关闭菜单（点击其他地方）
     await page.click(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
@@ -366,7 +366,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     const beforeImageIds = await getDisplayedImageIds(page);
     const targetImageId = beforeImageIds[1];
 
-    // 右键点击第二张图像并选择"设为首张"
+    // 右键点击第二张图像并选择"设为首图"
     await rightClickAndSetAsFirst(page, targetImageId);
 
     // 等待图像顺序变化
@@ -401,7 +401,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     const beforeImageIds = await getDisplayedImageIds(page);
     const targetImageId = beforeImageIds[1];
 
-    // 右键点击第二张图像并选择"设为首张"
+    // 右键点击第二张图像并选择"设为首图"
     await rightClickAndSetAsFirst(page, targetImageId);
 
     // 等待数据库中的顺序更新
@@ -446,7 +446,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     const originalFirstId = beforeImageIds[0];
     const targetImageId = beforeImageIds[2]; // 第三张图像
 
-    // 右键点击第三张图像并选择"设为首张"
+    // 右键点击第三张图像并选择"设为首图"
     await rightClickAndSetAsFirst(page, targetImageId);
 
     // 等待图像顺序变化
