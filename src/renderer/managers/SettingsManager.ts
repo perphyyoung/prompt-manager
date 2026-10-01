@@ -4,7 +4,7 @@ import { DialogService, DialogConfig } from "../services/index.ts";
 import { ElectronDataClearApi } from "../services/ElectronDataClearApi.ts";
 import { DuplicatePreventionMixin } from "../../utils/index.ts";
 import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
-import { ErrorHandler } from "../renderer_utils/index.ts";
+import { ErrorHandler, loadFontList } from "../renderer_utils/index.ts";
 import { progressDialog } from "../components/ProgressDialog.ts";
 import type { IClosableElement } from "../../types/entities.ts";
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
@@ -73,6 +73,9 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    * 打开设置模态框
    */
   async openModal(): Promise<void> {
+    // 枚举系统字体候选（queryLocalFonts 需要用户手势，故在打开设置页时触发）
+    void this.loadFontSelect();
+
     // 获取应用版本号
     try {
       const version = await window.electronAPI.getAppVersion();
@@ -169,10 +172,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     ) as HTMLInputElement | null;
     if (picker) picker.value = savedCardTextColor;
 
-    // 先加载自定义字体列表（注入 @font-face）
-    await this.loadCustomFonts();
-
-    // 加载字体设置
+    // 加载字体设置（系统字体候选在打开设置页时枚举）
     const savedFont = localStorageManager.get<string>(Constants.LocalStorageKey.FONT_FAMILY);
     this.setFontFamily(savedFont, false);
 
@@ -236,11 +236,6 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       });
     }
 
-    // 自定义字体文件选择
-    document
-      .getElementById(Constants.Ids.SELECT_FONT_FILE_BTN)
-      ?.addEventListener("click", () => this.selectCustomFont());
-
     // 导出孤儿文件
     document
       .getElementById(Constants.Ids.EXPORT_ORPHAN_FILES_BTN)
@@ -256,14 +251,14 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       .getElementById(Constants.Ids.IMPORT_FULL_BACKUP_BTN)
       ?.addEventListener("click", () => this.importFullBackup());
 
-    // 绑定自定义字体下拉框事件
-    const customFontSelect = document.getElementById(
-      Constants.Ids.CUSTOM_FONT_SELECT,
+    // 绑定字体下拉框事件
+    const fontFamilySelect = document.getElementById(
+      Constants.Ids.FONT_FAMILY_SELECT,
     ) as HTMLSelectElement | null;
-    if (customFontSelect) {
-      customFontSelect.addEventListener("change", () => {
-        if (customFontSelect.value) {
-          this.setFontFamily(customFontSelect.value, true);
+    if (fontFamilySelect) {
+      fontFamilySelect.addEventListener("change", () => {
+        if (fontFamilySelect.value) {
+          this.setFontFamily(fontFamilySelect.value, true);
         }
       });
     }
@@ -289,131 +284,57 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
   }
 
   /**
-   * 选择并安装自定义字体文件
+   * 加载系统字体候选并填充下拉框
+   * 依赖 queryLocalFonts（需用户手势），枚举失败时回退内置候选表
    * @private
    */
-  private async selectCustomFont(): Promise<void> {
-    try {
-      const result = await window.electronAPI.selectAndInstallFont();
-      if (!result) return;
+  private async loadFontSelect(): Promise<void> {
+    const select = document.getElementById(
+      Constants.Ids.FONT_FAMILY_SELECT,
+    ) as HTMLSelectElement | null;
+    if (!select) return;
 
-      const { fontName, filePath } = result;
-      if (!fontName || !filePath) {
-        this.app.showToast?.("字体信息不完整", "error");
-        return;
+    try {
+      const { families: allFamilies, status } = await loadFontList();
+      if (status === "fallback") {
+        logger.warn("SettingsManager", "系统字体枚举不可用，已回退内置候选字体");
+      }
+      // "跟随系统"已作为首项，避免与 system-ui 重复
+      const families = allFamilies.filter((family) => family !== "system-ui");
+
+      // 历史版本保存的导入字体已不存在，重置为默认字体栈
+      let savedFont = this.getFontFamily();
+      if (savedFont !== Constants.FontFamily.DEFAULT && !families.includes(savedFont)) {
+        savedFont = Constants.FontFamily.DEFAULT;
+        this.setFontFamily(savedFont, false);
       }
 
-      // 创建 @font-face 规则并注入到页面
-      this.injectFontFace(fontName, filePath);
-
-      // 自动切换到新字体
-      this.setFontFamily(fontName, true);
-
-      // 刷新已导入字体列表
-      await this.loadCustomFonts();
-
-      this.app.showToast?.(`字体 "${fontName}" 已导入并应用`, "success");
+      const options = [
+        this.createFontOption(Constants.FontFamily.DEFAULT, "跟随系统"),
+        ...families.map((family) => this.createFontOption(family, family)),
+      ];
+      select.replaceChildren(...options);
+      select.value = savedFont;
     } catch (error) {
       ErrorHandler.handleError(
-        { module: "SettingsManager.ts", operation: "select custom font" },
-        error,
-        { userMessage: "导入字体失败" },
-      );
-    }
-  }
-
-  /**
-   * 注入 @font-face CSS 规则
-   * @param fontName - 字体名称
-   * @param filePath - 字体文件路径
-   * @private
-   */
-  private injectFontFace(fontName: string, filePath: string): void {
-    // 检查是否已存在该字体的样式
-    const styleId = `font-face-${fontName}`;
-    if (document.getElementById(styleId)) return;
-
-    // 根据文件扩展名判断字体格式
-    const ext = filePath.split(".").pop()?.toLowerCase();
-    let format = "truetype";
-    switch (ext) {
-      case "otf":
-        format = "opentype";
-        break;
-      case "woff":
-        format = "woff";
-        break;
-      case "woff2":
-        format = "woff2";
-        break;
-      case "ttc":
-        format = "collection";
-        break;
-      default:
-        format = "truetype";
-    }
-
-    // 创建 style 元素
-    const style = document.createElement("style");
-    style.id = styleId;
-    style.textContent = `
-      @font-face {
-        font-family: '${fontName}';
-        src: url('file://${filePath.replace(/\\/g, "/")}') format('${format}');
-        font-weight: normal;
-        font-style: normal;
-        font-display: swap;
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  /**
-   * 加载已导入的自定义字体列表
-   * @private
-   */
-  private async loadCustomFonts(): Promise<void> {
-    try {
-      const fonts = await window.electronAPI.getInstalledFonts();
-      const customFontSelect = document.getElementById(
-        Constants.Ids.CUSTOM_FONT_SELECT,
-      ) as HTMLSelectElement | null;
-
-      if (!customFontSelect) return;
-
-      // 注入所有字体
-      fonts.forEach((font: { fontName: string; filePath: string }) => {
-        this.injectFontFace(font.fontName, font.filePath);
-      });
-
-      // 获取当前保存的字体
-      const savedFont = localStorageManager.get<string>(Constants.LocalStorageKey.FONT_FAMILY);
-
-      // 生成下拉框选项
-      const options = fonts
-        .map((font: { fontName: string }) => {
-          const isSelected = font.fontName === savedFont ? "selected" : "";
-          return `<option value="${font.fontName}" ${isSelected}>${font.fontName}</option>`;
-        })
-        .join("");
-
-      // 更新下拉框
-      customFontSelect.innerHTML = options || '<option value="">无已导入字体</option>';
-
-      // 如果有保存的字体且存在于列表中，设置为选中
-      if (savedFont) {
-        const fontExists = fonts.some((f: { fontName: string }) => f.fontName === savedFont);
-        if (fontExists) {
-          customFontSelect.value = savedFont;
-        }
-      }
-    } catch (error) {
-      ErrorHandler.handleError(
-        { module: "SettingsManager.ts", operation: "load custom fonts" },
+        { module: "SettingsManager.ts", operation: "load system fonts" },
         error,
         { showToast: false },
       );
     }
+  }
+
+  /**
+   * 创建字体下拉选项
+   * @param value - 写入 CSS 的字体家族名
+   * @param label - 选项显示文本
+   * @private
+   */
+  private createFontOption(value: string, label: string): HTMLOptionElement {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    return option;
   }
 
   /**

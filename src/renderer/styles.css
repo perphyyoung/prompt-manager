@@ -3717,6 +3717,11 @@ body * {
   margin-top: 2px;
 }
 
+/* 设置页字体下拉 */
+.setting-row .sort-select {
+  min-width: 200px;
+}
+
 /* 字体大小控制 */
 .font-size-control {
   display: flex;

@@ -9,6 +9,7 @@ export { ShortcutManager } from "./ShortcutManager.ts";
 export { ErrorHandler } from "./ErrorHandler.ts";
 export { SaveStrategy, PromptSaveStrategy, ImageSaveStrategy } from "./SaveStrategy.ts";
 export { focusInput } from "./DomUtils.ts";
+export { loadFontList } from "./FontFamilies.ts";
 export {
   VirtualScroller,
   type VisibleRange,

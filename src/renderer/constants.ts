@@ -188,18 +188,6 @@ export class Constants {
     CARDS_INFO_VISIBLE: "cardsInfoVisible",
   });
 
-  // 字体选项
-  static FONT_OPTIONS = Object.freeze([
-    { value: "system-ui", label: "系统默认" },
-    {
-      value: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      label: "现代无衬线",
-    },
-    { value: '"Microsoft YaHei", "PingFang SC", sans-serif', label: "中文优化" },
-    { value: 'Georgia, "Times New Roman", serif', label: "衬线字体" },
-    { value: '"Courier New", Consolas, monospace', label: "等宽字体" },
-  ]);
-
   // 回收站类型常量（定义见 shared/domain/trashType.ts，主进程共用）
   static TrashType = SharedTrashType;
 
@@ -572,8 +560,7 @@ export class Constants {
     FONT_SIZE_DECREASE: "fontSizeDecrease",
     FONT_SIZE_VALUE: "fontSizeValue",
     FONT_SIZE_INCREASE: "fontSizeIncrease",
-    CUSTOM_FONT_SELECT: "customFontSelect",
-    SELECT_FONT_FILE_BTN: "selectFontFileBtn",
+    FONT_FAMILY_SELECT: "fontFamilySelect",
     CURRENT_DATA_PATH: "currentDataPath",
     OPEN_DATA_DIR_BTN: "openDataDirBtn",
     EXPORT_ORPHAN_FILES_BTN: "exportOrphanFilesBtn",

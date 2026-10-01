@@ -115,8 +115,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getDataPath: bridge("getDataPath"),
   openDataDirectory: bridge("openDataDirectory"),
   selectDirectory: bridge("selectDirectory"),
-  selectAndInstallFont: bridge("selectAndInstallFont"),
-  getInstalledFonts: bridge("getInstalledFonts"),
 
   // ==================== 图像文件操作 ====================
   saveImageFile: bridge("saveImageFile"),

@@ -4,8 +4,6 @@
  * 从 main/index.ts 原样迁出，逻辑未改动。
  */
 
-import path from "path";
-import { promises as fs } from "fs";
 import { app, dialog, shell, clipboard } from "electron";
 import * as db from "../../database.js";
 import { logInfo, logError, logWarn, logDebug } from "../../mainLogger.js";
@@ -103,72 +101,5 @@ export function registerSystemIpc() {
             : logInfo;
     logFn(component, message, data);
     return true;
-  });
-
-  // 选择并安装自定义字体文件
-  handleTyped("selectAndInstallFont", async () => {
-    try {
-      // 打开字体文件选择对话框
-      const result = await dialog.showOpenDialog({
-        title: "选择字体文件",
-        properties: ["openFile"],
-        filters: [
-          { name: "字体文件", extensions: ["ttf", "otf", "ttc", "woff", "woff2"] },
-          { name: "所有文件", extensions: ["*"] },
-        ],
-      });
-
-      if (result.canceled || result.filePaths.length === 0) {
-        return null;
-      }
-
-      const sourcePath = result.filePaths[0];
-      const fileName = path.basename(sourcePath);
-      const fontName = fileName.replace(/\.(ttf|otf|ttc|woff|woff2)$/i, "");
-
-      // 创建应用字体目录
-      const fontsDir = path.join(getCurrentDataDir(), "fonts");
-      await fs.mkdir(fontsDir, { recursive: true });
-
-      // 复制字体文件到应用目录
-      const targetPath = path.join(fontsDir, fileName);
-      await fs.copyFile(sourcePath, targetPath);
-
-      return {
-        fontName,
-        fileName,
-        filePath: targetPath,
-      };
-    } catch (error) {
-      logError("Main", "Failed to select and install font:", error);
-      throw error;
-    }
-  });
-
-  // 获取已安装的自定义字体列表
-  handleTyped("getInstalledFonts", async () => {
-    try {
-      const fontsDir = path.join(getCurrentDataDir(), "fonts");
-
-      try {
-        await fs.access(fontsDir);
-      } catch {
-        return [];
-      }
-
-      const files = await fs.readdir(fontsDir);
-      const fonts = files
-        .filter((file) => /\.(ttf|otf|ttc|woff|woff2)$/i.test(file))
-        .map((file) => ({
-          fontName: file.replace(/\.(ttf|otf|ttc|woff|woff2)$/i, ""),
-          fileName: file,
-          filePath: path.join(fontsDir, file),
-        }));
-
-      return fonts;
-    } catch (error) {
-      logError("Main", "Failed to get installed fonts:", error);
-      return [];
-    }
   });
 }

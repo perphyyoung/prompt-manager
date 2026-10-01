@@ -57,8 +57,6 @@ export const IPC = {
   getStatistics: "get-statistics",
   getAppVersion: "get-app-version",
   rendererLog: "renderer-log",
-  selectAndInstallFont: "select-and-install-font",
-  getInstalledFonts: "get-installed-fonts",
   getPromptTags: "get-prompt-tags",
   addPromptTag: "add-prompt-tag",
   addPromptTags: "add-prompt-tags",
@@ -212,12 +210,6 @@ export interface IpcApi {
   clearAllData: () => Promise<string>;
   getStatistics: (isSafeOnly: boolean) => Promise<import("./domain/database-types.js").Statistics>;
   getAppVersion: () => Promise<string>;
-  selectAndInstallFont: () => Promise<{
-    fontName: string;
-    fileName: string;
-    filePath: string;
-  } | null>;
-  getInstalledFonts: () => Promise<{ fontName: string; fileName: string; filePath: string }[]>;
   getPromptTags: () => Promise<string[]>;
   addPromptTag: (tag: string) => Promise<string[]>;
   addPromptTags: (promptId: string, tagNames: string[]) => Promise<boolean>;
