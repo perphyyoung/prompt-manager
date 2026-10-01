@@ -168,6 +168,8 @@ export class FontSelect {
     input.focus();
     this.renderList();
     void this.loadFonts();
+    // 面板每次展开都会重建、scrollTop 归零，定位必须在展开流程末尾，不能只挂在首次加载上
+    this.scrollToSelected();
   }
 
   private readonly handleKeydown = (event: KeyboardEvent): void => {
@@ -253,9 +255,12 @@ export class FontSelect {
 
   /** 展开后滚动到当前选中项并居中（无选中或不在窗口内则停在顶部） */
   private scrollToSelected(): void {
-    this.listEl
-      ?.querySelector<HTMLElement>(".font-select__item.selected")
-      ?.scrollIntoView({ block: "center", inline: "nearest" });
+    // 下一帧再滚动，等面板与列表完成布局（面板每次展开重建，scrollTop 已归零）
+    requestAnimationFrame(() => {
+      this.listEl
+        ?.querySelector<HTMLElement>(".font-select__item.selected")
+        ?.scrollIntoView({ block: "center", inline: "nearest" });
+    });
   }
 
   private pick(family: string): void {
