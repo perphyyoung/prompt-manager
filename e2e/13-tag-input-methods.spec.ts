@@ -48,8 +48,6 @@ test.describe("详情界面标签输入方法", () => {
    * 在图像详情界面测试：直接回车添加单个标签（无下拉建议）
    */
   test("图像详情界面 - 直接回车添加单个标签（无下拉建议）", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
     // 进入图像详情界面
     const { firstImageId } = await enterImageDetailView(page);
 
@@ -90,9 +88,7 @@ test.describe("详情界面标签输入方法", () => {
   /**
    * 在图像详情界面测试：点击下拉建议项添加标签
    */
-  test("图像详情界面 - 点击下拉建议项添加标签", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("图像详情界面 - 点击下拉建议项添加标签", async ({ page }) => {
     // 进入图像详情界面
     await enterImageDetailView(page);
 
@@ -126,9 +122,7 @@ test.describe("详情界面标签输入方法", () => {
   /**
    * 在图像详情界面测试：使用键盘导航选择下拉建议并回车添加
    */
-  test("图像详情界面 - 使用键盘导航选择下拉建议并回车添加", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("图像详情界面 - 使用键盘导航选择下拉建议并回车添加", async ({ page }) => {
     // 进入图像详情界面
     await enterImageDetailView(page);
 
@@ -179,8 +173,6 @@ test.describe("详情界面标签输入方法", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart();
-
     // 进入图像详情界面
     await enterImageDetailView(page);
 
@@ -228,8 +220,6 @@ test.describe("详情界面标签输入方法", () => {
    * 在提示词详情界面测试：直接回车添加单个标签（无下拉建议）
    */
   test("提示词详情界面 - 直接回车添加单个标签（无下拉建议）", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
     // 进入提示词详情界面
     const { firstPromptId } = await enterPromptDetailView(page);
 
@@ -270,9 +260,7 @@ test.describe("详情界面标签输入方法", () => {
   /**
    * 在提示词详情界面测试：点击下拉建议项添加标签
    */
-  test("提示词详情界面 - 点击下拉建议项添加标签", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("提示词详情界面 - 点击下拉建议项添加标签", async ({ page }) => {
     // 进入提示词详情界面
     await enterPromptDetailView(page);
 
@@ -306,9 +294,7 @@ test.describe("详情界面标签输入方法", () => {
   /**
    * 在提示词详情界面测试：使用键盘导航选择下拉建议并回车添加
    */
-  test("提示词详情界面 - 使用键盘导航选择下拉建议并回车添加", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("提示词详情界面 - 使用键盘导航选择下拉建议并回车添加", async ({ page }) => {
     // 进入提示词详情界面
     await enterPromptDetailView(page);
 
@@ -354,8 +340,6 @@ test.describe("详情界面标签输入方法", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart();
-
     // 进入提示词详情界面
     await enterPromptDetailView(page);
 

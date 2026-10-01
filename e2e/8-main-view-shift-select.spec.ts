@@ -23,8 +23,6 @@ test.describe("Shift 范围选择", () => {
 
   test.describe("图像网格视图", () => {
     test("Shift+ 点击范围选择", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 使用快捷键切换到图像面板并进入网格视图
       await page.keyboard.press("Control+i");
       await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
@@ -83,8 +81,6 @@ test.describe("Shift 范围选择", () => {
 
   test.describe("提示词网格视图", () => {
     test("Shift+ 点击范围选择", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 使用快捷键切换到提示词面板并进入网格视图
       await page.keyboard.press("Control+p");
       await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {

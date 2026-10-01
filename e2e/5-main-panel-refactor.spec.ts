@@ -48,9 +48,7 @@ test.describe("主界面重构功能", () => {
   });
 
   test.describe("图像面板功能", () => {
-    test("图像卡片收藏按钮功能", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
+    test("图像卡片收藏按钮功能", async ({ page }) => {
       await enterImageGridView(page);
 
       const targetCard = page.locator(`.image-card[data-id="${testImageId}"]`);
@@ -84,9 +82,7 @@ test.describe("主界面重构功能", () => {
       expect(isBtnActive).toBe(!originalFavoriteStatus);
     });
 
-    test("图像卡片复制按钮功能", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
+    test("图像卡片复制按钮功能", async ({ page }) => {
       await enterImageGridView(page);
 
       const targetCard = page.locator(`.image-card[data-id="${testImageId}"]`);
@@ -100,8 +96,7 @@ test.describe("主界面重构功能", () => {
       expect(toastVisible).toBe(true);
     });
 
-    test("图像标签筛选区域收起/展开切换", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("图像标签筛选区域收起/展开切换", async ({ page }) => {
       await enterImageGridView(page);
 
       const tagFilterSection = page.locator(`#${Constants.Ids.IMAGE_TAG_FILTER_SECTION}`);
@@ -157,9 +152,7 @@ test.describe("主界面重构功能", () => {
   });
 
   test.describe("提示词面板功能", () => {
-    test("提示词卡片收藏按钮功能", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
+    test("提示词卡片收藏按钮功能", async ({ page }) => {
       await enterPromptGridView(page);
 
       const targetCard = page.locator(`.prompt-card[data-id="${testPromptId}"]`);
@@ -195,9 +188,7 @@ test.describe("主界面重构功能", () => {
       expect(isBtnActive).toBe(!originalFavoriteStatus);
     });
 
-    test("提示词卡片复制按钮功能", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
+    test("提示词卡片复制按钮功能", async ({ page }) => {
       await enterPromptGridView(page);
 
       const targetCard = page.locator(`.prompt-card[data-id="${testPromptId}"]`);
@@ -211,8 +202,7 @@ test.describe("主界面重构功能", () => {
       expect(toastVisible).toBe(true);
     });
 
-    test("提示词标签筛选区域收起/展开切换", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("提示词标签筛选区域收起/展开切换", async ({ page }) => {
       await enterPromptGridView(page);
 
       const tagFilterSection = page.locator(`#${Constants.Ids.PROMPT_TAG_FILTER_SECTION}`);

@@ -31,9 +31,7 @@ test.describe("图像标签筛选区", () => {
     await factory.createImageFactory().createBatch(3, "shared");
     await electronTest.refreshData();
   });
-  test('应该能通过特殊标签"无标"筛选图像', async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test('应该能通过特殊标签"无标"筛选图像', async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
 
@@ -66,8 +64,6 @@ test.describe("图像标签筛选区", () => {
   });
 
   test("应该能通过普通标签筛选图像", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
     // 使用 API 工厂创建测试标签（测试目标是筛选而非创建）
     const factory = electronTest.getApiFactory();
     const imageFactory = factory.createImageFactory();
@@ -111,9 +107,7 @@ test.describe("图像标签筛选区", () => {
     expect(parseInt(badgeText || "0")).toBeGreaterThan(0);
   });
 
-  test("排序选择器应该能切换标签排序方式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("排序选择器应该能切换标签排序方式", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
 
@@ -158,9 +152,7 @@ test.describe("图像标签筛选区", () => {
     expect(sortOrder2).toBe("desc");
   });
 
-  test("逆序按钮应该能切换排序顺序", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("逆序按钮应该能切换排序顺序", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
 
@@ -201,9 +193,7 @@ test.describe("图像标签筛选区", () => {
     expect(finalOrder).toBe(initialOrder);
   });
 
-  test("标签管理器按钮应该能打开标签管理器", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("标签管理器按钮应该能打开标签管理器", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
 
@@ -221,9 +211,7 @@ test.describe("图像标签筛选区", () => {
     await expect(tagManagerModal).toBeHidden({ timeout: 1000 });
   });
 
-  test("收起/展开按钮应该能控制标签筛选区显示", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("收起/展开按钮应该能控制标签筛选区显示", async ({ page }) => {
     // 切换到图像面板（不依赖卡片存在）
     await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
     await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
@@ -264,9 +252,7 @@ test.describe("图像标签筛选区", () => {
     await expect(tagFilterContent).toBeVisible();
   });
 
-  test("收起时应该能点击头部标签进行筛选", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("收起时应该能点击头部标签进行筛选", async ({ page }) => {
     // 切换到图像面板（不依赖卡片存在）
     await page.click(`#${Constants.Ids.IMAGE_MANAGER_BTN}`);
     await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
@@ -338,9 +324,7 @@ test.describe("提示词标签筛选区", () => {
     await electronTest.refreshData();
   });
 
-  test('应该能通过特殊标签"无标"筛选提示词', async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test('应该能通过特殊标签"无标"筛选提示词', async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
 
@@ -373,8 +357,6 @@ test.describe("提示词标签筛选区", () => {
   });
 
   test("应该能通过普通标签筛选提示词", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
     // 使用 API 工厂创建测试标签（测试目标是筛选而非创建）
     const factory = electronTest.getApiFactory();
     const promptFactory = factory.createPromptFactory();
@@ -418,9 +400,7 @@ test.describe("提示词标签筛选区", () => {
     expect(parseInt(badgeText || "0")).toBeGreaterThan(0);
   });
 
-  test("排序选择器应该能切换标签排序方式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("排序选择器应该能切换标签排序方式", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
 
@@ -465,9 +445,7 @@ test.describe("提示词标签筛选区", () => {
     expect(sortOrder2).toBe("desc");
   });
 
-  test("逆序按钮应该能切换排序顺序", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("逆序按钮应该能切换排序顺序", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
 
@@ -508,9 +486,7 @@ test.describe("提示词标签筛选区", () => {
     expect(finalOrder).toBe(initialOrder);
   });
 
-  test("标签管理器按钮应该能打开标签管理器", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("标签管理器按钮应该能打开标签管理器", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
 
@@ -528,9 +504,7 @@ test.describe("提示词标签筛选区", () => {
     await expect(tagManagerModal).toBeHidden({ timeout: 1000 });
   });
 
-  test("收起/展开按钮应该能控制标签筛选区显示", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("收起/展开按钮应该能控制标签筛选区显示", async ({ page }) => {
     // 切换到提示词面板（不依赖卡片存在）
     await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
     await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
@@ -571,9 +545,7 @@ test.describe("提示词标签筛选区", () => {
     await expect(tagFilterContent).toBeVisible();
   });
 
-  test("收起时应该能点击头部标签进行筛选", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("收起时应该能点击头部标签进行筛选", async ({ page }) => {
     // 切换到提示词面板（不依赖卡片存在）
     await page.click(`#${Constants.Ids.PROMPT_MANAGER_BTN}`);
     await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {

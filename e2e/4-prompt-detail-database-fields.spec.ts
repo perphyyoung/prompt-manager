@@ -51,8 +51,7 @@ test.describe("提示词详情界面数据库字段读取", () => {
     await electronTest.refreshData();
   });
 
-  test("ID 字段正确显示", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("ID 字段正确显示", async ({ page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -66,8 +65,7 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(displayedId).toBe(dbPrompt!.id);
   });
 
-  test("标题 (title) 字段正确显示", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("标题 (title) 字段正确显示", async ({ page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -81,8 +79,7 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(displayedTitle).toBe(dbPrompt!.title);
   });
 
-  test("内容 (content) 字段正确显示", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("内容 (content) 字段正确显示", async ({ page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -96,8 +93,7 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(displayedContent).toBe(dbPrompt!.content);
   });
 
-  test("翻译 (contentTranslate) 字段正确显示", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("翻译 (contentTranslate) 字段正确显示", async ({ page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -111,8 +107,7 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(displayedTranslate).toBe(dbPrompt!.contentTranslate || "");
   });
 
-  test("备注 (note) 字段正确显示", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("备注 (note) 字段正确显示", async ({ page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -126,8 +121,7 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(displayedNote).toBe(dbPrompt!.note || "");
   });
 
-  test("标签 (tags) 字段正确显示", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("标签 (tags) 字段正确显示", async ({ page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -163,8 +157,7 @@ test.describe("提示词详情界面数据库字段读取", () => {
     }
   });
 
-  test("安全状态 (isSafe) 字段正确显示", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("安全状态 (isSafe) 字段正确显示", async ({ page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -182,8 +175,7 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(isChecked).toBe(expectedSafe);
   });
 
-  test("关联图像 (images) 字段正确显示", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("关联图像 (images) 字段正确显示", async ({ page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取提示词信息
@@ -207,8 +199,6 @@ test.describe("提示词详情界面数据库字段读取", () => {
     electronTest,
     page,
   }) => {
-    await electronTest.logTestStart();
-
     // ===== 准备测试数据：创建两个带图像的提示词 =====
     const factory = electronTest.getApiFactory();
 
@@ -347,8 +337,6 @@ test.describe("提示词详情界面数据库字段读取", () => {
   });
 
   test("删除图像后通过图像管理重新加载原图像", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
     // 查找有图像的提示词
     const promptIdWithImage = await findPromptWithImageCount(page, 1);
     if (!promptIdWithImage) {
@@ -458,8 +446,6 @@ test.describe("提示词详情界面数据库字段读取", () => {
   });
 
   test("双击图像进入全屏查看模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
     // 查找有图像的提示词
     const promptIdWithImage = await findPromptWithImageCount(page, 1);
     if (!promptIdWithImage) {
@@ -510,8 +496,7 @@ test.describe("提示词详情界面数据库字段读取", () => {
     await expect(fullscreenViewer).toBeHidden({ timeout: 1000 });
   });
 
-  test("所有数据库字段一致性验证", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("所有数据库字段一致性验证", async ({ page }) => {
     const { firstPromptId } = await enterPromptDetailView(page);
 
     // 从数据库获取完整提示词信息

@@ -21,8 +21,6 @@ import { Constants } from "../src/renderer/constants.ts";
 test.describe("标签管理对话框失败重试功能", () => {
   test.describe("图像标签管理 - 对话框失败重试", () => {
     test("新建标签时标签名已存在 - 对话框保持打开并保留输入", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 创建一个已存在的标签
       const factory = electronTest.getApiFactory();
       const existingTagName = electronTest.generateE2ePrefixName("img_existing");
@@ -85,8 +83,6 @@ test.describe("标签管理对话框失败重试功能", () => {
     });
 
     test("重命名标签时标签名已存在 - 对话框保持打开并保留输入", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 创建两个标签
       const factory = electronTest.getApiFactory();
       const tagName1 = electronTest.generateE2ePrefixName("img_rename1");
@@ -158,8 +154,6 @@ test.describe("标签管理对话框失败重试功能", () => {
     });
 
     test("新建标签组时名称重复 - 对话框保持打开并保留输入", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 创建一个已存在的标签组并添加一个标签（空标签组不显示）
       const factory = electronTest.getApiFactory();
       const { group, tagName: _tagName } = await factory
@@ -227,8 +221,6 @@ test.describe("标签管理对话框失败重试功能", () => {
     });
 
     test("编辑标签组时名称重复 - 对话框保持打开并保留输入", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 创建两个标签组（带标签才能在UI中显示）
       const factory = electronTest.getApiFactory();
       const { group: group1 } = await factory
@@ -306,8 +298,6 @@ test.describe("标签管理对话框失败重试功能", () => {
 
   test.describe("提示词标签管理 - 对话框失败重试", () => {
     test("新建标签时标签名已存在 - 对话框保持打开并保留输入", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 创建一个已存在的标签
       const factory = electronTest.getApiFactory();
       const existingTagName = electronTest.generateE2ePrefixName("prompt_existing");
@@ -370,8 +360,6 @@ test.describe("标签管理对话框失败重试功能", () => {
     });
 
     test("重命名标签时标签名已存在 - 对话框保持打开并保留输入", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 创建两个标签
       const factory = electronTest.getApiFactory();
       const tagName1 = electronTest.generateE2ePrefixName("prompt_rename1");
@@ -443,8 +431,6 @@ test.describe("标签管理对话框失败重试功能", () => {
     });
 
     test("新建标签组时名称重复 - 对话框保持打开并保留输入", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 创建一个已存在的标签组并添加一个标签（空标签组不显示）
       const factory = electronTest.getApiFactory();
       const { group } = await factory
@@ -512,8 +498,6 @@ test.describe("标签管理对话框失败重试功能", () => {
     });
 
     test("编辑标签组时名称重复 - 对话框保持打开并保留输入", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 创建两个标签组（带标签才能在UI中显示）
       const factory = electronTest.getApiFactory();
       const { group: group1 } = await factory

@@ -35,8 +35,6 @@ test.describe("TagService 高级功能测试", () => {
 
   test.describe("详情界面标签删除", () => {
     test("图像详情界面 - 删除已关联的标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 1. 进入图像详情界面
       const { firstImageId } = await enterImageDetailView(page);
 
@@ -99,8 +97,6 @@ test.describe("TagService 高级功能测试", () => {
     });
 
     test("提示词详情界面 - 删除已关联的标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 1. 进入提示词详情界面
       const { firstPromptId } = await enterPromptDetailView(page);
 
@@ -167,8 +163,6 @@ test.describe("TagService 高级功能测试", () => {
 
   test.describe("标签存在检查", () => {
     test("图像标签 - 检查标签是否存在", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const factory = electronTest.getApiFactory();
       const imageFactory = factory.createImageFactory();
 
@@ -200,8 +194,6 @@ test.describe("TagService 高级功能测试", () => {
     });
 
     test("提示词标签 - 检查标签是否存在", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const factory = electronTest.getApiFactory();
       const promptFactory = factory.createPromptFactory();
 
@@ -237,8 +229,6 @@ test.describe("TagService 高级功能测试", () => {
 
   test.describe("获取组内标签", () => {
     test("图像标签组 - 获取组内所有标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const factory = electronTest.getApiFactory();
       const imageFactory = factory.createImageFactory();
 
@@ -279,8 +269,6 @@ test.describe("TagService 高级功能测试", () => {
     });
 
     test("提示词标签组 - 获取组内所有标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const factory = electronTest.getApiFactory();
       const promptFactory = factory.createPromptFactory();
 
@@ -325,8 +313,6 @@ test.describe("TagService 高级功能测试", () => {
 
   test.describe("updated_at 字段更新验证", () => {
     test("图像 - 添加标签时 updated_at 更新", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 1. 进入图像详情界面
       const { firstImageId } = await enterImageDetailView(page);
 
@@ -366,8 +352,6 @@ test.describe("TagService 高级功能测试", () => {
     });
 
     test("提示词 - 添加标签时 updated_at 更新", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 1. 进入提示词详情界面
       const { firstPromptId } = await enterPromptDetailView(page);
 

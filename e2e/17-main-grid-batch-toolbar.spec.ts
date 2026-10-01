@@ -12,9 +12,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 全选按钮 ====================
-  test("图像主界面-全选按钮应该选中所有卡片", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("图像主界面-全选按钮应该选中所有卡片", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
     await page.waitForSelector(".image-card", { timeout: 1000 });
@@ -56,9 +54,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 反选按钮 ====================
-  test("图像主界面-反选按钮应该反转选择状态", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("图像主界面-反选按钮应该反转选择状态", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
     await page.waitForSelector(".image-card", { timeout: 1000 });
@@ -99,8 +95,6 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
 
   // ==================== 图像主界面 - 添加标签按钮 ====================
   test("图像主界面-添加标签按钮应该能正常批量添加标签", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
     // 进入图像网格视图
     await enterImageGridView(page);
     await page.waitForSelector(".image-card", { timeout: 1000 });
@@ -146,9 +140,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 收藏按钮 ====================
-  test("图像主界面-收藏按钮应该收藏选中的图像", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("图像主界面-收藏按钮应该收藏选中的图像", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
     await page.waitForSelector(".image-card", { timeout: 1000 });
@@ -181,9 +173,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 取消按钮 ====================
-  test("图像主界面-取消按钮应该退出批量模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("图像主界面-取消按钮应该退出批量模式", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
     await page.waitForSelector(".image-card", { timeout: 1000 });
@@ -210,9 +200,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - ESC键退出 ====================
-  test("图像主界面-ESC键应该退出批量模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("图像主界面-ESC键应该退出批量模式", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
     await page.waitForSelector(".image-card", { timeout: 1000 });
@@ -255,9 +243,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - Shift+范围选择 ====================
-  test("图像主界面-Shift+点击应该范围选择", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("图像主界面-Shift+点击应该范围选择", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
     await page.waitForSelector(".image-card", { timeout: 1000 });
@@ -306,9 +292,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - Ctrl+A全选 ====================
-  test("图像主界面-Ctrl+A应该全选所有可见项目", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("图像主界面-Ctrl+A应该全选所有可见项目", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
     await page.waitForSelector(".image-card", { timeout: 1000 });
@@ -355,9 +339,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 搜索改变退出批量模式 ====================
-  test("图像主界面-搜索改变应该退出批量模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("图像主界面-搜索改变应该退出批量模式", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
     await page.waitForSelector(".image-card", { timeout: 1000 });
@@ -395,9 +377,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 添加标签空输入不执行 ====================
-  test("图像主界面-添加标签空输入不应该执行操作", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("图像主界面-添加标签空输入不应该执行操作", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
     await page.waitForSelector(".image-card", { timeout: 1000 });
@@ -452,9 +432,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 全选按钮 ====================
-  test("提示词主界面-全选按钮应该选中所有卡片", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("提示词主界面-全选按钮应该选中所有卡片", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
     await page.waitForSelector(".prompt-card", { timeout: 1000 });
@@ -488,9 +466,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 反选按钮 ====================
-  test("提示词主界面-反选按钮应该反转选择状态", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("提示词主界面-反选按钮应该反转选择状态", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
     await page.waitForSelector(".prompt-card", { timeout: 1000 });
@@ -531,8 +507,6 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
 
   // ==================== 提示词主界面 - 添加标签按钮 ====================
   test("提示词主界面-添加标签按钮应该能正常批量添加标签", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
     // 进入提示词网格视图
     await enterPromptGridView(page);
     await page.waitForSelector(".prompt-card", { timeout: 1000 });
@@ -578,9 +552,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 收藏按钮 ====================
-  test("提示词主界面-收藏按钮应该收藏选中的提示词", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("提示词主界面-收藏按钮应该收藏选中的提示词", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
     await page.waitForSelector(".prompt-card", { timeout: 1000 });
@@ -613,9 +585,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 取消按钮 ====================
-  test("提示词主界面-取消按钮应该退出批量模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("提示词主界面-取消按钮应该退出批量模式", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
     await page.waitForSelector(".prompt-card", { timeout: 1000 });
@@ -642,9 +612,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - ESC键退出 ====================
-  test("提示词主界面-ESC键应该退出批量模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("提示词主界面-ESC键应该退出批量模式", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
     await page.waitForSelector(".prompt-card", { timeout: 1000 });
@@ -667,9 +635,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - Shift+范围选择 ====================
-  test("提示词主界面-Shift+点击应该范围选择", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("提示词主界面-Shift+点击应该范围选择", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
     await page.waitForSelector(".prompt-card", { timeout: 1000 });
@@ -714,9 +680,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - Ctrl+A全选 ====================
-  test("提示词主界面-Ctrl+A应该全选所有可见项目", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("提示词主界面-Ctrl+A应该全选所有可见项目", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
     await page.waitForSelector(".prompt-card", { timeout: 1000 });
@@ -759,9 +723,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 搜索改变退出批量模式 ====================
-  test("提示词主界面-搜索改变应该退出批量模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("提示词主界面-搜索改变应该退出批量模式", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
     await page.waitForSelector(".prompt-card", { timeout: 1000 });
@@ -799,9 +761,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 添加标签空输入不执行 ====================
-  test("提示词主界面-添加标签空输入不应该执行操作", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("提示词主界面-添加标签空输入不应该执行操作", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
     await page.waitForSelector(".prompt-card", { timeout: 1000 });
@@ -855,8 +815,6 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
 
   // ==================== 图像主界面 - 删除按钮（完整流程） ====================
   test("图像主界面-删除按钮应该将测试图像移到回收站", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
     // 使用 API 工厂创建2个测试图像
     const factory = electronTest.getApiFactory();
     const imageFactory = factory.createImageFactory();
@@ -945,8 +903,6 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
 
   // ==================== 提示词主界面 - 删除按钮（完整流程） ====================
   test("提示词主界面-删除按钮应该将测试提示词移到回收站", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
     // 使用 API 工厂创建2个测试提示词
     const factory = electronTest.getApiFactory();
     const promptFactory = factory.createPromptFactory();
@@ -1030,9 +986,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 展开状态点击标签退出批量模式 ====================
-  test("图像主界面-展开状态点击标签应该退出批量模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("图像主界面-展开状态点击标签应该退出批量模式", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
     await page.waitForSelector(".image-card", { timeout: 1000 });
@@ -1096,9 +1050,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 展开状态点击标签退出批量模式 ====================
-  test("提示词主界面-展开状态点击标签应该退出批量模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("提示词主界面-展开状态点击标签应该退出批量模式", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
     await page.waitForSelector(".prompt-card", { timeout: 1000 });
@@ -1162,9 +1114,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 图像主界面 - 收起状态点击标签退出批量模式 ====================
-  test("图像主界面-收起状态点击标签应该退出批量模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("图像主界面-收起状态点击标签应该退出批量模式", async ({ page }) => {
     // 进入图像网格视图
     await enterImageGridView(page);
     await page.waitForSelector(".image-card", { timeout: 1000 });
@@ -1228,9 +1178,7 @@ test.describe("批量工具栏 - 主界面功能测试", () => {
   });
 
   // ==================== 提示词主界面 - 收起状态点击标签退出批量模式 ====================
-  test("提示词主界面-收起状态点击标签应该退出批量模式", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("提示词主界面-收起状态点击标签应该退出批量模式", async ({ page }) => {
     // 进入提示词网格视图
     await enterPromptGridView(page);
     await page.waitForSelector(".prompt-card", { timeout: 1000 });

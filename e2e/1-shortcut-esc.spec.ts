@@ -22,8 +22,7 @@ test.describe("Esc 键快捷键功能", () => {
 
   // ========== Esc 关闭统计视图 ==========
   test.describe("Esc 关闭统计视图", () => {
-    test("图像面板 - Esc 关闭统计视图", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("图像面板 - Esc 关闭统计视图", async ({ page }) => {
       await enterImageGridView(page);
       await page.click(`#${Constants.Ids.STATISTICS_BTN}`);
       await page.waitForSelector(`#${Constants.Ids.STATISTICS_MODAL}.active`, {
@@ -42,8 +41,7 @@ test.describe("Esc 键快捷键功能", () => {
       await expect(statisticsModal).not.toHaveClass(/active/);
     });
 
-    test("提示词面板 - Esc 关闭统计视图", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("提示词面板 - Esc 关闭统计视图", async ({ page }) => {
       await enterPromptGridView(page);
       await page.click(`#${Constants.Ids.STATISTICS_BTN}`);
       await page.waitForSelector(`#${Constants.Ids.STATISTICS_MODAL}.active`, {
@@ -64,8 +62,7 @@ test.describe("Esc 键快捷键功能", () => {
   });
 
   test.describe("Esc 关闭设置视图", () => {
-    test("图像面板 - Esc 关闭设置视图", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("图像面板 - Esc 关闭设置视图", async ({ page }) => {
       await enterImageGridView(page);
       await page.click(`#${Constants.Ids.SETTINGS_BTN}`);
       await page.waitForSelector(`#${Constants.Ids.SETTINGS_MODAL}.active`, {
@@ -84,8 +81,7 @@ test.describe("Esc 键快捷键功能", () => {
       await expect(settingsModal).not.toHaveClass(/active/);
     });
 
-    test("提示词面板 - Esc 关闭设置视图", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("提示词面板 - Esc 关闭设置视图", async ({ page }) => {
       await enterPromptGridView(page);
       await page.click(`#${Constants.Ids.SETTINGS_BTN}`);
       await page.waitForSelector(`#${Constants.Ids.SETTINGS_MODAL}.active`, {
@@ -106,8 +102,7 @@ test.describe("Esc 键快捷键功能", () => {
   });
 
   test.describe("Esc 关闭详情视图", () => {
-    test("图像面板 - Esc 关闭图像详情视图", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("图像面板 - Esc 关闭图像详情视图", async ({ page }) => {
       await enterImageGridView(page);
       await openImageDetail(page);
 
@@ -123,8 +118,7 @@ test.describe("Esc 键快捷键功能", () => {
       await expect(detailModal).not.toHaveClass(/active/);
     });
 
-    test("提示词面板 - Esc 关闭提示词详情视图", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("提示词面板 - Esc 关闭提示词详情视图", async ({ page }) => {
       await enterPromptGridView(page);
       await openPromptDetail(page);
 
@@ -142,8 +136,7 @@ test.describe("Esc 键快捷键功能", () => {
   });
 
   test.describe("Esc 清除主界面批量选择", () => {
-    test("图像面板 - Esc 清除批量选择", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("图像面板 - Esc 清除批量选择", async ({ page }) => {
       await enterImageGridView(page);
 
       const firstCard = page.locator(".image-card").first();
@@ -171,8 +164,7 @@ test.describe("Esc 键快捷键功能", () => {
       expect(hasSelectionMode).toBe(false);
     });
 
-    test("提示词面板 - Esc 清除批量选择", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("提示词面板 - Esc 清除批量选择", async ({ page }) => {
       await enterPromptGridView(page);
 
       const firstCard = page.locator(".prompt-card").first();
@@ -203,8 +195,7 @@ test.describe("Esc 键快捷键功能", () => {
 
   // ==================== 对话框功能测试（独立于面板）====================
 
-  test("Esc 关闭对话框", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("Esc 关闭对话框", async ({ page }) => {
     await enterImageGridView(page);
 
     const firstCard = page.locator(".image-card").first();
@@ -247,8 +238,7 @@ test.describe("Esc 键快捷键功能", () => {
   // ==================== 回收站功能测试（独立于面板）====================
 
   test.describe("Esc 关闭回收站视图", () => {
-    test("图像回收站 - Esc 关闭回收站视图", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("图像回收站 - Esc 关闭回收站视图", async ({ page }) => {
       await enterImageGridView(page);
       await page.click(`#${Constants.Ids.IMAGE_TRASH_BTN}`);
       await page.waitForFunction(
@@ -282,8 +272,7 @@ test.describe("Esc 键快捷键功能", () => {
       expect(trashModalHidden).toBe(true);
     });
 
-    test("提示词回收站 - Esc 关闭回收站视图", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("提示词回收站 - Esc 关闭回收站视图", async ({ page }) => {
       await enterPromptGridView(page);
       await page.click(`#${Constants.Ids.PROMPT_TRASH_BTN}`);
       await page.waitForFunction(
@@ -321,8 +310,7 @@ test.describe("Esc 键快捷键功能", () => {
 
   // ==================== 图像特有功能测试 ====================
 
-  test("Esc 关闭全屏查看器", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("Esc 关闭全屏查看器", async ({ page }) => {
     await enterImageGridView(page);
     await openImageDetail(page);
 
@@ -350,8 +338,7 @@ test.describe("Esc 键快捷键功能", () => {
   // ==================== 自动完成功能测试（同时测试图像和提示词）====================
 
   test.describe("Esc 关闭标签自动完成下拉", () => {
-    test("图像详情 - Esc 关闭标签自动完成下拉", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("图像详情 - Esc 关闭标签自动完成下拉", async ({ page }) => {
       await enterImageGridView(page);
       await openImageDetail(page);
 
@@ -396,8 +383,7 @@ test.describe("Esc 键快捷键功能", () => {
       });
     });
 
-    test("提示词详情 - Esc 关闭标签自动完成下拉", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
+    test("提示词详情 - Esc 关闭标签自动完成下拉", async ({ page }) => {
       await enterPromptGridView(page);
       await openPromptDetail(page);
 

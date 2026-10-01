@@ -34,8 +34,6 @@ test.describe("替换图像功能", () => {
   }
 
   test("图像详情界面替换图像", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
     const factory = electronTest.getApiFactory();
     const imageFactory = factory.createImageFactory();
     const promptFactory = factory.createPromptFactory();
@@ -103,8 +101,6 @@ test.describe("替换图像功能", () => {
   });
 
   test("提示词详情界面替换图像", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
     const factory = electronTest.getApiFactory();
     const imageFactory = factory.createImageFactory();
     const promptFactory = factory.createPromptFactory();

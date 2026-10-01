@@ -26,7 +26,6 @@
 - `exists()` - 检查元素是否存在
 - `wait()` - 等待指定时间
 - `screenshot()` - 截图
-- `logTestStart()` - 记录测试开始日志
 
 ### 测试数据生成
 

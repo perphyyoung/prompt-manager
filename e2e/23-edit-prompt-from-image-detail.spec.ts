@@ -46,8 +46,7 @@ test.describe("图像详情界面单提示词编辑跳转", () => {
     await electronTest.refreshData();
   });
 
-  test("单提示词下编辑按钮能打开该提示词", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("单提示词下编辑按钮能打开该提示词", async ({ page }) => {
     await enterImageDetailView(page);
 
     // 验证关联提示词区域只有一个提示词标题
@@ -81,8 +80,7 @@ test.describe("图像详情界面多提示词编辑跳转", () => {
     await electronTest.refreshData();
   });
 
-  test("多提示词下编辑按钮默认打开最新提示词", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("多提示词下编辑按钮默认打开最新提示词", async ({ page }) => {
     await enterImageDetailView(page);
 
     const promptRefItems = page.locator("#imageDetailPromptTitle .prompt-ref-item");
@@ -94,8 +92,7 @@ test.describe("图像详情界面多提示词编辑跳转", () => {
     await openPromptDetailFromImageAndVerify(page, promptNew);
   });
 
-  test("切换第二个提示词后编辑按钮打开对应提示词", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
+  test("切换第二个提示词后编辑按钮打开对应提示词", async ({ page }) => {
     await enterImageDetailView(page);
 
     const promptRefItems = page.locator("#imageDetailPromptTitle .prompt-ref-item");

@@ -202,18 +202,6 @@ export class ElectronTestHelper {
     });
   }
 
-  /**
-   * 记录测试开始日志
-   * 自动从 Playwright 获取当前测试名
-   */
-  async logTestStart(): Promise<void> {
-    const testName = base.info().title;
-    const page = this.getPage();
-    await page.evaluate((name: string) => {
-      window.electronAPI.logInfo("E2E-Test", `Starting test: ${name}`);
-    }, testName);
-  }
-
   async logWarn(page: Page, message: string, data?: Record<string, unknown>): Promise<void> {
     await page.evaluate(
       (params: { component: string; message: string; data?: Record<string, unknown> }) => {
@@ -2289,9 +2277,12 @@ async function resetPage(page: Page): Promise<void> {
  * spec 文件，若在 worker 级启动应用，多个文件就会共用同一进程与同一份数据库。这里自实现 file 级
  * 隔离：worker 级实例池按 spec 文件切换实例（切文件时关旧实例并删除其数据目录），test 级 fixture
  * 按文件取实例——同一文件内仍共享实例与数据，跨文件则是全新实例与全新数据目录。
+ *
+ * 另有一个 test 级 auto fixture 把用例标题与结果写进 pm.log，spec 侧零改动。
  */
 export const test = base.extend<
   {
+    _testLog: void;
     _instance: IE2eInstance;
     electronTest: ReturnType<typeof createElectronTest>;
     page: Page;
@@ -2351,6 +2342,28 @@ export const test = base.extend<
       }
     },
     { scope: "worker" },
+  ],
+  // test-scoped auto fixture：把用例标题与结果写进 pm.log，spec 侧零改动
+  // 无任何依赖：先于 app fixture setup 执行，worker 号只能取 testInfo，不能复用实例 tag
+  _testLog: [
+    // oxlint-disable-next-line no-empty-pattern
+    async ({}, use, testInfo) => {
+      const worker = `E2E w${testInfo.workerIndex}`;
+      const title = testInfo.titlePath.slice(1).join(" › ");
+      const startedAt = Date.now();
+      e2eLog("info", worker, `▶ ${title}`);
+
+      await use();
+
+      const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+      if (testInfo.status === testInfo.expectedStatus) {
+        e2eLog("info", worker, `✓ 通过 ${seconds}s ${title}`);
+        return;
+      }
+      const firstError = (testInfo.errors[0]?.message ?? "").split("\n")[0];
+      e2eLog("warn", worker, `✗ ${testInfo.status} ${seconds}s — ${firstError}`);
+    },
+    { scope: "test", auto: true },
   ],
   // test-scoped fixture：按 spec 文件取实例（冷启动耗时单独计时，不挤占用例超时）
   _instance: [

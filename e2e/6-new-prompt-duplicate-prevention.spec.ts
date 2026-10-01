@@ -26,9 +26,7 @@ test.describe("新建提示词防重复提交", () => {
     await electronTest.refreshData();
   });
 
-  test("快速点击完成按钮应该只创建一个提示词", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("快速点击完成按钮应该只创建一个提示词", async ({ page }) => {
     // 进入图像网格视图并获取第一个图像
     const firstImage = await enterImageGridView(page);
 
@@ -131,9 +129,7 @@ test.describe("新建提示词防重复提交", () => {
     expect(createdPrompt?.content).toBe(testContent);
   });
 
-  test("重复点击完成按钮时应该只执行一次保存", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("重复点击完成按钮时应该只执行一次保存", async ({ page }) => {
     // 进入图像网格视图并获取第一个图像
     const firstImage = await enterImageGridView(page);
 
@@ -233,9 +229,7 @@ test.describe("新建提示词防重复提交", () => {
     expect(createdPrompts.length).toBe(1);
   });
 
-  test("空内容时不应该创建提示词", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("空内容时不应该创建提示词", async ({ page }) => {
     // 进入图像网格视图并获取第一个图像
     const firstImage = await enterImageGridView(page);
 

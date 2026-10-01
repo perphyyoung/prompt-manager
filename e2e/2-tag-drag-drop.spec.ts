@@ -59,8 +59,6 @@ test.describe("标签拖拽功能", () => {
 
   test.describe("图像标签拖拽", () => {
     test("标签拖拽到图像卡片 - 展开状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 获取第一张测试图像的 ID（使用 beforeAll 创建的数据）
       const images = await page.evaluate(async () => {
         return await window.electronAPI.getImages("updatedAt", "desc");
@@ -155,8 +153,6 @@ test.describe("标签拖拽功能", () => {
     });
 
     test("标签拖拽到图像卡片 - 收起状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 获取第二张测试图像的 ID（使用 beforeAll 创建的数据）
       const images = await page.evaluate(async () => {
         return await window.electronAPI.getImages("updatedAt", "desc");
@@ -244,8 +240,6 @@ test.describe("标签拖拽功能", () => {
 
   test.describe("提示词标签拖拽", () => {
     test("标签拖拽到提示词卡片 - 展开状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 获取第一张测试提示词的 ID（使用 beforeAll 创建的数据）
       const prompts = await page.evaluate(async () => {
         return await window.electronAPI.getPrompts("updatedAt", "desc");
@@ -346,8 +340,6 @@ test.describe("标签拖拽功能", () => {
     });
 
     test("标签拖拽到提示词卡片 - 收起状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       // 获取第二张测试提示词的 ID（使用 beforeAll 创建的数据）
       const prompts = await page.evaluate(async () => {
         return await window.electronAPI.getPrompts("updatedAt", "desc");

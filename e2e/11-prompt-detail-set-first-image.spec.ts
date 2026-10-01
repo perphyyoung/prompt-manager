@@ -46,9 +46,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
   // ========== 空图像测试组（0张图像）==========
 
-  test("空图像：验证界面正常显示无错误", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("空图像：验证界面正常显示无错误", async ({ page }) => {
     // 查找无图像的提示词
     const promptId = await findPromptWithImageCount(page, 0, 0);
     expect(promptId, "需要至少1个无图像的提示词").not.toBeNull();
@@ -67,9 +65,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
   // ========== 单图像测试组（1张图像）==========
 
-  test("单图像：首张图像右键只显示打开本地保存位置", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("单图像：首张图像右键只显示打开本地保存位置", async ({ page }) => {
     // 查找只有1张图像的提示词
     const promptId = await findPromptWithImageCount(page, 1, 1);
     expect(promptId, "需要至少1个只有1张图像的提示词").not.toBeNull();
@@ -113,9 +109,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
   // ========== 双图像测试组（≥2张图像）==========
 
-  test("双图像：右键点击第二张图像并设为首图", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("双图像：右键点击第二张图像并设为首图", async ({ page }) => {
     // 查找有≥2张图像的提示词
     const promptId = await findPromptWithImageCount(page, 2);
     expect(promptId, "需要至少1个有2张及以上图像的提示词").not.toBeNull();
@@ -146,9 +140,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(afterImageIds.length).toBe(beforeImageIds.length);
   });
 
-  test("双图像：最后一张图像设为首图", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("双图像：最后一张图像设为首图", async ({ page }) => {
     // 复用同一个提示词（已在上一测试中找到）
     const promptId = await findPromptWithImageCount(page, 2);
     expect(promptId).not.toBeNull();
@@ -173,9 +165,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(afterImageIds[0]).toBe(lastImageId);
   });
 
-  test("双图像：设为首图后刷新页面验证顺序保持", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("双图像：设为首图后刷新页面验证顺序保持", async ({ page }) => {
     // 复用同一个提示词
     const promptId = await findPromptWithImageCount(page, 2);
     expect(promptId).not.toBeNull();
@@ -215,9 +205,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(afterReopenIds).toEqual(afterSetFirstIds);
   });
 
-  test("双图像：检查数据库中images字段正确更新", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("双图像：检查数据库中images字段正确更新", async ({ page }) => {
     // 复用同一个提示词
     const promptId = await findPromptWithImageCount(page, 2);
     expect(promptId).not.toBeNull();
@@ -251,9 +239,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(dbImageIdsAfter.length).toBe(dbImageIdsBefore.length);
   });
 
-  test("双图像：右键菜单正常显示", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("双图像：右键菜单正常显示", async ({ page }) => {
     // 复用同一个提示词
     const promptId = await findPromptWithImageCount(page, 2);
     expect(promptId).not.toBeNull();
@@ -298,9 +284,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     });
   });
 
-  test("双图像：菜单项点击响应正常", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("双图像：菜单项点击响应正常", async ({ page }) => {
     // 复用同一个提示词
     const promptId = await findPromptWithImageCount(page, 2);
     expect(promptId).not.toBeNull();
@@ -341,9 +325,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(afterImageIds[0]).toBe(secondImageId);
   });
 
-  test("双图像：验证currentImagesCache正确更新", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("双图像：验证currentImagesCache正确更新", async ({ page }) => {
     // 复用同一个提示词
     const promptId = await findPromptWithImageCount(page, 2);
     expect(promptId).not.toBeNull();
@@ -376,9 +358,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
     expect(cacheImageIds).toEqual(uiImageIds);
   });
 
-  test("双图像：验证缓存与数据库数据一致", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("双图像：验证缓存与数据库数据一致", async ({ page }) => {
     // 复用同一个提示词
     const promptId = await findPromptWithImageCount(page, 2);
     expect(promptId).not.toBeNull();
@@ -417,9 +397,7 @@ test.describe('提示词详情界面"设首张"功能', () => {
 
   // ========== 三图像测试组（≥3张图像）==========
 
-  test("三图像：验证其他图像顺序正确调整", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
-
+  test("三图像：验证其他图像顺序正确调整", async ({ page }) => {
     // 查找有≥3张图像的提示词
     const promptId = await findPromptWithImageCount(page, 3);
     expect(promptId, "需要至少1个有3张及以上图像的提示词").not.toBeNull();

@@ -15,7 +15,6 @@ import { test } from "./electron-test.ts";
 
 test.describe("设置界面导出并删除孤儿文件", () => {
   test("导出原图像并删除，缩略图直接删除", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
     const factory = electronTest.getApiFactory();
 
     // 1. 创建一个正常图像，用于生成物理文件

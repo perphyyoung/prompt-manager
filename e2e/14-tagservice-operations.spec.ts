@@ -24,7 +24,6 @@ test.describe("TagService 操作测试", () => {
 
   test.describe("标签组管理", () => {
     test("图像标签组 - 创建、编辑、删除完整流程", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // 1. 创建标签组（使用 UI，因为测试目标是 UI 创建流程）
@@ -121,7 +120,6 @@ test.describe("TagService 操作测试", () => {
     });
 
     test("提示词标签组 - 创建、编辑、删除完整流程", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // 1. 创建标签组（使用 UI，因为测试目标是 UI 创建流程）
@@ -222,7 +220,6 @@ test.describe("TagService 操作测试", () => {
 
   test.describe("标签分配到组", () => {
     test("图像标签 - 创建并分配到组", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
       await enterImageTagManager(page);
 
       // 1. 创建标签组（使用 UI，因为测试目标是 UI 创建流程）
@@ -299,7 +296,6 @@ test.describe("TagService 操作测试", () => {
     });
 
     test("提示词标签 - 创建并分配到组", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
       await enterPromptTagManager(page);
 
       // 1. 创建标签组（使用 UI，因为测试目标是 UI 创建流程）
@@ -380,8 +376,6 @@ test.describe("TagService 操作测试", () => {
 
   test.describe("标签重命名", () => {
     test("图像标签 - 重命名标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const factory = electronTest.getApiFactory();
       const imageFactory = factory.createImageFactory();
 
@@ -449,8 +443,6 @@ test.describe("TagService 操作测试", () => {
     });
 
     test("提示词标签 - 重命名标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const factory = electronTest.getApiFactory();
       const promptFactory = factory.createPromptFactory();
 
@@ -522,8 +514,6 @@ test.describe("TagService 操作测试", () => {
 
   test.describe("标签搜索功能", () => {
     test("图像标签管理器 - 搜索标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const factory = electronTest.getApiFactory();
       const imageFactory = factory.createImageFactory();
 
@@ -578,8 +568,6 @@ test.describe("TagService 操作测试", () => {
     });
 
     test("提示词标签管理器 - 搜索标签", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const factory = electronTest.getApiFactory();
       const promptFactory = factory.createPromptFactory();
 

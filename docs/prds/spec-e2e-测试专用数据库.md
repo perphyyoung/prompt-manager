@@ -146,13 +146,11 @@ test.describe("功能模块名称", () => {
 
   // ========== 不涉及增删改的测试项 ==========
   test("测试项A", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
     // 使用 beforeAll 创建的基础数据
   });
 
   // ========== 新建类测试（跳过 beforeAll 创建）==========
   test("新建标签", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
     // 直接测试新建功能
     const newTagName = electronTest.generateE2ePrefixName("new_tag");
     await createImageTagInManager(page, newTagName);
@@ -161,7 +159,6 @@ test.describe("功能模块名称", () => {
 
   // ========== 删除类测试（确保创建足够数据）==========
   test("删除标签", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
     // 确保有足够的测试数据（如果需要）
     await electronTest.createImageTags(2, "delete_test");
     // 执行删除测试

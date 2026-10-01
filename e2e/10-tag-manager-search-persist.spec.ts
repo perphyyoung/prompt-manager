@@ -33,8 +33,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
 
   test.describe("图像标签管理 - 搜索状态保持", () => {
     test("搜索后单个删除保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const searchKeyword = "persist_single_delete";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
@@ -126,8 +124,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
     });
 
     test("搜索后单个编辑保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const searchKeyword = "persist_single_edit";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
@@ -213,8 +209,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
     });
 
     test("搜索后批量删除保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const searchKeyword = "persist_test";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
@@ -297,8 +291,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
 
   test.describe("提示词标签管理 - 搜索状态保持", () => {
     test("搜索后单个删除保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const searchKeyword = "persist_single_delete";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
@@ -390,8 +382,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
     });
 
     test("搜索后单个编辑保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const searchKeyword = "persist_single_edit";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);
@@ -477,8 +467,6 @@ test.describe("标签管理器搜索状态保持功能", () => {
     });
 
     test("搜索后批量删除保持搜索状态", async ({ electronTest, page }) => {
-      await electronTest.logTestStart();
-
       const searchKeyword = "persist_test";
       const tagName1 = electronTest.generateE2ePrefixName(searchKeyword);
       const tagName2 = electronTest.generateE2ePrefixName(searchKeyword);

@@ -171,7 +171,6 @@ test.describe("功能模块名称", () => {
   });
 
   test("测试项", async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
     // 测试逻辑...
   });
 });
@@ -211,7 +210,6 @@ await electronTest.logDebug(page, '测试操作描述', {
 ```typescript
 test.describe('提示词管理功能', () => {
   test('应该创建新提示词', async ({ electronTest, page }) => {
-    await electronTest.logTestStart();  // 自动获取测试名并记录
     // ... 测试代码
   });
 });
@@ -307,7 +305,6 @@ test.describe('功能模块名称', () => {
   });
 
   test('不涉及数据操作的测试项', async ({ electronTest, page }) => {
-    await electronTest.logTestStart();
     // 复用 beforeAll 创建的数据
   });
 });
