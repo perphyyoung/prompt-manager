@@ -9,7 +9,6 @@
 
 import path from "path";
 import { promises as fs } from "fs";
-import { app } from "electron";
 import { getCurrentDataDir } from "../runtime.js";
 import { logError } from "../mainLogger.js";
 
@@ -47,14 +46,13 @@ export function parseFontFamilyMap(content: string): Record<string, string> {
 }
 
 /**
- * 模板候选路径：构建产物优先（dev/e2e/打包均产出 out/renderer），源码 public 兜底
+ * 模板候选路径：渲染产物目录优先（与主窗口 loadFile 同一基准，dev / e2e / 打包一致），
+ * 源码 public 兜底（直接跑源码时）
  */
 function templateCandidates(): string[] {
-  const appPath = app.getAppPath();
   return [
-    path.join(appPath, "out", "renderer", FONT_MAP_TEMPLATE),
-    path.join(appPath, "src", "renderer", "public", FONT_MAP_TEMPLATE),
-    path.join(appPath, "public", FONT_MAP_TEMPLATE),
+    path.join(__dirname, "..", "renderer", FONT_MAP_TEMPLATE),
+    path.join(process.cwd(), "src", "renderer", "public", FONT_MAP_TEMPLATE),
   ];
 }
 
