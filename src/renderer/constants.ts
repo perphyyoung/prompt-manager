@@ -560,7 +560,7 @@ export class Constants {
     FONT_SIZE_DECREASE: "fontSizeDecrease",
     FONT_SIZE_VALUE: "fontSizeValue",
     FONT_SIZE_INCREASE: "fontSizeIncrease",
-    FONT_FAMILY_SELECT: "fontFamilySelect",
+    FONT_SELECT: "fontSelect",
     CURRENT_DATA_PATH: "currentDataPath",
     OPEN_DATA_DIR_BTN: "openDataDirBtn",
     EXPORT_ORPHAN_FILES_BTN: "exportOrphanFilesBtn",

@@ -79,6 +79,34 @@ async function enumerateFonts(): Promise<FontListData> {
   }
 }
 
+/**
+ * 关键字过滤（大小写不敏感，空关键字返回全部）
+ */
+export function filterFonts(families: string[], keyword: string): string[] {
+  const kw = keyword.trim().toLowerCase();
+  if (!kw) {
+    return families;
+  }
+  return families.filter((family) => family.toLowerCase().includes(kw));
+}
+
+/**
+ * 列表渲染窗口：有选中项时把窗口挪到它附近（保留原顺序），否则从头开始。
+ * 本机字体常上千，只渲染 `max` 项；选中项若落在窗口外就不在 DOM 中，滚动定位无从谈起。
+ * `offset` 为选中项上方保留的上下文项数，末尾再夹一次避免选中项靠后时窗口留白。
+ */
+export function fontListWindow(
+  all: string[],
+  selected: string,
+  max: number,
+  offset: number,
+): string[] {
+  const index = selected ? all.indexOf(selected) : -1;
+  const desired = index > offset ? index - offset : 0;
+  const start = Math.min(desired, Math.max(0, all.length - max));
+  return all.slice(start, start + max);
+}
+
 /** 单例枚举：整个会话只调用一次 queryLocalFonts */
 let fontListPromise: Promise<FontListData> | null = null;
 

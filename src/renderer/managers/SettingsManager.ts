@@ -4,7 +4,8 @@ import { DialogService, DialogConfig } from "../services/index.ts";
 import { ElectronDataClearApi } from "../services/ElectronDataClearApi.ts";
 import { DuplicatePreventionMixin } from "../../utils/index.ts";
 import { contextStack, IContextStackEntry } from "./ContextStackManager.ts";
-import { ErrorHandler, loadFontList } from "../renderer_utils/index.ts";
+import { ErrorHandler } from "../renderer_utils/index.ts";
+import { FontSelect } from "../components/FontSelect.ts";
 import { progressDialog } from "../components/ProgressDialog.ts";
 import type { IClosableElement } from "../../types/entities.ts";
 import { localStorageManager } from "../configs/LocalStorageConfig.ts";
@@ -41,6 +42,7 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
   private currentTheme: string;
   private isModalActive = false;
   private isInitialized = false;
+  private fontSelect: FontSelect | null = null;
 
   constructor(options: ISettingsManagerOptions) {
     super();
@@ -73,9 +75,6 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    * 打开设置模态框
    */
   async openModal(): Promise<void> {
-    // 枚举系统字体候选（queryLocalFonts 需要用户手势，故在打开设置页时触发）
-    void this.loadFontSelect();
-
     // 获取应用版本号
     try {
       const version = await window.electronAPI.getAppVersion();
@@ -116,6 +115,9 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
    * 关闭设置模态框
    */
   closeModal(): void {
+    // 关闭可能展开的字体选择面板，避免面板残留在设置页之外
+    this.fontSelect?.close();
+
     const modal = document.getElementById(Constants.Ids.SETTINGS_MODAL);
     if (modal) {
       modal.classList.remove("active");
@@ -251,17 +253,13 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
       .getElementById(Constants.Ids.IMPORT_FULL_BACKUP_BTN)
       ?.addEventListener("click", () => this.importFullBackup());
 
-    // 绑定字体下拉框事件
-    const fontFamilySelect = document.getElementById(
-      Constants.Ids.FONT_FAMILY_SELECT,
-    ) as HTMLSelectElement | null;
-    if (fontFamilySelect) {
-      fontFamilySelect.addEventListener("change", () => {
-        if (fontFamilySelect.value) {
-          this.setFontFamily(fontFamilySelect.value, true);
-        }
-      });
-    }
+    // 字体选择器（搜索式下拉，候选为本机系统字体，空值=跟随系统）
+    this.fontSelect = new FontSelect({
+      containerId: Constants.Ids.FONT_SELECT,
+      onChange: (fontFamily) =>
+        this.setFontFamily(fontFamily || Constants.FontFamily.DEFAULT, true),
+    });
+    this.fontSelect.setValue(this.toFontSelectValue(this.getFontFamily()));
 
     // 绑定字体大小按钮事件
     const fontSizeDecrease = document.getElementById(Constants.Ids.FONT_SIZE_DECREASE);
@@ -281,60 +279,6 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
         this.adjustFontSize(Constants.FontSize.STEP, fontSizeValue);
       });
     }
-  }
-
-  /**
-   * 加载系统字体候选并填充下拉框
-   * 依赖 queryLocalFonts（需用户手势），枚举失败时回退内置候选表
-   * @private
-   */
-  private async loadFontSelect(): Promise<void> {
-    const select = document.getElementById(
-      Constants.Ids.FONT_FAMILY_SELECT,
-    ) as HTMLSelectElement | null;
-    if (!select) return;
-
-    try {
-      const { families: allFamilies, status } = await loadFontList();
-      if (status === "fallback") {
-        logger.warn("SettingsManager", "系统字体枚举不可用，已回退内置候选字体");
-      }
-      // "跟随系统"已作为首项，避免与 system-ui 重复
-      const families = allFamilies.filter((family) => family !== "system-ui");
-
-      // 历史版本保存的导入字体已不存在，重置为默认字体栈
-      let savedFont = this.getFontFamily();
-      if (savedFont !== Constants.FontFamily.DEFAULT && !families.includes(savedFont)) {
-        savedFont = Constants.FontFamily.DEFAULT;
-        this.setFontFamily(savedFont, false);
-      }
-
-      const options = [
-        this.createFontOption(Constants.FontFamily.DEFAULT, "跟随系统"),
-        ...families.map((family) => this.createFontOption(family, family)),
-      ];
-      select.replaceChildren(...options);
-      select.value = savedFont;
-    } catch (error) {
-      ErrorHandler.handleError(
-        { module: "SettingsManager.ts", operation: "load system fonts" },
-        error,
-        { showToast: false },
-      );
-    }
-  }
-
-  /**
-   * 创建字体下拉选项
-   * @param value - 写入 CSS 的字体家族名
-   * @param label - 选项显示文本
-   * @private
-   */
-  private createFontOption(value: string, label: string): HTMLOptionElement {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    return option;
   }
 
   /**
@@ -490,10 +434,20 @@ export class SettingsManager extends DuplicatePreventionMixin(Object) {
     const fontStack = `${fontFamily}, ${Constants.FontFamily.FALLBACK}`;
     root.style.setProperty("--font-family", fontStack);
     localStorageManager.set(Constants.LocalStorageKey.FONT_FAMILY, fontFamily);
+    this.fontSelect?.setValue(this.toFontSelectValue(fontFamily));
 
     if (showToast) {
-      this.app.showToast?.(`字体已切换为：${fontFamily}`, "success");
+      const label = fontFamily === Constants.FontFamily.DEFAULT ? "跟随系统" : fontFamily;
+      this.app.showToast?.(`字体已切换为：${label}`, "success");
     }
+  }
+
+  /**
+   * localStorage 值 → 选择器值（默认字体栈映射为「跟随系统」空串）
+   * @param fontFamily - 已保存的字体值
+   */
+  private toFontSelectValue(fontFamily: string): string {
+    return fontFamily === Constants.FontFamily.DEFAULT ? "" : fontFamily;
   }
 
   /**

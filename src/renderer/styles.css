@@ -3717,9 +3717,128 @@ body * {
   margin-top: 2px;
 }
 
-/* 设置页字体下拉 */
-.setting-row .sort-select {
-  min-width: 200px;
+/* ==================== 字体选择器（搜索式下拉） ==================== */
+.font-select {
+  flex-shrink: 0;
+  width: 240px;
+}
+
+.font-select__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-color);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.font-select__trigger:hover {
+  border-color: var(--primary-color);
+}
+
+.font-select__label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.font-select__arrow {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+/* 点击面板外关闭的透明遮罩，层级需高于设置弹窗 */
+.font-select__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+
+.font-select__panel {
+  position: fixed;
+  z-index: 2001;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.font-select__search {
+  padding: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.font-select__search input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-color);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.font-select__search input:focus {
+  border-color: var(--primary-color);
+}
+
+.font-select__hint {
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.font-select__list {
+  max-height: 256px;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.font-select__item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.font-select__item:hover {
+  background: var(--primary-light);
+}
+
+.font-select__item.selected {
+  color: var(--primary-color);
+}
+
+.font-select__empty {
+  padding: 6px 12px;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
 }
 
 /* 字体大小控制 */
