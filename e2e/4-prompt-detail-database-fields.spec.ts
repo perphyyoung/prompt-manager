@@ -6,6 +6,7 @@ import {
   getPromptFromDatabase,
   findPromptWithImageCount,
 } from "./electron-test.ts";
+import { e2eLog } from "./e2e-logger.ts";
 
 /**
  * 提示词详情界面数据库字段读取 E2E 测试
@@ -336,11 +337,11 @@ test.describe("提示词详情界面数据库字段读取", () => {
     await expect(imageDetailModal).toBeVisible({ timeout: 1000 });
   });
 
-  test("删除图像后通过图像管理重新加载原图像", async ({ electronTest, page }) => {
+  test("删除图像后通过图像管理重新加载原图像", async ({ page }) => {
     // 查找有图像的提示词
     const promptIdWithImage = await findPromptWithImageCount(page, 1);
     if (!promptIdWithImage) {
-      await electronTest.logWarn(page, "跳过测试：没有找到有图像的提示词");
+      e2eLog("warn", "E2E", "跳过测试：没有找到有图像的提示词");
       return;
     }
 
@@ -417,7 +418,7 @@ test.describe("提示词详情界面数据库字段读取", () => {
     const isImageItemVisible = await imageItem.isVisible().catch(() => false);
     if (!isImageItemVisible) {
       await page.locator(`#${Constants.Ids.CLOSE_IMAGE_SELECTOR_MODAL}`).click();
-      await electronTest.logWarn(page, `跳过测试：原图像 ${deletedImageId} 不在选择器中`);
+      e2eLog("warn", "E2E", `跳过测试：原图像 ${deletedImageId} 不在选择器中`);
       return;
     }
 
@@ -445,11 +446,11 @@ test.describe("提示词详情界面数据库字段读取", () => {
     expect(reloadedImageIds).toContain(deletedImageId);
   });
 
-  test("双击图像进入全屏查看模式", async ({ electronTest, page }) => {
+  test("双击图像进入全屏查看模式", async ({ page }) => {
     // 查找有图像的提示词
     const promptIdWithImage = await findPromptWithImageCount(page, 1);
     if (!promptIdWithImage) {
-      await electronTest.logWarn(page, "跳过测试：没有找到有图像的提示词");
+      e2eLog("warn", "E2E", "跳过测试：没有找到有图像的提示词");
       return;
     }
 

@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { Constants } from "../src/renderer/constants.ts";
 import { test, enterImageDetailView, getImageFromDatabase } from "./electron-test.ts";
+import { e2eLog } from "./e2e-logger.ts";
 import type { IImage } from "../src/preload/index.ts";
 
 /**
@@ -205,8 +206,8 @@ test.describe("图像详情界面数据库字段读取", () => {
 
     // 从数据库获取图像信息（包含关联提示词）
     // 注意：promptRefs 中的字段在映射到 IPrompt 时会转换为 contentTranslate
-    const dbImage = await page.evaluate(async (id: string) => {
-      try {
+    const dbImage = await page
+      .evaluate(async (id: string) => {
         // 获取图像详情，包含关联的提示词信息
         const image = await window.electronAPI.getImageById(id);
         return image as IImage & {
@@ -218,11 +219,11 @@ test.describe("图像详情界面数据库字段读取", () => {
             promptNote?: string;
           }>;
         };
-      } catch (error) {
-        await window.electronAPI.logError("E2E-Test", "获取图像失败", { error: String(error) });
+      }, firstImageId)
+      .catch((error: unknown) => {
+        e2eLog("error", "E2E", `获取图像失败: ${String(error)}`);
         return null;
-      }
-    }, firstImageId);
+      });
 
     expect(dbImage).toBeTruthy();
 
@@ -404,8 +405,8 @@ test.describe("图像详情界面数据库字段读取", () => {
     });
 
     // 从数据库获取图像信息（包含关联提示词）
-    const dbImage = await page.evaluate(async (id: string) => {
-      try {
+    const dbImage = await page
+      .evaluate(async (id: string) => {
         const image = await window.electronAPI.getImageById(id);
         return image as IImage & {
           promptRefs?: Array<{
@@ -416,11 +417,11 @@ test.describe("图像详情界面数据库字段读取", () => {
             promptNote?: string;
           }>;
         };
-      } catch (error) {
-        await window.electronAPI.logError("E2E-Test", "获取图像失败", { error: String(error) });
+      }, imageId)
+      .catch((error: unknown) => {
+        e2eLog("error", "E2E", `获取图像失败: ${String(error)}`);
         return null;
-      }
-    }, imageId);
+      });
 
     expect(dbImage).toBeTruthy();
 

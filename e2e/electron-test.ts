@@ -202,42 +202,6 @@ export class ElectronTestHelper {
     });
   }
 
-  async logWarn(page: Page, message: string, data?: Record<string, unknown>): Promise<void> {
-    await page.evaluate(
-      (params: { component: string; message: string; data?: Record<string, unknown> }) => {
-        window.electronAPI.logWarn(params.component, params.message, params.data);
-      },
-      { component: "E2E-Test", message, data },
-    );
-  }
-
-  async logError(page: Page, message: string, data?: Record<string, unknown>): Promise<void> {
-    await page.evaluate(
-      (params: { component: string; message: string; data?: Record<string, unknown> }) => {
-        window.electronAPI.logError(params.component, params.message, params.data);
-      },
-      { component: "E2E-Test", message, data },
-    );
-  }
-
-  async logInfo(page: Page, message: string, data?: Record<string, unknown>): Promise<void> {
-    await page.evaluate(
-      (params: { component: string; message: string; data?: Record<string, unknown> }) => {
-        window.electronAPI.logInfo(params.component, params.message, params.data);
-      },
-      { component: "E2E-Test", message, data },
-    );
-  }
-
-  async logDebug(page: Page, message: string, data?: Record<string, unknown>): Promise<void> {
-    await page.evaluate(
-      (params: { component: string; message: string; data?: Record<string, unknown> }) => {
-        window.electronAPI.logDebug(params.component, params.message, params.data);
-      },
-      { component: "E2E-Test", message, data },
-    );
-  }
-
   // ========== 测试数据管理 ==========
 
   /**
@@ -1910,30 +1874,30 @@ export async function enterPromptDetailView(page: any, screenshotPath?: string) 
  * 从数据库获取图像完整信息
  */
 export async function getImageFromDatabase(page: any, imageId: string): Promise<IImage | null> {
-  return await page.evaluate(async (id: string) => {
-    try {
+  try {
+    return await page.evaluate(async (id: string) => {
       const image = await window.electronAPI.getImageById(id);
       return image as IImage;
-    } catch (error) {
-      window.electronAPI.logError("E2E", "Failed to get image from database:", error);
-      return null;
-    }
-  }, imageId);
+    }, imageId);
+  } catch (error) {
+    e2eLog("error", "E2E", `读取图像失败: ${String(error)}`);
+    return null;
+  }
 }
 
 /**
  * 从数据库获取提示词完整信息
  */
 export async function getPromptFromDatabase(page: any, promptId: string): Promise<IPrompt | null> {
-  return await page.evaluate(async (id: string) => {
-    try {
+  try {
+    return await page.evaluate(async (id: string) => {
       const prompt = await window.electronAPI.getPromptById(id);
       return prompt as IPrompt;
-    } catch (error) {
-      window.electronAPI.logError("E2E", "Failed to get prompt from database:", error);
-      return null;
-    }
-  }, promptId);
+    }, promptId);
+  } catch (error) {
+    e2eLog("error", "E2E", `读取提示词失败: ${String(error)}`);
+    return null;
+  }
 }
 
 /**

@@ -1,5 +1,6 @@
 import { expect } from "@playwright/test";
 import { test } from "./electron-test.ts";
+import { e2eLog } from "./e2e-logger.ts";
 import { Constants } from "../src/renderer/constants.ts";
 
 /**
@@ -22,7 +23,7 @@ test.describe("Shift 范围选择", () => {
   });
 
   test.describe("图像网格视图", () => {
-    test("Shift+ 点击范围选择", async ({ electronTest, page }) => {
+    test("Shift+ 点击范围选择", async ({ page }) => {
       // 使用快捷键切换到图像面板并进入网格视图
       await page.keyboard.press("Control+i");
       await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
@@ -37,8 +38,8 @@ test.describe("Shift 范围选择", () => {
       // 先清除所有选择（按 Escape 退出批量模式）
       await page.keyboard.press("Escape");
       const batchToolbar = page.locator(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`);
-      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 }).catch(async () => {
-        await electronTest.logError(page, "批量工具栏隐藏失败");
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 }).catch(() => {
+        e2eLog("error", "E2E", "批量工具栏隐藏失败");
       });
 
       // 点击第一个复选框选中（建立 lastSelectedIndex）
@@ -80,7 +81,7 @@ test.describe("Shift 范围选择", () => {
   });
 
   test.describe("提示词网格视图", () => {
-    test("Shift+ 点击范围选择", async ({ electronTest, page }) => {
+    test("Shift+ 点击范围选择", async ({ page }) => {
       // 使用快捷键切换到提示词面板并进入网格视图
       await page.keyboard.press("Control+p");
       await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
@@ -95,8 +96,8 @@ test.describe("Shift 范围选择", () => {
       // 先清除所有选择（按 Escape 退出批量模式）
       await page.keyboard.press("Escape");
       const batchToolbar = page.locator(`#${Constants.Ids.PROMPT_MAIN_BATCH_TOOLBAR}`);
-      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 }).catch(async () => {
-        await electronTest.logError(page, "批量工具栏隐藏失败");
+      await batchToolbar.waitFor({ state: "hidden", timeout: 1000 }).catch(() => {
+        e2eLog("error", "E2E", "批量工具栏隐藏失败");
       });
 
       // 点击第一个复选框选中（建立 lastSelectedIndex）
