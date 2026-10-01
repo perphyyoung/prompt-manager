@@ -72,6 +72,9 @@ export class ShortcutManager {
     // 面板切换
     this.register("Ctrl+I", "switchToImagePanel", "切换到图像主界面");
     this.register("Ctrl+P", "switchToPromptPanel", "切换到提示词主界面");
+
+    // 卡片信息显示
+    this.register("Alt+I", "toggleCardsInfo", "显示/隐藏卡片信息");
   }
 
   /**
@@ -292,6 +295,11 @@ export class ShortcutManager {
           this.switchToPromptPanel();
           break;
 
+        // 卡片信息显示
+        case "toggleCardsInfo":
+          this.toggleCardsInfo();
+          break;
+
         default:
           logger.warn("ShortcutManager", `Unknown action: ${action}`);
       }
@@ -427,6 +435,13 @@ export class ShortcutManager {
     if (promptManagerBtn) {
       promptManagerBtn.click();
     }
+  }
+
+  /**
+   * 显示/隐藏卡片信息（复用工具栏按钮的切换逻辑）
+   */
+  toggleCardsInfo(): void {
+    document.getElementById(Constants.Ids.CARD_INFO_TOGGLE_BTN)?.click();
   }
 
   /**

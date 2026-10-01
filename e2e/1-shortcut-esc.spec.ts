@@ -8,6 +8,23 @@ import {
   openPromptDetail,
 } from "./electron-test.ts";
 
+test.describe("Alt+I 显示卡片信息", () => {
+  test("Alt+I 切换卡片信息显示与隐藏", async ({ page }) => {
+    const isHiddenBefore = await page.evaluate(() =>
+      document.body.classList.contains("cards-info-hidden"),
+    );
+
+    await page.keyboard.press("Alt+i");
+
+    await expect
+      .poll(() => page.evaluate(() => document.body.classList.contains("cards-info-hidden")))
+      .toBe(!isHiddenBefore);
+
+    // 还原，避免影响后续用例（用例间 reload 也会从 localStorage 恢复）
+    await page.keyboard.press("Alt+i");
+  });
+});
+
 test.describe("Esc 键快捷键功能", () => {
   // ========== 初始化和清理 ==========
   test.beforeAll(async ({ electronTest }) => {
