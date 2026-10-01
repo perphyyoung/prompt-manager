@@ -13,6 +13,7 @@ import { Constants } from "../src/renderer/constants.ts";
 import type { IImage, IPrompt, IElectronAPI } from "../src/preload/index.ts";
 import { tmpdir } from "os";
 import { ApiTestFactory } from "./factories/api-factory.ts";
+import { e2eLog } from "./e2e-logger.ts";
 
 declare global {
   interface Window {
@@ -554,7 +555,7 @@ export class ElectronTestHelper {
 
       return image;
     } catch (error) {
-      console.error("Failed to create test image:", error);
+      e2eLog("error", "E2E helper", `创建测试图像失败: ${String(error)}`);
       return null;
     }
   }
@@ -1926,7 +1927,7 @@ export async function getImageFromDatabase(page: any, imageId: string): Promise<
       const image = await window.electronAPI.getImageById(id);
       return image as IImage;
     } catch (error) {
-      console.error("Failed to get image from database:", error);
+      window.electronAPI.logError("E2E", "Failed to get image from database:", error);
       return null;
     }
   }, imageId);
@@ -1941,7 +1942,7 @@ export async function getPromptFromDatabase(page: any, promptId: string): Promis
       const prompt = await window.electronAPI.getPromptById(id);
       return prompt as IPrompt;
     } catch (error) {
-      console.error("Failed to get prompt from database:", error);
+      window.electronAPI.logError("E2E", "Failed to get prompt from database:", error);
       return null;
     }
   }, promptId);
@@ -2257,7 +2258,7 @@ async function waitForMainPanel(page: Page): Promise<void> {
       { state: "attached", timeout: 8_000 },
     )
     .catch(() => {
-      console.warn("[diag] 等待主面板激活超时，继续执行");
+      e2eLog("warn", "E2E reset", "[diag] 等待主面板激活超时，继续执行");
     });
 }
 
@@ -2270,11 +2271,11 @@ async function resetPage(page: Page): Promise<void> {
   try {
     await page.reload({ timeout: 8_000, waitUntil: "domcontentloaded" });
   } catch (error) {
-    console.warn(`[diag] 用例间 reload 失败，改用 goto 恢复: ${String(error)}`);
+    e2eLog("warn", "E2E reset", `[diag] 用例间 reload 失败，改用 goto 恢复: ${String(error)}`);
     try {
       await page.goto(url, { timeout: 8_000, waitUntil: "domcontentloaded" });
     } catch (gotoError) {
-      console.warn(`[diag] 页面恢复失败: ${String(gotoError)}`);
+      e2eLog("warn", "E2E reset", `[diag] 页面恢复失败: ${String(gotoError)}`);
     }
   }
   // reload 后等应用恢复完毕再交还页面
@@ -2329,7 +2330,7 @@ export const test = base.extend<
           // 清理上次运行同序号实例的残留数据
           rmSync(dataDir, { recursive: true, force: true });
 
-          console.log(`[E2E w${workerInfo.workerIndex}-${instanceSeq}] 启动实例: ${file}`);
+          e2eLog("info", `E2E w${workerInfo.workerIndex}-${instanceSeq}`, `启动实例: ${file}`);
           const electronTest = createElectronTest(dataDir);
           await electronTest.launch();
 

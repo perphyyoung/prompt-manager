@@ -1,6 +1,7 @@
 import { execSync } from "child_process";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { e2eLog } from "./e2e-logger.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -10,7 +11,7 @@ const __dirname = dirname(__filename);
  * 在测试开始前执行
  */
 async function globalSetup() {
-  console.log("Building Electron app for E2E tests...");
+  e2eLog("info", "E2E setup", "开始构建应用...");
 
   // 构建应用
   try {
@@ -18,9 +19,9 @@ async function globalSetup() {
       cwd: join(__dirname, ".."),
       stdio: "inherit",
     });
-    console.log("Build completed successfully");
+    e2eLog("info", "E2E setup", "构建完成");
   } catch (error) {
-    console.error("Build failed:", error);
+    e2eLog("error", "E2E setup", `构建失败: ${String(error)}`);
     throw error;
   }
 }
