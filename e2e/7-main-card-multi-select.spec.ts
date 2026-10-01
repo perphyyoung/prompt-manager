@@ -16,7 +16,7 @@ import { Constants } from "../src/renderer/constants.ts";
  */
 test.describe("主界面卡片视图多选功能", () => {
   // ========== 初始化 ==========
-  test.beforeAll(async ({ electronTest, page }) => {
+  test.beforeAll(async ({ electronTest }) => {
     // 创建测试数据：至少3个图像和3个提示词（用于多选测试）
     const factory = electronTest.getApiFactory();
     await factory.createImageFactory().createBatch(3, "multi_select");
@@ -24,27 +24,29 @@ test.describe("主界面卡片视图多选功能", () => {
 
     // 刷新界面以显示新数据
     await electronTest.refreshData();
-
-    // 使用快捷键切换到图像面板并确保在网格视图
-    await page.keyboard.press("Control+i");
-    await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
-      state: "visible",
-      timeout: 1000,
-    });
-    await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID}`, {
-      state: "visible",
-      timeout: 1000,
-    });
   });
 
   test.describe("图像面板多选功能", () => {
+    // 用例间会 reload 复位，每个用例前重新切到图像面板并确保在网格视图
+    test.beforeEach(async ({ page }) => {
+      await page.keyboard.press("Control+i");
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
+        state: "visible",
+        timeout: 1000,
+      });
+      await page.waitForSelector(`#${Constants.Ids.IMAGE_GRID}`, {
+        state: "visible",
+        timeout: 1000,
+      });
+    });
+
     test("图像复选框选中后进入多选模式 - 验证点击复选框后显示批量工具栏并进入多选模式", async ({
       electronTest,
       page,
     }) => {
       await electronTest.logTestStart();
-      // 注意：不在此调用 enterImageGridView，因为 beforeAll 已准备好视图
-      // 且 enterImageGridView 使用 Ctrl+I 快捷键会关闭批量工具栏
+      // 视图由 beforeEach 统一准备（用例间 reload 复位后重新进入）
+      // 不用 enterImageGridView：其 Ctrl+I 快捷键会关闭批量工具栏
       const firstCard = page.locator(".image-card").first();
       await expect(firstCard).toBeVisible({ timeout: 1000 });
 
@@ -72,7 +74,7 @@ test.describe("主界面卡片视图多选功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      // 注意：不在此调用 enterImageGridView，因为 beforeAll 已准备好视图
+      // 视图由 beforeEach 统一准备（用例间 reload 复位后重新进入）
 
       const firstCard = page.locator(".image-card").first();
       await firstCard.hover();
@@ -92,7 +94,7 @@ test.describe("主界面卡片视图多选功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      // 注意：不在此调用 enterImageGridView，因为 beforeAll 已准备好视图
+      // 视图由 beforeEach 统一准备（用例间 reload 复位后重新进入）
 
       const searchInput = page.locator(`#${Constants.Ids.IMAGE_SEARCH_INPUT}`);
       await searchInput.fill("");
@@ -161,7 +163,7 @@ test.describe("主界面卡片视图多选功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      // 注意：不在此调用 enterImageGridView，因为 beforeAll 已准备好视图
+      // 视图由 beforeEach 统一准备（用例间 reload 复位后重新进入）
 
       const firstCard = page.locator(".image-card").first();
       await firstCard.hover();
@@ -188,7 +190,7 @@ test.describe("主界面卡片视图多选功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      // 注意：不在此调用 enterImageGridView，因为 beforeAll 已准备好视图
+      // 视图由 beforeEach 统一准备（用例间 reload 复位后重新进入）
 
       const totalImages = await page.evaluate(async () => {
         const images = await window.electronAPI.getImages("createdAt", "desc");
@@ -240,7 +242,7 @@ test.describe("主界面卡片视图多选功能", () => {
       const batchToolbarBefore = page.locator(`#${Constants.Ids.IMAGE_MAIN_BATCH_TOOLBAR}`);
       await batchToolbarBefore.waitFor({ state: "hidden", timeout: 1000 }).catch(() => {});
 
-      // 注意：不在此调用 enterImageGridView，因为 beforeAll 已准备好视图
+      // 视图由 beforeEach 统一准备（用例间 reload 复位后重新进入）
 
       // 获取第一个图像的ID和当前收藏状态
       const firstCard = page.locator(".image-card").first();
@@ -303,8 +305,8 @@ test.describe("主界面卡片视图多选功能", () => {
   });
 
   test.describe("提示词面板多选功能", () => {
-    // 提示词面板测试的初始化：切换到提示词面板并确保在网格视图
-    test.beforeAll(async ({ page }) => {
+    // 用例间会 reload 复位，每个用例前重新切到提示词面板并确保在网格视图
+    test.beforeEach(async ({ page }) => {
       await page.keyboard.press("Control+p");
       await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
         state: "visible",
@@ -321,8 +323,8 @@ test.describe("主界面卡片视图多选功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      // 注意：不在此调用 enterPromptGridView，因为 beforeAll 已准备好视图
-      // 且 enterPromptGridView 使用 Ctrl+P 快捷键会关闭批量工具栏
+      // 视图由 beforeEach 统一准备（用例间 reload 复位后重新进入）
+      // 不用 enterPromptGridView：其 Ctrl+P 快捷键会关闭批量工具栏
 
       const firstCard = page.locator(".prompt-card").first();
       await expect(firstCard).toBeVisible({ timeout: 1000 });
@@ -351,7 +353,7 @@ test.describe("主界面卡片视图多选功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      // 注意：不在此调用 enterPromptGridView，因为 beforeAll 已准备好视图
+      // 视图由 beforeEach 统一准备（用例间 reload 复位后重新进入）
 
       const firstCard = page.locator(".prompt-card").first();
       await firstCard.hover();
@@ -371,7 +373,7 @@ test.describe("主界面卡片视图多选功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      // 注意：不在此调用 enterPromptGridView，因为 beforeAll 已准备好视图
+      // 视图由 beforeEach 统一准备（用例间 reload 复位后重新进入）
 
       const searchInput = page.locator(`#${Constants.Ids.PROMPT_SEARCH_INPUT}`);
       await searchInput.fill("");
@@ -439,7 +441,7 @@ test.describe("主界面卡片视图多选功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      // 注意：不在此调用 enterPromptGridView，因为 beforeAll 已准备好视图
+      // 视图由 beforeEach 统一准备（用例间 reload 复位后重新进入）
 
       const firstCard = page.locator(".prompt-card").first();
       await firstCard.hover();
@@ -466,7 +468,7 @@ test.describe("主界面卡片视图多选功能", () => {
       page,
     }) => {
       await electronTest.logTestStart();
-      // 注意：不在此调用 enterPromptGridView，因为 beforeAll 已准备好视图
+      // 视图由 beforeEach 统一准备（用例间 reload 复位后重新进入）
 
       const totalPrompts = await page.evaluate(async () => {
         const prompts = await window.electronAPI.getPrompts("createdAt", "desc");
@@ -515,7 +517,7 @@ test.describe("主界面卡片视图多选功能", () => {
     }) => {
       await electronTest.logTestStart();
 
-      // 注意：不在此调用 enterPromptGridView，因为 beforeAll 已准备好视图
+      // 视图由 beforeEach 统一准备（用例间 reload 复位后重新进入）
 
       const firstCard = page.locator(".prompt-card").first();
       await expect(firstCard).toBeVisible({ timeout: 1000 });

@@ -23,21 +23,8 @@ import { Constants } from "../src/renderer/constants.ts";
  * 4. 三图像测试组（≥3张图像）
  */
 test.describe('提示词详情界面"设首张"功能', () => {
-  // 每个测试后关闭可能打开的模态框，防止影响后续测试
-  test.afterEach(async ({ page }) => {
-    const modal = page.locator(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`);
-    const isVisible = await modal.isVisible().catch(() => false);
-    if (isVisible) {
-      await page.click(`#${Constants.Ids.PROMPT_DETAIL_CLOSE_BTN}`);
-      await page.waitForSelector(`#${Constants.Ids.PROMPT_DETAIL_MODAL}`, {
-        state: "hidden",
-        timeout: 1000,
-      });
-    }
-  });
-
   // 文件级别：创建基础测试数据
-  test.beforeAll(async ({ electronTest, page }) => {
+  test.beforeAll(async ({ electronTest }) => {
     // 使用工厂方法创建带不同数量图像的提示词
     const promptFactory = electronTest.getApiFactory().createPromptFactory();
 
@@ -45,8 +32,10 @@ test.describe('提示词详情界面"设首张"功能', () => {
     await promptFactory.createWithImageCount("set_first_1_image", 1);
     await promptFactory.createWithImageCount("set_first_2_images", 2);
     await promptFactory.createWithImageCount("set_first_3_images", 3);
+  });
 
-    // 返回提示词面板并刷新
+  // 每个用例前：用例间会 reload 复位，重新回到提示词面板并刷新数据
+  test.beforeEach(async ({ electronTest, page }) => {
     await page.keyboard.press("Control+p");
     await page.waitForSelector(`#${Constants.Ids.PROMPT_PANEL}`, {
       state: "visible",

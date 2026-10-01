@@ -12,7 +12,7 @@ test.describe("主界面重构功能", () => {
   let testPromptId: string = "";
 
   // ========== 初始化 ==========
-  test.beforeAll(async ({ electronTest, page }) => {
+  test.beforeAll(async ({ electronTest }) => {
     // 创建测试数据：至少1个图像和1个提示词
     const factory = electronTest.getApiFactory();
     await factory.createImageFactory().createBatch(2, "main_panel");
@@ -23,8 +23,11 @@ test.describe("主界面重构功能", () => {
 
     // 刷新界面以显示新数据
     await electronTest.refreshData();
+  });
 
-    // 获取测试数据ID（使用快捷键切换到对应面板）
+  // ========== 每个用例前 ==========
+  // 用例间会 reload 复位，视图与卡片 ID 需重新准备（切到面板后从卡片读取 ID）
+  test.beforeEach(async ({ page }) => {
     await page.keyboard.press("Control+i");
     await page.waitForSelector(`#${Constants.Ids.IMAGE_PANEL}`, {
       state: "visible",

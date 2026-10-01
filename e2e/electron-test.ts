@@ -76,6 +76,8 @@ export class ElectronTestHelper {
 
     // 等待应用加载完成
     await this.page.waitForLoadState("domcontentloaded");
+    // 等待应用初始化完成（主面板激活），否则用例里的面板切换快捷键会被初始化流程覆盖
+    await waitForMainPanel(this.page);
 
     return { electronApp: this.electronApp, page: this.page };
   }
@@ -2234,11 +2236,49 @@ interface IE2eInstance {
   /** 实例序号（同一 worker 内递增），用于数据目录命名 */
   seq: number;
   electronTest: ReturnType<typeof createElectronTest>;
+  /** 是否已有用例使用过：下一个用例进入前需要 reload 复位 */
+  usedByTest: boolean;
 }
 
 /** worker 级实例池：按 spec 文件切换实例，实现 file 级隔离 */
 interface IE2eAppPool {
   acquire(file: string): Promise<IE2eInstance>;
+}
+
+/**
+ * 等待应用初始化完成：主面板按钮已激活
+ * 应用启动与 reload 后都会「恢复上次打开的面板」，不等它完成，用例里立刻按的面板切换快捷键会被覆盖；
+ * 主面板的显隐由 NavigationManager 用 style.display 控制，active 类加在面板按钮上，故以按钮为准
+ */
+async function waitForMainPanel(page: Page): Promise<void> {
+  await page
+    .waitForSelector(
+      `#${Constants.Ids.PROMPT_MANAGER_BTN}.active, #${Constants.Ids.IMAGE_MANAGER_BTN}.active`,
+      { state: "attached", timeout: 8_000 },
+    )
+    .catch(() => {
+      console.warn("[diag] 等待主面板激活超时，继续执行");
+    });
+}
+
+/**
+ * 用例间复位：reload 页面，清掉上个用例残留的模态框/覆盖层/批量选择
+ * 超时取 8s（小于用例超时），失败先记诊断再用 goto 兜底——否则「页面失联」会伪装成「按钮等不到」
+ */
+async function resetPage(page: Page): Promise<void> {
+  const url = page.url();
+  try {
+    await page.reload({ timeout: 8_000, waitUntil: "domcontentloaded" });
+  } catch (error) {
+    console.warn(`[diag] 用例间 reload 失败，改用 goto 恢复: ${String(error)}`);
+    try {
+      await page.goto(url, { timeout: 8_000, waitUntil: "domcontentloaded" });
+    } catch (gotoError) {
+      console.warn(`[diag] 页面恢复失败: ${String(gotoError)}`);
+    }
+  }
+  // reload 后等应用恢复完毕再交还页面
+  await waitForMainPanel(page);
 }
 
 /**
@@ -2251,6 +2291,7 @@ interface IE2eAppPool {
  */
 export const test = base.extend<
   {
+    _instance: IE2eInstance;
     electronTest: ReturnType<typeof createElectronTest>;
     page: Page;
   },
@@ -2292,7 +2333,12 @@ export const test = base.extend<
           const electronTest = createElectronTest(dataDir);
           await electronTest.launch();
 
-          const instance: IE2eInstance = { file, seq: instanceSeq, electronTest };
+          const instance: IE2eInstance = {
+            file,
+            seq: instanceSeq,
+            electronTest,
+            usedByTest: false,
+          };
           state.current = instance;
           return instance;
         },
@@ -2306,16 +2352,30 @@ export const test = base.extend<
     { scope: "worker" },
   ],
   // test-scoped fixture：按 spec 文件取实例（冷启动耗时单独计时，不挤占用例超时）
-  electronTest: [
+  _instance: [
     async ({ _appPool }, use, testInfo) => {
-      await use((await _appPool.acquire(testInfo.file)).electronTest);
+      await use(await _appPool.acquire(testInfo.file));
     },
     { scope: "test", timeout: 30_000 },
   ],
-  // test-scoped fixture：传递 page 给测试使用
-  page: async ({ electronTest }, use) => {
-    await use(electronTest.getPage());
+  // test-scoped fixture：传递 electronTest 给测试使用
+  electronTest: async ({ _instance }, use) => {
+    await use(_instance.electronTest);
   },
+  // test-scoped fixture：传递 page 给测试使用，并负责用例间复位
+  // 复位放在 fixture（而非 beforeEach hook）里：耗时走 fixture timeout，不挤占用例超时预算
+  page: [
+    async ({ _instance }, use) => {
+      const page = _instance.electronTest.getPage();
+      // 全新实例的首次取用无残留、跳过 reload（reload 会打断初始加载的 IPC 请求导致 invoke 挂起）
+      if (_instance.usedByTest) {
+        await resetPage(page);
+      }
+      _instance.usedByTest = true;
+      await use(page);
+    },
+    { scope: "test", timeout: 30_000 },
+  ],
 });
 
 // ========== 提示词详情测试辅助函数 ==========
