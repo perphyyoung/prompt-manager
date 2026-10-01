@@ -1,45 +1,115 @@
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
+# AGENTS.md
 
-This project is indexed by GitNexus as **prompt-manager** (5890 symbols, 19645 relationships, 518 execution flows).
+行为准则，用于减少常见的 LLM 编码错误。根据需要与项目特定说明合并。
 
-> Index stale? Run `node .gitnexus/run.cjs analyze --index-only` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? Bootstrap with `npx`, `bunx`, or `pnpm dlx` — e.g. `bunx gitnexus@latest analyze` (npm 11 npx crash; #1939).
+**权衡：** 这些准则倾向于谨慎而非速度。对于琐碎任务，请自行判断。
 
-## Always Do
+## 指令优先级(从高到低)
 
-- **MUST run impact analysis before editing.** Use `impact({target: "symbolName", direction: "upstream"})` (MCP) or `node .gitnexus/run.cjs impact "symbolName" --direction upstream --repo .` (CLI fallback); report callers, processes, and risk. Never substitute grep for graph analysis.
-- **MUST analyze graph changes before committing.** Use `detect_changes({scope: "all"})` (MCP) or `node .gitnexus/run.cjs detect-changes --scope all --repo .` (CLI fallback). `partial: true` or `truncated: true` is not a clean check — a zero means unseen, not unaffected; re-run it. For regression review: `detect_changes({scope: "compare", base_ref: "main"})` or `node .gitnexus/run.cjs detect-changes --scope compare --base-ref "main" --repo .`.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- **MUST treat `risk: UNKNOWN` as unresolved, not as low.** An empty caller set is not evidence the symbol is unused — it can also mean the callers are not resolvable by the index (plain-object property access, dynamic dispatch, cross-language calls). `impact` pairs `UNKNOWN` with a `riskNote` saying so. Confirm with a text search before treating the symbol as safe to change or delete; do not proceed on the strength of a zero.
-- When exploring unfamiliar code, use `query({search_query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `context({name: "symbolName"})`.
-- For security review, `explain({target: "fileOrSymbol"})` lists taint findings (source→sink flows; needs `analyze --pdg`).
+- 用户指令
+- 本文件
+- .trae/rules/项目规则.md
+- 默认系统提示
 
-## Never Do
+## 原则
 
-- NEVER edit a function, class, or method before MCP/CLI impact analysis.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis, and never read `UNKNOWN` as an all-clear — it means the walk could not answer, which is the one verdict that requires confirming by other means.
-- NEVER rename symbols with find-and-replace — use `rename` which understands the call graph.
-- NEVER commit before MCP/CLI graph change analysis.
+- 修改代码时，必须参考 `代码目录结构说明.md`，并及时更新该文件
+- 修改代码后，执行 `pnpm check` 来验证，通过后输出 单独一行 的简要的 git commit 信息
+- 如果修改的相关逻辑可以重构，本轮修改完成后，提醒用户是否要重构
+- 给出的方案中, 需要遵循 `.trae/rules/具体规范.md` 要求
+- 删除文件改用移动代替, mv 到 `bak/`
+- e2e 测试写入 `e2e/`, 单元测试写入 `tests/`
+- 如果需要运行 e2e 测试，最多运行3个相关测试文件，不需要全部运行
 
-## Resources
+## mcp 工具
 
-| Resource | Use for |
-| --- | --- |
-| `gitnexus://repo/prompt-manager/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/prompt-manager/clusters` | All functional areas |
-| `gitnexus://repo/prompt-manager/processes` | All execution flows |
-| `gitnexus://repo/prompt-manager/process/{name}` | Step-by-step execution trace |
+- 代码搜索使用 rg, 而不是 grep
 
-## CLI
+## 教训
 
-| Task | Read this skill file |
-| --- | --- |
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus-cli/SKILL.md` |
+- 会话开始前, 阅读 `lessons.md`, 确保不会再犯
+- 我要求纠正, 或者其他你觉得必要的情况, 添加一条规则到 `lessons.md`, 说明为什么出错, 如何避免再犯
+- 规则为一条无序列表, 简洁描述, 要有通用性
+- 追加而非重写
 
-<!-- gitnexus:end -->
+## 禁止行为
+
+- 禁止为了静默失败而添加的可选链
+- 禁止开场白和结尾, 输出简洁但推理充分, 砍掉一切不改变决策的信息
+- 禁止直接重写整个文件, 优先编辑
+- 禁止以下替换方式(允许使用 TypeScript 脚本进行替换)：
+  - PowerShell 命令替换（如 `(Get-Content file) -replace 'old', 'new' | Set-Content file`）
+  - 任何命令行文本替换工具（如 sed、awk、perl 等）
+  - 正则表达式批量替换整个文件
+- 禁止直接删除日志生成语句, 需要我确认
+
+## 建议
+
+- 按照大型项目来设计和重构
+- 只要可拆分，先派出 subagent; 中等及以上任务默认并行 `2-3` 个 subagent
+- 删除时, 一次删除不要超过 100 行, 分次删除; 已删除方法的注释也删除
+- 抽象方法使用 `abstract` 声明, 而不是抛出实现错误
+
+## 编码前先思考
+
+**不要假设。不要隐藏困惑。提出权衡。**
+
+实施前：
+
+- 明确说明你的假设。如果不确定，请询问。
+- 如果存在多种解释，请提出它们——不要默默选择。
+- 如果存在更简单的方法，请说出来。必要时提出反对意见。
+- 如果有不清楚的地方，停下来。指出困惑之处。询问。
+
+## 简单优先
+
+**解决问题的最少代码。不要推测。**
+
+- 不要添加未要求的功能。
+- 不要为一次性代码创建抽象。
+- 不要添加未要求的"灵活性"或"可配置性"。
+- 不要为不可能的场景添加错误处理。
+- 如果你写了 200 行代码而其实可以只用 50 行，请重写。
+
+问自己："资深工程师会说这过于复杂吗？"如果是，请简化。
+
+## 精准修改
+
+**只接触必须修改的部分。只清理自己造成的混乱。**
+
+编辑现有代码时：
+
+- 不要"改进"相邻的代码、注释或格式。
+- 不要重构没有问题的代码。
+- 遵循现有风格，即使你会用不同的方式。
+- 如果你注意到无关的死代码，请提及——但不要删除它。
+
+当你的更改产生孤立代码时：
+
+- 删除因你的更改而变得未使用的导入/变量/函数。
+- 除非被要求，否则不要删除预先存在的死代码。
+
+测试标准：每一行更改都应该直接追溯到用户的请求。
+
+## 目标驱动执行
+
+**定义成功标准。循环直到验证通过。**
+
+将任务转化为可验证的目标：
+
+- "添加验证" → "为无效输入编写测试，然后让它们通过"
+- "修复 bug" → "编写能重现问题的测试，然后让它通过"
+- "重构 X" → "确保测试在重构前后都能通过"
+
+对于多步骤任务，简要说明计划：
+
+```
+1. [步骤] → 验证：[检查]
+2. [步骤] → 验证：[检查]
+```
+
+强有力的成功标准让你能够独立循环。弱标准（"让它工作"）需要不断的澄清。
+
+---
+
+**这些准则有效的情况是：** diff 中不必要更改更少，因过度复杂而重写的次数更少，澄清问题出现在实施前而非犯错后。
