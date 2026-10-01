@@ -2220,62 +2220,101 @@ export async function openPromptDetailById(page: Page, promptId: string): Promis
 // ========== 共用 Fixture ==========
 
 /**
- * 生成测试专用数据目录路径
- * 使用临时目录，确保测试数据隔离
+ * 测试数据目录：按 workerIndex + 本 worker 内实例序号命名
+ * 与传给应用的 E2E_TEST_DATA_DIR 取自同一个值，保证目录名与实际使用一致
  */
-function getTestDataDir(): string {
-  const timestamp = Date.now();
-  const randomId = Math.random().toString(36).slice(2, 8);
-  return join(tmpdir(), `prompt-manager-e2e-${timestamp}-${randomId}`);
+function getTestDataDir(workerIndex: number, seq: number): string {
+  return join(tmpdir(), "prompt-manager-e2e", `w${workerIndex}-${seq}`);
+}
+
+/** 文件级实例：同一 spec 文件的所有用例共享一个应用实例 */
+interface IE2eInstance {
+  /** 所属 spec 文件（绝对路径） */
+  file: string;
+  /** 实例序号（同一 worker 内递增），用于数据目录命名 */
+  seq: number;
+  electronTest: ReturnType<typeof createElectronTest>;
+}
+
+/** worker 级实例池：按 spec 文件切换实例，实现 file 级隔离 */
+interface IE2eAppPool {
+  acquire(file: string): Promise<IE2eInstance>;
 }
 
 /**
  * 共用的 Playwright fixture
- * 使用 worker-scoped fixture 管理应用生命周期
- * 应用在 worker 级别启动和关闭一次（并行时, 每个 worker 进程执行所有分配的测试文件）
+ *
+ * Playwright 的 fixture 只有 test / worker 两级 scope，没有 file 级；而一个 worker 会顺序执行多个
+ * spec 文件，若在 worker 级启动应用，多个文件就会共用同一进程与同一份数据库。这里自实现 file 级
+ * 隔离：worker 级实例池按 spec 文件切换实例（切文件时关旧实例并删除其数据目录），test 级 fixture
+ * 按文件取实例——同一文件内仍共享实例与数据，跨文件则是全新实例与全新数据目录。
  */
 export const test = base.extend<
   {
     electronTest: ReturnType<typeof createElectronTest>;
-    page: ReturnType<ReturnType<typeof createElectronTest>["getPage"]>;
+    page: Page;
   },
   {
-    _electronTest: ReturnType<typeof createElectronTest>;
-    _testDataDir: string;
+    _appPool: IE2eAppPool;
   }
 >({
-  // worker-scoped fixture：测试数据目录
-  _testDataDir: [
+  // worker-scoped fixture：持有实例池，文件切换时关旧实例并清理其数据目录
+  _appPool: [
     // oxlint-disable-next-line no-empty-pattern
-    async ({}, use) => {
-      const testDataDir = getTestDataDir();
-      await use(testDataDir);
-      // 测试完成后清理测试数据目录
-      try {
-        rmSync(testDataDir, { recursive: true, force: true });
-      } catch {
-        // 忽略清理错误
+    async ({}, use, workerInfo) => {
+      let seq = 0;
+      // 用对象包一层：闭包内改写属性，TS 不会把闭包外的读取窄化成 never
+      const state: { current: IE2eInstance | null } = { current: null };
+
+      const dispose = async (instance: IE2eInstance) => {
+        await instance.electronTest.close();
+        rmSync(getTestDataDir(workerInfo.workerIndex, instance.seq), {
+          recursive: true,
+          force: true,
+        });
+      };
+
+      await use({
+        async acquire(file: string): Promise<IE2eInstance> {
+          if (state.current?.file === file) {
+            return state.current;
+          }
+          if (state.current) {
+            await dispose(state.current);
+          }
+
+          const instanceSeq = seq++;
+          const dataDir = getTestDataDir(workerInfo.workerIndex, instanceSeq);
+          // 清理上次运行同序号实例的残留数据
+          rmSync(dataDir, { recursive: true, force: true });
+
+          console.log(`[E2E w${workerInfo.workerIndex}-${instanceSeq}] 启动实例: ${file}`);
+          const electronTest = createElectronTest(dataDir);
+          await electronTest.launch();
+
+          const instance: IE2eInstance = { file, seq: instanceSeq, electronTest };
+          state.current = instance;
+          return instance;
+        },
+      });
+
+      // worker teardown 兜底：关闭实例并清理数据目录
+      if (state.current) {
+        await dispose(state.current);
       }
     },
     { scope: "worker" },
   ],
-  // worker-scoped fixture：在 worker 级别管理应用生命周期
-  _electronTest: [
-    async ({ _testDataDir }, use) => {
-      const electronTest = createElectronTest(_testDataDir);
-      await electronTest.launch();
-      await use(electronTest);
-      await electronTest.close();
+  // test-scoped fixture：按 spec 文件取实例（冷启动耗时单独计时，不挤占用例超时）
+  electronTest: [
+    async ({ _appPool }, use, testInfo) => {
+      await use((await _appPool.acquire(testInfo.file)).electronTest);
     },
-    { scope: "worker" },
+    { scope: "test", timeout: 30_000 },
   ],
-  // test-scoped fixture：传递 electronTest 给测试使用
-  electronTest: async ({ _electronTest }, use) => {
-    await use(_electronTest);
-  },
   // test-scoped fixture：传递 page 给测试使用
-  page: async ({ _electronTest }, use) => {
-    await use(_electronTest.getPage());
+  page: async ({ electronTest }, use) => {
+    await use(electronTest.getPage());
   },
 });
 
