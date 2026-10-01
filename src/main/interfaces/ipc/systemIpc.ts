@@ -8,6 +8,7 @@ import { app, dialog, shell, clipboard } from "electron";
 import * as db from "../../database.js";
 import { logInfo, logError, logWarn, logDebug } from "../../mainLogger.js";
 import { getCurrentDataDir, getDataDir, getMainWindow } from "../../runtime.js";
+import { loadFontFamilyMap } from "../../infrastructure/fontFamilyMap.js";
 import { relaunchApp } from "../../bootstrap.js";
 import { handleTyped } from "./handleTyped.js";
 
@@ -101,5 +102,10 @@ export function registerSystemIpc() {
             : logInfo;
     logFn(component, message, data);
     return true;
+  });
+
+  // 字体中文名映射（数据目录 font-family-map.toml）
+  handleTyped("getFontFamilyMap", async () => {
+    return loadFontFamilyMap();
   });
 }

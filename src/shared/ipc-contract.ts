@@ -57,6 +57,7 @@ export const IPC = {
   getStatistics: "get-statistics",
   getAppVersion: "get-app-version",
   rendererLog: "renderer-log",
+  getFontFamilyMap: "get-font-family-map",
   getPromptTags: "get-prompt-tags",
   addPromptTag: "add-prompt-tag",
   addPromptTags: "add-prompt-tags",
@@ -210,6 +211,8 @@ export interface IpcApi {
   clearAllData: () => Promise<string>;
   getStatistics: (isSafeOnly: boolean) => Promise<import("./domain/database-types.js").Statistics>;
   getAppVersion: () => Promise<string>;
+  /** 字体英文族名 → 中文显示名映射 */
+  getFontFamilyMap: () => Promise<Record<string, string>>;
   getPromptTags: () => Promise<string[]>;
   addPromptTag: (tag: string) => Promise<string[]>;
   addPromptTags: (promptId: string, tagNames: string[]) => Promise<boolean>;

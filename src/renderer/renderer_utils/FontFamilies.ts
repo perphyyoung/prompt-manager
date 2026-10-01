@@ -79,15 +79,30 @@ async function enumerateFonts(): Promise<FontListData> {
   }
 }
 
+/** 字体英文族名 → 中文显示名映射 */
+export type FontFamilyMap = Record<string, string>;
+
+/** 显示名：有中文映射 → `中文名 (English)`，否则原样 */
+export function displayFontFamily(family: string, map: FontFamilyMap): string {
+  const cnName = family ? map[family] : "";
+  return cnName ? `${cnName} (${family})` : family;
+}
+
+/** 搜索文本：中文名与英文族名都要能被搜到，否则搜「雅黑」搜不到 Microsoft YaHei */
+export function fontFamilySearchText(family: string, map: FontFamilyMap): string {
+  const cnName = map[family];
+  return cnName ? `${family} ${cnName}` : family;
+}
+
 /**
- * 关键字过滤（大小写不敏感，空关键字返回全部）
+ * 关键字过滤（大小写不敏感、中英文名同搜，空关键字返回全部）
  */
-export function filterFonts(families: string[], keyword: string): string[] {
+export function filterFonts(families: string[], keyword: string, map: FontFamilyMap): string[] {
   const kw = keyword.trim().toLowerCase();
   if (!kw) {
     return families;
   }
-  return families.filter((family) => family.toLowerCase().includes(kw));
+  return families.filter((family) => fontFamilySearchText(family, map).toLowerCase().includes(kw));
 }
 
 /**
@@ -116,4 +131,22 @@ let fontListPromise: Promise<FontListData> | null = null;
 export function loadFontList(): Promise<FontListData> {
   fontListPromise ??= enumerateFonts();
   return fontListPromise;
+}
+
+/** 单例映射：整个会话只读取一次 font-family-map.toml */
+let fontFamilyMapPromise: Promise<FontFamilyMap> | null = null;
+
+/**
+ * 获取字体中文名映射（失败时返回空表，界面只显示英文族名）
+ */
+export function loadFontFamilyMap(): Promise<FontFamilyMap> {
+  fontFamilyMapPromise ??= (async () => {
+    try {
+      return await window.electronAPI.getFontFamilyMap();
+    } catch (error) {
+      logger.warn("FontFamilies", "字体中文名映射读取失败，仅显示英文族名", error);
+      return {};
+    }
+  })();
+  return fontFamilyMapPromise;
 }

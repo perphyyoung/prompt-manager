@@ -113,6 +113,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // ==================== 设置 ====================
   getDataPath: bridge("getDataPath"),
+  getFontFamilyMap: bridge("getFontFamilyMap"),
   openDataDirectory: bridge("openDataDirectory"),
   selectDirectory: bridge("selectDirectory"),
 

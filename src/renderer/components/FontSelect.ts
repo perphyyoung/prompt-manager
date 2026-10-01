@@ -7,7 +7,14 @@
  */
 
 import { logger } from "../../utils/Logger.ts";
-import { filterFonts, fontListWindow, loadFontList } from "../renderer_utils/index.ts";
+import {
+  displayFontFamily,
+  filterFonts,
+  fontListWindow,
+  loadFontFamilyMap,
+  loadFontList,
+  type FontFamilyMap,
+} from "../renderer_utils/index.ts";
 
 /** 过滤后最多渲染的项数（本机字体常上千，避免长列表卡顿） */
 const MAX_VISIBLE = 200;
@@ -35,6 +42,7 @@ export class FontSelect {
   private listEl: HTMLUListElement | null = null;
 
   private families: string[] = [];
+  private nameMap: FontFamilyMap = {};
   private keyword = "";
   private value = "";
   private opened = false;
@@ -96,10 +104,23 @@ export class FontSelect {
     this.trigger = trigger;
     this.labelEl = label;
     this.updateLabel();
+    void this.loadNameMap();
+  }
+
+  /**
+   * 挂载即取中文名映射（读取映射不需要用户手势）
+   * 否则按钮先显示英文族名、展开后才跳变成「中文名 (English)」
+   */
+  private async loadNameMap(): Promise<void> {
+    this.nameMap = await loadFontFamilyMap();
+    this.updateLabel();
+    if (this.opened) {
+      this.renderList();
+    }
   }
 
   private updateLabel(): void {
-    const text = this.value || "跟随系统";
+    const text = this.value ? displayFontFamily(this.value, this.nameMap) : "跟随系统";
     if (this.labelEl) {
       this.labelEl.textContent = text;
     }
@@ -222,10 +243,12 @@ export class FontSelect {
     if (this.loading) {
       items.push(this.createMessage("读取本机字体…"));
     } else {
-      const matched = filterFonts(this.families, this.keyword);
+      const matched = filterFonts(this.families, this.keyword, this.nameMap);
       const visible = fontListWindow(matched, this.value, MAX_VISIBLE, SELECTED_OFFSET);
       for (const family of visible) {
-        items.push(this.createItem(family, family, family === this.value));
+        items.push(
+          this.createItem(displayFontFamily(family, this.nameMap), family, family === this.value),
+        );
       }
       if (matched.length === 0) {
         items.push(this.createMessage("没有匹配的字体家族"));
